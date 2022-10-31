@@ -7,6 +7,7 @@ urlpatterns = [
     #  url(r'^browser$', cache_page(3600*24*7)(views.LigandBrowser.as_view()), name='ligand_browser'),
     url(r'^$', views.LigandTargetSelection.as_view(), name='ligand_selection'),
     path('ligand_by_name', views.LigandNameSelection.as_view(), name='ligand_selection'),
+    path('ligand_by_structure', views.LigandStructureSelection.as_view(), name='ligand_selection'),
 
     url(r'^target/all/(?P<slug>[-\w]+)/$', views.CachedTargetDetailsExtended, name='ligand_target_detail'),
     path('target_detail', views.CachedTargetDetailsExtended, name='ligand_target_detail'),
