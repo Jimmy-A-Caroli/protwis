@@ -87,15 +87,15 @@ def detail(request, slug):
 
 
     # get structures of this family
-    structures = Structure.objects.filter(protein_conformation__protein__parent__family__slug__startswith=slug
-        ).order_by('-representative', 'resolution').prefetch_related('pdb_code__web_resource')
+    structures = Structure.objects.filter(protein__parent__family__slug__startswith=slug
+        ).exclude(structure_type__slug__startswith='af-').order_by('-representative', 'resolution').prefetch_related('pdb_code__web_resource')
 
     mutations = MutationExperiment.objects.filter(protein__in=proteins).prefetch_related('residue__generic_number',
                                 'exp_qual', 'ligand')
 
 
     interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__parent__in=proteins,
+        structure_ligand_pair__structure__protein__parent__in=proteins,
         structure_ligand_pair__annotated=True).exclude(interaction_type__type='hidden').prefetch_related(
             'rotamer__residue__generic_number', 'interaction_type'
             ).order_by('rotamer__residue__sequence_number')

@@ -99,15 +99,17 @@ class Command(BaseCommand):
 
     def rebuild_constructs(self):
         self.purge_construct_data()
-        structures = Structure.objects.all()
+        structures = Structure.objects.exclude(structure_type__slug__startswith='af-')
         for s in structures:
             pdbname = str(s)
             cache.delete(pdbname+"_auto_d")
             self.all_pdbs.append(pdbname)
-            protein_conformation = s.protein_conformation
+            # protein_conformation = s.protein_conformation
+            protein = s.protein
 
             construct = Construct()
-            construct.protein = protein_conformation.protein.parent
+            # construct.protein = protein_conformation.protein.parent
+            construct.protein = protein.parent
             construct.name = pdbname
             construct.json = ''
             construct.structure = s
@@ -986,7 +988,7 @@ class Command(BaseCommand):
                 else:
                     cons = Construct.objects.filter(structure__pdb_code__index__in = pdbs)
             else:
-                cons = Construct.objects.filter(structure__protein_conformation__protein__parent__entry_name = m['entry_name'])
+                cons = Construct.objects.filter(structure__protein__parent__entry_name = m['entry_name'])
 
             pdbs_has = []
             pdbs_hasnot = []

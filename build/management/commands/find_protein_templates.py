@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
-from django.db import connection 
+from django.db import connection
 
 from build.management.commands.base_build import Command as BaseBuild
 from protein.models import (Protein, ProteinConformation, ProteinSequenceType, ProteinSegment,
@@ -32,8 +32,8 @@ class Command(BaseBuild):
 
     # fetch representative (inactive) structures FIXME add active structure??
     structures = Structure.objects.filter(representative=True,
-        protein_conformation__state__slug=settings.DEFAULT_PROTEIN_STATE).prefetch_related(
-        'protein_conformation__protein__parent__family')
+        state__slug=settings.DEFAULT_PROTEIN_STATE).prefetch_related(
+        'protein__parent__family')
 
     # fetch all protein conformations
     pconfs = ProteinConformation.objects.all().prefetch_related('protein__family', 'template_structure')
@@ -69,17 +69,17 @@ class Command(BaseBuild):
             # filter structure sequence queryset to include only sequences from within the same class
             pconf_class = pconf.protein.family.slug[:3]
             class_sps = self.structures.filter(
-                protein_conformation__protein__parent__family__slug__startswith=pconf_class)
+                protein__parent__family__slug__startswith=pconf_class)
             sps = []
             sps_str = []
             if class_sps.exists():
                 for structure in class_sps:
-                    sps.append(structure.protein_conformation.protein.parent) # use the wild-type sequence for main tpl
-                    sps_str.append(structure.protein_conformation.protein) # use the structure sequence for segment tpl
+                    sps.append(structure.protein.parent) # use the wild-type sequence for main tpl
+                    sps_str.append(structure.protein) # use the structure sequence for segment tpl
             else:
                 for structure in self.structures:
-                    sps.append(structure.protein_conformation.protein.parent)
-                    sps_str.append(structure.protein_conformation.protein)
+                    sps.append(structure.protein.parent)
+                    sps_str.append(structure.protein)
 
             # overall
             template = self.find_segment_template(pconf, sps, self.segments)
@@ -111,6 +111,6 @@ class Command(BaseBuild):
 
     def fetch_template_structure(self, structures, template_protein):
         for structure in structures:
-            structure_protein = structure.protein_conformation.protein.parent.entry_name
+            structure_protein = structure.protein.parent.entry_name
             if structure_protein == template_protein:
                 return structure

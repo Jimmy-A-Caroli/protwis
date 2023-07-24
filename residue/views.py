@@ -391,7 +391,7 @@ class ResidueFunctionBrowser(TemplateView):
             # Add X-ray ligand contacts
             # Optionally include the curation with the following filter: structure_ligand_pair__annotated=True
             class_a_interactions = ResidueFragmentInteraction.objects.filter(
-                structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith="001").exclude(interaction_type__type='hidden')\
+                structure_ligand_pair__structure__protein__family__slug__startswith="001").exclude(interaction_type__type='hidden')\
                 .values("rotamer__residue__generic_number__label").annotate(unique_receptors=Count("rotamer__residue__protein_conformation__protein__family_id", distinct=True))
 
             rfb_panel["ligand_binding"] = {entry["rotamer__residue__generic_number__label"] : entry["unique_receptors"] for entry in list(class_a_interactions)}
@@ -429,14 +429,14 @@ class ResidueFunctionBrowser(TemplateView):
             rfb_panel["basal_mutations"] = {entry["residue__generic_number__label"] : entry["unique_receptors"] for entry in list(all_basal_mutations)}
 
             # Intrasegment contacts
-            all_contacts = InteractingResiduePair.objects.filter(~Q(res1__protein_segment_id = F('res2__protein_segment_id')), referenced_structure__protein_conformation__protein__family__slug__startswith="001")\
-                            .values("res1__generic_number__label").annotate(unique_receptors=Count("referenced_structure__protein_conformation__protein__family_id", distinct=True))
+            all_contacts = InteractingResiduePair.objects.filter(~Q(res1__protein_segment_id = F('res2__protein_segment_id')), referenced_structure__protein__family__slug__startswith="001")\
+                            .values("res1__generic_number__label").annotate(unique_receptors=Count("referenced_structure__protein__family_id", distinct=True))
             rfb_panel["intrasegment_contacts"] = {entry["res1__generic_number__label"] : entry["unique_receptors"] for entry in list(all_contacts)}
 
 
             # Active/Inactive contacts
             all_active_contacts = InteractingResiduePair.objects.filter(~Q(res2__generic_number__label = None), ~Q(res1__generic_number__label = None),\
-                    referenced_structure__state__slug = "active", referenced_structure__protein_conformation__protein__family__slug__startswith="001")\
+                    referenced_structure__state__slug = "active", referenced_structure__protein__family__slug__startswith="001")\
                     .values("res1__generic_number__label", "res2__generic_number__label")
 
             # OPTIMIZE
@@ -448,7 +448,7 @@ class ResidueFunctionBrowser(TemplateView):
             rfb_panel["active_contacts"] = active_contacts
 
             all_inactive_contacts = InteractingResiduePair.objects.filter(~Q(res2__generic_number__label = None), ~Q(res1__generic_number__label = None),\
-                    referenced_structure__state__slug = "inactive", referenced_structure__protein_conformation__protein__family__slug__startswith="001")\
+                    referenced_structure__state__slug = "inactive", referenced_structure__protein__family__slug__startswith="001")\
                     .values("res1__generic_number__label", "res2__generic_number__label")
 
             # OPTIMIZE

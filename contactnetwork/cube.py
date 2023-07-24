@@ -42,7 +42,7 @@ def compute_interactions(pdb_name, do_interactions=False, do_complexes=False, do
         #s = pdb_get_structure(pdb_name)[0]
         chain = s[preferred_chain]
         # remove residues without GN and only those matching receptor.
-        residues = struc.protein_conformation.residue_set.exclude(generic_number=None).all().prefetch_related('generic_number')
+        residues = struc.protein.residue_set.exclude(generic_number=None).all().prefetch_related('generic_number')
     else:
     # Ensure that the PDB name is lowercase
         pdb_name = pdb_name.lower()
@@ -55,7 +55,7 @@ def compute_interactions(pdb_name, do_interactions=False, do_complexes=False, do
         #s = pdb_get_structure(pdb_name)[0]
         chain = s[preferred_chain]
         # remove residues without GN and only those matching receptor.
-        residues = struc.protein_conformation.residue_set.exclude(generic_number=None).all().prefetch_related('generic_number')
+        residues = struc.protein.residue_set.exclude(generic_number=None).all().prefetch_related('generic_number')
     dbres = {}
     dblabel = {}
     for r in residues:

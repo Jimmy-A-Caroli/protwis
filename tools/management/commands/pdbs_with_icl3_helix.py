@@ -28,16 +28,13 @@ class Command(BaseCommand):
 
     logger = logging.getLogger(__name__)
 
-    
+
 
     def handle(self, *args, **options):
-
-        for s in Structure.objects.all().order_by('protein_conformation__protein__parent__entry_name'):
+        #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
+        for s in Structure.objects.all().order_by('protein__parent__entry_name'):
             slug = str(s)
             pc = ProteinConformation.objects.filter(protein__entry_name=slug.lower()).get()
             rs = pc.residue_set.filter(generic_number__label='34x50')
             if not len(rs):
                 print(slug, pc.protein.parent.entry_name, s.state, s.representative)
-
-
-

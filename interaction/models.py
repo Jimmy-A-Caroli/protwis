@@ -27,7 +27,7 @@ class ResidueFragmentInteraction(models.Model):
         else:
             generic_num = self.rotamer.residue.sequence_number
         res_name = self.rotamer.residue.amino_acid
-        prot_entry_name = str(self.structure_ligand_pair.structure.protein_conformation.protein.parent.entry_name)
+        prot_entry_name = str(self.structure_ligand_pair.structure.protein.parent.entry_name)
         pdb_code = self.structure_ligand_pair.structure.pdb_code.index
         interaction = self.interaction_type.slug
 

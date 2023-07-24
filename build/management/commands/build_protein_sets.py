@@ -37,18 +37,18 @@ class Command(BaseCommand):
         class_dict = {'001': 'A', '002': 'B1', '003': 'B2', '004': 'C', '005': 'D1', '006': 'F', '007': 'T', '008': 'Other'}
 
         # proteins with a structure
-        structures = Structure.objects.order_by('protein_conformation__protein__parent__entry_name').distinct(
-            'protein_conformation__protein__parent__entry_name')
+        structures = Structure.objects.order_by('protein__parent__entry_name').distinct(
+            'protein__parent__entry_name')
         if structures:
             ps = ProteinSet.objects.create(name='All') # David's request
             ps_class = {}
             for structure in structures:
                 # Grab the class slug
-                pc = structure.protein_conformation.protein.parent.family.slug.split("_")[0]
+                pc = structure.protein.parent.family.slug.split("_")[0]
                 if pc not in ps_class:
                     ps_class[pc] = ProteinSet.objects.create(name='{}'.format(class_dict[pc])) # David's request
 
-                ps.proteins.add(structure.protein_conformation.protein.parent)
-                ps_class[pc].proteins.add(structure.protein_conformation.protein.parent)
+                ps.proteins.add(structure.protein.parent)
+                ps_class[pc].proteins.add(structure.protein.parent)
 
         self.logger.info('COMPLETED CREATING PROTEIN SETS')

@@ -21,11 +21,11 @@ class Command(BaseBuild):
 		try:
 			s = Structure.objects.get(pdb_code__index=options['s'])
 		except:
-			s = StructureModel.objects.get(protein__entry_name=options['s'], state__slug=options['state'])
+			s = Structure.objects.get(protein__entry_name=options['s'], state__slug=options['state'], structure_type__slug='af-gpcr')
 		if options['gns']:
-			if s.protein_conformation.protein.family.slug.startswith('002') or s.protein_conformation.protein.family.slug.startswith('003'):
+			if s.protein.family.slug.startswith('002') or s.protein.family.slug.startswith('003'):
 				tm2_gn, tm6_gn, tm3_gn, tm7_gn = '2x41', '6x33', '3x44', '7x51'
-			else:	
+			else:
 				tm2_gn, tm6_gn, tm3_gn, tm7_gn = '2x41', '6x38', '3x44', '7x52'
 			for value in options['gns']:
 				if value.startswith('2'):

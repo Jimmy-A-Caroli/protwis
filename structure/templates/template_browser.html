@@ -217,10 +217,10 @@
                     <td><input class="alt" type="checkbox"></td>
                     <td>{{ structure.0 }}</td>
                     <td>{{ structure.1 }}</td>
-                    <td>{{ structure.2.protein_conformation.protein.family.name|safe }}</td>
-                    <td>{{ structure.2.protein_conformation.protein.family.parent.name|safe }}</td>
-                    <td>{{ structure.2.protein_conformation.protein.family.parent.parent.parent.name }}</td>
-                    <td>{{ structure.2.protein_conformation.protein.species.common_name }}</td>
+                    <td>{{ structure.2.protein.family.name|safe }}</td>
+                    <td>{{ structure.2.protein.family.parent.name|safe }}</td>
+                    <td>{{ structure.2.protein.family.parent.parent.parent.name }}</td>
+                    <td>{{ structure.2.protein.species.common_name }}</td>
                     <td class="text-center">
                         <a href="{{ structure.2.pdb_code.index}}">
                             {{ structure.2.pdb_code.index}}
@@ -239,10 +239,10 @@
                     </td>
                     <td>
                         {% autoescape off %}
-                          {{ structure.2.protein_conformation.protein.parent.endogenous_gtp_set.all | endo_format }}
+                          {{ structure.2.protein.parent.endogenous_gtp_set.all | endo_format }}
                         {% endautoescape %}
                     </td>
-                    <td>{{ structure.2.protein_conformation.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
+                    <td>{{ structure.2.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
                     <td>
                         {% for ligand in structure.2.ligands.all %}
                         {{ ligand.ligand.name|safe }}<br />

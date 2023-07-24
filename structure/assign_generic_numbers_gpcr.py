@@ -48,7 +48,7 @@ class GenericNumbering(object):
                 struct = Structure.objects.get(pdb_code__index=self.pdb_code)
             if not signprot:
                 if pdb_code:
-                    s = SequenceParser(pdb_file=self.pdb_file, wt_protein_id=struct.protein_conformation.protein.parent.id)
+                    s = SequenceParser(pdb_file=self.pdb_file, wt_protein_id=struct.protein.parent.id)
                 else:
                     s = SequenceParser(pdb_file=self.pdb_file)#, wt_protein_id=struct.protein_conformation.protein.parent.id)
             else:
@@ -283,7 +283,7 @@ class GenericNumberingFromDB(GenericNumbering):
         self.pdb_seq = {}
         self.structure = structure_obj
         self.pdb_structure = pdbdata
-        resis = Residue.objects.filter(protein_conformation=structure_obj.protein_conformation, protein_segment__isnull=False).prefetch_related('display_generic_number', 'protein_segment')
+        resis = Residue.objects.filter(protein_conformation__protein=structure_obj.protein, protein_segment__isnull=False).prefetch_related('display_generic_number', 'protein_segment')
         self.resis = OrderedDict()
         for r in resis:
             self.resis[r.sequence_number] = r

@@ -124,17 +124,20 @@ def get_angles(request):
         data['headers2'] = [{"title" : "Group 2<br/>Min"},{"title" : "Group 2<br/>Avg"},{"title" : "Group 2<br/>Max"}]
         if len(pdbs2)==0:
             # select structure(s)
+            # OLD
+            # structures = Structure.objects.filter(pdb_code__index__in=pdbs) \
+            #             .select_related('protein_conformation__protein__family','protein_conformation__state')
             structures = Structure.objects.filter(pdb_code__index__in=pdbs) \
-                        .select_related('protein_conformation__protein__family','protein_conformation__state')
+                        .select_related('protein__family','state')
 
             # select PDBs
-            states = set( structure.protein_conformation.state.slug for structure in structures )
-            classes = set( structure.protein_conformation.protein.family.slug[:3] for structure in structures )
+            states = set( structure.state.slug for structure in structures )
+            classes = set( structure.protein.family.slug[:3] for structure in structures )
 
             query = Q()
             for classStart in classes:
-                    query = query | Q(protein_conformation__protein__family__slug__startswith=classStart)
-            set2 = Structure.objects.filter(protein_conformation__state__slug__in=states).filter(query).values_list('pdb_code__index')
+                    query = query | Q(protein__family__slug__startswith=classStart)
+            set2 = Structure.objects.filter(state__slug__in=states).filter(query).values_list('pdb_code__index')
 
             pdbs2 = [ x[0] for x in set2 ]
 
@@ -215,7 +218,7 @@ def ServePDB(request, pdbname):
     if structure.pdb_data is None:
         quit()
 
-    only_gns = list(structure.protein_conformation.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label').all())
+    only_gns = list(structure.protein.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label').all())
     only_gn = []
     gn_map = []
     segments = {}

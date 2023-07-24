@@ -233,10 +233,10 @@
                         </td>
 
                         <!-- Receptor -->
-                        <td><span><a target="_blank" href="https://www.uniprot.org/uniprot/{{ smr.target_structure.protein_conformation.protein.parent.accession }}">{{ smr.target_structure.protein_conformation.protein.parent.entry_short|safe }}</a></span></td>
-                        <td class="uniprot"><a target="_blank" href="/protein/{{ smr.target_structure.protein_conformation.protein.parent.entry_name }}">{{ smr.target_structure.protein_conformation.protein.parent.short|safe }}</a></td>
-                        <td class="expand" style="max-width: 80px;"><span>{{ smr.target_structure.protein_conformation.protein.family.parent.short|safe }}</span></td>
-                        <td class="expand" style="max-width: 30px;"><span>{{ smr.target_structure.protein_conformation.protein.family.parent.parent.parent.short|safe }}</span></td>
+                        <td><span><a target="_blank" href="https://www.uniprot.org/uniprot/{{ smr.target_structure.protein.parent.accession }}">{{ smr.target_structure.protein.parent.entry_short|safe }}</a></span></td>
+                        <td class="uniprot"><a target="_blank" href="/protein/{{ smr.target_structure.protein.parent.entry_name }}">{{ smr.target_structure.protein.parent.short|safe }}</a></td>
+                        <td class="expand" style="max-width: 80px;"><span>{{ smr.target_structure.protein.family.parent.short|safe }}</span></td>
+                        <td class="expand" style="max-width: 30px;"><span>{{ smr.target_structure.protein.family.parent.parent.parent.short|safe }}</span></td>
 
                         <!-- Experimental structure -->
                         <td class="pdb text-left">

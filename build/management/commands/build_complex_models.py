@@ -16,7 +16,7 @@ from signprot.models import SignprotComplex
 import structure.structural_superposition as sp
 import structure.assign_generic_numbers_gpcr as as_gn
 import structure.homology_models_tests as tests
-from structure.signprot_modeling import SignprotModeling 
+from structure.signprot_modeling import SignprotModeling
 from structure.homology_modeling_functions import SignprotFunctions, GPCRDBParsingPDB, ImportHomologyModel, Remodeling
 
 import Bio.PDB as PDB
@@ -46,7 +46,7 @@ logger = logging.getLogger('homology_modeling')
 hdlr = logging.FileHandler('./logs/homology_modeling.log')
 formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 hdlr.setFormatter(formatter)
-logger.addHandler(hdlr) 
+logger.addHandler(hdlr)
 logger.setLevel(logging.INFO)
 structure_path = './structure/'
 pir_path = os.sep.join([structure_path, 'PIR'])
@@ -56,16 +56,16 @@ build_date = date.today()
 import warnings
 warnings.filterwarnings("ignore")
 
-class Command(BaseBuild):  
+class Command(BaseBuild):
     help = 'Build automated chimeric GPCR homology models'
     class_code = {'A':'Class A (Rhodopsin)', 'B1':'Class B1 (Secretin)', 'F':'Class F (Frizzled)'}
-    
+
     def add_arguments(self, parser):
         super(Command, self).add_arguments(parser=parser)
-        parser.add_argument('--update', help='Upload models to GPCRdb, overwrites existing entry', default=False, 
+        parser.add_argument('--update', help='Upload models to GPCRdb, overwrites existing entry', default=False,
                             action='store_true')
-        parser.add_argument('-r', help='''Run program for specific receptor(s) by giving UniProt common name as 
-                                          argument (e.g. 5ht2a_human)''', 
+        parser.add_argument('-r', help='''Run program for specific receptor(s) by giving UniProt common name as
+                                          argument (e.g. 5ht2a_human)''',
                             default=False, type=str, nargs='+')
         parser.add_argument('-c', help='''Run for only specific receptor class''', default=False, type=str, nargs='+')
         parser.add_argument('--purge', help='Purge all existing db records', default=False, action='store_true')
@@ -75,11 +75,11 @@ class Command(BaseBuild):
         parser.add_argument('--signprot', help='Specify signaling protein with UniProt name', default=False, type=str, nargs='+')
         parser.add_argument('--force_main_temp', help='Build model using this xtal as main template', default=False, type=str)
         parser.add_argument('--no_remodeling', help='Do not allow for remodeling loop knots', default=False, action='store_true')
-        parser.add_argument('--skip_existing', help='Skip rebuilding models already in protwis/structure/complex_models_zip/', 
+        parser.add_argument('--skip_existing', help='Skip rebuilding models already in protwis/structure/complex_models_zip/',
                             default=False, action='store_true')
         parser.add_argument('-z', help='Create zip file of complex model directory containing all built complex models', default=False,
                             action='store_true')
-        
+
     def handle(self, *args, **options):
         if options['purge']:
             print("Delete existing db entries")
@@ -136,7 +136,7 @@ class Command(BaseBuild):
         if options['r']:
             self.receptor_list = Protein.objects.filter(entry_name__in=options['r'])
         else:
-            self.receptor_list = Protein.objects.filter(parent__isnull=True, accession__isnull=False, species__common_name='Human', 
+            self.receptor_list = Protein.objects.filter(parent__isnull=True, accession__isnull=False, species__common_name='Human',
                                                         family__parent__parent__parent__name__in=receptor_families)
         self.gprotein_targets = OrderedDict()
         for rf in receptor_families:
@@ -160,7 +160,7 @@ class Command(BaseBuild):
             for receptor in self.receptor_list:
                 for i,j in self.gprotein_targets[receptor.get_protein_class()].items():
                     for target in j:
-                        if len(SignprotComplex.objects.filter(structure__protein_conformation__protein__parent__entry_name=receptor.entry_name, protein__entry_name=target))==0:
+                        if len(SignprotComplex.objects.filter(structure__protein__parent__entry_name=receptor.entry_name, protein__entry_name=target))==0:
                             self.receptor_list = [receptor]
                             self.gprotein_targets = {receptor.get_protein_class():{i:[target]}}
                             break_loop = True
@@ -190,7 +190,7 @@ class Command(BaseBuild):
         print('Receptors to model: {}'.format(len(self.receptor_list)))
         print('G protein targets: {}'.format(self.gprotein_targets))
         print('Approx num models to build in total: {}'.format(count))
-        
+
         self.processors = options['proc']
         self.prepare_input(self.processors, self.receptor_list)
 
@@ -198,7 +198,7 @@ class Command(BaseBuild):
         for i in os.listdir('./structure/complex_models_zip/'):
             if i.startswith('Class') and not i.endswith('.zip'):
                 shutil.rmtree('./structure/complex_models_zip/'+i)
-        
+
         #create master zip for archive
         if options['z']:
             os.chdir('./structure/')
@@ -215,13 +215,13 @@ class Command(BaseBuild):
             i += 1
             with lock:
                 receptor = self.receptor_list[count.value]
-                logger.info('Generating complex model for  \'{}\' ... ({} out of {}) (processor:{} count:{})'.format(receptor.entry_name, 
+                logger.info('Generating complex model for  \'{}\' ... ({} out of {}) (processor:{} count:{})'.format(receptor.entry_name,
                             count.value+1, len(self.receptor_list),processor_id,i))
-                count.value +=1 
+                count.value +=1
 
             mod_startTime = datetime.now()
             self.build_all_complex_models_for_receptor(receptor, count, i, processor_id)
-            logger.info('Complex model finished for  \'{}\' ... (processor:{} count:{}) (Time: {})'.format(receptor.entry_name, 
+            logger.info('Complex model finished for  \'{}\' ... (processor:{} count:{}) (Time: {})'.format(receptor.entry_name,
                                                                                                     processor_id,i,datetime.now() - mod_startTime))
 
     def build_all_complex_models_for_receptor(self, receptor, count, i, processor_id):
@@ -234,7 +234,7 @@ class Command(BaseBuild):
                     continue
                 # print(receptor, target)
                 import_receptor = False
-                if len(SignprotComplex.objects.filter(structure__protein_conformation__protein__parent__entry_name=receptor.entry_name, protein__entry_name=target))>0:
+                if len(SignprotComplex.objects.filter(structure__protein__parent__entry_name=receptor.entry_name, protein__entry_name=target))>0:
                     continue
                 # Skip models already in './structure/complex_models_zip/'
                 if receptor.entry_name+'-'+target in self.existing_list:
@@ -243,7 +243,7 @@ class Command(BaseBuild):
                     if first_in_subfam:
                         if self.debug:
                             print('First in subfam: {} {}'.format(target, receptor))
-                        mod = CallHomologyModeling(receptor.entry_name, 'Active', debug=self.debug, update=self.update, complex_model=True, signprot=target, 
+                        mod = CallHomologyModeling(receptor.entry_name, 'Active', debug=self.debug, update=self.update, complex_model=True, signprot=target,
                                                    force_main_temp=self.force_main_temp, no_remodeling=self.no_remodeling)
                         mod.run(fast_refinement=True)
                         first_in_subfam = False
@@ -276,4 +276,3 @@ class Command(BaseBuild):
             StructureComplexModel.objects.all().delete()
         except:
             self.logger.warning('StructureComplexModel data cannot be deleted')
-        

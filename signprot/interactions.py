@@ -20,8 +20,8 @@ def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
 def get_entry_names(request):
     """Extract a list of entry names from the post request"""
     prot_confs = request.POST.getlist("pos[]")
-    complex_objs = SignprotComplex.objects.prefetch_related('structure__protein_conformation__protein').filter(structure__protein_conformation__in=prot_confs)
-    entry_names = [complex_obj.structure.protein_conformation.protein.entry_name for complex_obj in complex_objs]
+    complex_objs = SignprotComplex.objects.prefetch_related('structure__protein').filter(structure__protein__in=prot_confs)
+    entry_names = [complex_obj.structure.protein.entry_name for complex_obj in complex_objs]
 
     return entry_names
 

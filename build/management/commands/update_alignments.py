@@ -185,7 +185,7 @@ class Command(BaseBuild):
                     # template segment reference residue number
                     try:
                         tsrrn = Residue.objects.get(
-                            protein_conformation=segment_template_structure.protein_conformation,
+                            protein_conformation__protein=segment_template_structure.protein,
                             generic_number__label=segment_ref_position)
                     except Residue.DoesNotExist:
                         self.logger.info("Template residues for {} in {} not found, looking for alternatives!".format(
@@ -195,7 +195,7 @@ class Command(BaseBuild):
                                 protein_segment=segment)
                             try:
                                 tsrrn = Residue.objects.get(
-                                    protein_conformation=segment_tpl.structure.protein_conformation,
+                                    protein_conformation__protein=segment_tpl.structure.protein,
                                     generic_number__label=segment_ref_position)
                                 main_tpl_ss = StructureSegment.objects.get(structure=segment_tpl.structure,
                                     protein_segment=segment)
@@ -238,7 +238,7 @@ class Command(BaseBuild):
                         current_protein_genes = current_protein.genes.order_by('position')
                         if current_protein_genes.count():
                             current_gene = current_protein_genes[0]
-                            template_structure_protein = segment_template_structure.protein_conformation.protein.parent
+                            template_structure_protein = segment_template_structure.protein.parent
                             template_structure_gene = template_structure_protein.genes.order_by('position')[0]
                             if current_gene.name.lower() == template_structure_gene.name.lower():
                                 ignore_rules = True
@@ -247,7 +247,7 @@ class Command(BaseBuild):
 
                         # get a list of generic numbers in main template
                         main_tpl_gn_labels = Residue.objects.filter(
-                            protein_conformation=segment_template_structure.protein_conformation, generic_number__isnull=False,
+                            protein_conformation__protein=segment_template_structure.protein, generic_number__isnull=False,
                             protein_segment=segment).values_list('generic_number__label', flat=True)
 
                         for pa, parss in anomaly_rule_sets[segment.slug].items():

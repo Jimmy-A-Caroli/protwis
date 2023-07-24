@@ -41,13 +41,13 @@ class SignprotFunctions(object):
 
     def get_subfamilies_with_templates(self, receptor_family):
         subfams = []
-        for i in SignprotComplex.objects.filter(structure__protein_conformation__protein__family__parent__parent__parent__name=receptor_family):
+        for i in SignprotComplex.objects.filter(structure__protein__family__parent__parent__parent__name=receptor_family):
             if i.protein.family.parent.name not in subfams:
                 subfams.append(i.protein.family.parent.name)
         return subfams
 
     def get_receptor_families_with_templates(self):
-        return SignprotComplex.objects.all().values_list('structure__protein_conformation__protein__family__parent__parent__parent__name', flat=True).distinct()
+        return SignprotComplex.objects.all().values_list('structure__protein__family__parent__parent__parent__name', flat=True).distinct()
 
     def get_subfam_subtype_dict(self, subfamilies, receptor_family):
         d = {}
@@ -57,7 +57,7 @@ class SignprotFunctions(object):
             for p in prots:
                 if p=='gnal_human':
                     continue
-                if len(SignprotComplex.objects.filter(protein__entry_name=p, structure__protein_conformation__protein__family__parent__parent__parent__name=receptor_family))>0:
+                if len(SignprotComplex.objects.filter(protein__entry_name=p, structure__protein__family__parent__parent__parent__name=receptor_family))>0:
                     ordered_prots.append(p)
                 else:
                     non_ordered_prots.append(p)
@@ -86,10 +86,10 @@ class GPCRDBParsingPDB(object):
                     atoms_list.append(atom)
         return atoms_list
 
-    
+
     def gn_num_extract(self, gn, delimiter):
         ''' Extract TM number and position for formatting.
-        
+
             @param gn: str, Generic number \n
             @param delimiter: str, character between TM and position (usually 'x')
         '''
@@ -102,19 +102,19 @@ class GPCRDBParsingPDB(object):
                 return split[0], int(split[1])
             except:
                 return '/', '/'
-            
+
     def gn_comparer(self, gn1, gn2, protein_conformation):
         '''
         '''
         res1 = Residue.objects.get(protein_conformation=protein_conformation, display_generic_number__label=dgn(gn1,protein_conformation))
         res2 = Residue.objects.get(protein_conformation=protein_conformation, display_generic_number__label=dgn(gn2,protein_conformation))
         return res1.sequence_number-res2.sequence_number
-            
+
     def gn_indecer(self, gn, delimiter, direction):
         ''' Get an upstream or downstream generic number from reference generic number.
-        
+
             @param gn: str, Generic number \n
-            @param delimiter: str, character between TM and position (usually 'x') \n 
+            @param delimiter: str, character between TM and position (usually 'x') \n
             @param direction: int, n'th position from gn (+ or -)
         '''
         split = self.gn_num_extract(gn, delimiter)
@@ -180,7 +180,7 @@ class GPCRDBParsingPDB(object):
                 plus_offset.append([last_seg,list(reference_dict[last_seg])[last_index+k]])
                 last_index+=1
             plus_gns.append(list(reference_dict[last_seg])[last_index+k])
-        
+
         if len(plus_offset)>0:
             for p_s, p_gn in plus_offset:
                 section.append([p_s, p_gn])
@@ -192,27 +192,27 @@ class GPCRDBParsingPDB(object):
             not available then by residue number). Returns nested OrderedDict()
             with generic numbers as keys in the outer dictionary, and atom names as keys
             in the inner dictionary.
-            
+
             @param structure: Structure, Structure object where residues should be fetched from \n
             @param generic_numbers: list, list of generic numbers to be fetched \n
             @param modify_bulges: boolean, set it to true when used for bulge switching. E.g. you want a 5x461
-            residue to be considered a 5x46 residue. 
+            residue to be considered a 5x46 residue.
         '''
         output = OrderedDict()
         atoms_list = []
         for gn in generic_numbers:
             rotamer=None
-            if 'x' in str(gn):      
-                rotamer = list(Rotamer.objects.filter(structure__protein_conformation=structure.protein_conformation, 
-                        residue__display_generic_number__label=dgn(gn,structure.protein_conformation), 
+            if 'x' in str(gn):
+                rotamer = list(Rotamer.objects.filter(structure__protein=structure.protein,
+                        residue__display_generic_number__label=dgn(gn,structure.protein),
                         structure__preferred_chain=structure.preferred_chain))
             else:
-                residue = Residue.objects.get(protein_conformation=structure.protein_conformation, sequence_number=gn)
-                rotamer = list(Rotamer.objects.filter(structure__protein_conformation=structure.protein_conformation, 
+                residue = Residue.objects.get(protein_conformation__protein=structure.protein, sequence_number=gn)
+                rotamer = list(Rotamer.objects.filter(structure__protein=structure.protein,
                         residue=residue, structure__preferred_chain=structure.preferred_chain))
                 if just_nums==False:
                     try:
-                        gn = ggn(Residue.objects.get(protein_conformation=structure.protein_conformation,
+                        gn = ggn(Residue.objects.get(protein_conformation__protein=structure.protein,
                                                     sequence_number=gn).display_generic_number.label)
                     except:
                         pass
@@ -239,13 +239,13 @@ class GPCRDBParsingPDB(object):
                             output[str(gn)] = atoms_list
                     atoms_list = []
         return output
-        
+
     def fetch_residues_from_array(self, main_pdb_array_segment, list_of_gns):
         array = OrderedDict()
         for i in list_of_gns:
             array[i.replace('x','.')] = main_pdb_array_segment[i.replace('x','.')]
         return array
-        
+
     def add_two_ordereddict(self, dict1, dict2):
         output = OrderedDict()
         for i,j in dict1.items():
@@ -267,9 +267,9 @@ class GPCRDBParsingPDB(object):
         return rotamer
 
     def pdb_array_creator(self, structure=None, filename=None):
-        ''' Creates an OrderedDict() from the pdb of a Structure object where residue numbers/generic numbers are 
+        ''' Creates an OrderedDict() from the pdb of a Structure object where residue numbers/generic numbers are
             keys for the residues, and atom names are keys for the Bio.PDB.Residue objects.
-            
+
             @param structure: Structure, Structure object of protein. When using structure, leave filename=None. \n
             @param filename: str, filename of pdb to be parsed. When using filename, leave structure=None).
         '''
@@ -282,7 +282,7 @@ class GPCRDBParsingPDB(object):
         residue_array = []
         # pdb_struct = PDB.PDBParser(QUIET=True).get_structure(structure.pdb_code.index, io)[0]
 
-        residues = Residue.objects.filter(protein_conformation=structure.protein_conformation)
+        residues = Residue.objects.filter(protein_conformation__protein=structure.protein)
         gn_list = []
         for i in residues:
             try:
@@ -328,7 +328,7 @@ class GPCRDBParsingPDB(object):
             assign_gn = as_gn.GenericNumbering(pdb_file=io, pdb_code=structure.pdb_code.index, sequence_parser=True)
             pdb_struct = assign_gn.assign_generic_numbers_with_sequence_parser()
             pref_chain = structure.preferred_chain
-            parent_prot_conf = ProteinConformation.objects.get(protein=structure.protein_conformation.protein.parent)
+            parent_prot_conf = ProteinConformation.objects.get(protein=structure.protein.parent)
             parent_residues = Residue.objects.filter(protein_conformation=parent_prot_conf)
             last_res = list(parent_residues)[-1].sequence_number
             if len(pref_chain)>1:
@@ -375,7 +375,7 @@ class GPCRDBParsingPDB(object):
                     try:
                         found_res, found_gn = None, None
                         try:
-                            found_res = Residue.objects.get(protein_conformation=structure.protein_conformation,
+                            found_res = Residue.objects.get(protein_conformation__protein=structure.protein,
                                                             sequence_number=gn)
                         except:
                             # Exception for res 317 in 5VEX, 5VEW
@@ -739,14 +739,14 @@ sequence:{uniprot}::::::::
 
 class LoopRemodel(automodel):
     def __init__(self, env, alnfile, knowns, sequence, assess_methods, gaps=[], model_chains=[], start_resnums=[], icl3_delete=[]):
-        super(LoopRemodel, self).__init__(env, alnfile=alnfile, knowns=knowns, sequence=sequence, 
+        super(LoopRemodel, self).__init__(env, alnfile=alnfile, knowns=knowns, sequence=sequence,
                                                assess_methods=assess_methods)
         self.alnfile = alnfile
         self.gaps = gaps
         self.model_chains = model_chains
         self.start_resnums = start_resnums
         self.icl3_delete = icl3_delete
-        
+
     def special_patches(self, aln):
         # Rename chains and renumber the residues in each
         self.rename_segments(segment_ids=self.model_chains,
@@ -781,7 +781,7 @@ class LoopRemodel2(loopmodel):
         self.model_chains = model_chains
         self.start_resnums = start_resnums
         self.icl3_delete = icl3_delete
-        
+
     def special_patches(self, aln):
         # Rename chains and renumber the residues in each
         self.rename_segments(segment_ids=self.model_chains,
@@ -812,4 +812,3 @@ class SilentModeller(object):
     def __exit__(self, *args):
         sys.stdout.close()
         sys.stdout = self._stdout
-

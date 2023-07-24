@@ -72,7 +72,7 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-
+        #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
         self.ss = Structure.objects.all()
         self.structure_data_dir = os.sep.join([settings.DATA_DIR, 'structure_data', 'structures'])
         if self.purge:

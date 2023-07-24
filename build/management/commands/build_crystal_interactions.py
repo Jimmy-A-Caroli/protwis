@@ -29,7 +29,7 @@ class Command(BaseBuild):
 
     def handle(self, *args, **options):
         self.delete_all()
-        self.structures = Structure.objects.all()
+        self.structures = Structure.objects.all() #need to exclude models? **JIMMY**
         self.prepare_input(options['proc'], self.structures)
         self.logger.info('Finished building crystal interaction data for all PDBs!')
 
@@ -49,7 +49,7 @@ class Command(BaseBuild):
         while count.value<len(self.structures):
             with lock:
                 s = self.structures[count.value]
-                pdb_code = s.protein_conformation.protein.entry_name
+                pdb_code = s.protein.entry_name
                 count.value +=1
                 self.logger.info('Generating crystal interactions data for PDB \'{}\'... ({} out of {})'.format(pdb_code, count.value, len(self.structures)))
 
@@ -64,7 +64,7 @@ class Command(BaseBuild):
                 # Create the pair
                 res1_seq_num = p.get_residue_1().id[1]
                 res2_seq_num = p.get_residue_2().id[1]
-                conformation = s.protein_conformation
+                conformation = s.protein
 
                 # Get the residues
                 try:

@@ -192,7 +192,7 @@ def get_all_angles(pdbs,pfs,normalized,forced_class_a = False):
     if normalized:
         ds = list(ResidueAngle.objects.filter(structure__pdb_code__index__in=pdbs_upper) \
             .exclude(residue__generic_number=None) \
-            .values_list(generic_label,'structure__protein_conformation__protein__parent__family__slug','core_distance','a_angle','outer_angle','tau','phi','psi', 'sasa', 'rsa','theta','hse','ss_dssp','tau_angle', 'rotation_angle'))
+            .values_list(generic_label,'structure__protein__parent__family__slug','core_distance','a_angle','outer_angle','tau','phi','psi', 'sasa', 'rsa','theta','hse','ss_dssp','tau_angle', 'rotation_angle'))
         for d in ds:
             d = list(d)
             if not forced_class_a:

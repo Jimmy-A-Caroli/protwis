@@ -815,7 +815,7 @@ def Ginterface(request, protein=None):
     gproteinplot = DrawGproteinPlot(
         gprotein_residues, "Gprotein", protein)
 
-    crystal = Structure.objects.get(pdb_code__index="3SN6")
+    crystal = Structure.objects.get(pdb_code__index="3SN6")  # HARDCODED? **JIMMY**
     aa_names = definitions.AMINO_ACID_GROUP_NAMES_OLD
     names_aa = dict(zip(aa_names.values(), aa_names.keys()))
     names_aa['Polar (S/T)'] = 'pol_short'
@@ -1122,12 +1122,12 @@ def sort_a_by_b(a, b, remove_invalid=False):
 
 def interface_dataset():
     # correct receptor entry names - the ones with '_a' appended
-    complex_objs = SignprotComplex.objects.prefetch_related('structure__protein_conformation__protein')
+    complex_objs = SignprotComplex.objects.prefetch_related('structure__protein')
 
     # TOFIX: Current workaround is forcing _a to pdb for indicating alpha-subunit
     # complex_names = [complex_obj.structure.protein_conformation.protein.entry_name + '_' + complex_obj.alpha.lower() for
     #                 complex_obj in complex_objs]
-    complex_names = [complex_obj.structure.protein_conformation.protein.entry_name + '_a' for
+    complex_names = [complex_obj.structure.protein.entry_name + '_a' for
                      complex_obj in complex_objs]
 
     complex_struc_ids = [co.structure_id for co in complex_objs]
@@ -1156,7 +1156,7 @@ def interface_dataset():
         'interaction__interaction_type',
         'referenced_structure__pdb_code__index',
         'referenced_structure__signprot_complex__protein__entry_name',
-        'referenced_structure__protein_conformation__protein__parent__entry_name',
+        'referenced_structure__protein__parent__entry_name',
         'res1__amino_acid',
         'res1__sequence_number',
         'res1__generic_number__label',
@@ -1174,9 +1174,9 @@ def interface_dataset():
             # ordering=interaction_sort_order
         ),
         pdb_id=F('referenced_structure__pdb_code__index'),
-        conf_id=F('referenced_structure__protein_conformation_id'),
+        conf_id=F('referenced_structure__protein_id'),
         gprot=F('referenced_structure__signprot_complex__protein__entry_name'),
-        entry_name=F('referenced_structure__protein_conformation__protein__parent__entry_name'),
+        entry_name=F('referenced_structure__protein__parent__entry_name'),
 
         rec_aa=F('res1__amino_acid'),
         rec_pos=F('res1__sequence_number'),
@@ -1207,7 +1207,7 @@ def AJAX_Interactions(request):
     elif effector == 'A':
         complex_names = [pdb_name.lower() + '_arrestin' for pdb_name in selected_pdbs]
     pdbs_names = [pdb.lower() for pdb in selected_pdbs]
-    complex_objs = SignprotComplex.objects.filter(structure__protein_conformation__protein__entry_name__in=pdbs_names).prefetch_related('structure__protein_conformation__protein')
+    complex_objs = SignprotComplex.objects.filter(structure__protein__entry_name__in=pdbs_names).prefetch_related('structure__protein')
     # fetching the id of the selected structures
     complex_struc_ids = [co.structure_id for co in complex_objs]
     # protein conformations for those
@@ -1236,7 +1236,7 @@ def AJAX_Interactions(request):
         'interaction__interaction_type',
         'referenced_structure__pdb_code__index',
         'referenced_structure__signprot_complex__protein__entry_name',
-        'referenced_structure__protein_conformation__protein__parent__entry_name',
+        'referenced_structure__protein__parent__entry_name',
         'res1__amino_acid',
         'res1__sequence_number',
         'res1__generic_number__label',
@@ -1254,9 +1254,9 @@ def AJAX_Interactions(request):
             # ordering=interaction_sort_order
         ),
         pdb_id=F('referenced_structure__pdb_code__index'),
-        conf_id=F('referenced_structure__protein_conformation_id'),
+        conf_id=F('referenced_structure__protein_id'),
         gprot=F('referenced_structure__signprot_complex__protein__entry_name'),
-        entry_name=F('referenced_structure__protein_conformation__protein__parent__entry_name'),
+        entry_name=F('referenced_structure__protein__parent__entry_name'),
 
         rec_aa=F('res1__amino_acid'),
         rec_pos=F('res1__sequence_number'),
@@ -1317,9 +1317,9 @@ def InteractionMatrix(request, database='gprotein'):
     struc = SignprotComplex.objects.prefetch_related(
         'structure__pdb_code',
         'structure__stabilizing_agents',
-        'structure__protein_conformation__protein__species',
-        'structure__protein_conformation__protein__parent__parent__parent',
-        'structure__protein_conformation__protein__family__parent__parent__parent__parent',
+        'structure__protein__species',
+        'structure__protein__parent__parent__parent',
+        'structure__protein__family__parent__parent__parent__parent',
         'structure__stabilizing_agents',
         'structure__signprot_complex__protein__family__parent__parent__parent__parent',
     )
@@ -1329,12 +1329,12 @@ def InteractionMatrix(request, database='gprotein'):
         r = {}
         s = s.structure
         r['pdb_id'] = s.pdb_code.index
-        r['name'] = s.protein_conformation.protein.parent.short()
-        r['entry_name'] = s.protein_conformation.protein.parent.entry_name
-        r['class'] = s.protein_conformation.protein.get_protein_class()
-        r['family'] = s.protein_conformation.protein.get_protein_family()
-        r['conf_id'] = s.protein_conformation.id
-        r['organism'] = s.protein_conformation.protein.species.common_name
+        r['name'] = s.protein.parent.short()
+        r['entry_name'] = s.protein.parent.entry_name
+        r['class'] = s.protein.get_protein_class()
+        r['family'] = s.protein.get_protein_family()
+        r['conf_id'] = s.id
+        r['organism'] = s.protein.species.common_name
         try:
             r['gprot'] = s.get_stab_agents_gproteins()
         except Exception:

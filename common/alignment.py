@@ -1401,22 +1401,22 @@ class AlignedReferenceTemplate(Alignment):
             template_family = self.reference_protein.family.parent.parent.parent
         if self.reference_protein.family.parent.parent.parent.name == 'Class B2 (Adhesion)':
             self.structures_data = Structure.objects.filter(
-                state__name__in=self.query_states).filter(Q(protein_conformation__protein__parent__family__parent__parent__parent=template_family) |
-                                                          Q(protein_conformation__protein__parent__family__parent__parent__parent=self.reference_protein.family.parent.parent.parent)
-                                                          ).order_by('protein_conformation__protein__parent','resolution').filter(annotated=True).distinct()
+                state__name__in=self.query_states).filter(Q(protein__parent__family__parent__parent__parent=template_family) |
+                                                          Q(protein__parent__family__parent__parent__parent=self.reference_protein.family.parent.parent.parent)
+                                                          ).order_by('protein__parent','resolution').filter(annotated=True).distinct()
         else:
             self.structures_data = Structure.objects.filter(
-                state__name__in=self.query_states, protein_conformation__protein__parent__family__parent__parent__parent=
-                template_family).order_by('protein_conformation__protein__parent',
+                state__name__in=self.query_states, protein__parent__family__parent__parent__parent=
+                template_family).order_by('protein__parent',
                                           'resolution').filter(annotated=True).distinct()
         if self.revise_xtal==None:
             if self.force_main_temp:
                 main_st = Structure.objects.get(pdb_code__index=self.force_main_temp.upper())
-                if main_st.protein_conformation.protein.parent.entry_name in self.main_temp_ban_list:
-                    self.main_temp_ban_list.remove(main_st.protein_conformation.protein.parent.entry_name)
-            self.structures_data = self.structures_data.exclude(protein_conformation__protein__parent__entry_name__in=self.main_temp_ban_list)
+                if main_st.protein.parent.entry_name in self.main_temp_ban_list:
+                    self.main_temp_ban_list.remove(main_st.protein.parent.entry_name)
+            self.structures_data = self.structures_data.exclude(protein__parent__entry_name__in=self.main_temp_ban_list)
         self.load_proteins(
-            [Protein.objects.get(id=target.protein_conformation.protein.parent.id) for target in self.structures_data])
+            [Protein.objects.get(id=target.protein.parent.id) for target in self.structures_data])
 
     def get_main_template(self):
         """Returns main template structure after checking for matching helix start and end positions."""
@@ -1424,20 +1424,20 @@ class AlignedReferenceTemplate(Alignment):
             st = Structure.objects.get(pdb_code__index=self.force_main_temp.upper())
             # if self.core_alignment and st.pdb_code.index in self.seq_num_overwrite_files:
             #     self.overwrite_db_seq_nums(st, st.pdb_code.index)
-            self.main_template_protein = [i for i in self.ordered_proteins if i.protein==st.protein_conformation.protein.parent][0]
+            self.main_template_protein = [i for i in self.ordered_proteins if i.protein==st.protein.parent][0]
             return st
         i = 1
         if self.complex:
             complex_templates = self.get_template_from_gprotein(self.signprot)
         for st in self.similarity_table:
-            if st.pdb_code.index in ['5LWE','4Z9G'] and st.protein_conformation.protein.parent==self.ordered_proteins[i].protein:
+            if st.pdb_code.index in ['5LWE','4Z9G'] and st.protein.parent==self.ordered_proteins[i].protein:
                 i+=1
                 continue
             # only use complex main template in table signprot_complex
             if self.complex and st.pdb_code.index not in complex_templates:
                 i+=1
                 continue
-            if st.protein_conformation.protein.parent==self.ordered_proteins[i].protein:
+            if st.protein.parent==self.ordered_proteins[i].protein:
                 self.main_template_protein = self.ordered_proteins[i]
                 # if self.core_alignment and st.pdb_code.index in self.seq_num_overwrite_files:
                 #     self.overwrite_db_seq_nums(st, st.pdb_code.index)
@@ -1445,10 +1445,10 @@ class AlignedReferenceTemplate(Alignment):
 
     def get_template_from_gprotein(self, signprot):
         gprotein = Protein.objects.get(entry_name=signprot)
-        templates = SignprotComplex.objects.filter(protein=gprotein, structure__protein_conformation__protein__family__slug__startswith=self.gpcr_class.slug).exclude(beta_protein__isnull=True).values_list('structure__pdb_code__index', flat=True)
+        templates = SignprotComplex.objects.filter(protein=gprotein, structure__protein__family__slug__startswith=self.gpcr_class.slug).exclude(beta_protein__isnull=True).values_list('structure__pdb_code__index', flat=True)
         if len(templates)==0:
             subfamily = Protein.objects.filter(family__parent=gprotein.family.parent).exclude(entry_name=gprotein.entry_name)
-            templates = SignprotComplex.objects.filter(protein__in=subfamily, structure__protein_conformation__protein__family__slug__startswith=self.gpcr_class.slug).exclude(beta_protein__isnull=True).values_list('structure__pdb_code__index', flat=True)
+            templates = SignprotComplex.objects.filter(protein__in=subfamily, structure__protein__family__slug__startswith=self.gpcr_class.slug).exclude(beta_protein__isnull=True).values_list('structure__pdb_code__index', flat=True)
         if len(templates)==0:
             templates = SignprotComplex.objects.all().exclude(beta_protein__isnull=True).values_list('structure__pdb_code__index', flat=True)
         return templates
@@ -1466,9 +1466,9 @@ class AlignedReferenceTemplate(Alignment):
         similarity_table = OrderedDict()
         for protein in self.proteins:
             try:
-                matches = self.structures_data.filter(protein_conformation__protein__parent=protein.protein)
+                matches = self.structures_data.filter(protein__parent=protein.protein)
                 for m in matches:
-                    if m.protein_conformation.protein.parent==self.reference_protein.protein and int(protein.similarity)==0:
+                    if m.protein.parent==self.reference_protein.protein and int(protein.similarity)==0:
                         continue
                     if (m, int(protein.similarity), float(m.resolution), protein, m.representative) not in temp_list:
                         temp_list.append((m, int(protein.similarity), float(m.resolution), protein, m.representative))
@@ -1498,7 +1498,8 @@ class AlignedReferenceTemplate(Alignment):
         """
         temp_list, temp_list1, temp_list2, temp_list_mid = [],[],[],[]
         similarity_table = OrderedDict()
-        self.main_template_protein = self.main_template_structure.protein_conformation.protein.parent
+        # DOUBLE CHECK MAIN TEMPLATE PROTEIN **JIMMY**
+        self.main_template_protein = self.main_template_structure.protein.parent
         ref_seq = Residue.objects.filter(protein_conformation__protein=self.reference_protein,
                                          protein_segment__slug=self.segment_labels[0])
         x50_ref = False
@@ -1535,11 +1536,11 @@ class AlignedReferenceTemplate(Alignment):
                 ref_ECL2 = None
 
         for struct, similarity in self.provide_similarity_table.items():
-            protein = struct.protein_conformation.protein.parent
+            protein = struct.protein.parent
             if protein==self.main_template_protein:
-                main_temp_seq = Residue.objects.filter(protein_conformation=struct.protein_conformation,
+                main_temp_seq = Residue.objects.filter(protein_conformation__protein=struct.protein,
                                                        protein_segment__slug=self.segment_labels[0])
-                parent = ProteinConformation.objects.get(protein=struct.protein_conformation.protein.parent)
+                parent = ProteinConformation.objects.get(protein=struct.protein.parent)
                 main_temp_parent = Residue.objects.filter(protein_conformation=parent,
                                                           protein_segment__slug=self.segment_labels[0])
                 try:
@@ -1592,14 +1593,14 @@ class AlignedReferenceTemplate(Alignment):
             else:
                 temp_length, temp_length1, temp_length2 = [],[],[]
                 try:
-                    alt_last_gn = Residue.objects.get(protein_conformation=struct.protein_conformation,
+                    alt_last_gn = Residue.objects.get(protein_conformation__protein=struct.protein,
                                                       display_generic_number__label=dgn(last_before_gn,
-                                                                                        struct.protein_conformation))
-                    alt_first_gn= Residue.objects.get(protein_conformation=struct.protein_conformation,
+                                                                                        struct.protein))
+                    alt_first_gn= Residue.objects.get(protein_conformation__protein=struct.protein,
                                                       display_generic_number__label=dgn(first_after_gn,
-                                                                                        struct.protein_conformation))
+                                                                                        struct.protein))
                     temp_length = alt_first_gn.sequence_number-alt_last_gn.sequence_number-1
-                    alt_seq = Residue.objects.filter(protein_conformation=struct.protein_conformation, protein_segment__slug=self.segment_labels[0])
+                    alt_seq = Residue.objects.filter(protein_conformation__protein=struct.protein, protein_segment__slug=self.segment_labels[0])
                     if self.segment_labels[0]=='ECL2' and ref_ECL2!=None:
                         alt_ECL2 = self.ECL2_slicer(alt_seq)
                         alt_rota = [x for x in Rotamer.objects.filter(structure=struct, residue__in=alt_ECL2[1]) if x.pdbdata.pdb.startswith('COMPND')==False]
@@ -1888,25 +1889,25 @@ class ClosestReceptorHomolog():
         exclusion_list = ['opsd_todpa', 'g1sgd4_rabit', 'us28_hcmva', 'q08bg4_danre', 'q9wtk1_cavpo', 'q80km9_hcmv', 'q98sw5_xenla', 'b1b1u5_9arac']
         if self.protein in exclusion_list:
             exclusion_list.remove(self.protein)
-        this_structs = Structure.objects.filter(protein_conformation__protein__parent__entry_name=self.protein)
+        this_structs = Structure.objects.filter(protein__parent__entry_name=self.protein)
         if len(this_structs)>0:
-            return this_structs[0].protein_conformation.protein.parent
+            return this_structs[0].protein.parent
         else:
             if p.family.slug[:3]=='008':
-                structures = Structure.objects.all().exclude(annotated=False).exclude(protein_conformation__protein__parent__entry_name__in=exclusion_list)
+                structures = Structure.objects.all().exclude(annotated=False).exclude(protein__parent__entry_name__in=exclusion_list)
             elif isinstance(self.family_mapping[p.family.slug[:3]], list):
                 structures = []
                 for slug in self.family_mapping[p.family.slug[:3]]:
-                    structures+=list(Structure.objects.filter(protein_conformation__protein__parent__family__slug__istartswith=slug).exclude(
-                    annotated=False).exclude(protein_conformation__protein__parent__entry_name__in=exclusion_list))
+                    structures+=list(Structure.objects.filter(protein__parent__family__slug__istartswith=slug).exclude(
+                    annotated=False).exclude(protein__parent__entry_name__in=exclusion_list))
             else:
-                structures = Structure.objects.filter(protein_conformation__protein__parent__family__slug__istartswith=self.family_mapping[p.family.slug[:3]]).exclude(
-                    annotated=False).exclude(protein_conformation__protein__parent__entry_name__in=exclusion_list)
+                structures = Structure.objects.filter(protein__parent__family__slug__istartswith=self.family_mapping[p.family.slug[:3]]).exclude(
+                    annotated=False).exclude(protein__parent__entry_name__in=exclusion_list)
             a.load_reference_protein(p)
             structure_proteins = []
             for i in structures:
-                if i.protein_conformation.protein.parent not in structure_proteins:
-                    structure_proteins.append(i.protein_conformation.protein.parent)
+                if i.protein.parent not in structure_proteins:
+                    structure_proteins.append(i.protein.parent)
             a.load_proteins(structure_proteins)
             a.load_segments(ProteinSegment.objects.filter(slug__in=self.protein_segments))
             a.build_alignment()

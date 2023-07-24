@@ -280,18 +280,18 @@ class Command(BaseCommand):
         with io.StringIO(var) as f:
             return parser.get_structure(pdb_code,f)
 
-
+    #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
     def handle(self, *args, **options):
         if incremental_update:
             done_structures = Angle.objects.values('structure_id').distinct()
             # TODO add filter here for non-processed structures
-            self.references = Structure.objects.all().exclude(id__in=done_structures).prefetch_related('pdb_code','pdb_data','protein_conformation__protein','protein_conformation__state').order_by('protein_conformation__protein')
+            self.references = Structure.objects.all().prefetch_related('pdb_code','pdb_data','protein','state').order_by('protein')
         else:
             Angle.objects.all().delete()
             Distance.objects.all().delete()
             StructureVectors.objects.all().delete()
             print("All Angle, Distance, and StructureVector data cleaned")
-            self.references = Structure.objects.all().prefetch_related('pdb_code','pdb_data','protein_conformation__protein','protein_conformation__state').order_by('protein_conformation__protein')
+            self.references = Structure.objects.all().prefetch_related('pdb_code','pdb_data','protein','state').order_by('protein')
 
         # DEBUG for a specific PDB
         # self.references = Structure.objects.filter(pdb_code__index="2RH1").prefetch_related('pdb_code','pdb_data','protein_conformation__protein','protein_conformation__state').order_by('protein_conformation__protein')
@@ -533,7 +533,7 @@ class Command(BaseCommand):
         # references = list(references)
         references = self.references
 
-        pids = [ref.protein_conformation.protein.id for ref in references]
+        pids = [ref.protein.id for ref in references]
 
         qset = Residue.objects.filter(protein_conformation__protein__id__in=pids)
         if GN_only:
@@ -542,7 +542,7 @@ class Command(BaseCommand):
             qset = qset.order_by('-protein_conformation__protein','-generic_number__label')
         qset = list(qset.prefetch_related('generic_number', 'protein_conformation__protein','protein_conformation__state'))
 
-        res_dict = {ref.pdb_code.index:qgen(ref.protein_conformation.protein,qset) for ref in references}
+        res_dict = {ref.pdb_code.index:qgen(ref.protein,qset) for ref in references}
 
         #######################################################################
         ######################### Start of main loop ##########################
@@ -565,7 +565,7 @@ class Command(BaseCommand):
             try:
                 structure = self.load_pdb_var(pdb_code,reference.pdb_data.pdb)
                 pchain = structure[0][preferred_chain]
-                state_id = reference.protein_conformation.state.id
+                state_id = reference.state.id
 
                 # DSSP
                 filename = "{}_temp.pdb".format(pdb_code)

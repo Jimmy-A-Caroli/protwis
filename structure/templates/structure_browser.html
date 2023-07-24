@@ -280,11 +280,11 @@
                     {% endif %}
                         <!-- Receptor -->
                         <td class="text-center"><input class="alt" type="checkbox" id="{{ structure.pk }}"></td>
-                        <td><span><a target='_blank' href="http://www.uniprot.org/uniprot/{{ structure.protein_conformation.protein.parent.accession }}">{{ structure.protein_conformation.protein.parent.entry_short|safe }}</a></span></td>
-                        <td class='uniprot'><a target='_blank' href="/protein/{{ structure.protein_conformation.protein.parent.entry_name }}">{{ structure.protein_conformation.protein.parent.short|safe }}</a></td>
-                        <td class="expand"><span>{{ structure.protein_conformation.protein.family.parent.short|safe }}</span></td>
-                        <td class="expand" style="max-width: 30px;">{{ structure.protein_conformation.protein.family.parent.parent.parent.shorter|safe }}</td>
-                        <td class="expand">{{ structure.protein_conformation.protein.species.common_name }}</td>
+                        <td><span><a target='_blank' href="http://www.uniprot.org/uniprot/{{ structure.protein.parent.accession }}">{{ structure.protein.parent.entry_short|safe }}</a></span></td>
+                        <td class='uniprot'><a target='_blank' href="/protein/{{ structure.protein.parent.entry_name }}">{{ structure.protein.parent.short|safe }}</a></td>
+                        <td class="expand"><span>{{ structure.protein.family.parent.short|safe }}</span></td>
+                        <td class="expand" style="max-width: 30px;">{{ structure.protein.family.parent.parent.parent.shorter|safe }}</td>
+                        <td class="expand">{{ structure.protein.species.common_name }}</td>
                         <!-- Structure -->
                         <td>
                             {{ structure.structure_type.type_short|escape }}
@@ -339,13 +339,13 @@
                         <!-- Endogenous ligand -->
                         <td class='expand'>
                             {% autoescape off %}
-                              {{ structure.protein_conformation.protein.parent.endogenous_gtp_set.all | endo_format }}
+                              {{ structure.protein.parent.endogenous_gtp_set.all | endo_format }}
                             {% endautoescape %}
                         </td>
-                        <td>{{ structure.protein_conformation.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
+                        <td>{{ structure.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
                         <!-- Sodium ion site -->
                         <td>
-                            {% if structure.protein_conformation.is_sodium %}
+                            {% if structure.protein.is_sodium %}
                             Yes
                             {% else %}
                             No

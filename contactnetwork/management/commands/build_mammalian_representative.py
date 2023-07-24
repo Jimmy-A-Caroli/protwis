@@ -22,11 +22,11 @@ class Command(BaseCommand):
     def receptor_mammal_representatives(self):
         # print('Script to label structures if they are mammal, and which are the closest structure to human')
 
-        structures = Structure.objects.all().prefetch_related(
+        structures = Structure.objects.all().prefetch_related( #DO WE NEED TO EXCLUDE MODELS? **JIMMY*
             "pdb_code",
             "state",
-            "protein_conformation__protein__parent__family",
-            "protein_conformation__protein__species")
+            "protein__parent__family",
+            "protein__species")
 
         distinct_proteins = {}
         is_mammal = {}
@@ -35,10 +35,10 @@ class Command(BaseCommand):
         for s in structures:
             pdb = s.pdb_code.index
             state = s.state.slug
-            slug = s.protein_conformation.protein.parent.family.slug
-            name = s.protein_conformation.protein.parent.family.name
-            species = s.protein_conformation.protein.species.common_name
-            protein = s.protein_conformation.protein.parent
+            slug = s.protein.parent.family.slug
+            name = s.protein.parent.family.name
+            species = s.protein.species.common_name
+            protein = s.protein.parent
 
             if species not in is_mammal:
                 mammal = self.check_uniprot_if_mammal(protein)
@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 distinct_proteins[key] = []
 
             distinct_proteins[key].append([pdb, species, protein, s])
-        
+
         print("DEBUG", is_mammal)
 
 

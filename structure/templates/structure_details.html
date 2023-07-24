@@ -14,7 +14,7 @@
 
 <div class="row text-success">
   <div class="text-center">
-    <h2>{{ crystal.protein_conformation.protein.family.name|safe }}</h2>
+    <h2>{{ crystal.protein.family.name|safe }}</h2>
   </div>
 </div>
 
@@ -23,7 +23,7 @@
     <h4>PROTEIN CLASS</h4>
   </div>
   <div class="col-md-9">
-    {{ crystal.protein_conformation.protein.get_protein_class }}
+    {{ crystal.protein.get_protein_class }}
   </div>
 </div>
 
@@ -32,7 +32,7 @@
     <h4>RECEPTOR</h4>
   </div>
   <div class="col-md-9">
-    <a href="../protein/{{ crystal.protein_conformation.protein.parent.entry_name }}">{{ crystal.protein_conformation.protein.parent.name|safe }}</a>
+    <a href="../protein/{{ crystal.protein.parent.entry_name }}">{{ crystal.protein.parent.name|safe }}</a>
   </div>
 </div>
 
@@ -50,7 +50,7 @@
     <h4>SPECIES</h4>
   </div>
   <div class="col-md-9">
-    {{ crystal.protein_conformation.protein.species.latin_name }}
+    {{ crystal.protein.species.latin_name }}
   </div>
 </div>
 
@@ -138,8 +138,8 @@
   </div>
   <div class="col-md-9">
     <p style="display: inline;">
-      {% if crystal.protein_conformation.protein.parent.endogenous_gtp_set.all.count > 0 %}
-        {{ crystal.protein_conformation.protein.parent.endogenous_gtp_set.all | endo_format | safe }}
+      {% if crystal.protein.parent.endogenous_gtp_set.all.count > 0 %}
+        {{ crystal.protein.parent.endogenous_gtp_set.all | endo_format | safe }}
       {% else %}
         No endogenous ligands available
       {% endif %}

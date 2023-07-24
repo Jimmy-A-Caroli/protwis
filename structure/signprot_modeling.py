@@ -18,7 +18,7 @@ from copy import deepcopy
 
 gprotein_segments = ProteinSegment.objects.filter(proteinfamily='Alpha')
 gprotein_segment_slugs = [i.slug for i in gprotein_segments]
-atom_num_dict = {'E':9, 'S':6, 'Y':12, 'G':4, 'A':5, 'V':7, 'M':8, 'L':8, 'I':8, 'T':7, 'F':11, 'H':10, 'K':9, 
+atom_num_dict = {'E':9, 'S':6, 'Y':12, 'G':4, 'A':5, 'V':7, 'M':8, 'L':8, 'I':8, 'T':7, 'F':11, 'H':10, 'K':9,
                          'D':8, 'C':6, 'R':11, 'P':7, 'Q':9, 'N':8, 'W':14, '-':0}
 subfam_template_preference = {'Gs': ['Gs','Gi/o','Gq/11','G12/13','GPa1 family'],
                               'Gi/o': ['Gi/o','Gq/11','G12/13','Gs','GPa1 family'],
@@ -82,7 +82,7 @@ class SignprotModeling():
                             return subfam_dict[fam][0]
                     except ProteinFamily.DoesNotExist:
                         continue
-                return Structure.objects.get(pdb_code__index='3SN6')
+                return Structure.objects.get(pdb_code__index='3SN6')    #HARDCODED? **JIMMY**
 
     def get_ordered_alpha_templates(self, signprot):
         target_subfam = signprot.family.parent
@@ -119,7 +119,7 @@ class SignprotModeling():
             if res.protein_segment.slug not in self.template_source:
                 self.template_source[res.protein_segment.slug] = OrderedDict()
             self.template_source[res.protein_segment.slug][res.display_generic_number.label] = [self.main_structure, self.main_structure]
-        
+
         # Custom fix for engineered and distorted alphas
         if self.main_structure.pdb_code.index in ['7JVQ','6WHA','7D77','7D7M','7BW0','6PLB','6NBI','6XOX']: # FIXME - need non-hardcoded approach here
             for seg in ['H1', 'h1ha']:
@@ -146,7 +146,7 @@ class SignprotModeling():
 
             alt_residues1 = parse.fetch_residues_from_array(alt_signprot_pdb_array['HN'], before_cgns)
             alt_residues2 = parse.fetch_residues_from_array(alt_signprot_pdb_array['H5'], after_cgns)
-            
+
             alt_middle = OrderedDict()
             for s in segs_for_alt_complex_struct:
                 alt_middle = parse.add_two_ordereddict(alt_middle, alt_signprot_pdb_array[s])
@@ -159,7 +159,7 @@ class SignprotModeling():
                     del_list.append(r)
             for r in del_list:
                 del alt_residues[r]
-            
+
             superpose = sp.LoopSuperpose(orig_residues, alt_residues)
             new_residues = superpose.run()
             key_list = list(new_residues.keys())[4:-4]
@@ -199,7 +199,7 @@ class SignprotModeling():
                 signprot_pdb_array['H1']['G.H1.10'] = 'x'
                 signprot_pdb_array['H1']['G.H1.11'] = 'x'
                 self.template_source = update_template_source(self.template_source, ['G.H1.09','G.H1.10','G.H1.11'], None, 'H1')
-                
+
             # Let Modeller model buffer regions
             self.trimmed_residues.append('s1h1_6')
             self.trimmed_residues.append('hfs2_1')
@@ -216,7 +216,7 @@ class SignprotModeling():
             if self.signprot_complex.protein.entry_name=='gnai1_human':
                 self.trimmed_residues.append('G.H1.10')
                 self.trimmed_residues.append('G.H1.11')
-        
+
         # Identifying missing sections
         full_protein_list = []
         for seg, resis in signprot_pdb_array.items():
@@ -326,21 +326,21 @@ class SignprotModeling():
                         key = r_seg+'_'+str(i+1)
                         if i+1<=mid_temp:
                             temp_out[key] = temp_loop[i]
-                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, i, ref_loop_residues[i].display_generic_number.label, 
+                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, i, ref_loop_residues[i].display_generic_number.label,
                                                                                       ref_loop_residues[i].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                         elif mid_temp<i+1<=loop_length-mid_temp+1:
                             if i+1==loop_length-mid_temp+1 and len(temp_loop)%2==0:
                                 temp_out[key] = temp_loop[mid_temp+j]
-                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_temp+j, ref_loop_residues[i].display_generic_number.label, 
+                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_temp+j, ref_loop_residues[i].display_generic_number.label,
                                                                                           ref_loop_residues[i].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                                 j+=1
                             else:
                                 temp_out[key.replace('_','?')] = '-'
-                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_temp+j, ref_loop_residues[i].display_generic_number.label, 
+                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_temp+j, ref_loop_residues[i].display_generic_number.label,
                                                                                           ref_loop_residues[i].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                         else:
                             temp_out[key] = temp_loop[mid_temp+j]
-                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_temp+j, ref_loop_residues[i].display_generic_number.label, 
+                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_temp+j, ref_loop_residues[i].display_generic_number.label,
                                                                                       ref_loop_residues[i].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                             j+=1
                         if list(sign_a.reference_dict[r_seg].keys())[i] in self.trimmed_residues:
@@ -367,24 +367,24 @@ class SignprotModeling():
                         key = r_seg+'_'+str(i+1)
                         if i+1<=mid_ref:
                             ref_out[key] = ref_loop[i]
-                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, i, temp_loop_residues[i].display_generic_number.label, 
+                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, i, temp_loop_residues[i].display_generic_number.label,
                                                                                       ref_loop_residues[i].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                         elif mid_ref<i+1<=loop_length-mid_ref+1:
                             if i+1==loop_length-mid_ref+1 and len(ref_loop)%2==0:
                                 ref_out[key] = ref_loop[mid_ref+j]
-                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_ref+j, temp_loop_residues[i].display_generic_number.label, 
+                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_ref+j, temp_loop_residues[i].display_generic_number.label,
                                                                                           ref_loop_residues[mid_ref+j].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                                 j+=1
                             else:
                                 ref_out[key.replace('_','?')] = '-'
-                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_ref+j, temp_loop_residues[i].display_generic_number.label, 
+                                self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_ref+j, temp_loop_residues[i].display_generic_number.label,
                                                                                           ref_loop_residues[mid_ref+j].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                         else:
                             ref_out[key] = ref_loop[mid_ref+j]
-                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_ref+j, temp_loop_residues[i].display_generic_number.label, 
+                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, mid_ref+j, temp_loop_residues[i].display_generic_number.label,
                                                                                       ref_loop_residues[mid_ref+j].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                             j+=1
-                        
+
                     i = 0
                     for j in list(sign_a.template_dict[t_seg].values()):
                         key = r_seg+'_'+str(i+1)
@@ -407,7 +407,7 @@ class SignprotModeling():
                         ref_out[r_key] = i
                         temp_out[r_seg+'_'+str(ct)] = j
                         if len(temp_loop_residues)==len(temp_loop):
-                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, ct-1, temp_loop_residues[ct-1].display_generic_number.label, 
+                            self.template_source = compare_and_update_template_source(self.template_source, r_seg, signprot_pdb_array, ct-1, temp_loop_residues[ct-1].display_generic_number.label,
                                                                                       ref_loop_residues[cr-1].sequence_number, segs_for_alt_complex_struct, alt_complex_struct, self.main_structure)
                         if list(sign_a.reference_dict[r_seg].keys())[cr-1] in self.trimmed_residues:
                             self.trimmed_residues.append(r_key)
@@ -463,7 +463,7 @@ class SignprotModeling():
                 sign_a.template_dict[t_seg] = temp_out_final
                 sign_a.alignment_dict[a_seg] = align_out_final
                 signprot_pdb_array[r_seg] = new_pdb_array_final
-                
+
                 align_loop = list(sign_a.alignment_dict[a_seg].values())
 
         # Updating template dict with pdb_array
@@ -499,7 +499,7 @@ class SignprotModeling():
                     self.template_source = update_template_source(self.template_source, [cgn], None, seg, just_rot=True)
                     if self.debug:
                         print("No rotamer template, mutating to ALA: ", cgn)
-        
+
         self.a.reference_dict = deepcopy(self.a.reference_dict)
         self.a.template_dict = deepcopy(self.a.template_dict)
         self.a.alignment_dict = deepcopy(self.a.alignment_dict)
@@ -656,7 +656,7 @@ class SignprotModeling():
             atoms = [atom for atom in g_res]
             self.main_pdb_array['Gamma'][key] = atoms
             self.template_source['Gamma'][key] = [self.main_structure, self.main_structure]
-        
+
         # pprint.pprint(self.trimmed_residues)
         # for i,j,k,l in zip(sign_a.reference_dict, sign_a.template_dict, sign_a.alignment_dict, signprot_pdb_array):
         #     pprint.pprint(self.template_source[i])
@@ -718,4 +718,3 @@ class SignprotModeling():
         alignment.template_dict = new_temp
         alignment.alignment_dict = new_align
         return alignment
-

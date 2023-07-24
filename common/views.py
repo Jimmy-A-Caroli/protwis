@@ -13,7 +13,7 @@ Alignment = getattr(__import__('common.alignment_' + settings.SITE_NAME, fromlis
 
 from common.selection import SimpleSelection, Selection, SelectionItem
 from ligand.models import AssayExperiment, BiasedData, BalancedLigands
-from structure.models import Structure, StructureModel, StructureComplexModel
+from structure.models import Structure, StructureComplexModel
 from protein.models import Protein, ProteinFamily, ProteinSegment, Species, ProteinSource, ProteinSet, ProteinCouplings
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, ResidueGenericNumberEquivalent, ResiduePositionSet, Residue
 from interaction.forms import PDBform
@@ -277,7 +277,7 @@ def getTargetTable():
             )
             proteins = proteins | missing[:1]
 
-        pdbids = list(Structure.objects.all().values_list("pdb_code__index", "protein_conformation__protein__family_id"))
+        pdbids = list(Structure.objects.exclude(structure_type__slug__startswith='af-').values_list("pdb_code__index", "protein__family_id"))
 
         allpdbs = {}
         for pdb in pdbids:
@@ -1246,9 +1246,9 @@ def AddToSelection(request):
             state = selection_id.split('_')[-1]
             entry_name = '_'.join(selection_id.split('_')[:-1])
             try:
-                sm = StructureModel.objects.get(protein__entry_name=entry_name, state__name=state)
-            except StructureModel.DoesNotExist:
-                sm = StructureModel.objects.get(protein__parent__entry_name=entry_name, state__name=state)
+                sm = Structure.objects.get(protein__entry_name=entry_name, state__name=state, structure_type__slug__startswith='af-')
+            except Structure.DoesNotExist:
+                sm = Structure.objects.get(protein__parent__entry_name=entry_name, state__name=state, structure_type__slug__startswith='af-')
             o.append(sm)
 
         elif selection_subtype == 'structure_models_many':
@@ -1256,7 +1256,7 @@ def AddToSelection(request):
             for model in selection_id.split(","):
                 state = model.split('_')[-1]
                 entry_name = '_'.join(model.split('_')[:-1])
-                o.append(StructureModel.objects.get(protein__entry_name=entry_name, state__name=state))
+                o.append(Structure.objects.get(protein__entry_name=entry_name, state__name=state, structure_type__slug__startswith='af-'))
 
 
     elif selection_type == 'segments':
@@ -1588,7 +1588,7 @@ def SelectAlignableResidues(request):
             elif simple_selection.reference[0].type == 'protein':
                 r_prot = simple_selection.reference[0].item
             elif simple_selection.reference[0].type == 'structure':
-                r_prot = simple_selection.reference[0].item.protein_conformation.protein
+                r_prot = simple_selection.reference[0].item.protein
 
             seg_ids_all = get_protein_segment_ids(r_prot, seg_ids_all)
             if r_prot.residue_numbering_scheme not in numbering_schemes:
@@ -1602,7 +1602,7 @@ def SelectAlignableResidues(request):
                 elif t.type == 'protein':
                     t_prot = t.item
                 elif t.type == 'structure':
-                    t_prot = t.item.protein_conformation.protein
+                    t_prot = t.item.protein
                 seg_ids_all = get_protein_segment_ids(t_prot, seg_ids_all)
                 if t_prot.residue_numbering_scheme not in numbering_schemes:
                     numbering_schemes.append(t_prot.residue_numbering_scheme)
@@ -1990,7 +1990,7 @@ def ExpandSegment(request):
             elif first_item.type == 'protein':
                 numbering_scheme = first_item.item.residue_numbering_scheme
             elif first_item.type == 'structure':
-                numbering_scheme = first_item.item.protein_conformation.protein.residue_numbering_scheme
+                numbering_scheme = first_item.item.protein.residue_numbering_scheme
         else:
             numbering_scheme = ResidueNumberingScheme.objects.get(slug="gpcrdba")
     elif numbering_scheme_slug:

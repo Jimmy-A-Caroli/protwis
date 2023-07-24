@@ -621,10 +621,10 @@ class designPDB(AbsTargetSelection):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['structures'] = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name').annotate(
+        context['structures'] = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein__parent__entry_name').annotate(
             num_ligands=Count('structure_ligand_pair', distinct=True), num_interactions=Count('pk', distinct=True)).order_by('structure_ligand_pair__structure__pdb_code__index')
         context['form'] = PDBform()
-        context['pdb_ids'] = json.dumps({s:s for s in Structure.objects.all().values_list('pdb_code__index', flat=True)})
+        context['pdb_ids'] = json.dumps({s:s for s in Structure.objects.exclude(structure_type__slug__startswith='af-').values_list('pdb_code__index', flat=True)})
         return context
 
 class design(AbsReferenceSelection):
@@ -671,7 +671,7 @@ class design(AbsReferenceSelection):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['structures'] = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name').annotate(
+        context['structures'] = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein__parent__entry_name').annotate(
             num_ligands=Count('structure_ligand_pair', distinct=True), num_interactions=Count('pk', distinct=True)).order_by('structure_ligand_pair__structure__pdb_code__index')
         context['form'] = PDBform()
         return context
@@ -780,7 +780,7 @@ def coverage(request):
     if 1==1:
         class_interactions = ResidueFragmentInteraction.objects.filter(structure_ligand_pair__annotated=True).prefetch_related(
             'rotamer__residue__display_generic_number','interaction_type',
-            'structure_ligand_pair__structure__protein_conformation__protein__parent__family',
+            'structure_ligand_pair__structure__protein__parent__family',
             'structure_ligand_pair__ligand',
             )
 
@@ -792,7 +792,7 @@ def coverage(request):
 
         dump_interactions = []
         for i in class_interactions:
-            fid = i.structure_ligand_pair.structure.protein_conformation.protein.parent.family.slug.split("_")
+            fid = i.structure_ligand_pair.structure.protein.parent.family.slug.split("_")
             interaction_type = i.interaction_type.slug
             interaction_type_class = i.interaction_type.type
             if i.rotamer.residue.display_generic_number:
@@ -967,9 +967,9 @@ def pocket(request):
     gpcr_class = '006' #class a 1 , c 4, f 6
 
     class_interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith=gpcr_class, structure_ligand_pair__annotated=True).prefetch_related(
+        structure_ligand_pair__structure__protein__family__slug__startswith=gpcr_class, structure_ligand_pair__annotated=True).prefetch_related(
         'rotamer__residue__display_generic_number','interaction_type',
-        'structure_ligand_pair__structure__protein_conformation__protein__parent',
+        'structure_ligand_pair__structure__protein__parent',
         'structure_ligand_pair__ligand')
 
     class_mutations = MutationExperiment.objects.filter(
@@ -981,7 +981,7 @@ def pocket(request):
 
     for i in class_interactions:
         ligand = i.structure_ligand_pair.ligand.name
-        receptor = i.structure_ligand_pair.structure.protein_conformation.protein.parent.entry_name
+        receptor = i.structure_ligand_pair.structure.protein.parent.entry_name
         receptor = receptor.split("_")[0]
         interaction_type = i.interaction_type.slug
         interaction_type_class = i.interaction_type.type
@@ -1105,9 +1105,9 @@ def showcalculation(request):
 
     gpcr_class = family
     class_interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith=gpcr_class.slug, structure_ligand_pair__annotated=True).prefetch_related(
+        structure_ligand_pair__structure__protein__family__slug__startswith=gpcr_class.slug, structure_ligand_pair__annotated=True).prefetch_related(
         'rotamer__residue__generic_number','interaction_type',
-        'structure_ligand_pair__structure__protein_conformation__protein__parent__family',
+        'structure_ligand_pair__structure__protein__parent__family',
         'structure_ligand_pair__ligand')
 
     class_mutations = MutationExperiment.objects.filter(
@@ -1120,9 +1120,9 @@ def showcalculation(request):
     for i in class_interactions:
         #continue
         ligand = i.structure_ligand_pair.ligand.name
-        receptor = i.structure_ligand_pair.structure.protein_conformation.protein.parent.entry_name
+        receptor = i.structure_ligand_pair.structure.protein.parent.entry_name
         receptor = receptor.split("_")[0]
-        family_id = i.structure_ligand_pair.structure.protein_conformation.protein.parent.family.slug.split("_")
+        family_id = i.structure_ligand_pair.structure.protein.parent.family.slug.split("_")
         interaction_type = i.interaction_type.slug
         interaction_type_class = i.interaction_type.type
 
@@ -1240,7 +1240,7 @@ def showcalculation(request):
 
     #NEW CLASS METHOD, then select closest
     class_interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith=family.slug, structure_ligand_pair__annotated=True).prefetch_related('rotamer__residue__generic_number','interaction_type','structure_ligand_pair__structure__protein_conformation__protein__parent__family','structure_ligand_pair__structure__pdb_code','structure_ligand_pair__ligand')
+        structure_ligand_pair__structure__protein__family__slug__startswith=family.slug, structure_ligand_pair__annotated=True).prefetch_related('rotamer__residue__generic_number','interaction_type','structure_ligand_pair__structure__protein__parent__family','structure_ligand_pair__structure__pdb_code','structure_ligand_pair__ligand')
 
     class_mutations = MutationExperiment.objects.filter(
         protein__family__slug__startswith=family.slug).prefetch_related('protein__family','residue__generic_number','mutation','refs__web_link', 'exp_qual','ligand').order_by('-foldchange','exp_qual')
@@ -1251,7 +1251,7 @@ def showcalculation(request):
 
     class_p = []
     for i in class_interactions:
-        p = i.structure_ligand_pair.structure.protein_conformation.protein.parent
+        p = i.structure_ligand_pair.structure.protein.parent
         if p not in class_p:
             class_p.append(p)
     for m in class_mutations:
@@ -1362,8 +1362,8 @@ def showcalculation(request):
         if i.rotamer.residue.generic_number:
             generic = i.rotamer.residue.generic_number.label
 
-            entry_name = i.structure_ligand_pair.structure.protein_conformation.protein.parent.entry_name
-            family_id = i.structure_ligand_pair.structure.protein_conformation.protein.parent.family.slug.split("_")
+            entry_name = i.structure_ligand_pair.structure.protein.parent.entry_name
+            family_id = i.structure_ligand_pair.structure.protein.parent.family.slug.split("_")
             pdbcode = i.structure_ligand_pair.structure.pdb_code.index
             ligand = i.structure_ligand_pair.ligand.name
             if i.structure_ligand_pair.ligand:
@@ -2046,13 +2046,13 @@ def collectAndCacheClassData(target_class):
     if class_thermo_muts == None:
         class_thermo_muts = {}
         all_thermo = ConstructMutation.objects.filter(construct__protein__family__slug__startswith=target_class, effects__slug='thermostabilising', effects__effect="Increased")\
-                    .values("pk", "residue__generic_number__label", "wild_type_amino_acid", "mutated_amino_acid", "construct__structure__protein_conformation__protein__family__slug")\
+                    .values("pk", "residue__generic_number__label", "wild_type_amino_acid", "mutated_amino_acid", "construct__structure__protein__family__slug")\
                     .order_by("residue__generic_number__label")
         for pair in all_thermo:
             gn = pair["residue__generic_number__label"]
             wt = pair["wild_type_amino_acid"]
             mutant = pair["mutated_amino_acid"]
-            receptor_slug = pair["construct__structure__protein_conformation__protein__family__slug"]
+            receptor_slug = pair["construct__structure__protein__family__slug"]
             if gn not in class_thermo_muts:
                 class_thermo_muts[gn] = {}
                 class_thermo_muts[gn]["count"] = 0
@@ -2073,14 +2073,14 @@ def collectAndCacheClassData(target_class):
     if class_struct_expr_incr_muts == None:
         class_struct_expr_incr_muts = {}
         all_expr = ConstructMutation.objects.filter(construct__protein__family__slug__startswith=target_class, effects__slug='receptor-expression', effects__effect="Increased")\
-                    .values("residue__generic_number__label", "wild_type_amino_acid", "mutated_amino_acid", "construct__structure__protein_conformation__protein__family__slug")\
+                    .values("residue__generic_number__label", "wild_type_amino_acid", "mutated_amino_acid", "construct__structure__protein__family__slug")\
                     .order_by("residue__generic_number__label")
 
         for pair in all_expr:
             gn = pair["residue__generic_number__label"]
             wt = pair["wild_type_amino_acid"]
             mutant = pair["mutated_amino_acid"]
-            receptor_slug = pair["construct__structure__protein_conformation__protein__family__slug"]
+            receptor_slug = pair["construct__structure__protein__family__slug"]
 
             if gn not in class_struct_expr_incr_muts:
                 class_struct_expr_incr_muts[gn] = {}
@@ -2142,7 +2142,7 @@ def collectAndCacheClassData(target_class):
     if class_ligand_ints == None:
         class_ligand_ints = {}
         ligand_interactions = ResidueFragmentInteraction.objects.filter(
-            structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith=target_class, structure_ligand_pair__annotated=True)\
+            structure_ligand_pair__structure__protein__family__slug__startswith=target_class, structure_ligand_pair__annotated=True)\
                     .exclude(interaction_type__type='hidden')\
                     .values("rotamer__residue__generic_number__label")\
                     .order_by("rotamer__residue__generic_number__label")\
@@ -2163,7 +2163,7 @@ def collectAndCacheClassData(target_class):
         class_prot_ints = {}
 
         gprot_interactions = InteractingResiduePair.objects.filter(
-                referenced_structure__protein_conformation__protein__family__slug__startswith=target_class
+                referenced_structure__protein__family__slug__startswith=target_class
             ).exclude(
                 res1__protein_conformation_id=F('res2__protein_conformation_id')
             ).values(
@@ -2171,9 +2171,9 @@ def collectAndCacheClassData(target_class):
             ).order_by(
                 'res1__generic_number__label',
             ).annotate(
-                unique_structures=Count("referenced_structure__protein_conformation", distinct=True)
+                unique_structures=Count("referenced_structure__protein", distinct=True)
             ).annotate(
-                unique_receptors=Count("referenced_structure__protein_conformation__protein__family_id", distinct=True)
+                unique_receptors=Count("referenced_structure__protein__family_id", distinct=True)
             ).annotate(
                 pdb_codes=ArrayAgg('referenced_structure__pdb_code__index')
             )
@@ -2223,19 +2223,19 @@ def contactMutationDesign(request, goal = "both"):
             if actives == None:
                 actives = []
                 active_structs = Structure.objects.filter(\
-                    protein_conformation__protein__family__slug__startswith=target_class, \
+                    protein__family__slug__startswith=target_class, \
                     state__name='Active', resolution__lte=3.7, gprot_bound_likeness__gte=90)\
                     .prefetch_related(
                                 "pdb_code",
                                 "state",
                                 "structureligandinteraction_set__ligand__ligand_type",
                                 "structureligandinteraction_set__ligand_role",
-                                "protein_conformation__protein__parent__parent__parent",
-                                "protein_conformation__protein__parent__family__parent",
-                                "protein_conformation__protein__parent__family__parent__parent__parent",
-                                "protein_conformation__protein__species", Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
+                                "protein__parent__parent__parent",
+                                "protein__parent__family__parent",
+                                "protein__parent__family__parent__parent__parent",
+                                "protein__species", Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
                                 annotated=True).prefetch_related('ligand__ligand_type', 'ligand_role')))\
-                    .annotate(res_count = Sum(Case(When(protein_conformation__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
+                    .annotate(res_count = Sum(Case(When(protein__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
 
                 for s in active_structs:
                     # Make sure no custom PDBs are taken along
@@ -2243,16 +2243,16 @@ def contactMutationDesign(request, goal = "both"):
                         continue
 
                     # Verify if species identity to human > 90
-                    if s.protein_conformation.protein.species.common_name != "Human":
+                    if s.protein.species.common_name != "Human":
                         # Use same cache as contact network => should be separate function to ensure consistency
-                        key = 'identity_to_human_{}_{}'.format(s.protein_conformation.protein.parent.family.slug,s.protein_conformation.protein.species.pk)
+                        key = 'identity_to_human_{}_{}'.format(s.protein.parent.family.slug,s.protein.species.pk)
                         identity = cache.get(key)
                         if identity == None:
                             try:
                                 a = Alignment()
-                                ref_p = Protein.objects.get(family = s.protein_conformation.protein.parent.family, species__common_name = 'Human', sequence_type__slug = 'wt')
+                                ref_p = Protein.objects.get(family = s.protein.parent.family, species__common_name = 'Human', sequence_type__slug = 'wt')
                                 a.load_reference_protein(ref_p)
-                                a.load_proteins([s.protein_conformation.protein.parent])
+                                a.load_proteins([s.protein.parent])
                                 a.load_segments(ProteinSegment.objects.filter(slug__in=['TM1', 'TM2', 'TM3', 'TM4','TM5','TM6', 'TM7']))
                                 a.build_alignment()
                                 a.calculate_similarity()
@@ -2269,7 +2269,7 @@ def contactMutationDesign(request, goal = "both"):
 
                     # NOTE This comparison differs from the structure browser
                     # Verify coverage WT receptor (>= 86)
-                    wt_count = list(ProteinConformation.objects.filter(protein__pk=s.protein_conformation.protein.parent.pk).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
+                    wt_count = list(ProteinConformation.objects.filter(protein__pk=s.protein.parent.pk).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
                     coverage = round((s.res_count / wt_count[0]["res_count"])*100)
                     if coverage < 86:
                         continue
@@ -2303,7 +2303,7 @@ def contactMutationDesign(request, goal = "both"):
             if inactives == None:
                 inactives = []
                 inactive_structs = Structure.objects.filter(\
-                    protein_conformation__protein__family__slug__startswith=target_class, \
+                    protein__family__slug__startswith=target_class, \
                     state__name='Inactive', resolution__lte=3.7, gprot_bound_likeness__lte=20)\
                     .prefetch_related(
                                 "pdb_code",
@@ -2312,12 +2312,12 @@ def contactMutationDesign(request, goal = "both"):
                                 "structureligandinteraction_set__ligand__ligand_type",
                                 "structureligandinteraction_set__ligand_role",
                                 "structure_type",
-                                "protein_conformation__protein__parent__parent__parent",
-                                "protein_conformation__protein__parent__family__parent",
-                                "protein_conformation__protein__parent__family__parent__parent__parent",
-                                "protein_conformation__protein__species", Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
+                                "protein__parent__parent__parent",
+                                "protein__parent__family__parent",
+                                "protein__parent__family__parent__parent__parent",
+                                "protein__species", Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
                                 annotated=True).prefetch_related('ligand__ligand_type', 'ligand_role')))\
-                    .annotate(res_count = Sum(Case(When(protein_conformation__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
+                    .annotate(res_count = Sum(Case(When(protein__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
 
                 for s in inactive_structs:
                     # Make sure no custom PDBs are taken along
@@ -2325,16 +2325,16 @@ def contactMutationDesign(request, goal = "both"):
                         continue
 
                     # Verify if species identity to human > 90
-                    if s.protein_conformation.protein.species.common_name != "Human":
+                    if s.protein.species.common_name != "Human":
                         # Use same cache as contact network => should be separate function to ensure consistency
-                        key = 'identity_to_human_{}_{}'.format(s.protein_conformation.protein.parent.family.slug,s.protein_conformation.protein.species.pk)
+                        key = 'identity_to_human_{}_{}'.format(s.protein.parent.family.slug,s.protein.species.pk)
                         identity = cache.get(key)
                         if identity == None:
                             try:
                                 a = Alignment()
-                                ref_p = Protein.objects.get(family = s.protein_conformation.protein.parent.family, species__common_name = 'Human', sequence_type__slug = 'wt')
+                                ref_p = Protein.objects.get(family = s.protein.parent.family, species__common_name = 'Human', sequence_type__slug = 'wt')
                                 a.load_reference_protein(ref_p)
-                                a.load_proteins([s.protein_conformation.protein.parent])
+                                a.load_proteins([s.protein.parent])
                                 a.load_segments(ProteinSegment.objects.filter(slug__in=['TM1', 'TM2', 'TM3', 'TM4','TM5','TM6', 'TM7']))
                                 a.build_alignment()
                                 a.calculate_similarity()
@@ -2351,7 +2351,7 @@ def contactMutationDesign(request, goal = "both"):
 
                     # NOTE This comparison differs from the structure browser
                     # Verify coverage WT receptor (>= 86)
-                    wt_count = list(ProteinConformation.objects.filter(protein__pk=s.protein_conformation.protein.parent.pk).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
+                    wt_count = list(ProteinConformation.objects.filter(protein__pk=s.protein.parent.pk).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
                     coverage = round((s.res_count / wt_count[0]["res_count"])*100)
                     if coverage < 86:
                         continue
@@ -2590,10 +2590,10 @@ def contactMutationDesign(request, goal = "both"):
             conservation_set1 = collectAAConservation(set1, top_set1_gns)
             conservation_set2 = collectAAConservation(set2, top_set1_gns)
 
-            receptor_slugs = list(Structure.objects.filter(pdb_code__index__in=set1).values_list("protein_conformation__protein__family__slug", flat=True).distinct())
+            receptor_slugs = list(Structure.objects.filter(pdb_code__index__in=set1).values_list("protein__family__slug", flat=True).distinct())
             num_receptor_slugs = len(receptor_slugs)
 
-            receptor_slugs2 = list(Structure.objects.filter(pdb_code__index__in=set2).values_list("protein_conformation__protein__family__slug", flat=True).distinct())
+            receptor_slugs2 = list(Structure.objects.filter(pdb_code__index__in=set2).values_list("protein__family__slug", flat=True).distinct())
             num_receptor_slugs2 = len(receptor_slugs2)
 
             #1. calculate conserved AA for these GNs in set 1 and identify which are different from WT
@@ -2814,12 +2814,12 @@ def calculateResidueContactFrequency(pdbs, allowed_gns, detail_gn = None):
     pdbs.sort()
     cache_name = "Contact_freq_" + hashlib.md5("_".join(pdbs).encode()).hexdigest()  + hashlib.md5("_".join(allowed_gns).encode()).hexdigest()
 
-    receptor_slugs = Structure.objects.filter(pdb_code__index__in=pdbs).values("protein_conformation__protein__family__slug").annotate(structure_count=Count('pk')).order_by(
-                'protein_conformation__protein__family__slug',
+    receptor_slugs = Structure.objects.filter(pdb_code__index__in=pdbs).values("protein__family__slug").annotate(structure_count=Count('pk')).order_by(
+                'protein__family__slug',
             ).distinct()
     receptor_counts = {}
     for count in receptor_slugs:
-        receptor_counts[count["protein_conformation__protein__family__slug"]] = count["structure_count"]
+        receptor_counts[count["protein__family__slug"]] = count["structure_count"]
 
     num_receptor_slugs = len(receptor_counts)
 
@@ -2874,7 +2874,7 @@ def calculateResidueContactFrequency(pdbs, allowed_gns, detail_gn = None):
         ).values(
             'interaction_type',
             'interacting_pair__referenced_structure__pk',
-            'interacting_pair__referenced_structure__protein_conformation__protein__family__slug',
+            'interacting_pair__referenced_structure__protein__family__slug',
             'interacting_pair__res1__generic_number__label',
             'interacting_pair__res2__generic_number__label',
         ).distinct(
@@ -2886,12 +2886,12 @@ def calculateResidueContactFrequency(pdbs, allowed_gns, detail_gn = None):
             i_options_filter
         ).values(
             'interacting_pair__referenced_structure__pk',
-            'interacting_pair__referenced_structure__protein_conformation__protein__family__slug',
+            'interacting_pair__referenced_structure__protein__family__slug',
             'interacting_pair__res1__generic_number__label',
             'interacting_pair__res2__generic_number__label',
         ).order_by(
             'interacting_pair__referenced_structure__pk',
-            'interacting_pair__referenced_structure__protein_conformation__protein__family__slug',
+            'interacting_pair__referenced_structure__protein__family__slug',
             'interacting_pair__res1__generic_number__label',
             'interacting_pair__res2__generic_number__label',
         ).distinct(
@@ -2902,7 +2902,7 @@ def calculateResidueContactFrequency(pdbs, allowed_gns, detail_gn = None):
         for pair in pairs:
             gn1 = pair["interacting_pair__res1__generic_number__label"]
             gn2 = pair["interacting_pair__res2__generic_number__label"]
-            slug = pair["interacting_pair__referenced_structure__protein_conformation__protein__family__slug"]
+            slug = pair["interacting_pair__referenced_structure__protein__family__slug"]
 
             pair_id = "{}_{}".format(gn1, gn2)
             if pair_id not in result_pairs:

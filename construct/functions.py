@@ -1172,7 +1172,7 @@ def add_construct(d):
 
     protein = Protein.objects.filter(entry_name=d['construct_crystal']['uniprot']).get()
     structure = Structure.objects.filter(pdb_code__index=d['construct_crystal']['pdb'].upper()).get()
-    protein_conformation = structure.protein_conformation
+    protein_conformation = structure.protein
 
     construct = Construct()
     construct.protein = protein

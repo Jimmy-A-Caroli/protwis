@@ -4,7 +4,7 @@ from django.conf import settings
 
 
 from protein.models import Protein, ProteinState
-from structure.models import Structure, StructureModel, StructureComplexModel, StatsText, PdbData, StructureModelpLDDT
+from structure.models import Structure,, StructureComplexModel, StatsText, PdbData, StructurepLDDT
 import structure.assign_generic_numbers_gpcr as as_gn
 from residue.models import Residue
 
@@ -96,14 +96,14 @@ class Command(BaseBuild):
                 s.main_template.save()
             StructureComplexModel.objects.all().delete()
         elif options['purge']:
-            for s in StructureModel.objects.all():
+            for s in Structure.objects.filter(structure_type__slug='af-gpcr'):
                 s.pdb_data.delete()
-                try:
-                    s.main_template.refined = False
-                    s.main_template.save()
-                except AttributeError:
-                    pass
-            StructureModel.objects.all().delete()
+                # try:
+                #     s.main_template.refined = False
+                #     s.main_template.save()
+                # except AttributeError:
+                #     pass
+            Structure.objects.filter(structure_type__slug='af-gpcr').delete()
         if options['c']:
             path = './structure/complex_models_zip/'
         else:
@@ -141,7 +141,7 @@ class Command(BaseBuild):
             shutil.rmtree(mod_dir)
 
     def upload_to_db(self, modelname, path):
-        ''' Upload to model to StructureModel or StructureComplexModel
+        ''' Upload to model to Structure or StructureComplexModel
         '''
         name_list = modelname.split('_')
         if len(name_list)<3:
@@ -189,7 +189,7 @@ class Command(BaseBuild):
         else:
             stats_text = StatsText.objects.get_or_create(stats_text=''.join(templates))[0]
         pdb = PdbData.objects.get_or_create(pdb=pdb_data)[0]
-        
+
         if self.complex:
             m_s = self.get_structures(main_structure)
             r_prot = Protein.objects.get(entry_name=gpcr_prot)
@@ -199,7 +199,7 @@ class Command(BaseBuild):
             s_state = ProteinState.objects.get(name=state)
             m_s = self.get_structures(main_structure)
             prot = Protein.objects.get(entry_name=gpcr_prot)
-            sm, _ = StructureModel.objects.get_or_create(protein=prot, state=s_state, main_template=m_s, pdb_data=pdb, version=build_date, stats_text=stats_text)
+            sm, _ = Structure.objects.get_or_create(protein=prot, state=s_state, pdb_data=pdb, publication_date=build_date, structure_type='af-gpcr', preferred_chain='A')
             if main_structure=='AF':
                 p = PDB.PDBParser().get_structure('model', os.sep.join([path, modelname, modelname+'.pdb']))[0]
                 resis = []
@@ -207,9 +207,9 @@ class Command(BaseBuild):
                     for res in chain:
                         plddt = res['C'].get_bfactor()
                         res_obj = Residue.objects.get(protein_conformation__protein=prot, sequence_number=res.get_id()[1])
-                        r = StructureModelpLDDT(structure_model=sm, residue=res_obj, pLDDT=plddt)
+                        r = StructurepLDDT(structure_model=sm, residue=res_obj, pLDDT=plddt)
                         resis.append(r)
-                StructureModelpLDDT.objects.bulk_create(resis)
+                StructurepLDDT.objects.bulk_create(resis)
         if self.revise_xtal:
             m_s.refined = True
             m_s.save()

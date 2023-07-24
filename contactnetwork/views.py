@@ -146,18 +146,18 @@ def ShowDistances(request):
     return render(request, 'contactnetwork/distances.html', template_data)
 
 def PdbTreeData(request):
-    data = Structure.objects.values(
+    data = Structure.objects.exclude(structure_type__slug__startswith='af-').values(
         'representative',
         'pdb_code__index',
-        'protein_conformation__protein__parent__family__parent__parent__parent__name',
-        'protein_conformation__protein__parent__family__parent__parent__name',
-        'protein_conformation__protein__parent__family__parent__name',
-        'protein_conformation__protein__parent__family__name',
-        'protein_conformation__protein__parent__family__parent__parent__parent__slug',
-        'protein_conformation__protein__parent__family__parent__parent__slug',
-        'protein_conformation__protein__parent__family__parent__slug',
-        'protein_conformation__protein__parent__family__slug',
-        'protein_conformation__state__slug'
+        'protein__parent__family__parent__parent__parent__name',
+        'protein__parent__family__parent__parent__name',
+        'protein__parent__family__parent__name',
+        'protein__parent__family__name',
+        'protein__parent__family__parent__parent__parent__slug',
+        'protein__parent__family__parent__parent__slug',
+        'protein__parent__family__parent__slug',
+        'protein__parent__family__slug',
+        'state__slug'
         )
 
     # TODO: Use ordereddict
@@ -167,15 +167,15 @@ def PdbTreeData(request):
     for d in data:
         pdb = d['pdb_code__index']
         rep = d['representative']
-        l3 = d['protein_conformation__protein__parent__family__name']
-        l2 = d['protein_conformation__protein__parent__family__parent__name']
-        l1 = d['protein_conformation__protein__parent__family__parent__parent__name']
-        l0 = d['protein_conformation__protein__parent__family__parent__parent__parent__name']
-        s3 = d['protein_conformation__protein__parent__family__slug']
-        s2 = d['protein_conformation__protein__parent__family__parent__slug']
-        s1 = d['protein_conformation__protein__parent__family__parent__parent__slug']
-        s0 = d['protein_conformation__protein__parent__family__parent__parent__parent__slug']
-        state = d['protein_conformation__state__slug']
+        l3 = d['protein__parent__family__name']
+        l2 = d['protein__parent__family__parent__name']
+        l1 = d['protein__parent__family__parent__parent__name']
+        l0 = d['protein__parent__family__parent__parent__parent__name']
+        s3 = d['protein__parent__family__slug']
+        s2 = d['protein__parent__family__parent__slug']
+        s1 = d['protein__parent__family__parent__parent__slug']
+        s0 = d['protein__parent__family__parent__parent__parent__slug']
+        state = d['state__slug']
 
         if rep:
             rep = 'R'
@@ -208,17 +208,17 @@ def PdbTableData(request):
     #    else:
     #        method = "N/A"
     #    methods[c.name] = method
-    data = Structure.objects.all().prefetch_related(
+    data = Structure.objects.exclude(structure_type__slug__startswith='af-').prefetch_related(
                 "pdb_code",
                 "state",
                 "stabilizing_agents",
                 "structureligandinteraction_set__ligand__ligand_type",
                 "structureligandinteraction_set__ligand_role",
                 "structure_type",
-                "protein_conformation__protein__parent__parent__parent",
-                "protein_conformation__protein__parent__family__parent",
-                "protein_conformation__protein__parent__family__parent__parent__parent",
-                "protein_conformation__protein__species",Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
+                "protein__parent__parent__parent",
+                "protein__parent__family__parent",
+                "protein__parent__family__parent__parent__parent",
+                "protein__species",Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
                 annotated=True).prefetch_related('ligand__ligand_type', 'ligand_role')))
     # get best signalprotein/species/receptor
     # if effector is defined (as one letter), filter by that
@@ -228,35 +228,35 @@ def PdbTableData(request):
         data = data.filter(extra_proteins__category__startswith=effector).prefetch_related(
         'extra_proteins__protein_conformation','extra_proteins__wt_protein').order_by(
         'extra_proteins__protein_conformation__protein__parent','state').annotate(
-        res_count = Sum(Case(When(extra_proteins__structure__protein_conformation__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
-        signal_ps = StructureExtraProteins.objects.filter(category__startswith=effector).values('structure__protein_conformation__protein__parent','display_name').order_by().annotate(coverage = Max('wt_coverage'))
+        res_count = Sum(Case(When(extra_proteins__structure__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
+        signal_ps = StructureExtraProteins.objects.filter(category__startswith=effector).values('structure__protein__parent','display_name').order_by().annotate(coverage = Max('wt_coverage'))
     else:
         data = data.prefetch_related('extra_proteins__protein_conformation','extra_proteins__wt_protein').order_by(
         'extra_proteins__protein_conformation__protein__parent','state').annotate(
         res_count = Sum(Case(When(extra_proteins__protein_conformation__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
-        signal_ps = StructureExtraProteins.objects.all().values('structure__protein_conformation__protein__parent','display_name').order_by().annotate(coverage = Max('wt_coverage'))
+        signal_ps = StructureExtraProteins.objects.all().values('structure__protein__parent','display_name').order_by().annotate(coverage = Max('wt_coverage'))
 
     if exclude_non_interacting and effector == 'G alpha':
         complex_structure_ids = SignprotComplex.objects.values_list('structure', flat=True)
         data = data.filter(id__in=complex_structure_ids)
 
     # get a gn residue count for all WT proteins
-    proteins_pks = Structure.objects.all().values_list("protein_conformation__protein__parent__pk", flat=True).distinct()
+    proteins_pks = Structure.objects.exclude(structure_type__slug__startswith='af-').values_list("protein__parent__pk", flat=True).distinct()
     residue_counts = ProteinConformation.objects.filter(protein__pk__in=proteins_pks).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
     rcs = {}
     for rc in residue_counts:
         rcs[rc['protein__pk']] = rc['res_count']
 
     # get minimum resolution for every receptor/state pair
-    resolutions = Structure.objects.all().values('protein_conformation__protein__parent','state__name').order_by().annotate(res = Min('resolution'))
+    resolutions = Structure.objects.exclude(structure_type__slug__startswith='af-').values('protein__parent','state__name').order_by().annotate(res = Min('resolution'))
     best_resolutions = {}
     for r in resolutions:
-        key = '{}_{}'.format(r['protein_conformation__protein__parent'], r['state__name'])
+        key = '{}_{}'.format(r['protein__parent'], r['state__name'])
         best_resolutions[key] = r['res']
 
     best_signal_p = {}
     for ps in signal_ps:
-        key = '{}_{}'.format(ps['structure__protein_conformation__protein__parent'], ps['display_name'])
+        key = '{}_{}'.format(ps['structure__protein__parent'], ps['display_name'])
         best_signal_p[key] = ps['coverage']
 
     data_dict = OrderedDict()
@@ -313,11 +313,11 @@ def PdbTableData(request):
             continue
 
         r = {}
-        r['protein'] = s.protein_conformation.protein.parent.entry_short()
-        r['protein_long'] = s.protein_conformation.protein.parent.short()
-        r['protein_family'] = s.protein_conformation.protein.parent.family.parent.short()
-        r['class'] = s.protein_conformation.protein.parent.family.parent.parent.parent.shorter()
-        r['species'] = s.protein_conformation.protein.species.common_name
+        r['protein'] = s.protein.parent.entry_short()
+        r['protein_long'] = s.protein.parent.short()
+        r['protein_family'] = s.protein.parent.family.parent.short()
+        r['class'] = s.protein.parent.family.parent.parent.parent.shorter()
+        r['species'] = s.protein.species.common_name
         # # r['date'] = s.publication_date
         r['state'] = s.state.name
         r['distance_representative'] = 'Yes' if s.distance_representative else 'No'
@@ -344,7 +344,7 @@ def PdbTableData(request):
 
         r['identity_to_human'] = "100"
         if r['species'] != 'Human':
-            key = 'identity_to_human_{}_{}'.format(s.protein_conformation.protein.parent.family.slug,s.protein_conformation.protein.species.pk)
+            key = 'identity_to_human_{}_{}'.format(s.protein.parent.family.slug,s.protein.species.pk)
             if key in identity_lookup:
                   r['identity_to_human'] = identity_lookup[key]
             else:
@@ -352,9 +352,9 @@ def PdbTableData(request):
                 if r['identity_to_human'] == None:
                     try:
                         a = Alignment()
-                        ref_p = Protein.objects.get(family = s.protein_conformation.protein.parent.family, species__common_name = 'Human', sequence_type__slug = 'wt')
+                        ref_p = Protein.objects.get(family = s.protein.parent.family, species__common_name = 'Human', sequence_type__slug = 'wt')
                         a.load_reference_protein(ref_p)
-                        a.load_proteins([s.protein_conformation.protein.parent])
+                        a.load_proteins([s.protein.parent])
                         a.load_segments(ProteinSegment.objects.filter(slug__in=['TM1', 'TM2', 'TM3', 'TM4','TM5','TM6', 'TM7']))
                         a.build_alignment()
                         a.calculate_similarity()
@@ -367,7 +367,7 @@ def PdbTableData(request):
                 identity_lookup[key] = r['identity_to_human']
 
 
-        residues_wt = rcs[s.protein_conformation.protein.parent.pk]
+        residues_wt = rcs[s.protein.parent.pk]
         residues_s = s.res_count
         # residues_s = residues_wt
         #print(pdb,"residues",protein,residues_wt,residues_s,residues_s/residues_wt)
@@ -390,7 +390,7 @@ def PdbTableData(request):
         for ep in s.extra_proteins.filter(category__in=["G alpha", "Arrestin"]):
 #            if ep.category == "Antibody":
 #                continue
-            key = '{}_{}'.format(s.protein_conformation.protein.parent.pk,ep)
+            key = '{}_{}'.format(s.protein.parent.pk,ep)
             if best_signal_p[key] == ep.wt_coverage:
                 # this is the best coverage
                 r['signal_protein_seq_cons_color'] = 'green'
@@ -422,7 +422,7 @@ def PdbTableData(request):
 
         r['resolution'] = "{0:.2g}".format(s.resolution)
 
-        r['resolution_best'] = s.resolution==best_resolutions['{}_{}'.format(s.protein_conformation.protein.parent.pk, s.state.name)]
+        r['resolution_best'] = s.resolution==best_resolutions['{}_{}'.format(s.protein.parent.pk, s.state.name)]
 
         r['7tm_distance'] = s.distance
         r['tm6_angle'] = str(round(s.tm6_angle)) if s.tm6_angle != None else ''
@@ -592,7 +592,7 @@ def InteractionBrowserData(request):
 
     # Deduce class
     gpcr_class = Structure.objects.filter(pdb_code__index__in=pdbs_upper
-                ).values_list('protein_conformation__protein__parent__family__parent__parent__parent__slug', flat=True).distinct()
+                ).values_list('protein__parent__family__parent__parent__parent__slug', flat=True).distinct()
     if len(gpcr_class)>1:
         print('ERROR mix of classes!', gpcr_class)
         return JsonResponse({'error':list(gpcr_class)})
@@ -771,14 +771,14 @@ def InteractionBrowserData(request):
         # class_ligand_interactions=None
         if class_ligand_interactions==None or len(class_ligand_interactions)==0:
             class_interactions = ResidueFragmentInteraction.objects.filter(
-                structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith=gpcr_class, structure_ligand_pair__annotated=True).prefetch_related(
+                structure_ligand_pair__structure__protein__family__slug__startswith=gpcr_class, structure_ligand_pair__annotated=True).prefetch_related(
                 'rotamer__residue__generic_number',
                 'rotamer__residue__display_generic_number',
-                'structure_ligand_pair__structure__protein_conformation__protein__family')
+                'structure_ligand_pair__structure__protein__family')
 
             class_ligand_interactions = {}
             for i in class_interactions:
-                p = i.structure_ligand_pair.structure.protein_conformation.protein.family.slug
+                p = i.structure_ligand_pair.structure.protein.family.slug
                 if i.rotamer.residue.generic_number:
 
                     display_gn = re.sub(r'\.[\d]+', '', i.rotamer.residue.generic_number.label)
@@ -802,7 +802,7 @@ def InteractionBrowserData(request):
         if class_complex_interactions == None or len(class_complex_interactions) == 0:
 
             interactions = Interaction.objects.filter(
-                interacting_pair__referenced_structure__protein_conformation__protein__family__slug__startswith=gpcr_class
+                interacting_pair__referenced_structure__protein__family__slug__startswith=gpcr_class
             ).exclude(
                 interacting_pair__res1__protein_conformation_id=F('interacting_pair__res2__protein_conformation_id') # Filter interactions with other proteins
             ).distinct(
@@ -810,7 +810,7 @@ def InteractionBrowserData(request):
                 specific_type='water-mediated'
             ).values(
                 'interaction_type',
-                'interacting_pair__referenced_structure__protein_conformation__protein__family__slug',
+                'interacting_pair__referenced_structure__protein__family__slug',
                 'interacting_pair__res1__generic_number__label',
                 'interacting_pair__res1__display_generic_number__label',
                 'interacting_pair__res2__pk',
@@ -818,7 +818,7 @@ def InteractionBrowserData(request):
 
             class_complex_interactions = {}
             for i in interactions:
-                p = i['interacting_pair__referenced_structure__protein_conformation__protein__family__slug']
+                p = i['interacting_pair__referenced_structure__protein__family__slug']
 
                 display_gn = re.sub(r'\.[\d]+', '', i['interacting_pair__res1__display_generic_number__label'])
                 if forced_class_a:
@@ -950,15 +950,15 @@ def InteractionBrowserData(request):
             data['pfs2_lookup'] = defaultdict(lambda: [])
 
         structures = Structure.objects.filter(pdb_code__index__in=pdbs_upper
-                     ).select_related('protein_conformation__protein'
+                     ).select_related('protein'
                      ).values('pk','pdb_code__index',
-                            'protein_conformation__protein__parent__entry_name',
-                            'protein_conformation__protein__parent__family__slug',
-                            'protein_conformation__protein__entry_name')
+                            'protein__parent__entry_name',
+                            'protein__parent__family__slug',
+                            'protein__entry_name')
         s_lookup = {}
         pdb_lookup = {}
         for s in structures:
-            protein, pdb_name,pf  = [s['protein_conformation__protein__parent__entry_name'],s['protein_conformation__protein__entry_name'],s['protein_conformation__protein__parent__family__slug']]
+            protein, pdb_name,pf  = [s['protein__parent__entry_name'],s['protein_conformation__protein__entry_name'],s['protein__parent__family__slug']]
             s_lookup[s['pk']] = [protein, pdb_name,pf]
             pdb_lookup[pdb_name] = [protein, s['pk'],pf]
             data['pfs_lookup'][pf].append(pdb_name)
@@ -1017,7 +1017,7 @@ def InteractionBrowserData(request):
                 all_interaction_residues.add(i[1])
             all_interaction_residues = sorted(list(all_interaction_residues), key=functools.cmp_to_key(gpcrdb_number_comparator))
 
-            all_pdbs = list(Structure.objects.all().values_list('pdb_code__index', flat=True))
+            all_pdbs = list(Structure.objects.exclude(structure_type__slug__startswith='af-').values_list('pdb_code__index', flat=True))
             all_pdbs = [x.lower() for x in all_pdbs]
             #generic_number__label__in=all_interaction_residues)
             residues = Residue.objects.filter(protein_conformation__protein__entry_name__in=all_pdbs).exclude(generic_number=None).values(
@@ -1720,9 +1720,9 @@ def InteractionBrowserData(request):
                 ).distinct().annotate(
                     i_types=ArrayAgg('interaction_type'),
                     structures=ArrayAgg('interacting_pair__referenced_structure__pdb_code__index'),
-                    pfs=ArrayAgg('interacting_pair__referenced_structure__protein_conformation__protein__parent__family__slug'),
+                    pfs=ArrayAgg('interacting_pair__referenced_structure__protein__parent__family__slug'),
                     structuresC=Count('interacting_pair__referenced_structure',distinct=True),
-                    pfsC=Count('interacting_pair__referenced_structure__protein_conformation__protein__parent__family__name',distinct=True)
+                    pfsC=Count('interacting_pair__referenced_structure__protein__parent__family__name',distinct=True)
                 ))
             for i in interactions:
                 key = '{},{}{}{}'.format(r_class_translate_from_classA[i['gn1']],r_class_translate_from_classA[i['gn2']],i['aa1'],i['aa2'])
@@ -1762,9 +1762,9 @@ def InteractionBrowserData(request):
                 ).distinct().annotate(
                     i_types=ArrayAgg('interaction_type'),
                     structures=ArrayAgg('interacting_pair__referenced_structure__pdb_code__index'),
-                    pfs=ArrayAgg('interacting_pair__referenced_structure__protein_conformation__protein__parent__family__slug'),
+                    pfs=ArrayAgg('interacting_pair__referenced_structure__protein__parent__family__slug'),
                     structuresC=Count('interacting_pair__referenced_structure',distinct=True),
-                    pfsC=Count('interacting_pair__referenced_structure__protein_conformation__protein__parent__family__name',distinct=True)
+                    pfsC=Count('interacting_pair__referenced_structure__protein__parent__family__name',distinct=True)
                 ))
 
             for i in interactions:
@@ -1883,9 +1883,9 @@ def InteractionBrowserData(request):
                 ).distinct().annotate(
                     i_types=ArrayAgg('interaction_type'),
                     structures=ArrayAgg('interacting_pair__referenced_structure__pdb_code__index'),
-                    pfs=ArrayAgg('interacting_pair__referenced_structure__protein_conformation__protein__parent__family__slug'),
+                    pfs=ArrayAgg('interacting_pair__referenced_structure__protein__parent__family__slug'),
                     structuresC=Count('interacting_pair__referenced_structure',distinct=True),
-                    pfsC=Count('interacting_pair__referenced_structure__protein_conformation__protein__parent__family__name',distinct=True)
+                    pfsC=Count('interacting_pair__referenced_structure__protein__parent__family__name',distinct=True)
                 ))
 
             for i in interactions:
@@ -2754,7 +2754,7 @@ def stableResMatrix(pdbs):
         # select all distances to selected residue
         reference = stable_residues[selclass]
         ds = list(Distance.objects.filter(structure__pdb_code__index__in=pdbs) \
-                                .filter(structure__protein_conformation__protein__family__slug__startswith=selclass) \
+                                .filter(structure__protein__family__slug__startswith=selclass) \
                                 .filter(Q(gn1=reference) | Q(gn2=reference)) \
                                 .values('structure__pdb_code__index', 'gns_pair', 'distance'))
 
@@ -2859,8 +2859,8 @@ def ClusteringData(request):
         # Grab all annotations and all the ligand role when present in aggregates
         # NOTE: we can probably remove the parent step and go directly via family in the query
         annotations = Structure.objects.filter(pdb_code__index__in=pdbs) \
-                        .values_list('pdb_code__index','state__slug','protein_conformation__protein__parent__entry_name','protein_conformation__protein__parent__name','protein_conformation__protein__parent__family__parent__name', \
-                        'protein_conformation__protein__parent__family__parent__parent__name', 'protein_conformation__protein__parent__family__parent__parent__parent__name', 'structure_type__name', 'protein_conformation__protein__family__slug', 'tm6_angle', 'gprot_bound_likeness')\
+                        .values_list('pdb_code__index','state__slug','protein__parent__entry_name','protein__parent__name','protein__parent__family__parent__name', \
+                        'protein__parent__family__parent__parent__name', 'protein__parent__family__parent__parent__parent__name', 'structure_type__name', 'protein__family__slug', 'tm6_angle', 'gprot_bound_likeness')\
                         .annotate(arr=ArrayAgg('structureligandinteraction__ligand_role__slug', filter=Q(structureligandinteraction__annotated=True))) \
 
         # Adding signaling protein data on top
@@ -3298,9 +3298,9 @@ def InteractionData(request):
 
         # Get the relevant interactions
         interactions = Interaction.objects.filter(
-            interacting_pair__referenced_structure__protein_conformation__protein__entry_name__in=pdbs
+            interacting_pair__referenced_structure__protein__entry_name__in=pdbs
         ).values(
-            'interacting_pair__referenced_structure__protein_conformation__protein__entry_name',
+            'interacting_pair__referenced_structure__protein__entry_name',
             'interacting_pair__res1__amino_acid',
             'interacting_pair__res2__amino_acid',
             'interacting_pair__res1__sequence_number',
@@ -3367,7 +3367,7 @@ def InteractionData(request):
                         data['generic_map_full'][r.sequence_number] = r.short_display_generic_number()
 
         for i in interactions:
-            pdb_name = i['interacting_pair__referenced_structure__protein_conformation__protein__entry_name']
+            pdb_name = i['interacting_pair__referenced_structure__protein__entry_name']
             if not pdb_name in data['pdbs']:
                 data['pdbs'].add(pdb_name)
 
@@ -3379,7 +3379,7 @@ def InteractionData(request):
         number_dict = set()
 
         for i in interactions:
-            pdb_name = i['interacting_pair__referenced_structure__protein_conformation__protein__entry_name']
+            pdb_name = i['interacting_pair__referenced_structure__protein__entry_name']
             res1_seq = i['interacting_pair__res1__sequence_number']
             res2_seq = i['interacting_pair__res2__sequence_number']
             res1_gen = i['interacting_pair__res1__generic_number__label']
@@ -3457,7 +3457,7 @@ def ServePDB(request, pdbname):
     if structure.pdb_data is None:
         quit()
 
-    only_gns = list(structure.protein_conformation.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label','display_generic_number__label').all())
+    only_gns = list(structure.protein.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label','display_generic_number__label').all())
     only_gn = []
     gn_map = []
     gn_map_classa = []

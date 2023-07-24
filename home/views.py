@@ -9,7 +9,6 @@ from protwis.context_processors import site_title
 from news.models import News
 from common.models import ReleaseNotes, ReleaseStatistics, Citation
 from protein.models import Protein, ProteinCouplings
-from structure.models import StructureComplexModel
 from ligand.models import BiasedData, BiasedPathwaysAssay, Endogenous_GTP, BalancedLigands
 from contactnetwork.models import InteractingResiduePair
 from signprot.models import SignprotComplex, SignprotStructure

@@ -470,15 +470,15 @@ def check_gn (pdb_struct):
 
 
 #==============================================================================
-def get_segment_template (protein, segments=['TM1', 'TM2', 'TM3', 'TM4','TM5','TM6', 'TM7'], state=None):
+def get_segment_template(protein, segments=['TM1', 'TM2', 'TM3', 'TM4','TM5','TM6', 'TM7'], state=None):
 
     a = Alignment()
     a.load_reference_protein(protein)
     #You are so gonna love it...
     if state:
-        a.load_proteins([x.protein_conformation.protein.parent for x in list(Structure.objects.order_by('protein_conformation__protein__parent','resolution').exclude(protein_conformation__protein=protein.id, protein_conformation__state=state))])
+        a.load_proteins([x.protein.parent for x in list(Structure.objects.order_by('protein__parent','resolution').exclude(protein=protein.id, state=state))])
     else:
-        a.load_proteins([x.protein_conformation.protein.parent for x in list(Structure.objects.order_by('protein_conformation__protein__parent','resolution').exclude(protein_conformation__protein=protein.id))])
+        a.load_proteins([x.protein.parent for x in list(Structure.objects.order_by('protein__parent','resolution').exclude(protein=protein.id))])
     a.load_segments(ProteinSegment.objects.filter(slug__in=segments))
     a.build_alignment()
     a.calculate_similarity()
@@ -487,9 +487,9 @@ def get_segment_template (protein, segments=['TM1', 'TM2', 'TM3', 'TM4','TM5','T
 
 
 #==============================================================================
-def fetch_template_structure (template_protein):
+def fetch_template_structure(template_protein): #IS THIS FUNCTION STILL USED? **JIMMY**
 
-    return Structure.objects.get(protein_conformation__protein__parent=template_protein.entry_name)
+    return Structure.objects.get(protein__parent=template_protein.entry_name)
 
 
 #==============================================================================
@@ -911,17 +911,17 @@ class PdbStateIdentifier():
         self.structure_type = None
 
         try:
-            if structure.protein_conformation.protein.parent is None:
+            if structure.protein.parent is None:
                 raise Exception
             self.structure = structure
             self.structure_type = 'structure'
-            family = structure.protein_conformation.protein.family
+            family = structure.protein.family
         except:
             try:
-                structure.protein_conformation.protein
+                structure.protein
                 self.structure = structure
                 self.structure_type = 'refined'
-                family = structure.protein_conformation.protein.family
+                family = structure.protein.family
             except:
                 try:
                     structure.protein
@@ -948,11 +948,11 @@ class PdbStateIdentifier():
 
     def run(self):
         if self.structure_type=='structure':
-            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein_conformation.protein.parent)
+            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein.parent)
             ssno = StructureSeqNumOverwrite(self.structure)
             ssno.seq_num_overwrite('pdb')
         elif self.structure_type=='refined':
-            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein_conformation.protein)
+            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein)
         elif self.structure_type=='hommod':
             self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein)
         elif self.structure_type=='complex':
@@ -1030,8 +1030,8 @@ class PdbStateIdentifier():
 
     def get_residue_distance(self, residue1, residue2):
         try:
-            res1 = Residue.objects.get(protein_conformation__protein=self.structure.protein_conformation.protein.parent, display_generic_number__label=dgn(residue1, self.parent_prot_conf))
-            res2 = Residue.objects.get(protein_conformation__protein=self.structure.protein_conformation.protein.parent, display_generic_number__label=dgn(residue2, self.parent_prot_conf))
+            res1 = Residue.objects.get(protein_conformation__protein=self.structure.protein.parent, display_generic_number__label=dgn(residue1, self.parent_prot_conf))
+            res2 = Residue.objects.get(protein_conformation__protein=self.structure.protein.parent, display_generic_number__label=dgn(residue2, self.parent_prot_conf))
             print(res1, res1.id, res2, res2.id)
             try:
                 rota1 = Rotamer.objects.filter(structure=self.structure, residue__sequence_number=res1.sequence_number)
@@ -1216,11 +1216,11 @@ class StructureBuildCheck():
 
     def check_duplicate_residues(self):
         for s in Structure.objects.all():
-            resis = Residue.objects.filter(protein_conformation=s.protein_conformation)
+            resis = Residue.objects.filter(protein_conformation=s.protein)
             if len(resis)!=len(resis.values_list('sequence_number').distinct()):
                 for r in resis:
                     try:
-                        Residue.objects.get(protein_conformation=s.protein_conformation, sequence_number=r.sequence_number)
+                        Residue.objects.get(protein_conformation=s.protein, sequence_number=r.sequence_number)
                     except Residue.MultipleObjectsReturned:
                         if s in self.duplicate_residue_error:
                             self.duplicate_residue_error[s].append(r)
@@ -1230,8 +1230,8 @@ class StructureBuildCheck():
     def check_segment_ends(self, structure):
         key = structure.pdb_code.index
         if key in self.segends_dict:
-            parent_residues = Residue.objects.filter(protein_conformation__protein=structure.protein_conformation.protein.parent)
-            structure_residues = Residue.objects.filter(protein_conformation=structure.protein_conformation)
+            parent_residues = Residue.objects.filter(protein_conformation__protein=structure.protein.parent)
+            structure_residues = Residue.objects.filter(protein_conformation=structure.protein)
             annotation = self.segends_dict[key]
             for i in range(1,9):
                 if annotation[str(i)+'e']=='-':

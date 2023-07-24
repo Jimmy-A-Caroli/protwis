@@ -26,7 +26,7 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-
+        #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
         structures = Structure.objects.all()
         self.fusions = {}
         self.fusions_mutations = {}

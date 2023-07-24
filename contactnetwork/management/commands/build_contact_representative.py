@@ -23,10 +23,10 @@ class Command(BaseCommand):
     def receptor_representatives(self):
         print('Script to decide contact representative for a conformation. Maximising highest frequence of common contacts, while minimizing uncommon (50%)')
 
-        structures = Structure.objects.all().prefetch_related(
+        structures = Structure.objects.all().prefetch_related( #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
             "pdb_code",
             "state",
-            "protein_conformation__protein__parent__family")
+            "protein__parent__family")
 
         distinct_proteins = {}
 
@@ -35,8 +35,8 @@ class Command(BaseCommand):
             pdb = s.pdb_code.index
             resolution_lookup[pdb] = s.resolution
             state = s.state.slug
-            slug = s.protein_conformation.protein.parent.family.slug
-            name = s.protein_conformation.protein.parent.family.name
+            slug = s.protein.parent.family.slug
+            name = s.protein.parent.family.name
 
             key = '{}_{}'.format(name,state)
 
@@ -140,12 +140,12 @@ class Command(BaseCommand):
     def class_level_contacts(self):
 
         class_level_contacts = {}
-        structures = Structure.objects.filter(refined=False).prefetch_related(
+        structures = Structure.objects.filter(refined=False).prefetch_related( #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
             "pdb_code",
             "state",
-            "protein_conformation__protein__parent__family",
-            "protein_conformation__protein__family",
-            "protein_conformation__protein__species")
+            "protein__parent__family",
+            "protein__family",
+            "protein__species")
 
         distinct_proteins = {}
 
@@ -154,12 +154,12 @@ class Command(BaseCommand):
         pdb_to_state_lookup = {}
         for s in structures:
             pdb = s.pdb_code.index
-            gpcr_class = s.protein_conformation.protein.family.slug.split("_")[0]
+            gpcr_class = s.protein.family.slug.split("_")[0]
             state = s.state
-            slug = s.protein_conformation.protein.parent.family.slug
-            name = s.protein_conformation.protein.parent.family.name
-            species = s.protein_conformation.protein.species.common_name
-            protein = s.protein_conformation.protein.parent
+            slug = s.protein.parent.family.slug
+            name = s.protein.parent.family.name
+            species = s.protein.species.common_name
+            protein = s.protein.parent
 
             pdb_to_protein_lookup[pdb] = protein
             pdb_to_class_lookup[pdb] = gpcr_class
@@ -328,10 +328,10 @@ class Command(BaseCommand):
     def class_based_representative(self):
         print('Script to decide contact representative for a conformation. Maximising highest frequence of common contacts, while minimizing uncommon (50%)')
 
-        structures = Structure.objects.filter(refined=False).prefetch_related(
+        structures = Structure.objects.filter(refined=False).prefetch_related( #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
             "pdb_code",
             "state",
-            "protein_conformation__protein__parent__family")
+            "protein__parent__family")
 
         distinct_proteins = {}
 
@@ -340,8 +340,8 @@ class Command(BaseCommand):
             pdb = s.pdb_code.index
             resolution_lookup[pdb] = s.resolution
             state = s.state.slug
-            slug = s.protein_conformation.protein.parent.family.slug
-            name = s.protein_conformation.protein.parent.family.name
+            slug = s.protein.parent.family.slug
+            name = s.protein.parent.family.name
 
             key = '{}_{}'.format(name,state)
 

@@ -6,21 +6,53 @@ from Bio.PDB import PDBIO
 import re
 from protein.models import ProteinCouplings
 
+# class Structure(models.Model):
+#     # linked onto the Xtal ProteinConformation, which is linked to the Xtal protein
+#     protein_conformation = models.ForeignKey('protein.ProteinConformation', on_delete=models.CASCADE)
+#     structure_type = models.ForeignKey('StructureType', on_delete=models.CASCADE)
+#     pdb_code = models.ForeignKey('common.WebLink', on_delete=models.CASCADE)
+#     state = models.ForeignKey('protein.ProteinState', on_delete=models.CASCADE)
+#     author_state = models.ForeignKey('protein.ProteinState', null=True, on_delete=models.CASCADE, related_name='author_state')
+#     publication = models.ForeignKey('common.Publication', null=True, on_delete=models.CASCADE)
+#     ligands = models.ManyToManyField('ligand.Ligand', through='interaction.StructureLigandInteraction')
+#     protein_anomalies = models.ManyToManyField('protein.ProteinAnomaly')
+#     stabilizing_agents = models.ManyToManyField('StructureStabilizingAgent')
+#     preferred_chain = models.CharField(max_length=20)
+#     resolution = models.DecimalField(max_digits=5, decimal_places=3)
+#     publication_date = models.DateField()
+#     pdb_data = models.ForeignKey('PdbData', null=True, on_delete=models.CASCADE) #allow null for now, since dump file does not contain.
+#     representative = models.BooleanField(default=False)
+#     distance_representative = models.BooleanField(default=True)
+#     contact_representative = models.BooleanField(default=False)
+#     contact_representative_score = models.DecimalField(max_digits=5, decimal_places=3, null=True)
+#     inactive_class_contacts_fraction = models.DecimalField(max_digits=5, decimal_places=3, null=True)
+#     active_class_contacts_fraction = models.DecimalField(max_digits=5, decimal_places=3, null=True)
+#     class_contact_representative = models.BooleanField(default=False)
+#     annotated = models.BooleanField(default=True)
+#     refined = models.BooleanField(default=False)
+#     distance = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+#     tm6_angle = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+#     gprot_bound_likeness = models.DecimalField(max_digits=5, decimal_places=2, null=True)
+#     sodium = models.BooleanField(default=False)
+#     signprot_complex = models.ForeignKey('signprot.SignprotComplex', null=True, on_delete=models.SET_NULL, related_name='signprot_complex')
+#     stats_text = models.ForeignKey('StatsText', null=True, on_delete=models.CASCADE)
+#     mammal = models.BooleanField(default=False) #whether the species of the structure is mammal
+#     closest_to_human = models.BooleanField(default=False) # A boolean to say if the receptor/state of this structure is the closest structure to human
+
 class Structure(models.Model):
-    # linked onto the Xtal ProteinConformation, which is linked to the Xtal protein
-    protein_conformation = models.ForeignKey('protein.ProteinConformation', on_delete=models.CASCADE)
+    protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True) # from protein_conformation
     structure_type = models.ForeignKey('StructureType', on_delete=models.CASCADE)
-    pdb_code = models.ForeignKey('common.WebLink', on_delete=models.CASCADE)
-    state = models.ForeignKey('protein.ProteinState', on_delete=models.CASCADE)
+    pdb_code = models.ForeignKey('common.WebLink', on_delete=models.CASCADE, null=True)
+    state = models.ForeignKey('protein.ProteinState', on_delete=models.CASCADE)   #NOT DEFINED / ACTIVE (Kay models)
     author_state = models.ForeignKey('protein.ProteinState', null=True, on_delete=models.CASCADE, related_name='author_state')
     publication = models.ForeignKey('common.Publication', null=True, on_delete=models.CASCADE)
     ligands = models.ManyToManyField('ligand.Ligand', through='interaction.StructureLigandInteraction')
     protein_anomalies = models.ManyToManyField('protein.ProteinAnomaly')
     stabilizing_agents = models.ManyToManyField('StructureStabilizingAgent')
     preferred_chain = models.CharField(max_length=20)
-    resolution = models.DecimalField(max_digits=5, decimal_places=3)
+    resolution = models.DecimalField(max_digits=5, decimal_places=3, null=True) #allow null for now, for AF models
     publication_date = models.DateField()
-    pdb_data = models.ForeignKey('PdbData', null=True, on_delete=models.CASCADE) #allow null for now, since dump file does not contain.
+    pdb_data = models.ForeignKey('PdbData', on_delete=models.CASCADE)
     representative = models.BooleanField(default=False)
     distance_representative = models.BooleanField(default=True)
     contact_representative = models.BooleanField(default=False)
@@ -28,14 +60,13 @@ class Structure(models.Model):
     inactive_class_contacts_fraction = models.DecimalField(max_digits=5, decimal_places=3, null=True)
     active_class_contacts_fraction = models.DecimalField(max_digits=5, decimal_places=3, null=True)
     class_contact_representative = models.BooleanField(default=False)
-    annotated = models.BooleanField(default=True)
-    refined = models.BooleanField(default=False)
+    annotated = models.BooleanField(default=True) #NOT NEEDED WITH STRUCTURE TYPES UPDATED (SEARCH) (ALWAYS TRUE)
+    refined = models.BooleanField(default=False)  #NOT NEEDED WITH STRUCTURE TYPES UPDATED (SEARCH)
     distance = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     tm6_angle = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     gprot_bound_likeness = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     sodium = models.BooleanField(default=False)
     signprot_complex = models.ForeignKey('signprot.SignprotComplex', null=True, on_delete=models.SET_NULL, related_name='signprot_complex')
-    stats_text = models.ForeignKey('StatsText', null=True, on_delete=models.CASCADE)
     mammal = models.BooleanField(default=False) #whether the species of the structure is mammal
     closest_to_human = models.BooleanField(default=False) # A boolean to say if the receptor/state of this structure is the closest structure to human
 
@@ -117,30 +148,40 @@ class StructureVectors(models.Model):
     class Meta():
         db_table = 'structure_vectors'
 
+# class StructureModel(models.Model):
+#     protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE)
+#     state = models.ForeignKey('protein.ProteinState', on_delete=models.CASCADE)
+#     main_template = models.ForeignKey('structure.Structure', null=True, on_delete=models.CASCADE)
+#     pdb_data = models.ForeignKey('PdbData', null=True, on_delete=models.CASCADE)
+#     version = models.DateField()
+#     stats_text = models.ForeignKey('StatsText', null=True, on_delete=models.CASCADE)
+#
+#     def __repr__(self):
+#         return '<StructureModel: '+str(self.protein.entry_name)+' '+str(self.state)+'>'
+#
+#     def __str__(self):
+#         return '<StructureModel: '+str(self.protein.entry_name)+' '+str(self.state)+'>'
+#
+#     class Meta():
+#         db_table = 'structure_model'
+#
+#     def get_cleaned_pdb(self):
+#         return self.pdb_data.pdb
 
-class StructureModel(models.Model):
-    protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE)
-    state = models.ForeignKey('protein.ProteinState', on_delete=models.CASCADE)
-    main_template = models.ForeignKey('structure.Structure', null=True, on_delete=models.CASCADE)
-    pdb_data = models.ForeignKey('PdbData', null=True, on_delete=models.CASCADE)
-    version = models.DateField()
-    stats_text = models.ForeignKey('StatsText', null=True, on_delete=models.CASCADE)
 
-    def __repr__(self):
-        return '<StructureModel: '+str(self.protein.entry_name)+' '+str(self.state)+'>'
+# class StructureModelpLDDT(models.Model):
+#     structure_model = models.ForeignKey('StructureModel', on_delete=models.CASCADE)
+#     residue = models.ForeignKey('residue.Residue', on_delete=models.CASCADE)
+#     pLDDT = models.DecimalField(max_digits=4, decimal_places=2)
+#
+#     def __str__(self):
+#         return '<pLDDT: {} {} {}>'.format(self.pLDDT, self.residue.sequence_number, self.structure_model)
+#
+#     class Meta():
+#         db_table = 'structure_model_plddt'
 
-    def __str__(self):
-        return '<StructureModel: '+str(self.protein.entry_name)+' '+str(self.state)+'>'
-
-    class Meta():
-        db_table = 'structure_model'
-
-    def get_cleaned_pdb(self):
-        return self.pdb_data.pdb
-
-
-class StructureModelpLDDT(models.Model):
-    structure_model = models.ForeignKey('StructureModel', on_delete=models.CASCADE)
+class StructurepLDDT(models.Model):
+    structure_model = models.ForeignKey('structure.Structure', on_delete=models.CASCADE)
     residue = models.ForeignKey('residue.Residue', on_delete=models.CASCADE)
     pLDDT = models.DecimalField(max_digits=4, decimal_places=2)
 
@@ -148,7 +189,7 @@ class StructureModelpLDDT(models.Model):
         return '<pLDDT: {} {} {}>'.format(self.pLDDT, self.residue.sequence_number, self.structure_model)
 
     class Meta():
-        db_table = 'structure_model_plddt'
+        db_table = 'structure_plddt'
 
 
 class StructureComplexModel(models.Model):
@@ -204,10 +245,34 @@ class StatsText(models.Model):
         db_table = 'stats_text'
 
 
-class StructureModelRMSD(models.Model):
-    homology_model = models.ForeignKey('structure.StructureModel', on_delete=models.CASCADE, null=True)
+# class StructureModelRMSD(models.Model):
+#     homology_model = models.ForeignKey('structure.StructureModel', on_delete=models.CASCADE, null=True)
+#     target_structure = models.ForeignKey('structure.Structure', related_name='target_structure', null=True, on_delete=models.CASCADE)
+#     main_template = models.ForeignKey('structure.Structure', related_name='main_template', null=True, on_delete=models.CASCADE)
+#     version = models.DateField(null=True)
+#     seq_id = models.IntegerField(null=True)
+#     seq_sim = models.IntegerField(null=True)
+#     overall_all = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     overall_backbone = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     TM_all = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     TM_backbone = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     H8 = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     ICL1 = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     ECL1 = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     ICL2 = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     ECL2 = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     ECL3 = models.DecimalField(null=True, max_digits=3, decimal_places=1)
+#     binding_pocket = models.DecimalField(null=True, max_digits=2, decimal_places=1)
+#     notes = models.CharField(max_length=150)
+#
+#     def __repr__(self):
+#         return '<StructureModelRMSD: {} {}>'.format(self.target_structure, self.version)
+#
+#     class Meta():
+#         db_table = 'structure_model_rmsd'
+class StructureRMSD(models.Model):
+    homology_model = models.ForeignKey('structure.Structure', on_delete=models.CASCADE, null=True)
     target_structure = models.ForeignKey('structure.Structure', related_name='target_structure', null=True, on_delete=models.CASCADE)
-    main_template = models.ForeignKey('structure.Structure', related_name='main_template', null=True, on_delete=models.CASCADE)
     version = models.DateField(null=True)
     seq_id = models.IntegerField(null=True)
     seq_sim = models.IntegerField(null=True)
@@ -225,14 +290,13 @@ class StructureModelRMSD(models.Model):
     notes = models.CharField(max_length=150)
 
     def __repr__(self):
-        return '<StructureModelRMSD: {} {}>'.format(self.target_structure, self.version)
+        return '<StructureRMSD: {} {}>'.format(self.target_structure, self.version)
 
     class Meta():
-        db_table = 'structure_model_rmsd'
-
+        db_table = 'structure_rmsd'
 
 class StructureType(models.Model):
-    slug = models.SlugField(max_length=25, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
 
     def type_short(self):

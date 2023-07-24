@@ -40,7 +40,7 @@ canvas {
         <td width="50%" style="border:0px;">
         <div class="row text-success">
         <div class="text-center">
-                <h2>{{ crystal.protein_conformation.protein.family.name|safe }}</h2>
+                <h2>{{ crystal.protein.family.name|safe }}</h2>
             </div>
         </div>
 
@@ -49,7 +49,7 @@ canvas {
                 <h4>PROTEIN CLASS</h4>
             </div>
             <div class="col-md-6">
-            {{ crystal.protein_conformation.protein.get_protein_class }}
+            {{ crystal.protein.get_protein_class }}
             </div>
         </div>
 
@@ -67,7 +67,7 @@ canvas {
                 <h4>SPECIES</h4>
             </div>
             <div class="col-md-6">
-            {{ crystal.protein_conformation.protein.species.latin_name }}
+            {{ crystal.protein.species.latin_name }}
             </div>
         </div>
 

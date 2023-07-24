@@ -142,7 +142,7 @@ class Command(BaseCommand):
                 except Structure.DoesNotExist:
                     structure = False
                 if structure:
-                    pc = structure.protein_conformation
+                    pc = structure.protein
 
                 export_line = ''
                 for col in general_cols:
@@ -155,7 +155,7 @@ class Command(BaseCommand):
                 try:
                     struct = Structure.objects.get(pdb_code__index=pdb_code);
                     # construct
-                    export_line += struct.protein_conformation.protein.entry_name + '\t'
+                    export_line += struct.protein.entry_name + '\t'
                     # auxiliary protein
                     export_line += ', '.join(struct.stabilizing_agents.values_list('name',
                         flat=True).order_by('id')) + '\t'

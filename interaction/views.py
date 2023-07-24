@@ -165,7 +165,7 @@ def check_pdb(projectdir, pdb):  #CAN WE HAVE THE PDB AS A VAR AND NOT A FILE?
                 pdbfile = f.read()
         else:
             pdbfile = pdbfile.text
-            
+
         # output_pdb = pdbfile.decode('utf-8').split('\n')
         temp_path = projectdir + 'pdbs/' + pdb + '.pdb'
         with open(temp_path, "w") as f:
@@ -1171,7 +1171,7 @@ class InteractionSelection(AbsTargetSelection):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        context['structures'] = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name').annotate(
+        context['structures'] = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein__parent__entry_name').annotate(
             num_ligands=Count('structure_ligand_pair', distinct=True), num_interactions=Count('pk', distinct=True)).order_by('structure_ligand_pair__structure__pdb_code__index')
         context['structure_groups'] = sorted(set([ structure['structure_ligand_pair__structure__pdb_code__index'][0] for structure in context['structures'] ]))
         context['form'] = PDBform()
@@ -1195,7 +1195,7 @@ def StructureDetails(request, pdbname):
             main_ligand.append(structure['structure_ligand_pair__pdb_reference'])
 
     crystal = Structure.objects.get(pdb_code__index=pdbname)
-    p = Protein.objects.get(protein=crystal.protein_conformation.protein)
+    p = Protein.objects.get(protein=crystal.protein)
 
     residuelist = Residue.objects.filter(protein_conformation__protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
     lookup = {}
@@ -1347,8 +1347,8 @@ def StructureDetails(request, pdbname):
 def list_structures(request):
     form = PDBform()
     #structures = ResidueFragmentInteraction.objects.distinct('structure_ligand_pair__structure').all()
-    structures = ResidueFragmentInteraction.objects.exclude(interaction_type__slug='acc').values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name').annotate(
-        num_ligands=Count('structure_ligand_pair', distinct=True), num_interactions=Count('pk', distinct=True)).order_by('structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name')
+    structures = ResidueFragmentInteraction.objects.exclude(interaction_type__slug='acc').values('structure_ligand_pair__structure__pdb_code__index', 'structure_ligand_pair__structure__protein__parent__entry_name').annotate(
+        num_ligands=Count('structure_ligand_pair', distinct=True), num_interactions=Count('pk', distinct=True)).order_by('structure_ligand_pair__structure__protein__parent__entry_name')
     #structures = ResidueFragmentInteraction.objects.values('structure_ligand_pair__structure__pdb_code__index','structure_ligand_pair__structure').annotate(Count('structure_ligand_pair__ligand'))
     # print(structures.count())
     genes = {}
@@ -1358,9 +1358,9 @@ def list_structures(request):
     totaltopinteractions = 0
     for structure in structures:
         # print(structure)
-        if structure['structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name'] not in genes:
+        if structure['structure_ligand_pair__structure__protein__parent__entry_name'] not in genes:
             genes[structure[
-                'structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name']] = 1
+                'structure_ligand_pair__structure__protein__parent__entry_name']] = 1
         totalligands += structure['num_ligands']
         totalinteractions += structure['num_interactions']
         ligands = ResidueFragmentInteraction.objects.exclude(interaction_type__slug='acc').values('structure_ligand_pair__ligand__name').filter(structure_ligand_pair__structure__pdb_code__index=structure[
@@ -1391,7 +1391,7 @@ def crystal(request):
     structures = ResidueFragmentInteraction.objects.values('structure_ligand_pair__ligand__name').filter(
         structure_ligand_pair__structure__pdb_code__index=pdbname).annotate(numRes=Count('pk', distinct=True)).order_by('-numRes')
     crystal = Structure.objects.get(pdb_code__index=pdbname)
-    p = Protein.objects.get(protein=crystal.protein_conformation.protein)
+    p = Protein.objects.get(protein=crystal.protein)
     residues = ResidueFragmentInteraction.objects.filter(
         structure_ligand_pair__structure__pdb_code__index=pdbname).order_by('rotamer__residue__sequence_number')
     print("residues", residues)
@@ -1459,7 +1459,7 @@ def extract_fragment_rotamer(f, residue, structure, ligand):
         try:
             rotamer = Rotamer.objects.get(residue=residue, structure=structure)
         except Rotamer.DoesNotExist:
-            rotamer, _ = Rotamer.objects.get_or_create(residue=residue, structure=structure, pdbdata=rotamer_data)            
+            rotamer, _ = Rotamer.objects.get_or_create(residue=residue, structure=structure, pdbdata=rotamer_data)
 
         fragment_data, _ = PdbData.objects.get_or_create(pdb=fragment_pdb)
         fragment, created = Fragment.objects.get_or_create(ligand=ligand, structure=structure, pdbdata=fragment_data, residue=residue)
@@ -1926,7 +1926,7 @@ def ajax(request, slug, **response_kwargs):
             lookup[r.generic_number.label] = r.sequence_number
 
     interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name=slug, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').order_by('rotamer__residue__sequence_number')
+        structure_ligand_pair__structure__protein__parent__entry_name=slug, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').order_by('rotamer__residue__sequence_number')
     # return HttpResponse("Hello, world. You're at the polls index. "+slug)
     jsondata = {}
     for interaction in interactions:
@@ -1957,7 +1957,7 @@ def ajaxLigand(request, slug, ligand, **response_kwargs):
 
 
     interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__parent__entry_name=slug, structure_ligand_pair__ligand__name=ligand).exclude(interaction_type__type ='hidden').order_by('rotamer__residue__sequence_number')
+        structure_ligand_pair__structure__protein__parent__entry_name=slug, structure_ligand_pair__ligand__name=ligand).exclude(interaction_type__type ='hidden').order_by('rotamer__residue__sequence_number')
     # return HttpResponse("Hello, world. You're at the polls index. "+slug)
     jsondata = {}
     for interaction in interactions:

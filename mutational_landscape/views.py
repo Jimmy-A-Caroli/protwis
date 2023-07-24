@@ -165,7 +165,7 @@ def render_variants(request, protein=None, family=None, download=None, receptor_
             orthologs = Protein.objects.filter(family__slug__startswith=proteins[0].family.slug, sequence_type__slug='wt')
 
         interactions = ResidueFragmentInteraction.objects.filter(
-            structure_ligand_pair__structure__protein_conformation__protein__parent__in=orthologs, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').all()
+            structure_ligand_pair__structure__protein__parent__in=orthologs, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').all()
         interaction_data = {}
         for interaction in interactions:
             if interaction.rotamer.residue.generic_number:
@@ -339,7 +339,7 @@ def ajaxNaturalMutation(request, slug, **response_kwargs):
     orthologs = Protein.objects.filter(family__slug__startswith=p.family.slug, sequence_type__slug='wt')
 
     interactions = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__parent__in=orthologs, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').order_by('rotamer__residue__sequence_number')
+        structure_ligand_pair__structure__protein__parent__in=orthologs, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').order_by('rotamer__residue__sequence_number')
     interaction_data = {}
     for interaction in interactions:
         if interaction.rotamer.residue.generic_number:
@@ -631,7 +631,7 @@ def get_functional_sites(protein):
     ## interaction data also from those
     orthologs = Protein.objects.filter(family__slug__startswith=protein.family.slug, sequence_type__slug='wt').prefetch_related('protein__family')
     interaction_residues = ResidueFragmentInteraction.objects.filter(
-        structure_ligand_pair__structure__protein_conformation__protein__parent__in=orthologs, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').values_list('rotamer__residue_id', flat=True).distinct()
+        structure_ligand_pair__structure__protein__parent__in=orthologs, structure_ligand_pair__annotated=True).exclude(interaction_type__type ='hidden').values_list('rotamer__residue_id', flat=True).distinct()
 
     ## Get variants of these known residues:
     known_function_sites = set(x for l in [GP_object,sp_object,ms_object,ptms,interaction_residues] for x in l)

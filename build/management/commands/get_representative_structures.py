@@ -9,8 +9,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        repr_structs = list(Structure.objects.order_by('protein_conformation__protein__parent', 'state',
-            'resolution').distinct('protein_conformation__protein__parent'))
+        repr_structs = list(Structure.objects.order_by('protein__parent', 'state',
+            'resolution').distinct('protein__parent'))
         print(len(repr_structs))
         print("PDB code\tProtein name\tPreferred_chain")
         for struct in repr_structs:
@@ -19,4 +19,4 @@ class Command(BaseCommand):
             #io = PDBIO()
             #io.set_structure(pdb_structure)
             #io.save("{!s}.pdb".format(struct.pdb_code.index))
-            print("{!s}\t{!s}\t{!s}".format(struct.pdb_code.index, struct.protein_conformation.protein.parent.entry_name, struct.preferred_chain))
+            print("{!s}\t{!s}\t{!s}".format(struct.pdb_code.index, struct.protein.parent.entry_name, struct.preferred_chain))

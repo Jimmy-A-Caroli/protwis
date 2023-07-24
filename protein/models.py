@@ -317,7 +317,7 @@ class ProteinConformationTemplateStructure(models.Model):
     structure = models.ForeignKey('structure.Structure', on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.protein_conformation.protein.name + " " + self.protein_segment.slug \
+        return self.protein.name + " " + self.protein_segment.slug \
                + " " + self.structure.pdb_code.index
 
     class Meta():

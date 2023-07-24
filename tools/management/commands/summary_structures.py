@@ -282,18 +282,18 @@ class Command(BaseCommand):
         p2pdb = {}
         pdb2p = {}
         new_pdbs = ['5O9H', '5OLG', '5OLH', '5OLO', '5OLV', '5OLZ', '5OM1', '5OM4', '5V54', '5WF5', '5WF6', '5YQZ', '6AQF', '6B3J', '6B73', '6BQG', '6BQH', '6CM4', '6FFH', '6FFI']
-        for s in Structure.objects.all():
+        for s in Structure.objects.exclude(structure_type__slug__startswith='af-'):
+            #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
            # print(s)
             #print(s.protein_conformation.protein.parent.entry_name)
-            proteins.add(s.protein_conformation.protein.parent.entry_name)
-            proteins_nonortho.add(s.protein_conformation.protein.parent.family.name)
-            if s.protein_conformation.protein.parent.entry_name not in p2pdb:
-                p2pdb[s.protein_conformation.protein.parent.entry_name] = []
-            p2pdb[s.protein_conformation.protein.parent.entry_name].append(str(s))
-            pdb2p[str(s)] = s.protein_conformation.protein.parent.entry_name
+            proteins.add(s.protein.parent.entry_name)
+            proteins_nonortho.add(s.protein.parent.family.name)
+            if s.protein.parent.entry_name not in p2pdb:
+                p2pdb[s.protein.parent.entry_name] = []
+            p2pdb[s.protein.parent.entry_name].append(str(s))
+            pdb2p[str(s)] = s.protein.parent.entry_name
         print(len(proteins),"total entry names")
         print(len(proteins_nonortho),"total entry names (proteins_nonortho)")
 
         for p in new_pdbs:
             print('New PDB',p,'entry_name',pdb2p[p],'other pdbs for this protein',p2pdb[pdb2p[p]])
-

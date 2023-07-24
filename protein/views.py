@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from protein.models import Protein, ProteinConformation, ProteinAlias, ProteinFamily, Gene, ProteinSegment
 from residue.models import Residue
-from structure.models import Structure, StructureModel, StructureExtraProteins
+from structure.models import Structure, StructureExtraProteins
 # from structure.views import StructureBrowser
 from interaction.models import ResidueFragmentInteraction,StructureLigandInteraction
 from mutation.models import MutationExperiment
@@ -88,7 +88,7 @@ def detail(request, slug):
         alt_genes = genes[1:]
 
     # get structures of this protein
-    structures = Structure.objects.filter(protein_conformation__protein__parent=p)
+    structures = Structure.objects.filter(protein__parent=p)
 
     # get residues
     residues = Residue.objects.filter(protein_conformation=pc).order_by('sequence_number').prefetch_related(
@@ -133,7 +133,7 @@ def detail(request, slug):
     if r_buffer:
         r_chunks.append(r_buffer)
 
-    homology_models = StructureModel.objects.filter(protein=p)
+    homology_models = Structure.objects.filter(protein=p, structure_type__slug='af-gpcr')
 
     context = {'p': p, 'families': families, 'r_chunks': r_chunks, 'chunk_size': chunk_size, 'aliases': aliases,
                'gene': gene, 'alt_genes': alt_genes, 'structures': structures, 'mutations': mutations, 'protein_links': protein_links,'homology_models': homology_models}

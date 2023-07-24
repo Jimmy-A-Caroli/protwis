@@ -10,7 +10,7 @@ from django.shortcuts import redirect
 
 from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from protein.models import ProteinSegment
-from structure.models import Structure, StructureModel, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureModelRMSD, StructureModelpLDDT
+from structure.models import Structure, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureRMSD, StructurepLDDT
 from structure.functions import CASelector, SelectionParser, GenericNumbersSelector, SubstructureSelector, ModelRotamer
 from structure.assign_generic_numbers_gpcr import GenericNumbering, GenericNumberingFromDB
 from structure.structural_superposition import ProteinSuperpose,FragmentSuperpose
@@ -65,13 +65,13 @@ class StructureBrowser(TemplateView):
                 "state",
                 "structure_type",
                 "pdb_code__web_resource",
-                "protein_conformation__protein__species",
-                "protein_conformation__protein__source",
-                "protein_conformation__protein__family__parent__parent__parent",
+                "protein__species",
+                "protein__source",
+                "protein__family__parent__parent__parent",
                 "publication__web_link__web_resource").prefetch_related(
                 "stabilizing_agents", "construct__crystallization__crystal_method",
-                "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type",
-                "protein_conformation__site_protein_conformation__site","structure_type",
+                "protein__parent__endogenous_gtp_set__ligand__ligand_type",
+                "site_protein_conformation__site","structure_type",
                 Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
                 annotated=True).prefetch_related('ligand__ligand_type', 'ligand_role','ligand__ids__web_resource')),
                 Prefetch("extra_proteins", queryset=StructureExtraProteins.objects.all().prefetch_related(
@@ -89,9 +89,9 @@ class StructureBrowser(TemplateView):
         structs_and_coverage = []
         for s in structures:
             # structure_residues = Residue.objects.filter(protein_conformation=s.protein_conformation, protein_segment__isnull=False)
-            residue_num = structure_residues[s.protein_conformation.id]
+            residue_num = structure_residues[s.protein.id]
             # coverage = round((len(structure_residues) / len(s.protein_conformation.protein.parent.sequence))*100)
-            coverage = round((residue_num / len(s.protein_conformation.protein.parent.sequence))*100)
+            coverage = round((residue_num / len(s.protein.parent.sequence))*100)
             structs_and_coverage.append([s, coverage])
         context['structures'] = structs_and_coverage
 
@@ -119,13 +119,13 @@ class EffectorStructureBrowser(TemplateView):
                 "state",
                 "structure_type",
                 "pdb_code__web_resource",
-                "protein_conformation__protein__species",
-                "protein_conformation__protein__source",
-                "protein_conformation__protein__family__parent__parent__parent",
+                "protein__species",
+                "protein__source",
+                "protein__family__parent__parent__parent",
                 "publication__web_link__web_resource").prefetch_related(
                 "stabilizing_agents", "construct__crystallization__crystal_method", "structure_type",
-                "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type",
-                "protein_conformation__site_protein_conformation__site",
+                "protein__parent__endogenous_gtp_set__ligand__ligand_type",
+                "site_protein_conformation__site",
                 Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
                 annotated=True).prefetch_related('ligand__ligand_type', 'ligand_role','ligand__ids__web_resource')),
                 Prefetch("extra_proteins", queryset=StructureExtraProteins.objects.all().prefetch_related(
@@ -164,14 +164,12 @@ class ServeHomologyModels(TemplateView):
     def get_context_data(self, **kwargs):
         context = super(ServeHomologyModels, self).get_context_data(**kwargs)
         try:
-            context['structure_model'] = StructureModel.objects.all().prefetch_related(
+            context['structure_model'] = Structure.objects.filter(structure_type__slug__startswith='af-').exclude(structure_type__slug='af-peptide').prefetch_related(
                 "protein__family",
                 "state",
                 "protein__family__parent__parent__parent",
-                "protein__species",
-                "main_template__protein_conformation__protein__parent__family",
-                "main_template__pdb_code")
-        except StructureModel.DoesNotExist as e:
+                "protein__species")
+        except Structure.DoesNotExist as e:
             pass
 
         return context
@@ -205,12 +203,12 @@ class ServeModelStatistics(TemplateView):
     template_name = "model_statistics.html"
     def get_context_data(self, **kwargs):
         context = super(ServeModelStatistics, self).get_context_data(**kwargs)
-        smr = StructureModelRMSD.objects.all()
+        smr = StructureRMSD.objects.all()
         try:
             context['structure_model_rmsds'] = smr.prefetch_related(
-                "target_structure__protein_conformation__protein__parent",
-                "target_structure__protein_conformation__protein__parent__family")
-        except StructureModelRMSD.DoesNotExist as e:
+                "target_structure__protein__parent",
+                "target_structure__protein__parent__family")
+        except StructureRMSD.DoesNotExist as e:
             print(e)
 
         return context
@@ -227,21 +225,21 @@ def HomologyModelDetails(request, modelname, state):
     modelname = modelname
 
     color_palette = ["orange","cyan","yellow","lime","fuchsia","green","teal","olive","thistle","grey","chocolate","blue","red","pink","maroon"]
-    model_plddt = StructureModelpLDDT.objects.filter(structure_model__protein__entry_name=modelname, structure_model__state__slug=state)
+    model_plddt = StructurepLDDT.objects.filter(structure_model__protein__entry_name=modelname, structure_model__state__slug=state)
     residues_plddt = {}
     for item in model_plddt:
         residues_plddt[item.residue.id] = [item.residue, item.pLDDT]
 
-    model = StructureModel.objects.get(protein__entry_name=modelname, state__slug=state)
+    model = Structure.objects.get(protein__entry_name=modelname, state__slug=state, structure_type__slug='af-gpcr')
     version = model.version
     ### Keep old coloring for refined structures
     if model.protein.accession==None:
-        model_main_template = model.main_template
+        model_main_template = model.protein
         if model.protein.accession:
             residues = Residue.objects.filter(protein_conformation__protein=model.protein)
             a = Alignment()
             a.load_reference_protein(model.protein)
-            a.load_proteins([model.main_template.protein_conformation.protein.parent])
+            a.load_proteins([model.protein_conformation.protein.parent])
             segs = ProteinSegment.objects.filter(id__in=residues.order_by("protein_segment__slug").distinct("protein_segment__slug").values_list("protein_segment", flat=True))
             a.load_segments(segs)
             a.build_alignment()
@@ -613,7 +611,7 @@ def format_model_details(rotamers, model_main_template, color_palette, chain=Non
     return bb_temps, backbone_templates, r_temps, rotamer_templates, segments_out, bb_main, bb_alt, bb_none, sc_main, sc_alt, sc_none, template_list, colors
 
 def ServeHomModDiagram(request, modelname, state):
-    model=StructureModel.objects.filter(protein__entry_name=modelname, state__slug=state)
+    model=Structure.objects.filter(protein__entry_name=modelname, state__slug=state, structure_type__slug='af-gpcr')
     if model.exists():
         model=model.get()
     else:
@@ -654,7 +652,7 @@ def StructureDetails(request, pdbname):
 
     crystal = Structure.objects.get(pdb_code__index=pdbname)
     ligands = StructureLigandInteraction.objects.filter(structure=crystal, annotated=True)
-    p = Protein.objects.get(protein=crystal.protein_conformation.protein)
+    p = Protein.objects.get(protein=crystal.protein)
     residues = ResidueFragmentInteraction.objects.filter(structure_ligand_pair__structure__pdb_code__index=pdbname, structure_ligand_pair__annotated=True).order_by('rotamer__residue__sequence_number')
 
     # positioning data
@@ -669,7 +667,7 @@ def StructureDetails(request, pdbname):
     signaling_complex = SignprotComplex.objects.filter(structure=crystal).count() > 0
 
     # GN list
-    only_gns = list(crystal.protein_conformation.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label','display_generic_number__label').all())
+    only_gns = list(crystal.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label','display_generic_number__label').all())
     gn_list = [x[1] for x in only_gns]
     filter_tm1 = [x[1] for x in only_gns if x[2] == "1x46"]
     ref_tm1 = ""
@@ -728,7 +726,7 @@ def ServeUprightPdbDiagram(request, pdbname):
     qn_upright = rotmat(v1, v2)
 
     # Calculate rotation around axis (TM1 placement)
-    ref_tm1 = Residue.objects.filter(protein_conformation=structure.protein_conformation, generic_number_id__label="1x46")
+    ref_tm1 = Residue.objects.filter(protein_conformation__protein=structure.protein, generic_number_id__label="1x46")
     if ref_tm1.count() > 0:
         ref_tm1 = ref_tm1.first().sequence_number
         tm1_coord = struct[0][structure.preferred_chain][ref_tm1]["CA"].get_vector()
@@ -775,14 +773,14 @@ class StructureStatistics(TemplateView):
             lookup[f.slug] = f.name
 
         #GENERIC
-        all_structs = Structure.objects.all().prefetch_related('protein_conformation__protein__family')
+        all_structs = Structure.objects.exclude(structure_type__slug__startswith='af-').all().prefetch_related('protein__family')
         all_complexes = all_structs.exclude(ligands=None)
-        unique_structs = Structure.objects.order_by('protein_conformation__protein__family__name', 'state',
-            'publication_date', 'resolution').distinct('protein_conformation__protein__family__name').prefetch_related('protein_conformation__protein__family')
-        unique_complexes = StructureLigandInteraction.objects.filter(annotated=True).distinct('ligand', 'structure__protein_conformation__protein__family').prefetch_related('structure', 'structure__protein_conformation', 'structure__protein_conformation__protein', 'structure__protein_conformation__protein__family')
-        all_active = all_structs.filter(protein_conformation__state__slug = 'active')
+        unique_structs = Structure.objects.order_by('protein__family__name', 'state',
+            'publication_date', 'resolution').distinct('protein__family__name').prefetch_related('protein__family')
+        unique_complexes = StructureLigandInteraction.objects.filter(annotated=True).distinct('ligand', 'structure__protein__family').prefetch_related('structure', 'structure__protein', 'structure__protein__family')
+        all_active = all_structs.filter(state__slug = 'active')
         years = self.get_years_range(list(set([x.publication_date.year for x in all_structs])))
-        unique_active = unique_structs.filter(protein_conformation__state__slug = 'active')
+        unique_active = unique_structs.filter(state__slug = 'active')
         #Stats
         # struct_count = Structure.objects.all().annotate(Count('id'))
         struct_lig_count = Structure.objects.exclude(ligands=None)
@@ -809,28 +807,28 @@ class StructureStatistics(TemplateView):
         context['chartdata_class_all'] = self.get_per_class_cumulative_data_series(years, all_structs, lookup)
 
         # GPROT Complex information
-        all_gprots = StructureExtraProteins.objects.filter(category='G alpha').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
+        all_gprots = StructureExtraProteins.objects.filter(category='G alpha').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein__family")
         # all_gprots = all_structs.filter(id__in=SignprotComplex.objects.filter(protein__family__slug__startswith='100').values_list("structure__id", flat=True))
 
         ###### these are query sets for G-Prot Structure Statistics
         if self.origin != 'arrestin':
-            all_g_A_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='001')
-            all_g_B1_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='002')
-            all_g_B2_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='003')
-            all_g_C_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='004')
-            all_g_D1_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='005')
-            all_g_F_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='006')
-            all_g_T2_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='007')
+            all_g_A_complexes = all_gprots.filter(structure__protein__family__slug__startswith='001')
+            all_g_B1_complexes = all_gprots.filter(structure__protein__family__slug__startswith='002')
+            all_g_B2_complexes = all_gprots.filter(structure__protein__family__slug__startswith='003')
+            all_g_C_complexes = all_gprots.filter(structure__protein__family__slug__startswith='004')
+            all_g_D1_complexes = all_gprots.filter(structure__protein__family__slug__startswith='005')
+            all_g_F_complexes = all_gprots.filter(structure__protein__family__slug__startswith='006')
+            all_g_T2_complexes = all_gprots.filter(structure__protein__family__slug__startswith='007')
             # unique_gprots = unique_structs.filter(id__in=SignprotComplex.objects.filter(protein__family__slug__startswith='100').values_list("structure__id", flat=True))
             # unique_gprots = unique_structs.filter(id__in=StructureExtraProteins.objects.filter(category='G alpha').values_list("structure__id", flat=True))
-            unique_gprots = StructureExtraProteins.objects.filter(category='G alpha').prefetch_related("wt_protein", "wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family").distinct('structure__protein_conformation__protein__family__name')
-            unique_g_A_complexes = all_g_A_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_g_B1_complexes = all_g_B1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_g_B2_complexes = all_g_B2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_g_C_complexes = all_g_C_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_g_D1_complexes = all_g_D1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_g_F_complexes = all_g_F_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_g_T2_complexes = all_g_T2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_gprots = StructureExtraProteins.objects.filter(category='G alpha').prefetch_related("wt_protein", "wt_protein__family", "wt_protein__family__parent", "structure__protein__family").distinct('structure__protein__family__name')
+            unique_g_A_complexes = all_g_A_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_g_B1_complexes = all_g_B1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_g_B2_complexes = all_g_B2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_g_C_complexes = all_g_C_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_g_D1_complexes = all_g_D1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_g_F_complexes = all_g_F_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_g_T2_complexes = all_g_T2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
             context['all_gprots'] = len(all_gprots)
             context['all_gprots_by_class'] = self.count_by_class(all_gprots, lookup, extra=True)
             context['all_gprots_by_gclass'] = self.count_by_effector_class(all_gprots, lookup)
@@ -865,40 +863,40 @@ class StructureStatistics(TemplateView):
                 context['noncomplex_gprots_by_gclass'] = self.count_by_effector_class(noncomplex_gprots, lookup, nc=True)
                 context['noncomplex_gprots'] = len(noncomplex_gprots)
                 circle_data = all_gprots.values_list(
-                              "wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index").order_by(
-                              "wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index").distinct(
-                              "wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index")
+                              "wt_protein__family__parent__name", "structure__protein__parent__entry_name", "structure__pdb_code_id__index").order_by(
+                              "wt_protein__family__parent__name", "structure__protein__parent__entry_name", "structure__pdb_code_id__index").distinct(
+                              "wt_protein__family__parent__name", "structure__protein__parent__entry_name", "structure__pdb_code_id__index")
                 context['total_gprots_by_gclass'] = []
                 for key in context['all_gprots_by_gclass']:
                     context['total_gprots_by_gclass'].append(context['all_gprots_by_gclass'][key] + context['noncomplex_gprots_by_gclass'][key])
                 context['total_gprots'] = sum(context['total_gprots_by_gclass'])
             else:
                 circle_data = all_structs.values_list(
-                              "state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index").order_by(
-                              "state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index").distinct(
-                              "state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index")
+                              "state_id__slug", "protein__parent__entry_name", "pdb_code_id__index").order_by(
+                              "state_id__slug", "protein__parent__entry_name", "pdb_code_id__index").distinct(
+                              "state_id__slug", "protein__parent__entry_name", "pdb_code_id__index")
 
         #ARRESTIN
         else:
-            all_arrestins = StructureExtraProteins.objects.filter(category='Arrestin').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
+            all_arrestins = StructureExtraProteins.objects.filter(category='Arrestin').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein__family")
             noncomplex_arrestins = SignprotStructure.objects.filter(protein__family__slug__startswith='200').prefetch_related("protein")
             ###### these are query sets for Arrestin Structure Statistics
-            all_arr_A_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='001')
-            all_arr_B1_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='002')
-            all_arr_B2_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='003')
-            all_arr_C_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='004')
-            all_arr_D1_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='005')
-            all_arr_F_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='006')
-            all_arr_T2_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='007')
+            all_arr_A_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='001')
+            all_arr_B1_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='002')
+            all_arr_B2_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='003')
+            all_arr_C_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='004')
+            all_arr_D1_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='005')
+            all_arr_F_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='006')
+            all_arr_T2_complexes = all_arrestins.filter(structure__protein__family__slug__startswith='007')
             # unique_arrestins = unique_structs.filter(id__in=StructureExtraProteins.objects.filter(category='Arrestin').values_list("structure__id", flat=True))
-            unique_arrestins = StructureExtraProteins.objects.filter(category='Arrestin').prefetch_related("wt_protein", "structure__protein_conformation__protein__family").distinct('structure__protein_conformation__protein__family__name')
-            unique_arr_A_complexes = all_arr_A_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_B1_complexes = all_arr_B1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_B2_complexes = all_arr_B2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_C_complexes = all_arr_C_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_D1_complexes = all_arr_D1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_F_complexes = all_arr_F_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_T2_complexes = all_arr_T2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arrestins = StructureExtraProteins.objects.filter(category='Arrestin').prefetch_related("wt_protein", "structure__protein__family").distinct('structure__protein__family__name')
+            unique_arr_A_complexes = all_arr_A_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arr_B1_complexes = all_arr_B1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arr_B2_complexes = all_arr_B2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arr_C_complexes = all_arr_C_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arr_D1_complexes = all_arr_D1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arr_F_complexes = all_arr_F_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
+            unique_arr_T2_complexes = all_arr_T2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
             context['all_arrestins'] = len(all_arrestins)
             context['all_arrestins_by_class'] = self.count_by_class(all_arrestins, lookup, extra=True)
             context['all_arrestins_by_gclass'] = self.count_by_effector_class(all_arrestins, lookup, effector='arrestin')
@@ -929,9 +927,9 @@ class StructureStatistics(TemplateView):
             context['unique_arrestins_by_gclass'] = self.count_by_effector_class(unique_arrestins, lookup, effector='arrestin')
             context['unique_arrestins_by_class'] = self.count_by_class(unique_arrestins, lookup, extra=True)
             circle_data = all_arrestins.values_list(
-                          "wt_protein__family__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index").order_by(
-                          "wt_protein__family__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index").distinct(
-                          "wt_protein__family__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index")
+                          "wt_protein__family__name", "structure__protein__parent__entry_name", "structure__pdb_code_id__index").order_by(
+                          "wt_protein__family__name", "structure__protein__parent__entry_name", "structure__pdb_code_id__index").distinct(
+                          "wt_protein__family__name", "structure__protein__parent__entry_name", "structure__pdb_code_id__index")
             context['total_arrestins_by_gclass'] = []
             for key in context['all_arrestins_by_gclass']:
                 context['total_arrestins_by_gclass'].append(context['all_arrestins_by_gclass'][key] + context['noncomplex_arrestins_by_gclass'][key])
@@ -1041,7 +1039,7 @@ class StructureStatistics(TemplateView):
 
         families = []
         for s in queryset:
-            fid = s.protein_conformation.protein.family.slug.split("_")
+            fid = s.protein.family.slug.split("_")
             fname = lookup[fid[0]+"_"+fid[1]]
             cname = lookup[fid[0]]
             if fname not in families:
@@ -1056,12 +1054,12 @@ class StructureStatistics(TemplateView):
         records = []
         if extra == False:
             for s in queryset:
-                fid = s.protein_conformation.protein.family.slug.split("_")
+                fid = s.protein.family.slug.split("_")
                 cname = lookup[fid[0]]
                 records.append(cname)
         else:
             for s in queryset:
-                fid = s.structure.protein_conformation.protein.family.slug.split("_")
+                fid = s.structure.protein.family.slug.split("_")
                 cname = lookup[fid[0]]
                 records.append(cname)
 
@@ -1127,7 +1125,7 @@ class StructureStatistics(TemplateView):
                     data[prot_class] = []
                 count = 0
                 for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
+                    fid = structure.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
                     if lookup[fid[0]] == prot_class and structure.publication_date.year == year:
                         count += 1
@@ -1155,7 +1153,7 @@ class StructureStatistics(TemplateView):
                     data[family] = []
                 count = 0
                 for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
+                    fid = structure.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
                     if lookup[fid[0]+"_"+fid[1]] == family and structure.publication_date.year == year:
                         count += 1
@@ -1183,7 +1181,7 @@ class StructureStatistics(TemplateView):
                     data[prot_class] = []
                 count = 0
                 for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
+                    fid = structure.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
                     if lookup[fid[0]] == prot_class and structure.publication_date.year == year:
                         count += 1
@@ -1215,7 +1213,7 @@ class StructureStatistics(TemplateView):
                     data[family] = []
                 count = 0
                 for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
+                    fid = structure.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
                     if lookup[fid[0]+"_"+fid[1]] == family and structure.publication_date.year == year:
                         count += 1
@@ -1313,7 +1311,7 @@ class StructureStatistics(TemplateView):
 
         class_interactions = ResidueFragmentInteraction.objects.filter(structure_ligand_pair__annotated=True).prefetch_related(
             'rotamer__residue__display_generic_number','interaction_type',
-            'structure_ligand_pair__structure__protein_conformation__protein__parent__family',
+            'structure_ligand_pair__structure__protein__parent__family',
             'structure_ligand_pair__ligand',
             )
 
@@ -1321,11 +1319,11 @@ class StructureStatistics(TemplateView):
         score_copy = {'score': {'a':0,'i':0,'i_weight':0,'m':0,'m_weight':0,'s':0,'s_weight':0} , 'interaction' : {},'mutation': {}}
 
         # Replace above as fractions etc is not required and it was missing xtals that didnt have interactions.
-        unique_structs = list(Structure.objects.order_by('protein_conformation__protein__parent', 'state',
-            'publication_date', 'resolution').distinct('protein_conformation__protein__parent').prefetch_related('protein_conformation__protein__family'))
+        unique_structs = list(Structure.objects.exclude(structure_type__slug__startswith='af-').order_by('protein__parent', 'state',
+            'publication_date', 'resolution').distinct('protein__parent').prefetch_related('protein__family'))
 
         for s in unique_structs:
-            fid = s.protein_conformation.protein.family.slug.split("_")
+            fid = s.protein.family.slug.split("_")
             coverage[fid[0]]['children'][fid[1]]['children'][fid[2]]['children'][fid[3]]['receptor_i'] = 1
             coverage[fid[0]]['children'][fid[1]]['children'][fid[2]]['children'][fid[3]]['interactions'] += 1
 
@@ -1375,8 +1373,8 @@ class StructureStatistics(TemplateView):
         Prepare data for coverage diagram.
         """
 
-        crystal_proteins = [x.protein_conformation.protein.parent for x in Structure.objects.order_by('protein_conformation__protein__parent', 'state',
-            'publication_date', 'resolution').distinct('protein_conformation__protein__parent').prefetch_related('protein_conformation__protein__parent__family')]
+        crystal_proteins = [x.protein.parent for x in Structure.objects.exclude(structure_type__slug__startswith='af-').order_by('protein__parent', 'state',
+            'publication_date', 'resolution').distinct('protein__parent').prefetch_related('protein__parent__family')]
 
         families = []
         for cryst_prot in crystal_proteins:
@@ -1427,18 +1425,18 @@ class StructureStatistics(TemplateView):
 
         class_interactions = ResidueFragmentInteraction.objects.filter(structure_ligand_pair__annotated=True).prefetch_related(
             'rotamer__residue__display_generic_number','interaction_type',
-            'structure_ligand_pair__structure__protein_conformation__protein__parent__family',
+            'structure_ligand_pair__structure__protein__parent__family',
             'structure_ligand_pair__ligand',
             )
 
         score_copy = {'score': {'a':0,'i':0,'i_weight':0,'m':0,'m_weight':0,'s':0,'s_weight':0} , 'interaction' : {},'mutation': {}}
 
         # Replace above as fractions etc is not required and it was missing xtals that didnt have interactions.
-        unique_structs = list(Structure.objects.order_by('protein_conformation__protein__family__name', 'state',
-            'publication_date', 'resolution').distinct('protein_conformation__protein__family__name').prefetch_related('protein_conformation__protein__family'))
+        unique_structs = list(Structure.objects.exclude(structure_type__slug__startswith='af-').order_by('protein__family__name', 'state',
+            'publication_date', 'resolution').distinct('protein__family__name').prefetch_related('protein__family'))
 
         for s in unique_structs:
-            fid = s.protein_conformation.protein.family.slug.split("_")
+            fid = s.protein.family.slug.split("_")
             coverage[fid[0]]['children'][fid[1]]['children'][fid[2]]['children'][fid[3]]['receptor_i'] = 1
             coverage[fid[0]]['children'][fid[1]]['children'][fid[2]]['children'][fid[3]]['interactions'] += 1
 
@@ -1875,7 +1873,7 @@ class SuperpositionWorkflowResults(TemplateView):
             alt_file_names = []
             for x in selection.targets:
                 if x.type=='structure':
-                    alt_file_names.append('{}_{}.pdb'.format(x.item.protein_conformation.protein.entry_name, x.item.pdb_code.index))
+                    alt_file_names.append('{}_{}.pdb'.format(x.item.protein.entry_name, x.item.pdb_code.index))
                 elif x.type=='structure_model' or x.type=='structure_model_Inactive' or x.type=='structure_model_Intermediate' or x.type=='structure_model_Active':
                     alt_file_names.append('Class{}_{}_{}_{}_GPCRdb.pdb'.format(class_dict[x.item.protein.family.slug[:3]], x.item.protein.entry_name, x.item.state.name, x.item.main_template.pdb_code.index))
         if len(out_structs) == 0:
@@ -1929,7 +1927,7 @@ class SuperpositionWorkflowDownload(View):
             gn_assigner.assign_generic_numbers()
             self.ref_substructure_mapping = gn_assigner.get_substructure_mapping_dict()
             if selection.reference[0].type=='structure':
-                ref_name = '{}_{}_ref.pdb'.format(selection.reference[0].item.protein_conformation.protein.entry_name, selection.reference[0].item.pdb_code.index)
+                ref_name = '{}_{}_ref.pdb'.format(selection.reference[0].item.protein.entry_name, selection.reference[0].item.pdb_code.index)
             elif selection.reference[0].type=='structure_model' or selection.reference[0].type=='structure_model_Inactive' or selection.reference[0].type=='structure_model_Intermediate' or selection.reference[0].type=='structure_model_Active':
                 ref_name = 'Class{}_{}_{}_{}_GPCRdb_ref.pdb'.format(class_dict[selection.reference[0].item.protein.family.slug[:3]], selection.reference[0].item.protein.entry_name,
                                                                     selection.reference[0].item.state.name, selection.reference[0].item.main_template.pdb_code.index)
@@ -2215,24 +2213,24 @@ class TemplateBrowser(TemplateView):
         a.load_reference_protein_from_selection(simple_selection)
 
         # fetch
-        qs = Structure.objects.all().select_related(
+        qs = Structure.objects.all().select_related(    #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
             "pdb_code__web_resource",
-            "protein_conformation__protein__species",
-            "protein_conformation__protein__source",
-            "protein_conformation__protein__family__parent__parent__parent",
+            "protein__species",
+            "protein__source",
+            "protein__family__parent__parent__parent",
             "publication__web_link__web_resource").prefetch_related(
             "stabilizing_agents",
-            "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type",
+            "protein__parent__endogenous_gtp_set__ligand__ligand_type",
             Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
             annotated=True).prefetch_related('ligand__ligand_type', 'ligand_role')))
 
         # Dirty but fast
         qsd = {}
         for st in qs:
-            qsd[st.protein_conformation.protein.id] = st
+            qsd[st.protein.id] = st
 
         # add proteins to the alignment
-        a.load_proteins([x.protein_conformation.protein for x in qs])
+        a.load_proteins([x.protein for x in qs])
 
         if simple_selection.segments != []:
             a.load_segments_from_selection(simple_selection)
@@ -2314,7 +2312,7 @@ class PDBClean(TemplateView):
             if selection.targets != [] and selection.targets[0].type == 'structure':
                 request.session['substructure_mapping'] = OrderedDict()
                 for selected_struct in [x for x in selection.targets if x.type == 'structure']:
-                    struct_name = '{}_{}.pdb'.format(selected_struct.item.protein_conformation.protein.parent.entry_name, selected_struct.item.pdb_code.index)
+                    struct_name = '{}_{}.pdb'.format(selected_struct.item.protein.parent.entry_name, selected_struct.item.pdb_code.index)
                     if hets:
                         lig_names = [x.pdb_reference for x in StructureLigandInteraction.objects.filter(structure=selected_struct.item, annotated=True)]
                     else:
@@ -2485,7 +2483,7 @@ def ConvertStructuresToProteins(request):
         selection.importer(simple_selection)
     if selection.targets != []:
         for struct in selection.targets:
-            prot = struct.item.protein_conformation.protein.parent
+            prot = struct.item.protein.parent
             selection.remove('targets', 'structure', struct.item.id)
             selection.add('targets', 'protein', SelectionItem('protein', prot))
         if selection.reference != []:
@@ -2522,7 +2520,7 @@ def ConvertStructureModelsToProteins(request):
                 selection.remove('targets', 'structure_complex_receptor', struct_mod.item.id)
                 selection.add('targets', 'protein', SelectionItem('protein', prot))
             elif hasattr(struct_mod.item, 'pdb_code'):
-                prot = struct_mod.item.protein_conformation.protein.parent
+                prot = struct_mod.item.protein.parent
                 selection.remove('targets', 'structure', struct_mod.item.id)
                 selection.add('targets', 'protein', SelectionItem('protein', prot))
 
@@ -2563,11 +2561,11 @@ def ConvertStructureComplexSignprotToProteins(request):
     return HttpResponseRedirect('/alignment/segmentselectiongprot')
 
 
-def HommodDownload(request):
+def HommodDownload(request):                        #MAIN TEMPLATE? **JIMMY**
     "Download selected homology models in zip file"
     pks = request.GET['ids'].split(',')
 
-    hommodels = [StructureModel.objects.get(pk=pk) for pk in pks]
+    hommodels = [Structure.objects.get(pk=pk) for pk in pks]
 
     zip_io = BytesIO()
     with zipfile.ZipFile(zip_io, mode='w', compression=zipfile.ZIP_DEFLATED) as backup_zip:
@@ -2576,9 +2574,9 @@ def HommodDownload(request):
 
             if not hommod.protein.accession:
                 mod_name = 'Class{}_{}_{}_refined_{}_{}_GPCRDB.pdb'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.parent.entry_name,
-                                                                   hommod.main_template.pdb_code.index, hommod.state.name, hommod.version)
+                                                                   hommod.pdb_code.index, hommod.state.name, hommod.version)
                 stat_name = 'Class{}_{}_{}_refined_{}_{}_GPCRDB.templates.csv'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.parent.entry_name,
-                                                                   hommod.main_template.pdb_code.index, hommod.state.name, hommod.version)
+                                                                   hommod.pdb_code.index, hommod.state.name, hommod.version)
             else:
                 mod_name = 'Class{}_{}_{}_{}_{}_GPCRDB.pdb'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.entry_name,
                                                                           hommod.state.name, 'AF', hommod.version)
@@ -2594,7 +2592,7 @@ def HommodDownload(request):
     response['Content-Length'] = zip_io.tell()
     return response
 
-def ComplexmodDownload(request):
+def ComplexmodDownload(request):         #MAIN TEMPLATE? **JIMMY**
     "Download selected complex homology models in zip file"
     pks = request.GET['ids'].split(',')
 
@@ -2606,14 +2604,14 @@ def ComplexmodDownload(request):
             stats_text = StringIO(hommod.stats_text.stats_text)
             if not hommod.receptor_protein.accession:
                 mod_name = 'Class{}_{}-{}_{}_refined_{}_GPCRDB.pdb'.format(class_dict[hommod.receptor_protein.family.slug[:3]], hommod.receptor_protein.parent.entry_name,
-                                                                   hommod.sign_protein.entry_name, hommod.main_template.pdb_code.index, hommod.version)
+                                                                   hommod.sign_protein.entry_name, hommod.pdb_code.index, hommod.version)
                 stat_name = 'Class{}_{}-{}_{}_refined_{}_GPCRDB.templates.csv'.format(class_dict[hommod.receptor_protein.family.slug[:3]], hommod.receptor_protein.parent.entry_name,
-                                                                   hommod.sign_protein.entry_name, hommod.main_template.pdb_code.index, hommod.version)
+                                                                   hommod.sign_protein.entry_name, hommod.pdb_code.index, hommod.version)
             else:
                 mod_name = 'Class{}_{}-{}_{}_{}_GPCRDB.pdb'.format(class_dict[hommod.receptor_protein.family.slug[:3]], hommod.receptor_protein.entry_name,
-                                                                   hommod.sign_protein.entry_name, hommod.main_template.pdb_code.index, hommod.version)
+                                                                   hommod.sign_protein.entry_name, hommod.pdb_code.index, hommod.version)
                 stat_name = 'Class{}_{}-{}_{}_{}_GPCRDB.templates.csv'.format(class_dict[hommod.receptor_protein.family.slug[:3]], hommod.receptor_protein.entry_name,
-                                                                   hommod.sign_protein.entry_name, hommod.main_template.pdb_code.index, hommod.version)
+                                                                   hommod.sign_protein.entry_name, hommod.pdb_code.index, hommod.version)
             backup_zip.writestr(mod_name, io.getvalue())
             backup_zip.writestr(stat_name, stats_text.getvalue())
     response = HttpResponse(zip_io.getvalue(), content_type='application/x-zip-compressed')
@@ -2621,27 +2619,27 @@ def ComplexmodDownload(request):
     response['Content-Length'] = zip_io.tell()
     return response
 
-def SingleModelDownload(request, modelname, fullness, state=None, csv=False):
+def SingleModelDownload(request, modelname, fullness, state=None, csv=False):        #MAIN TEMPLATE? **JIMMY**
     "Download single homology model"
     zip_io = BytesIO()
     if state:
-        hommod = StructureModel.objects.get(protein__entry_name=modelname.lower(), state__slug=state)
+        hommod = Structure.objects.get(protein__entry_name=modelname.lower(), state__slug=state, structure_type__slug='af-gpcr')
     else:
-        hommod = StructureModel.objects.get(protein__entry_name=modelname.lower())
+        hommod = Structure.objects.get(protein__entry_name=modelname.lower(), structure_type__slug='af-gpcr')
     stat_name = None
     stats_lines = ''
     if not hommod.protein.accession:
         version = hommod.pdb_data.pdb.split('\n')[0][-10:]
         mod_name = 'Class{}_{}_{}_refined_{}_{}_GPCRdb.pdb'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.parent.entry_name,
-                                                                 hommod.main_template.pdb_code.index, hommod.state.name, version)
+                                                                 hommod.pdb_code.index, hommod.state.name, version)
         stat_name = 'Class{}_{}_{}_refined_{}_{}_GPCRdb.templates.csv'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.parent.entry_name,
-                                                                 hommod.main_template.pdb_code.index, hommod.state.name, version)
+                                                                 hommod.pdb_code.index, hommod.state.name, version)
     else:
-        if hommod.main_template:
+        if hommod.protein:
             mod_name = 'Class{}_{}_{}_{}_{}_GPCRdb.pdb'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.entry_name,
-                                                                           hommod.state.name, hommod.main_template.pdb_code.index, hommod.version)
+                                                                           hommod.state.name, hommod.pdb_code.index, hommod.version)
             stat_name = 'Class{}_{}_{}_{}_{}_GPCRdb.templates.csv'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.entry_name,
-                                                                           hommod.state.name, hommod.main_template.pdb_code.index, hommod.version)
+                                                                           hommod.state.name, hommod.pdb_code.index, hommod.version)
         else:
             mod_name = 'Class{}_{}_{}_{}_{}_GPCRdb.pdb'.format(class_dict[hommod.protein.family.slug[:3]], hommod.protein.entry_name,
                                                                            hommod.state.name, 'AF', hommod.version)

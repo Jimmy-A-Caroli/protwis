@@ -73,7 +73,7 @@ class ConstructStatistics(TemplateView):
         cons = Construct.objects.all().defer('schematics','snakecache').order_by("protein__entry_name","crystal__pdb_code").prefetch_related(
             "crystal","mutations__effects","purification","protein__family__parent__parent__parent", "insertions__insert_type", "modifications", "deletions", "crystallization__chemical_lists",
             "protein__species","structure__pdb_code","structure__publication__web_link", "contributor",
-            "structure__protein_conformation__protein__parent", "structure__state")
+            "structure__protein__parent", "structure__state")
 
         #PREPARE DATA
         proteins_ids = Construct.objects.all().values_list('protein', flat = True)
@@ -244,10 +244,10 @@ class ConstructStatistics(TemplateView):
                 if state=='other':
                     continue
                 entry_name_pdb_state = entry_name+ "_"+ pdb_code + "_" +state
-                crystal_p = c.structure.protein_conformation.protein.parent.entry_name
+                crystal_p = c.structure.protein.parent.entry_name
                 if entry_name!=crystal_p:
                     print("ERROR ERROR ERROR",pdb_code,entry_name,crystal_p)
-                    c.protein = c.structure.protein_conformation.protein.parent
+                    c.protein = c.structure.protein.parent
                     c.save()
                 #print(c.structure.state.slug)
                 p_class = p.family.slug.split('_')[0]
@@ -1504,7 +1504,7 @@ def stabilisation_browser(request):
     class_interactions_list = {}
     for c in gpcr_class:
         class_interactions = ResidueFragmentInteraction.objects.filter(
-            structure_ligand_pair__structure__protein_conformation__protein__family__slug__startswith=c, structure_ligand_pair__annotated=True).exclude(interaction_type__slug='acc').prefetch_related(
+            structure_ligand_pair__structure__protein__family__slug__startswith=c, structure_ligand_pair__annotated=True).exclude(interaction_type__slug='acc').prefetch_related(
             'rotamer__residue__generic_number','interaction_type',
             'rotamer__residue__protein_conformation__protein__parent__family')
 

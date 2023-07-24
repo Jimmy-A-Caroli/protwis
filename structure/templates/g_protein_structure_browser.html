@@ -242,16 +242,16 @@
                             {% endif %}
                         </td>
                         <td class="text-center">{{ structure.resolution|floatformat:"1" }}</td>
-                        {% if structure.protein_conformation %}
-                            <td><span><a href="http://www.uniprot.org/uniprot/{{ structure.protein_conformation.protein.parent.accession }}">{{ structure.protein_conformation.protein.parent.entry_short|safe }}</a></span></td>
-                            <td class='uniprot'><a href="/protein/{{ structure.protein_conformation.protein.parent.entry_name }}">{{ structure.protein_conformation.protein.parent.short|safe }}</a></td>
+                        {% if structure.protein %}
+                            <td><span><a href="http://www.uniprot.org/uniprot/{{ structure.protein.parent.accession }}">{{ structure.protein.parent.entry_short|safe }}</a></span></td>
+                            <td class='uniprot'><a href="/protein/{{ structure.protein.parent.entry_name }}">{{ structure.protein.parent.short|safe }}</a></td>
                         {% else %}
                             <td>-</td>
                             <td>-</td>
                         {% endif %}
-                        <td><span>{{ structure.protein_conformation.protein.family.parent.short|safe|dashwhenempty }}</span></td>
-                        <td class='expand'><span>{{ structure.protein_conformation.protein.family.parent.parent.parent.short|safe|dashwhenempty }}</span></td>
-                        <td class='expand'>{{ structure.protein_conformation.protein.species.common_name|dashwhenempty }}</td>
+                        <td><span>{{ structure.protein.family.parent.short|safe|dashwhenempty }}</span></td>
+                        <td class='expand'><span>{{ structure.protein.family.parent.parent.parent.short|safe|dashwhenempty }}</span></td>
+                        <td class='expand'>{{ structure.protein.species.common_name|dashwhenempty }}</td>
                         <td>
                             {{ structure.stabilizing_agents.all|only_fusions|linebreaksbr }}
                         </td>
@@ -281,10 +281,10 @@
                         <!-- Endogenous ligand -->
                         <td class='expand'>
                             {% autoescape off %}
-                              {{ structure.protein_conformation.protein.parent.endogenous_gtp_set.all | endo_format }}
+                              {{ structure.protein.parent.endogenous_gtp_set.all | endo_format }}
                             {% endautoescape %}
                         </td>
-                        <td>{{ structure.protein_conformation.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
+                        <td>{{ structure.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
                         <td class='expand'>
                             {% if structure.publication %}
                                 {{ structure.publication.authors}}
@@ -474,16 +474,16 @@
                           {% endif %}
                       </td>
                       <td class="text-center">{{ structure.resolution|floatformat:"1" }}</td>
-                      {% if structure.protein_conformation %}
-                          <td><span><a href="http://www.uniprot.org/uniprot/{{ structure.protein_conformation.protein.parent.accession }}">{{ structure.protein_conformation.protein.parent.entry_short|safe }}</a></span></td>
-                          <td class='uniprot'><a href="/protein/{{ structure.protein_conformation.protein.parent.entry_name }}">{{ structure.protein_conformation.protein.parent.short|safe }}</a></td>
+                      {% if structure.protein %}
+                          <td><span><a href="http://www.uniprot.org/uniprot/{{ structure.protein.parent.accession }}">{{ structure.protein.parent.entry_short|safe }}</a></span></td>
+                          <td class='uniprot'><a href="/protein/{{ structure.protein.parent.entry_name }}">{{ structure.protein.parent.short|safe }}</a></td>
                       {% else %}
                           <td>-</td>
                           <td>-</td>
                       {% endif %}
-                      <td><span>{{ structure.protein_conformation.protein.family.parent.short|safe|dashwhenempty }}</span></td>
-                      <td class='expand'><span>{{ structure.protein_conformation.protein.family.parent.parent.parent.short|safe|dashwhenempty }}</span></td>
-                      <td class='expand'>{{ structure.protein_conformation.protein.species.common_name|dashwhenempty }}</td>
+                      <td><span>{{ structure.protein.family.parent.short|safe|dashwhenempty }}</span></td>
+                      <td class='expand'><span>{{ structure.protein.family.parent.parent.parent.short|safe|dashwhenempty }}</span></td>
+                      <td class='expand'>{{ structure.protein.species.common_name|dashwhenempty }}</td>
                       <td>
                           {{ structure.stabilizing_agents.all|only_fusions|linebreaksbr }}
                       </td>
@@ -513,10 +513,10 @@
                       <!-- Endogenous ligand -->
                       <td class='expand'>
                           {% autoescape off %}
-                            {{ structure.protein_conformation.protein.parent.endogenous_gtp_set.all | endo_format }}
+                            {{ structure.protein.parent.endogenous_gtp_set.all | endo_format }}
                           {% endautoescape %}
                       </td>
-                      <td>{{ structure.protein_conformation.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
+                      <td>{{ structure.protein.parent.endogenous_gtp_set.all.0.ligand.ligand_type|dashwhenempty }}</td>
                       <td class='expand'>
                           {% if structure.publication %}
                               {{ structure.publication.authors}}

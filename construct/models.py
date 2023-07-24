@@ -68,7 +68,7 @@ class Construct(models.Model):
                     else:
                         position = 'icl3'
             result.append([confirmed,insert.insert_type.name, insert.insert_type.subtype,insert.position,insert.start,insert.end,'',''])
-        
+
         if position:
             for insert in self.insertions.all():
                 if insert.presence=='YES' and insert.insert_type.name=='linker':
@@ -213,7 +213,7 @@ class ConstructMutation(models.Model):
         seq_no = self.sequence_number
         try:
             # res_cons = Residue.objects.get(protein_conformation__protein=construct, sequence_number=seq_no)
-            res_wt = Residue.objects.get(protein_conformation__protein=self.construct.structure.protein_conformation.protein.parent, sequence_number=seq_no)
+            res_wt = Residue.objects.get(protein_conformation__protein=self.construct.structure.protein.parent, sequence_number=seq_no)
             if res_wt.amino_acid != self.wild_type_amino_acid:
                 pass
                 # print('aa dont match',construct.name,seq_no,"annotated wt:", self.wild_type_amino_acid, "DB wt:",res_wt.amino_acid, "Annotated Mut",self.mutated_amino_acid)

@@ -1284,7 +1284,7 @@ class SignatureMatch():
                 )
 
         if signprot:
-            complex_objs = SignprotComplex.objects.prefetch_related('structure__protein_conformation__protein').values_list('structure__protein_conformation__protein__parent_id', flat=True)
+            complex_objs = SignprotComplex.objects.prefetch_related('structure__protein').values_list('structure__protein__parent_id', flat=True)
             class_proteins = class_proteins.exclude(id__in=complex_objs)
 
         class_a_pcf = ProteinConformation.objects.order_by(

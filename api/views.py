@@ -243,25 +243,33 @@ class PeptideList(views.APIView):
     def get(self, request):
         peptides_ids = Ligand.objects.filter(ligand_type_id=2).values_list('id', flat=True)
         peptides_data = Ligand.objects.filter(ligand_type_id=2).values_list('id', flat=True).values_list('name', 'sequence')
+        # OLD
+        # peptides_with_structures = LigandPeptideStructure.objects.filter(ligand_id__in=peptides_ids).prefetch_related('structure', 'structure_id__web_link',
+        #                                                                                    'structure__protein_conformation', 'structure__protein_conformation__protein',
+        #                                                                                    'structure__protein_conformation__protein__family').values_list(
+        #                                                                                    'ligand_id__name', 'ligand_id__sequence', 'structure_id__pdb_code_id__index',
+        #                                                                                    'structure_id__protein_conformation_id__protein_id__parent_id__entry_name',
+        #                                                                                    'structure_id__protein_conformation_id__protein_id__family__parent__name',
+        #                                                                                    'structure_id__protein_conformation_id__protein_id__family__parent__parent__parent__name',
+        #                                                                                    'chain')
         peptides_with_structures = LigandPeptideStructure.objects.filter(ligand_id__in=peptides_ids).prefetch_related('structure', 'structure_id__web_link',
-                                                                                           'structure__protein_conformation', 'structure__protein_conformation__protein',
-                                                                                           'structure__protein_conformation__protein__family').values_list(
+                                                                                           'structure__protein', 'structure__protein__family').values_list(
                                                                                            'ligand_id__name', 'ligand_id__sequence', 'structure_id__pdb_code_id__index',
-                                                                                           'structure_id__protein_conformation_id__protein_id__parent_id__entry_name',
-                                                                                           'structure_id__protein_conformation_id__protein_id__family__parent__name',
-                                                                                           'structure_id__protein_conformation_id__protein_id__family__parent__parent__parent__name',
+                                                                                           'structure_id__protein_id__parent_id__entry_name',
+                                                                                           'structure_id__protein_id__family__parent__name',
+                                                                                           'structure_id__protein_id__family__parent__parent__parent__name',
                                                                                            'chain')
         s = []
         for peptide in peptides_with_structures:
             peptide_info = {
-                'Peptide name': peptide[0],
-                'Sequence': peptide[1],
-                'Sequence length': len(peptide[1]) if peptide[1] is not None else None,
-                'PDB': peptide[2],
-                'Chain': peptide[6],
-                'Receptor': peptide[3],
-                'Family': peptide[4],
-                'GPCR Class': peptide[5]
+                'Peptide name': peptide[0],         #ligand_id__name
+                'Sequence': peptide[1],             #ligand_id__sequence
+                'Sequence length': len(peptide[1]) if peptide[1] is not None else None, #ligand_id__sequence
+                'PDB': peptide[2],                  #structure_id__pdb_code_id__index
+                'Chain': peptide[6],                #chain
+                'Receptor': peptide[3],             #structure_id__protein_id__parent_id__entry_name
+                'Family': peptide[4],               #structure_id__protein_id__family__parent__name
+                'GPCR Class': peptide[5]            #structure_id__protein_id__family__parent__parent__parent__name
             }
             s.append(peptide_info)
         for peptide in peptides_data:
@@ -313,18 +321,22 @@ class StructureList(views.APIView):
         if pdb_code:
             structures = Structure.objects.filter(pdb_code__index=pdb_code)
         elif entry_name and representative:
-            structures = Structure.objects.filter(protein_conformation__protein__parent__entry_name=entry_name,
-                representative=True)
+            # OLD
+            # structures = Structure.objects.filter(protein_conformation__protein__parent__entry_name=entry_name,
+            #     representative=True)
+            structures = Structure.objects.filter(protein__parent__entry_name=entry_name, representative=True)
         elif entry_name:
-            structures = Structure.objects.filter(protein_conformation__protein__parent__entry_name=entry_name)
+            # OLD
+            # structures = Structure.objects.filter(protein_conformation__protein__parent__entry_name=entry_name)
+            structures = Structure.objects.filter(protein__parent__entry_name=entry_name)
         elif representative:
             structures = Structure.objects.filter(representative=True)
         else:
             structures = Structure.objects.all()
 
-        structures = structures.prefetch_related('protein_conformation__protein__parent__species', 'pdb_code',
-            'protein_conformation__protein__parent__family', 'protein_conformation__protein__parent__species',
-            'protein_conformation__protein__parent__family__parent__parent__parent',
+        structures = structures.prefetch_related('protein__parent__species', 'pdb_code',
+            'protein__parent__family', 'protein__parent__species',
+            'protein__parent__family__parent__parent__parent',
             'publication__web_link', 'publication__web_link__web_resource', 'structure_type',
             'structureligandinteraction_set__ligand',
             'structureligandinteraction_set__ligand__ligand_type',
@@ -343,10 +355,10 @@ class StructureList(views.APIView):
             # essential fields
             structure_data = {
                 'pdb_code': structure.pdb_code.index,
-                'protein': structure.protein_conformation.protein.parent.entry_name,
-                'class': structure.protein_conformation.protein.parent.family.parent.parent.parent.name,
-                'family': structure.protein_conformation.protein.parent.family.slug,
-                'species': structure.protein_conformation.protein.parent.species.latin_name,
+                'protein': structure.protein.parent.entry_name,
+                'class': structure.protein.parent.family.parent.parent.parent.name,
+                'family': structure.protein.parent.family.slug,
+                'species': structure.protein.parent.species.latin_name,
                 'preferred_chain': structure.preferred_chain,
                 'resolution': structure.resolution,
                 'publication_date': structure.publication_date,
@@ -447,8 +459,8 @@ class StructureAccessionHuman(views.APIView):
     """
 
     def get(self, request):
-        unique_slugs = list(Structure.objects.filter(protein_conformation__protein__family__slug__startswith="00")\
-            .order_by('protein_conformation__protein__family__slug').values_list('protein_conformation__protein__family__slug', flat=True).distinct())
+        unique_slugs = list(Structure.objects.filter(protein__family__slug__startswith="00")\
+            .order_by('protein__family__slug').values_list('protein__family__slug', flat=True).distinct())
         accession_codes = list(Protein.objects.filter(family__slug__in=unique_slugs, sequence_type__slug='wt', species__latin_name='Homo sapiens')\
                             .values_list('entry_name', flat=True))
         accessions = [x.split("_")[0].upper() for x in accession_codes]
@@ -857,12 +869,12 @@ class StructureTemplate(views.APIView):
         if entry_name is not None:
             ref = Protein.objects.get(sequence_type__slug='wt', entry_name=entry_name)
 
-            structures =  Structure.objects.order_by('protein_conformation__protein__parent', 'state',
-                'resolution').distinct('protein_conformation__protein__parent', 'state')
+            structures =  Structure.objects.order_by('protein__parent', 'state',
+                'resolution').distinct('protein__parent', 'state')
 
             ps = []
             for structure in structures:
-                ps.append(structure.protein_conformation.protein.parent)
+                ps.append(structure.protein.parent)
 
             if segments is not None:
                 input_list = segments.split(",")

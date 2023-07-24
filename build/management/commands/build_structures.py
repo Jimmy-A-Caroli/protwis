@@ -292,7 +292,7 @@ class Command(BaseBuild):
         i = 1
 
         # Checking Na+ atom in xtal
-        parent_prot_conf = ProteinConformation.objects.get(protein=structure.protein_conformation.protein.parent)
+        parent_prot_conf = ProteinConformation.objects.get(protein=structure.protein.parent)
         try:
             wt_2x50 = Residue.objects.get(protein_conformation=parent_prot_conf, display_generic_number__label=dgn('2x50',parent_prot_conf))
             wt_3x39 = Residue.objects.get(protein_conformation=parent_prot_conf, display_generic_number__label=dgn('3x39',parent_prot_conf))
@@ -372,9 +372,9 @@ class Command(BaseBuild):
                     pdbseq[chain][pos] = [i, AA[residue.resname]]
                     i += 1
 
-        parent_seq_protein = str(structure.protein_conformation.protein.parent.sequence)
+        parent_seq_protein = str(structure.protein.parent.sequence)
         # print(structure.protein_conformation.protein.parent.entry_name)
-        rs = Residue.objects.filter(protein_conformation__protein=structure.protein_conformation.protein.parent).prefetch_related('display_generic_number','generic_number','protein_segment')
+        rs = Residue.objects.filter(protein_conformation__protein=structure.protein.parent).prefetch_related('display_generic_number','generic_number','protein_segment')
 
         if structure.pdb_code.index.upper() in self.xtal_seg_ends:
             seg_ends = self.xtal_seg_ends[structure.pdb_code.index.upper()]
@@ -392,7 +392,7 @@ class Command(BaseBuild):
         #     print('Residues sequence differ from sequence in protein',structure.protein_conformation.protein.parent.entry_name,structure.pdb_code.index)
 
         if len(wt_lookup)==0:
-            print("No residues for",structure.protein_conformation.protein.parent.entry_name)
+            print("No residues for",structure.protein.parent.entry_name)
             return None
 
         if self.debug:
@@ -617,7 +617,7 @@ class Command(BaseBuild):
         # print("seg res not mapped",gaps)
 
         pdb = structure.pdb_data.pdb
-        protein_conformation=structure.protein_conformation
+        protein_conformation=structure.protein
         temp = ''
         check = 0
         errors = 0
@@ -933,7 +933,7 @@ class Command(BaseBuild):
                                             generic_change += 1
                                             # print(residue.protein_segment.slug[0:2])
                                             if residue.protein_segment.slug[0:2]=="TM" or 1==1:
-                                                if debug: print(structure.protein_conformation.protein.entry_name,residue.amino_acid,"XTAL POS",residue.sequence_number, "WT POS",wt_r.sequence_number,"XTAL:",residue.protein_segment,"WT:",wt_r.protein_segment)
+                                                if debug: print(structure.protein.entry_name,residue.amino_acid,"XTAL POS",residue.sequence_number, "WT POS",wt_r.sequence_number,"XTAL:",residue.protein_segment,"WT:",wt_r.protein_segment)
 
                                                 # FIX ME
                                                 # self.logger.info('No SEG ENDS info for {}'.format(structure.protein_conformation.protein.entry_name,residue.amino_acid,residue.sequence_number, wt_r.sequence_number,residue.protein_segment,wt_r.protein_segment))
@@ -981,7 +981,7 @@ class Command(BaseBuild):
 
         ns = settings.DEFAULT_NUMBERING_SCHEME
         ns_obj = ResidueNumberingScheme.objects.get(slug=ns)
-        scheme = structure.protein_conformation.protein.residue_numbering_scheme
+        scheme = structure.protein.residue_numbering_scheme
         segments_present = []
         for res in residues_bulk:
             if res.protein_segment:
@@ -1088,7 +1088,7 @@ class Command(BaseBuild):
         #
         # for i in bulked:
         #     print(i.pk)
-        if debug: print("WT",structure.protein_conformation.protein.parent.entry_name,"length",len(parent_seq),structure.pdb_code.index,'length',len(seq),len(mapped_seq),'mapped res',str(mismatch_seq+match_seq+aa_mismatch),'pos mismatch',mismatch_seq,'aa mismatch',aa_mismatch,'not mapped',not_matched,' mapping off, matched on pos,aa',matched_by_pos,"generic_segment_changes",generic_change)
+        if debug: print("WT",structure.protein.parent.entry_name,"length",len(parent_seq),structure.pdb_code.index,'length',len(seq),len(mapped_seq),'mapped res',str(mismatch_seq+match_seq+aa_mismatch),'pos mismatch',mismatch_seq,'aa mismatch',aa_mismatch,'not mapped',not_matched,' mapping off, matched on pos,aa',matched_by_pos,"generic_segment_changes",generic_change)
         if (len(segments_present)<8 and 'H8' in segments_present) or len(segments_present)<7:
             print("Present helices:",segments_present)
             print("MISSING HELICES?!")
@@ -1132,7 +1132,7 @@ class Command(BaseBuild):
                 structure.pdb_data = pdbdata
                 structure.save()
 
-            protein = structure.protein_conformation
+            protein = structure.protein
             lig_key = list(data.keys())[0]
 
             f = module_dir + "/results/" + pdb_id + "/interaction" + "/" + pdb_id + "_" + lig_key + ".pdb"
@@ -1274,11 +1274,11 @@ class Command(BaseBuild):
 
             # protein conformation
             try:
-                s.protein_conformation = ProteinConformation.objects.get(protein=con)
+                s.protein = ProteinConformation.objects.get(protein=con)
             except ProteinConformation.DoesNotExist:
                 self.logger.error('Protein conformation for construct {} does not exists'.format(con))
                 continue
-            if s.protein_conformation.state is not state:
+            if s.state is not state:
                 ProteinConformation.objects.filter(protein=con).update(state=ps)
 
             # get the PDB file and save to DB
@@ -1537,7 +1537,7 @@ class Command(BaseBuild):
                             i.save()
 
             # protein anomalies
-            anomaly_entry = self.xtal_anomalies[s.protein_conformation.protein.parent.entry_name]
+            anomaly_entry = self.xtal_anomalies[s.protein.parent.entry_name]
             segment_codes = {'1':'TM1','12':'ICL1','2':'TM2','23':'ECL1','3':'TM3','34':'ICL2','4':'TM4','5':'TM5','6':'TM6','7':'TM7'}
             all_bulges, all_constrictions = OrderedDict(), OrderedDict()
             for key, val in anomaly_entry.items():
@@ -1557,7 +1557,7 @@ class Command(BaseBuild):
                     except:
                         all_constrictions[segment] = [val]
 
-            scheme = s.protein_conformation.protein.residue_numbering_scheme
+            scheme = s.protein.residue_numbering_scheme
             if len(all_bulges)>0:
                 pa_slug = 'bulge'
                 try:
@@ -1647,7 +1647,7 @@ class Command(BaseBuild):
             #Remove previous Rotamers/Residues to prepare repopulate
             Fragment.objects.filter(structure=s).delete()
             Rotamer.objects.filter(structure=s).delete()
-            Residue.objects.filter(protein_conformation=s.protein_conformation).delete()
+            Residue.objects.filter(protein_conformation__protein=s.protein).delete()
 
             d = {}
 
@@ -1661,7 +1661,7 @@ class Command(BaseBuild):
                 end = time.time()
                 diff = round(end - current,1)
                 self.logger.info('construction calculations done for {}. {} seconds.'.format(
-                            s.protein_conformation.protein.entry_name, diff))
+                            s.protein.entry_name, diff))
             except Exception as msg:
                 print(msg)
                 print('ERROR WITH CONSTRUCT FETCH {}'.format(sd['pdb']))
@@ -1678,7 +1678,7 @@ class Command(BaseBuild):
                 end = time.time()
                 diff = round(end - current,1)
                 self.logger.info('Create resides/rotamers done for {}. {} seconds.'.format(
-                            s.protein_conformation.protein.entry_name, diff))
+                            s.protein.entry_name, diff))
             except Exception as msg:
                 print(msg)
                 print('ERROR WITH ROTAMERS {}'.format(sd['pdb']))
@@ -1687,7 +1687,7 @@ class Command(BaseBuild):
                 self.rotamer_errors.append(s)
 
             try:
-                s.protein_conformation.generate_sites()
+                s.protein.generate_sites()
             except:
                 pass
 
@@ -1697,7 +1697,7 @@ class Command(BaseBuild):
                     self.build_contact_network(s, sd['pdb'])
                     end = time.time()
                     diff = round(end - current,1)
-                    self.logger.info('Create contactnetwork done for {}. {} seconds.'.format(s.protein_conformation.protein.entry_name, diff))
+                    self.logger.info('Create contactnetwork done for {}. {} seconds.'.format(s.protein.entry_name, diff))
                 except Exception as msg:
                     print(msg)
                     print('ERROR WITH CONTACTNETWORK {}'.format(sd['pdb']))
@@ -1721,7 +1721,7 @@ class Command(BaseBuild):
                         end = time.time()
                         diff = round(end - current,1)
                         self.logger.info('Interaction calculations done for {}. {} seconds.'.format(
-                                    s.protein_conformation.protein.entry_name, diff))
+                                    s.protein.entry_name, diff))
                     except Exception as msg:
                         print(msg)
                         # print(traceback.format_exc())

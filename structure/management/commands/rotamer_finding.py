@@ -41,10 +41,10 @@ class Command(BaseCommand):
 
             AA = polypeptide.three_to_one(af_atoms[0].get_parent().get_resname())
             this_temp = ['AF', round(rmsd,3)]
-            for pdb in Structure.objects.all():#gn_dict[g]:
+            for pdb in Structure.objects.exclude(structure_type__slug__startswith='af-'):             #gn_dict[g]:
                 struct = pdb#Structure.objects.get(pdb_code__index=pdb)
                 try:
-                    dgn_lab = dgn(g, struct.protein_conformation)
+                    dgn_lab = dgn(g, struct.protein)
                     rot_obj = Rotamer.objects.filter(structure=struct, residue__amino_acid=AA, residue__display_generic_number__label=dgn_lab)
                 except ResidueGenericNumberEquivalent.DoesNotExist:
                     continue
@@ -91,5 +91,3 @@ class Command(BaseCommand):
         else:
             rotamer=rotamer[0]
         return rotamer
-
-    
