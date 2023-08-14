@@ -411,17 +411,14 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                                         ringlist.append([atomlist, center, normal, vectorlist])
                             print('check first vector')
                             ligand_rings[hetflag] = ringlist
-
                             fdefName = os.path.join(RDConfig.RDDataDir,'BaseFeatures.fdef')
                             factory = ChemicalFeatures.BuildFeatureFactory(fdefName)
                             feats = factory.GetFeaturesForMol(mol2)
-
                             for i, atom in enumerate(mol2.GetAtoms()):
                                 if atom.GetFormalCharge() != 0:
                                     positions = mol2.GetConformer().GetAtomPosition(i)
                                     chargevector = Vector(positions)
                                     ligand_charged[hetflag].append([chargevector, atom.GetFormalCharge()])
-
                             for feat in feats:
                                 if feat.GetFamily() == 'Acceptor':
                                     positions = feat.GetPos()
@@ -662,7 +659,7 @@ def get_ring_from_aa(scroller, projectdir, residueid, residue):
     # ANALYZING AROMATIC RINGS
     rings = Chem.rdmolops.GetSSSR(mol)
     ringlist = []
-    if rings > 0:
+    if len(rings) > 0:
         counter = -1
         ri = mol.GetRingInfo()
         for ring in ri.BondRings():

@@ -72,3 +72,14 @@ class Command(BaseBuild):
 		# 	for f in files:
 		# 		if 'blastp_out.fasta' in f:
 		# 			os.remove(f)
+
+class CustomBlast():
+	help = 'Run query on blastdb'
+
+	def __init__(self, fasta_file):
+		self.blastdb = fasta_file
+		self.blast_search = BlastSearch(blastdb=self.blastdb, top_results=1)
+
+	def run(self, query):
+		out = self.blast_search.run(query)
+		return out[0][0]
