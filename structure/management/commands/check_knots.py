@@ -3,7 +3,7 @@ from build.management.commands.build_homology_models_zip import Command as Uploa
 from django.db.models import Q
 from django.conf import settings
 
-from protein.models import Protein, ProteinConformation, ProteinAnomaly, ProteinState, ProteinSegment
+from protein.models import Protein, ProteinAnomaly, ProteinState, ProteinSegment
 from residue.models import Residue
 from residue.functions import dgn, ggn
 from structure.models import *
@@ -15,7 +15,7 @@ from signprot.models import SignprotComplex
 import structure.structural_superposition as sp
 import structure.assign_generic_numbers_gpcr as as_gn
 import structure.homology_models_tests as tests
-from structure.signprot_modeling import SignprotModeling 
+from structure.signprot_modeling import SignprotModeling
 from structure.homology_modeling_functions import GPCRDBParsingPDB, ImportHomologyModel, Remodeling
 
 import Bio.PDB as PDB
@@ -40,7 +40,7 @@ import subprocess
 
 startTime = datetime.now()
 
-class Command(BaseBuild):  
+class Command(BaseBuild):
 	help = 'Build automated chimeric GPCR homology models'
 	models_with_knots = []
 
@@ -61,7 +61,7 @@ class Command(BaseBuild):
 
 		self.processors = options['proc']
 		self.prepare_input(options['proc'], self.file_list)
-		
+
 		# print(self.models_with_knots)
 		# print(len(self.file_list), len(self.models_with_knots), str(len(self.models_with_knots)/len(self.file_list)*100)+'%')
 		datetime.now() - startTime
@@ -73,7 +73,7 @@ class Command(BaseBuild):
 			i += 1
 			with lock:
 				zipname = self.file_list[count.value]
-				
+
 				count.value +=1
 			modelname = zipname.split('.')[0]
 			zip_ref = zipfile.ZipFile(self.path+zipname, 'r')

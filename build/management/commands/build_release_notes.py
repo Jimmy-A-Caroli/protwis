@@ -10,7 +10,7 @@ from ligand.models import Ligand, AssayExperiment, BiasedData, BiasedPathwaysAss
 from mutation.models import MutationExperiment
 from mutational_landscape.models import NaturalMutations
 from protein.models import Protein, ProteinCouplings
-from structure.models import Structure, StructureComplexModel
+from structure.models import Structure
 from signprot.models import SignprotComplex, SignprotStructure
 from contactnetwork.models import InteractingResiduePair
 
@@ -72,13 +72,13 @@ class Command(BaseCommand):
         signcomp = SignprotComplex.objects.all().exclude(protein__family__slug__startswith="200")
         interface_interactions_count = (
             InteractingResiduePair.objects.filter(referenced_structure__in=signcomp.values_list("structure", flat=True))
-            .exclude(res1__protein_conformation_id=F("res2__protein_conformation_id"))
+            .exclude(res1__protein_id=F("res2__protein_id"))
             .count()
         )
         signcomp_arrestin = SignprotComplex.objects.filter(protein__family__slug__startswith="200")
         interface_interactions_arrestin_count = (
             InteractingResiduePair.objects.filter(referenced_structure__in=signcomp.values_list("structure", flat=True))
-            .exclude(res1__protein_conformation_id=F("res2__protein_conformation_id"))
+            .exclude(res1__protein_id=F("res2__protein_id"))
             .count()
         )
             #['Proteins', Protein.objects.filter(sequence_type__slug='wt').count(), 'GPCRdb'],
@@ -103,7 +103,7 @@ class Command(BaseCommand):
             ['GPCRs structures GPCRdb', Structure.objects.filter(protein__family__slug__startswith="00").exclude(structure_type__slug='af-gpcr').count(), 'GPCRdb'],
             ['GPCRs structure models GPCRdb', Structure.objects.filter(structure_type__slug='af-gpcr', protein__accession__isnull=False).count(), 'GPCRdb'],
             ['Generic residues GPCRdb', ResidueGenericNumber.objects.filter(scheme_id__in=[7,8,9,10,11]).values('label').count(), 'GPCRdb'],
-            ['Refined structures GPCRdb', Structure.objects.filter(structure_type__slug='refined-gpcr', protein__accession__isnull=True, protein__family__slug__startswith="00").count() + StructureComplexModel.objects.filter(receptor_protein__accession__isnull=True, receptor_protein__family__slug__startswith="00").count(), 'GPCRdb'],
+            ['Refined structures GPCRdb', Structure.objects.filter(structure_type__slug__in=['refined-gpcr', 'af-refined'], protein__accession__isnull=True, protein__family__slug__startswith="00").count(), 'GPCRdb'],
             #GproteinDb block
             ['Human G proteins GproteinDb', Protein.objects.filter(family__parent__parent__name="Alpha", species__common_name="Human", accession__isnull=False).count(), 'GproteinDb'],
             ['Species orthologs GproteinDb', Protein.objects.filter(family__parent__parent__name="Alpha", accession__isnull=False).count(), 'GproteinDb'],
@@ -111,7 +111,7 @@ class Command(BaseCommand):
             ['G proteins GproteinDb', signcomp.count() + SignprotStructure.objects.all().exclude(protein__family__slug__startswith="200").count(), 'GproteinDb'],
             ['G protein complexes GproteinDb', SignprotComplex.objects.all().count(), 'GproteinDb'],
             ['Generic residues GproteinDb', ResidueGenericNumber.objects.filter(scheme_id__in=[15]).values('label').count(), 'GproteinDb'],
-            ['G protein complexes', StructureComplexModel.objects.all().count() - SignprotComplex.objects.filter(structure__refined=True).count(), 'GproteinDb'],
+            ['G protein complexes', Structure.objects.filter(structure_type__slug='af-complex').count() - SignprotComplex.objects.filter(structure__refined=True).count(), 'GproteinDb'],
             ['Refined complexes GproteinDb', signcomp.filter(structure__refined=True).count(), 'GproteinDb'],
             ['G protein interface GproteinDb', interface_interactions_count, 'GproteinDb'],
             ['Interface mutations GproteinDb', 54, 'GproteinDb'],

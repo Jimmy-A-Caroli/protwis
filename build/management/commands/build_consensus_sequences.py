@@ -5,7 +5,7 @@ from django.utils.text import slugify
 
 from build.management.commands.build_human_proteins import Command as BuildHumanProteins
 from residue.functions import *
-from protein.models import Protein, ProteinConformation, ProteinFamily, ProteinSegment, ProteinSequenceType
+from protein.models import Protein, ProteinFamily, ProteinSegment, ProteinSequenceType
 from common.alignment import Alignment
 from common.tools import test_model_updates
 from alignment.models import AlignmentConsensus
@@ -132,7 +132,7 @@ class Command(BuildHumanProteins):
         # for family in families:
             # get proteins in this family
             proteins = Protein.objects.filter(family__slug__startswith=family.slug, sequence_type__slug='wt',
-                species__common_name="Human").prefetch_related('species', 'residue_numbering_scheme')
+                species__common_name="Human").prefetch_related('species', 'residue_numbering_scheme', 'protein_anomalies')
 
             # if family does not have human equivalents, like Class D1
             if len(proteins)==0:
@@ -191,9 +191,9 @@ class Command(BuildHumanProteins):
             all_constrictions = []
             constriction_freq = dict()
             consensus_pas = dict() # a constriction has to be in all sequences to be included in the consensus
-            pcs = ProteinConformation.objects.filter(protein__in=proteins,
-                state__slug=settings.DEFAULT_PROTEIN_STATE).prefetch_related('protein_anomalies')
-            for pc in pcs:
+            # pcs = ProteinConformation.objects.filter(protein__in=proteins,
+            #     state__slug=settings.DEFAULT_PROTEIN_STATE).prefetch_related('protein_anomalies')
+            for pc in proteins:
                 pas = pc.protein_anomalies.all().prefetch_related('generic_number__protein_segment', 'anomaly_type')
                 for pa in pas:
                     pa_label = pa.generic_number.label
@@ -229,8 +229,7 @@ class Command(BuildHumanProteins):
                     consensus_pas[pa_segment_slug].append(pa)
 
             # create residues
-            pc = ProteinConformation.objects.get(protein__entry_name=up['entry_name'],
-                state__slug=settings.DEFAULT_PROTEIN_STATE)
+            pc = Protein.objects.get(entry_name=up['entry_name'])
             segment_info = self.get_segment_residue_information(a.forced_consensus)
             ref_positions, segment_starts, segment_aligned_starts, segment_ends, segment_aligned_ends = segment_info
             for segment_slug, s in a.forced_consensus.items():

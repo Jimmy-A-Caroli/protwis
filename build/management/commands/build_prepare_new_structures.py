@@ -4,7 +4,7 @@ from django.db import connection
 
 from structure.management.commands.list_new_xtals import QueryPDB
 from residue.models import Residue
-from protein.models import Protein, ProteinConformation, ProteinSegment
+from protein.models import Protein, ProteinSegment
 from structure.sequence_parser import SequenceParser
 
 from Bio.PDB import parse_pdb_header
@@ -84,7 +84,7 @@ class Command(BaseCommand):
         segments = ProteinSegment.objects.all()
         for segment in segments:
             resi = list(Residue.objects.filter(protein_segment = segment,
-                protein_conformation__protein__entry_name = prot_entry_name).order_by('sequence_number'))
+                protein__entry_name = prot_entry_name).order_by('sequence_number'))
             try:
                 if resi:
                     output[segment.slug] = [resi[0].sequence_number, resi[-1].sequence_number]

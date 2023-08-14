@@ -4,7 +4,7 @@ from django.conf import settings
 from signprot.models import SignprotComplex
 from structure.models import StructureExtraProteins, Structure
 from structure.functions import ParseStructureCSV
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 from common.tools import test_model_updates
 from interaction.models import StructureLigandInteraction
@@ -64,7 +64,7 @@ class Command(BaseBuild):
             sep = StructureExtraProteins()
             sep.wt_protein = s.protein
             sep.structure = s.structure
-            sep.protein_conformation = ProteinConformation.objects.get(protein__entry_name=s.structure.pdb_code.index.lower()+'_a')
+            sep.pdbcode = Protein.objects.get(entry_name=s.structure.pdb_code.index.lower()+'_a')
             sep.display_name = self.g_prot_dict[s.protein.family.name]
             if 'note'!='' in self.psc.structures[s.structure.pdb_code.index]['g_protein']['note']:
                 sep.note = self.psc.structures[s.structure.pdb_code.index]['g_protein']['note']
@@ -72,8 +72,8 @@ class Command(BaseBuild):
                 sep.note = None
             sep.chain = s.alpha
             sep.category = 'G alpha'
-            wt_resis_len = len(Residue.objects.filter(protein_conformation__protein=s.protein))
-            struct_resis_len = len(Residue.objects.filter(protein_conformation=sep.protein_conformation))
+            wt_resis_len = len(Residue.objects.filter(protein=s.protein))
+            struct_resis_len = len(Residue.objects.filter(protein=sep.pdbcode))
             if s.structure.pdb_code.index=='6E67':
                 struct_resis_len = 175
             sep.wt_coverage = round(struct_resis_len/wt_resis_len*100)
@@ -83,7 +83,7 @@ class Command(BaseBuild):
                 beta_sep = StructureExtraProteins()
                 beta_sep.wt_protein = s.beta_protein
                 beta_sep.structure = s.structure
-                beta_sep.protein_conformation = ProteinConformation.objects.get(protein=s.beta_protein)
+                # beta_sep.protein_conformation = ProteinConformation.objects.get(protein=s.beta_protein)
                 beta_sep.display_name = self.g_prot_dict[s.beta_protein.name]
                 beta_sep.note = None
                 beta_sep.chain = s.beta_chain
@@ -95,7 +95,7 @@ class Command(BaseBuild):
                 gamma_sep = StructureExtraProteins()
                 gamma_sep.wt_protein = s.gamma_protein
                 gamma_sep.structure = s.structure
-                gamma_sep.protein_conformation = ProteinConformation.objects.get(protein=s.gamma_protein)
+                # gamma_sep.protein_conformation = ProteinConformation.objects.get(protein=s.gamma_protein)
                 gamma_sep.display_name = self.g_prot_dict[s.gamma_protein.name]
                 gamma_sep.note = None
                 gamma_sep.chain = s.gamma_chain
@@ -109,7 +109,7 @@ class Command(BaseBuild):
                 sep = StructureExtraProteins()
                 sep.wt_protein = Protein.objects.get(entry_name=vals['arrestin']['protein'])
                 sep.structure = Structure.objects.get(pdb_code__index=pdb)
-                sep.protein_conformation = None
+                # sep.protein_conformation = None
                 sep.note = vals['arrestin']['note']
                 sep.chain = vals['arrestin']['chain']
                 sep.category = 'Arrestin'
@@ -119,7 +119,7 @@ class Command(BaseBuild):
                     struct_resis_len = 347
                 elif pdb=='5W0P':
                     struct_resis_len = 364
-                wt_resis_len = len(Residue.objects.filter(protein_conformation__protein=sep.wt_protein))
+                wt_resis_len = len(Residue.objects.filter(protein=sep.wt_protein))
                 sep.wt_coverage = round(struct_resis_len/wt_resis_len*100)
                 sep.save()
 
@@ -146,7 +146,7 @@ class Command(BaseBuild):
 
                 sep.wt_protein = wt_protein
                 sep.structure = Structure.objects.get(pdb_code__index=struct)
-                sep.protein_conformation = None
+                # sep.protein_conformation = None
                 sep.note = vals['note']
                 sep.chain = vals['chain']
                 sep.category = vals['category']
@@ -154,7 +154,7 @@ class Command(BaseBuild):
                     sep.wt_coverage = None
                 else:
                     try:
-                        wt_resis = Residue.objects.filter(protein_conformation__protein=wt_protein)
+                        wt_resis = Residue.objects.filter(protein=wt_protein)
                         sep.wt_coverage = round(vals['length']/len(wt_resis)*100)
                     except Protein.DoesNotExist:
                         sep.wt_coverage = None

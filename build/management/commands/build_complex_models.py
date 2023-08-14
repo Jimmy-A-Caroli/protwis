@@ -4,7 +4,7 @@ from build.management.commands.build_homology_models import CallHomologyModeling
 from django.db.models import Q
 from django.conf import settings
 
-from protein.models import Protein, ProteinConformation, ProteinAnomaly, ProteinState, ProteinSegment
+from protein.models import Protein, ProteinAnomaly, ProteinState, ProteinSegment
 from residue.models import Residue
 from residue.functions import dgn, ggn
 from structure.models import *

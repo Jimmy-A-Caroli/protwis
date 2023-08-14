@@ -26,7 +26,7 @@ from interaction.forms import PDBform
 
 from residue.models import Residue,ResidueNumberingScheme, ResidueGenericNumberEquivalent
 from residue.views import ResidueTablesDisplay
-from protein.models import Protein, ProteinSegment, ProteinFamily, ProteinConformation, ProteinCouplings
+from protein.models import Protein, ProteinSegment, ProteinFamily, ProteinCouplings
 from structure.models import Structure
 
 from seqsign.sequence_signature import SequenceSignature
@@ -365,7 +365,7 @@ def render_mutations(request, protein = None, family = None, download = None, re
         # create an alignment object
         #print(proteins)
         #alignment_proteins = Protein.objects.filter(protein__in=proteins)
-        protein_hash = hash(tuple(sorted(ProteinConformation.objects.filter(protein__in=alignment_proteins).values_list('id',flat=True))))
+        protein_hash = hash(tuple(sorted(Protein.objects.filter(pk__in=alignment_proteins).values_list('id',flat=True))))
 
         excluded_segment = ['C-term','N-term']
         excluded_segment = []
@@ -380,7 +380,7 @@ def render_mutations(request, protein = None, family = None, download = None, re
             if len(proteins)>1:
                 mutations_pos_list = {}
                 if len(mutations_list) > 0:
-                    residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(proteins[0]), generic_number__label__in=mutations_list.keys()).prefetch_related('display_generic_number','generic_number')
+                    residuelist = Residue.objects.filter(protein__entry_name=str(proteins[0]), generic_number__label__in=mutations_list.keys()).prefetch_related('display_generic_number','generic_number')
                     for residue in residuelist:
                         if residue.generic_number and residue.generic_number.label in mutations_list:
                             mutations_pos_list[residue.sequence_number] = mutations_list[residue.generic_number.label]
@@ -462,9 +462,9 @@ def render_mutations(request, protein = None, family = None, download = None, re
             data = OrderedDict()
             for segment in segments:
                 data[segment.slug] = OrderedDict()
-                residues = Residue.objects.filter(protein_segment=segment, protein_conformation__protein__in=proteins,
-                                                generic_number__in=residue_table_list).prefetch_related('protein_conformation__protein',
-                                                'protein_conformation__state', 'protein_segment',
+                residues = Residue.objects.filter(protein_segment=segment, protein__in=proteins,
+                                                generic_number__in=residue_table_list).prefetch_related('protein',
+                                                'protein__state', 'protein_segment',
                                                 'generic_number','display_generic_number','generic_number__scheme', 'alternative_generic_numbers__scheme')
                 pos_list = residues.values_list('generic_number__label',flat=True)
                 for scheme in numbering_schemes:
@@ -485,19 +485,19 @@ def render_mutations(request, protein = None, family = None, download = None, re
                         if default_scheme.slug == settings.DEFAULT_NUMBERING_SCHEME:
                             pos = residue.generic_number
                             if scheme == pos.scheme:
-                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                             else:
                                 if scheme.slug not in data[segment.slug][pos.label].keys():
                                     data[segment.slug][pos.label][scheme.slug] = alternative.label
                                 if alternative.label not in data[segment.slug][pos.label][scheme.slug]:
                                     data[segment.slug][pos.label][scheme.slug] += " "+alternative.label
-                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                         else:
                             if scheme.slug not in data[segment.slug][pos.label].keys():
                                 data[segment.slug][pos.label][scheme.slug] = alternative.label
                             if alternative.label not in data[segment.slug][pos.label][scheme.slug]:
                                 data[segment.slug][pos.label][scheme.slug] += " "+alternative.label
-                            data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                            data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
 
             # Preparing the dictionary of list of lists. Dealing with tripple nested dictionary in django templates is a nightmare
             flattened_data = OrderedDict.fromkeys([x.slug for x in segments], [])
@@ -1087,7 +1087,7 @@ def showcalculation(request):
 
     family_level_ids = protein_ids[0].slug.split("_")
 
-    residues = Residue.objects.filter(protein_conformation__protein=context['proteins'][0]).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residues = Residue.objects.filter(protein=context['proteins'][0]).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     HelixBox = DrawHelixBox(
                 residues, context['proteins'][0].get_protein_class(), str(p), nobuttons=1)
@@ -2146,8 +2146,8 @@ def collectAndCacheClassData(target_class):
                     .exclude(interaction_type__type='hidden')\
                     .values("rotamer__residue__generic_number__label")\
                     .order_by("rotamer__residue__generic_number__label")\
-                    .annotate(unique_structures=Count("rotamer__residue__protein_conformation", distinct=True))\
-                    .annotate(unique_receptors=Count("rotamer__residue__protein_conformation__protein__family_id", distinct=True))
+                    .annotate(unique_structures=Count("rotamer__residue__protein", distinct=True))\
+                    .annotate(unique_receptors=Count("rotamer__residue__protein__family_id", distinct=True))
 
         for pair in ligand_interactions:
             gn = pair["rotamer__residue__generic_number__label"]
@@ -2165,7 +2165,7 @@ def collectAndCacheClassData(target_class):
         gprot_interactions = InteractingResiduePair.objects.filter(
                 referenced_structure__protein__family__slug__startswith=target_class
             ).exclude(
-                res1__protein_conformation_id=F('res2__protein_conformation_id')
+                res1__protein_id=F('res2__protein_id')
             ).values(
                 "res1__generic_number__label"
             ).order_by(
@@ -2269,15 +2269,15 @@ def contactMutationDesign(request, goal = "both"):
 
                     # NOTE This comparison differs from the structure browser
                     # Verify coverage WT receptor (>= 86)
-                    wt_count = list(ProteinConformation.objects.filter(protein__pk=s.protein.parent.pk).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
+                    wt_count = list(Protein.objects.filter(pk=s.protein.parent.pk).values('pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
                     coverage = round((s.res_count / wt_count[0]["res_count"])*100)
                     if coverage < 86:
                         continue
 
                     # Verify coverage Ga subunit (>= 43)
                     try:
-                        gprot_pconf = ProteinConformation.objects.get(protein__entry_name=s.pdb_code.index.lower()+"_a")
-                        structure_residues = Residue.objects.filter(protein_conformation=gprot_pconf, protein_segment__isnull=False)
+                        gprot_pconf = Protein.objects.get(entry_name=s.pdb_code.index.lower()+"_a")
+                        structure_residues = Residue.objects.filter(protein=gprot_pconf, protein_segment__isnull=False)
                         subcoverage = round((len(structure_residues) / len(gprot_pconf.protein.parent.sequence))*100)
                         if subcoverage < 43:
                             continue
@@ -2351,7 +2351,7 @@ def contactMutationDesign(request, goal = "both"):
 
                     # NOTE This comparison differs from the structure browser
                     # Verify coverage WT receptor (>= 86)
-                    wt_count = list(ProteinConformation.objects.filter(protein__pk=s.protein.parent.pk).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
+                    wt_count = list(Protein.objects.filter(pk=s.protein.parent.pk).values('pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField()))))
                     coverage = round((s.res_count / wt_count[0]["res_count"])*100)
                     if coverage < 86:
                         continue
@@ -2429,7 +2429,7 @@ def contactMutationDesign(request, goal = "both"):
 
             # Collect target residues for the selected receptor
             wt_res = Residue.objects.filter(generic_number__label__in=gns_both,
-                                    protein_conformation__protein__entry_name=target_protein).\
+                                    protein__entry_name=target_protein).\
                                     values("generic_number__label", "amino_acid", "sequence_number", "display_generic_number__label")
 
             target_residues = {}
@@ -2741,12 +2741,12 @@ def contactMutationDesign(request, goal = "both"):
 def collectGNsMatchingOccupancy(structures, occupancy):
     lowercase = [pdb.lower() for pdb in structures]
     segment_slugs = list(ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').values_list("slug", flat = True))
-    gn_occurrences = Residue.objects.filter(protein_conformation__protein__entry_name__in=lowercase,
+    gn_occurrences = Residue.objects.filter(protein__entry_name__in=lowercase,
                             #protein_segment__slug__in=['TM1', 'TM2', 'TM3', 'TM4','TM5','TM6', 'TM7', 'H8'])\
                             protein_segment__slug__in=segment_slugs)\
                             .exclude(generic_number_id=None)\
                             .order_by('generic_number__label').values("generic_number__label").distinct()\
-                            .annotate(count_structures=Count("protein_conformation__protein__entry_name", distinct=True))
+                            .annotate(count_structures=Count("protein__entry_name", distinct=True))
     gns_set = []
     for presence in gn_occurrences:
         if presence["count_structures"] >= occupancy*len(structures):
@@ -2757,10 +2757,10 @@ def collectGNsMatchingOccupancy(structures, occupancy):
 # Collect the AA conservation for each GN in a set of gns
 def collectAAConservation(structures, allowed_gns):
     lowercase = [pdb.lower() for pdb in structures]
-    gn_aas = Residue.objects.filter(protein_conformation__protein__entry_name__in=lowercase,
+    gn_aas = Residue.objects.filter(protein__entry_name__in=lowercase,
                             generic_number__label__in=allowed_gns)\
                             .order_by('generic_number__label').values("generic_number__label", "amino_acid").distinct()\
-                            .annotate(count_slugs=Count("protein_conformation__protein__family__slug", distinct=True))
+                            .annotate(count_slugs=Count("protein__family__slug", distinct=True))
 
     gns_set = {}
     for gn_aa in gn_aas:
@@ -2868,7 +2868,7 @@ def calculateResidueContactFrequency(pdbs, allowed_gns, detail_gn = None):
         ).filter(interacting_pair__res1__generic_number__label__in = allowed_gns,
                  interacting_pair__res2__generic_number__label__in = allowed_gns
         ).filter(
-            interacting_pair__res1__protein_conformation_id=F('interacting_pair__res2__protein_conformation_id') # Filter interactions with other proteins
+            interacting_pair__res1__protein_id=F('interacting_pair__res2__protein_id') # Filter interactions with other proteins
         ).filter(
             interacting_pair__res1__pk__lt=F('interacting_pair__res2__pk')
         ).values(
@@ -2961,7 +2961,7 @@ def collectResiduePairs(pdbs, allowed_gns):
         pairs = list(Interaction.objects.filter(interacting_pair__res1__generic_number__label__in = allowed_gns,
                         interacting_pair__res2__generic_number__label__in = allowed_gns,
                         interacting_pair__referenced_structure__pdb_code__index__in=pdbs,
-                        interacting_pair__res1__protein_conformation_id=F('interacting_pair__res2__protein_conformation_id'),
+                        interacting_pair__res1__protein_id=F('interacting_pair__res2__protein_id'),
                         interacting_pair__res1__pk__lt=F('interacting_pair__res2__pk')
                     ).values_list(
                             'interacting_pair__res1__generic_number__label',
@@ -3172,7 +3172,7 @@ def gprotMutationDesign(request, goal):
 
         if len(binder) > 0 and len(nonbinder) > 0:
             # Collect target residues for the selected receptor
-            wt_res = Residue.objects.filter(protein_conformation__protein__entry_name=target_protein).\
+            wt_res = Residue.objects.filter(protein__entry_name=target_protein).\
                                     exclude(generic_number__label=None).\
                                     values("generic_number__label", "amino_acid", "sequence_number", "display_generic_number__label")
 

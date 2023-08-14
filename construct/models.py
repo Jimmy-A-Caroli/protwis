@@ -167,7 +167,7 @@ class Construct(models.Model):
         temp = self.snakecache
         if temp==None:
             print(self.name+'_snake no cache')
-            residues = Residue.objects.filter(protein_conformation__protein=self.protein).order_by('sequence_number').prefetch_related(
+            residues = Residue.objects.filter(protein=self.protein).order_by('sequence_number').prefetch_related(
                 'protein_segment', 'generic_number', 'display_generic_number')
             temp = DrawSnakePlot(residues,self.protein.get_protein_class(),str(self.protein),nobuttons = True)
             self.snakecache = pickle.dumps(temp)
@@ -213,7 +213,7 @@ class ConstructMutation(models.Model):
         seq_no = self.sequence_number
         try:
             # res_cons = Residue.objects.get(protein_conformation__protein=construct, sequence_number=seq_no)
-            res_wt = Residue.objects.get(protein_conformation__protein=self.construct.structure.protein.parent, sequence_number=seq_no)
+            res_wt = Residue.objects.get(protein=self.construct.structure.protein.parent, sequence_number=seq_no)
             if res_wt.amino_acid != self.wild_type_amino_acid:
                 pass
                 # print('aa dont match',construct.name,seq_no,"annotated wt:", self.wild_type_amino_acid, "DB wt:",res_wt.amino_acid, "Annotated Mut",self.mutated_amino_acid)

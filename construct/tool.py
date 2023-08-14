@@ -7,7 +7,7 @@ from django import forms
 
 from construct.models import *
 from structure.models import Structure
-from protein.models import ProteinConformation, Protein, ProteinSegment, ProteinFamily
+from protein.models import Protein, ProteinSegment, ProteinFamily
 from alignment.models import AlignmentConsensus
 from common.definitions import AMINO_ACIDS, AMINO_ACID_GROUPS, STRUCTURAL_RULES, STRUCTURAL_SWITCHES
 
@@ -136,7 +136,7 @@ def new_tool(request):
         active_xtals = False
 
 
-    rs = Residue.objects.filter(protein_conformation__protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     residues = {}
     residues_gn = {}
@@ -233,7 +233,7 @@ def tool(request):
         active_xtals = False
 
 
-    rs = Residue.objects.filter(protein_conformation__protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     residues = {}
     residues_gn = {}
@@ -303,7 +303,7 @@ def json_palmi(request, slug, **response_kwargs):
 
     start_time = time.time()
     seq = Protein.objects.filter(entry_name=slug).values_list('sequence', flat = True).get()
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug,protein_segment__slug__in=['H8','C-term']).order_by('sequence_number').prefetch_related('protein_segment')
+    rs = Residue.objects.filter(protein__entry_name=slug, protein_segment__slug__in=['H8','C-term']).order_by('sequence_number').prefetch_related('protein_segment')
     residues = {}
     seq = ''
     end_h8 = 0
@@ -343,7 +343,7 @@ def json_glyco(request, slug, **response_kwargs):
     start_time = time.time()
 
     seq = Protein.objects.filter(entry_name=slug).values_list('sequence', flat = True).get()
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related('protein_segment')
+    rs = Residue.objects.filter(protein__entry_name=slug).prefetch_related('protein_segment')
     residues = {}
     for r in rs:
         residues[r.sequence_number] = r.protein_segment.slug
@@ -408,17 +408,17 @@ def json_icl3(request, slug, **response_kwargs):
     tm6_end = {}
     tm5_50 = {}
     tm6_50 = {}
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__protein_segment__slug='TM5').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__protein_segment__slug='TM5').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
     for pc in pconfs:
         tm5_start[pc.protein.entry_name] = pc.start
         tm5_end[pc.protein.entry_name] = pc.end
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__protein_segment__slug='TM6').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__protein_segment__slug='TM6').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
     for pc in pconfs:
         tm6_start[pc.protein.entry_name] = pc.start
         tm6_end[pc.protein.entry_name] = pc.end
 
 
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__generic_number__label__in=['5x50','6x50']).annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__generic_number__label__in=['5x50','6x50']).annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
     for pc in pconfs:
         tm5_50[pc.protein.entry_name] = pc.start
         tm6_50[pc.protein.entry_name] = pc.end
@@ -482,17 +482,17 @@ def json_icl2(request, slug, **response_kwargs):
     tm4_end = {}
     tm3_50 = {}
     tm4_50 = {}
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__protein_segment__slug='TM3').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__protein_segment__slug='TM3').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
     for pc in pconfs:
         tm3_start[pc.protein.entry_name] = pc.start
         tm3_end[pc.protein.entry_name] = pc.end
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__protein_segment__slug='TM4').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__protein_segment__slug='TM4').annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
     for pc in pconfs:
         tm4_start[pc.protein.entry_name] = pc.start
         tm4_end[pc.protein.entry_name] = pc.end
 
 
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__generic_number__label__in=['3x50','4x50']).annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__generic_number__label__in=['3x50','4x50']).annotate(start=Min('residue__sequence_number'), end=Max('residue__sequence_number'))
     for pc in pconfs:
         tm3_50[pc.protein.entry_name] = pc.start
         tm4_50[pc.protein.entry_name] = pc.end
@@ -549,7 +549,7 @@ def json_nterm(request, slug, **response_kwargs):
 
     ##PREPARE TM1 LOOKUP DATA
     proteins = Construct.objects.all().values_list('protein', flat = True)
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__protein_segment__slug='TM1').annotate(start=Min('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__protein_segment__slug='TM1').annotate(start=Min('residue__sequence_number'))
     #pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).filter(residue__generic_number__label__in=['1x50']).values_list('protein__entry_name','residue__sequence_number','residue__generic_number__label')
     tm1_start = {}
     for pc in pconfs:
@@ -603,7 +603,7 @@ def json_cterm(request, slug, **response_kwargs):
     #     cterm_start[pc.protein.entry_name] = pc.start
     # pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).filter(residue__protein_segment__slug='C-term').annotate(start=Min('residue__sequence_number')).values_list('protein__entry_name','start','residue__generic_number__label')
     #pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).filter(residue__generic_number__label__in=['8x50']).values_list('protein__entry_name','residue__sequence_number','residue__generic_number__label')
-    pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).prefetch_related('protein').filter(residue__protein_segment__slug='C-term').annotate(start=Min('residue__sequence_number'))
+    pconfs = Protein.objects.filter(id__in=proteins).filter(residue__protein_segment__slug='C-term').annotate(start=Min('residue__sequence_number'))
     cterm_start = {}
     for pc in pconfs:
         cterm_start[pc.protein.entry_name] = pc.start
@@ -649,7 +649,7 @@ def thermostabilising(request, slug, **response_kwargs):
 
     start_time = time.time()
 
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     wt_lookup = {}
     wt_lookup_pos = {}
@@ -769,7 +769,7 @@ def thermostabilising(request, slug, **response_kwargs):
 def structure_rules(request, slug, **response_kwargs):
     start_time = time.time()
 
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     wt_lookup = {}
     wt_lookup_pos = {}
@@ -972,7 +972,7 @@ def mutations(request, slug, **response_kwargs):
         cache.set(key,mutations,60*60*24)
 
     # Build current target residue GN mapping
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__isnull=False).prefetch_related('generic_number', 'protein_segment')
+    rs = Residue.objects.filter(protein__entry_name=slug, generic_number__isnull=False).prefetch_related('generic_number', 'protein_segment')
 
     # Build a dictionary to know how far a residue is from segment end/start
     # Used for propensity removals
@@ -1358,7 +1358,7 @@ def mutations(request, slug, **response_kwargs):
 
     # GLYCO
     seq = Protein.objects.filter(entry_name=slug).values_list('sequence', flat = True).get()
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related('protein_segment')
+    rs = Residue.objects.filter(protein__entry_name=slug).prefetch_related('protein_segment')
     residues = {}
     for r in rs:
         residues[r.sequence_number] = r.protein_segment.slug
@@ -1423,7 +1423,7 @@ def mutations(request, slug, **response_kwargs):
 
     #PALMI
     definition_matches = [int(3),"palmitoylation removal"]
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug,protein_segment__slug__in=['H8','C-term']).order_by('sequence_number').prefetch_related('protein_segment')
+    rs = Residue.objects.filter(protein__entry_name=slug,protein_segment__slug__in=['H8','C-term']).order_by('sequence_number').prefetch_related('protein_segment')
     residues = {}
     seq = ''
     end_h8 = 0
@@ -1523,7 +1523,7 @@ def cons_strucs(request, slug, **response_kwargs):
         cache.set("CD_xtal_"+level.split("_")[0],potentials,60*60*24)
 
 
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     results = {}
     for r in rs:
@@ -1595,7 +1595,7 @@ def cons_rf(request, slug, **response_kwargs):
                 potentials[gn] = [aa[0],aa[1]]
 
 
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     results = {}
     for r in rs:
@@ -1714,7 +1714,7 @@ def cons_rf_and_class(request, slug, **response_kwargs):
         cache.set("CD_rfc_"+"_".join(level.split("_")[0:1]),potentials2,60*60*24)
 
 
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     results = {}
     for r in rs:
@@ -1773,7 +1773,7 @@ def cons_rm_GP(request, slug, **response_kwargs):
                 potentials[gn] = [aa[0],aa[1]]
 
 
-    rs = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein__entry_name=slug, generic_number__label__in=list(potentials.keys())).prefetch_related('protein_segment','display_generic_number','generic_number')
 
     results = {}
     results2 = {}

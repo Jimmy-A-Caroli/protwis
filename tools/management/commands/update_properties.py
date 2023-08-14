@@ -100,9 +100,9 @@ def qgen(x, qset):
     """
     start = False
     for i in range(len(qset)-1,0,-1):
-        if not start and qset[i].protein_conformation.protein == x:
+        if not start and qset[i].protein == x:
             start = i
-        if start and qset[i].protein_conformation.protein != x:
+        if start and qset[i].protein != x:
             if start != len(qset)-1:
                 del qset[start+1:]
                 return qset[i+1:]
@@ -134,12 +134,12 @@ class Command(BaseCommand):
         failed = []
 
         # get preferred chain for PDB-code
-        references = Structure.objects.exclude(structure_type__slug__startswith='af-').filter(protein__family__slug__startswith="001").prefetch_related('pdb_code','pdb_data','protein_conformation__protein','protein_conformation__state').order_by('protein')
+        references = Structure.objects.exclude(structure_type__slug__startswith='af-').filter(protein__family__slug__startswith="001").prefetch_related('pdb_code','pdb_data','protein','protein__state').order_by('protein')
         references = list(references)
 
         pids = [ref.protein.id for ref in references]
 
-        qset = Residue.objects.filter(protein_conformation__protein__id__in=pids)
+        qset = Residue.objects.filter(protein__id__in=pids)
         qset = qset.filter(generic_number__label__regex=r'^[1-7]x[0-9]+').order_by('-protein','-generic_number__label')
         qset = list(qset.prefetch_related('generic_number', 'protein','state'))
 

@@ -7,7 +7,7 @@ Created on Mon Apr 25 15:50:57 2016
 from build.management.commands.base_build import Command as BaseBuild
 from django.db.models import Q
 
-from protein.models import Protein, ProteinConformation, ProteinSequenceType, ProteinSource, ProteinState
+from protein.models import Protein, ProteinSequenceType, ProteinSource, ProteinState
 from residue.models import Residue
 from structure.models import Structure, PdbData, StructureType
 from structure.sequence_parser import SequenceParser
@@ -42,8 +42,8 @@ structs_with_missing_x50 = ['5EM9', '5AER', '3BEF', '3LU9', '3HKI', '3HKJ', '1NR
                             '5CL1', '5CM4', '5URZ', '5URY', '6O39', '5URV', '4Z33', '6NE2', '6NE4', '6O3B', '6O3A', '5WBS', '5T44', '5UN6', '5UN5', '6NDZ', '5KZV',
                             '5KZY', '5KZZ', '7JQD', '2PUX', '2PV9', '6EXJ', '7JNZ', '7NW3', '4F8K', '1RY1', '2J28', '4UE5', '6O9I', '6O9H', '7ALO', '6SKA', '4DLQ',
                             '5OVP', '6SKE', '5FTT', '5FTU', '4YEB', '4RMK', '4RML', '6JBU', '6IDX', '5KVM', '6V55', '7NJZ', '3N96', '3N93', '3N95', '7D86', '7DO4',
-                            '4OAJ', '4LI1', '4LI2', '7R84', '7R85', '7R86', '1EWK', '1EWT', '1EWV', '1ISR', '1ISS', '2E4U', '2E4V', '2E4W', '2E4X', '2E4Y', '1DDV', 
-                            '2E4Z', '5X2M', '5X2N', '5X2O', '5X2P', '5X2Q', '7N95', '7N97', '7N9S', '1IJY', '4F0A', '6AHY', '6TFB', '6TFM', '4C79', '4C7A', '7DF9', 
+                            '4OAJ', '4LI1', '4LI2', '7R84', '7R85', '7R86', '1EWK', '1EWT', '1EWV', '1ISR', '1ISS', '2E4U', '2E4V', '2E4W', '2E4X', '2E4Y', '1DDV',
+                            '2E4Z', '5X2M', '5X2N', '5X2O', '5X2P', '5X2Q', '7N95', '7N97', '7N9S', '1IJY', '4F0A', '6AHY', '6TFB', '6TFM', '4C79', '4C7A', '7DF9',
                             '7DFA', '7DFB', '7DFC', '7P8X', '7P93']
 
 
@@ -152,7 +152,7 @@ class QueryPDB():
         except:
             protein = None
         try:
-            x50s = Residue.objects.filter(protein_conformation__protein=protein, generic_number__label__in=['1x50','2x50','3x50','4x50','5x50','6x50','7x50'])
+            x50s = Residue.objects.filter(protein=protein, generic_number__label__in=['1x50','2x50','3x50','4x50','5x50','6x50','7x50'])
         except:
             x50s = None
         if uniprot in blast_uniprot_dict:
@@ -248,7 +248,7 @@ class QueryPDB():
                                                                           parent=protein, residue_numbering_scheme=protein.residue_numbering_scheme,
                                                                           sequence_type=ProteinSequenceType.objects.get(slug='mod'), source=ProteinSource.objects.get(name='OTHER'),
                                                                           species=protein.species)
-                        new_prot_conf, created = ProteinConformation.objects.get_or_create(protein=new_prot, state=state)
+                        # new_prot_conf, created = ProteinConformation.objects.get_or_create(protein=new_prot, state=state)
                         for line in lines:
                             if line.startswith('REVDAT   1'):
                                 publication_date = line[13:22]
@@ -675,4 +675,3 @@ def yamls_to_csv():
         ar_w.writerow(['PDB', 'UniProt', 'ChainID', 'Note'])
         for pdb, vals in arrestin.items():
             ar_w.writerow([pdb, vals['prot'], vals['chain'], vals['note']])
-

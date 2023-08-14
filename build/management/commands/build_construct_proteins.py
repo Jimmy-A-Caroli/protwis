@@ -5,7 +5,7 @@ from django.utils.html import strip_tags
 from django.db import IntegrityError
 from common.tools import test_model_updates
 from build.management.commands.base_build import Command as BaseBuild
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinSequenceType, ProteinSegment, ProteinSource)
+from protein.models import (Protein, ProteinState, ProteinSequenceType, ProteinSegment, ProteinSource)
 from residue.models import Residue
 from structure.functions import ParseStructureCSV
 
@@ -86,10 +86,9 @@ class Command(BaseBuild):
 
             # fetch the parent protein
             try:
-                ppc = ProteinConformation.objects.prefetch_related('protein__family', 'protein__species',
-                    'protein__residue_numbering_scheme').get(protein__entry_name=sd['protein'].lower(),
-                    state__slug=settings.DEFAULT_PROTEIN_STATE)
-            except ProteinConformation.DoesNotExist:
+                ppc = Protein.objects.prefetch_related('protein__family', 'protein__species',
+                    'protein__residue_numbering_scheme').get(entry_name=sd['protein'].lower())
+            except Protein.DoesNotExist:
                 # abort if parent protein is not found
                 print('Parent protein {} for construct {} not found, aborting!'.format(
                     sd['protein'], sd['name']))
@@ -140,15 +139,15 @@ class Command(BaseBuild):
                 p = Protein.objects.get(name=sd['name'])
 
 
-            if not ProteinConformation.objects.filter(protein=p).exists():
-                # create protein conformation record
-                pc = ProteinConformation()
-                pc.protein = p
-                pc.state = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
-                try:
-                    pc.save()
-                    self.logger.info('Created conformation {} of protein {}'.format(pc.state.name, p.name))
-                except:
-                    print('Failed creating conformation {} of protein {}'.format(pc.state.name,p.entry_name))
-                    self.logger.error('Failed creating conformation {} of protein {}'.format(pc.state.name,
-                        p.entry_name))
+            # if not ProteinConformation.objects.filter(protein=p).exists():
+            #     # create protein conformation record
+            #     pc = ProteinConformation()
+            #     pc.protein = p
+            #     pc.state = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
+            #     try:
+            #         pc.save()
+            #         self.logger.info('Created conformation {} of protein {}'.format(pc.state.name, p.name))
+            #     except:
+            #         print('Failed creating conformation {} of protein {}'.format(pc.state.name,p.entry_name))
+            #         self.logger.error('Failed creating conformation {} of protein {}'.format(pc.state.name,
+            #             p.entry_name))

@@ -110,7 +110,7 @@ class GenericNumbering(object):
         logger.info("{:d}\t{:d}".format(hsps.query_start, hsps.sbjct_start))
 
         rs = Residue.objects.prefetch_related('display_generic_number', 'protein_segment').filter(
-            protein_conformation__protein=prot_id)
+            protein=prot_id)
         residues = {}
         for r in rs:
             residues[r.sequence_number] = r
@@ -283,7 +283,7 @@ class GenericNumberingFromDB(GenericNumbering):
         self.pdb_seq = {}
         self.structure = structure_obj
         self.pdb_structure = pdbdata
-        resis = Residue.objects.filter(protein_conformation__protein=structure_obj.protein, protein_segment__isnull=False).prefetch_related('display_generic_number', 'protein_segment')
+        resis = Residue.objects.filter(protein=structure_obj.protein, protein_segment__isnull=False).prefetch_related('display_generic_number', 'protein_segment')
         self.resis = OrderedDict()
         for r in resis:
             self.resis[r.sequence_number] = r

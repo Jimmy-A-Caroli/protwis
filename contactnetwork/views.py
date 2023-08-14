@@ -20,7 +20,7 @@ from contactnetwork.functions import *
 from structure.models import Structure, StructureVectors, StructureExtraProteins
 from structure.templatetags.structure_extras import *
 from construct.models import Construct
-from protein.models import Protein, ProteinSegment, ProteinCouplings, ProteinConformation
+from protein.models import Protein, ProteinSegment, ProteinCouplings
 from residue.models import Residue, ResidueGenericNumber
 from signprot.models import SignprotComplex
 from interaction.models import StructureLigandInteraction, ResidueFragmentInteraction
@@ -226,14 +226,14 @@ def PdbTableData(request):
     # 'A' = Arrestin
     if effector:
         data = data.filter(extra_proteins__category__startswith=effector).prefetch_related(
-        'extra_proteins__protein_conformation','extra_proteins__wt_protein').order_by(
-        'extra_proteins__protein_conformation__protein__parent','state').annotate(
+        'extra_proteins__protein','extra_proteins__wt_protein').order_by(
+        'extra_proteins__protein__parent','state').annotate(
         res_count = Sum(Case(When(extra_proteins__structure__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
         signal_ps = StructureExtraProteins.objects.filter(category__startswith=effector).values('structure__protein__parent','display_name').order_by().annotate(coverage = Max('wt_coverage'))
     else:
-        data = data.prefetch_related('extra_proteins__protein_conformation','extra_proteins__wt_protein').order_by(
-        'extra_proteins__protein_conformation__protein__parent','state').annotate(
-        res_count = Sum(Case(When(extra_proteins__protein_conformation__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
+        data = data.prefetch_related('extra_proteins__protein','extra_proteins__wt_protein').order_by(
+        'extra_proteins__protein__parent','state').annotate(
+        res_count = Sum(Case(When(extra_proteins__protein__residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
         signal_ps = StructureExtraProteins.objects.all().values('structure__protein__parent','display_name').order_by().annotate(coverage = Max('wt_coverage'))
 
     if exclude_non_interacting and effector == 'G alpha':
@@ -242,7 +242,7 @@ def PdbTableData(request):
 
     # get a gn residue count for all WT proteins
     proteins_pks = Structure.objects.exclude(structure_type__slug__startswith='af-').values_list("protein__parent__pk", flat=True).distinct()
-    residue_counts = ProteinConformation.objects.filter(protein__pk__in=proteins_pks).values('protein__pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
+    residue_counts = Protein.objects.filter(pk__in=proteins_pks).values('pk').annotate(res_count = Sum(Case(When(residue__generic_number=None, then=0), default=1, output_field=IntegerField())))
     rcs = {}
     for rc in residue_counts:
         rcs[rc['protein__pk']] = rc['res_count']
@@ -724,19 +724,19 @@ def InteractionBrowserData(request):
         if class_pair_lookup==None or len(class_pair_lookup)==0:
             # Class pair conservation
             sum_proteins = Protein.objects.filter(family__slug__startswith=gpcr_class,sequence_type__slug='wt',species__common_name='Human').count()
-            residues = Residue.objects.filter(protein_conformation__protein__family__slug__startswith=gpcr_class,
-                                              protein_conformation__protein__sequence_type__slug='wt',
-                                              protein_conformation__protein__species__common_name='Human',
+            residues = Residue.objects.filter(protein__family__slug__startswith=gpcr_class,
+                                              protein__sequence_type__slug='wt',
+                                              protein__species__common_name='Human',
 
-                        ).exclude(display_generic_number=None).values('pk','sequence_number','generic_number__label','amino_acid','protein_conformation__protein__entry_name','display_generic_number__label').all()
+                        ).exclude(display_generic_number=None).values('pk','sequence_number','generic_number__label','amino_acid','protein__entry_name','display_generic_number__label').all()
             r_pair_lookup = defaultdict(lambda: defaultdict(lambda: set()))
             for r in residues:
                 # use the class specific generic number
                 r['display_generic_number__label'] = re.sub(r'\.[\d]+', '', r['display_generic_number__label'])
                 if forced_class_a:
-                    r_pair_lookup[r['generic_number__label']][r['amino_acid']].add(r['protein_conformation__protein__entry_name'])
+                    r_pair_lookup[r['generic_number__label']][r['amino_acid']].add(r['protein__entry_name'])
                 else:
-                    r_pair_lookup[r['display_generic_number__label']][r['amino_acid']].add(r['protein_conformation__protein__entry_name'])
+                    r_pair_lookup[r['display_generic_number__label']][r['amino_acid']].add(r['protein__entry_name'])
             class_pair_lookup = {}
 
             gen_keys = sorted(r_pair_lookup.keys(), key=functools.cmp_to_key(gpcrdb_number_comparator))
@@ -804,7 +804,7 @@ def InteractionBrowserData(request):
             interactions = Interaction.objects.filter(
                 interacting_pair__referenced_structure__protein__family__slug__startswith=gpcr_class
             ).exclude(
-                interacting_pair__res1__protein_conformation_id=F('interacting_pair__res2__protein_conformation_id') # Filter interactions with other proteins
+                interacting_pair__res1__protein_id=F('interacting_pair__res2__protein_id') # Filter interactions with other proteins
             ).distinct(
             ).exclude(
                 specific_type='water-mediated'
@@ -866,7 +866,7 @@ def InteractionBrowserData(request):
         interactions = Interaction.objects.filter(
             interacting_pair__referenced_structure__pdb_code__index__in=pdbs_upper
         ).filter(
-            interacting_pair__res1__protein_conformation_id=F('interacting_pair__res2__protein_conformation_id') # Filter interactions with other proteins
+            interacting_pair__res1__protein_id=F('interacting_pair__res2__protein_id') # Filter interactions with other proteins
         ).filter(
             interacting_pair__res1__pk__lt=F('interacting_pair__res2__pk')
         ).filter(
@@ -958,7 +958,7 @@ def InteractionBrowserData(request):
         s_lookup = {}
         pdb_lookup = {}
         for s in structures:
-            protein, pdb_name,pf  = [s['protein__parent__entry_name'],s['protein_conformation__protein__entry_name'],s['protein__parent__family__slug']]
+            protein, pdb_name,pf  = [s['protein__parent__entry_name'],s['protein__entry_name'],s['protein__parent__family__slug']]
             s_lookup[s['pk']] = [protein, pdb_name,pf]
             pdb_lookup[pdb_name] = [protein, s['pk'],pf]
             data['pfs_lookup'][pf].append(pdb_name)
@@ -1020,8 +1020,8 @@ def InteractionBrowserData(request):
             all_pdbs = list(Structure.objects.exclude(structure_type__slug__startswith='af-').values_list('pdb_code__index', flat=True))
             all_pdbs = [x.lower() for x in all_pdbs]
             #generic_number__label__in=all_interaction_residues)
-            residues = Residue.objects.filter(protein_conformation__protein__entry_name__in=all_pdbs).exclude(generic_number=None).values(
-                        'pk','sequence_number','display_generic_number__label','generic_number__label','amino_acid','protein_conformation__protein__entry_name','protein_segment__slug').all()
+            residues = Residue.objects.filter(protein__entry_name__in=all_pdbs).exclude(generic_number=None).values(
+                        'pk','sequence_number','display_generic_number__label','generic_number__label','amino_acid','protein__entry_name','protein_segment__slug').all()
 
             r_lookup = {}
             r_pair_lookup = defaultdict(lambda: defaultdict(lambda: []))
@@ -1033,8 +1033,8 @@ def InteractionBrowserData(request):
                 if r['generic_number__label'] not in all_interaction_residues:
                     continue
                 r_lookup[r['pk']] = r
-                r_pair_lookup[r['generic_number__label']][r['amino_acid']].append(r['protein_conformation__protein__entry_name'])
-                r_presence_lookup[r['generic_number__label']].append(r['protein_conformation__protein__entry_name'])
+                r_pair_lookup[r['generic_number__label']][r['amino_acid']].append(r['protein__entry_name'])
+                r_presence_lookup[r['generic_number__label']].append(r['protein__entry_name'])
                 segm_lookup[r['generic_number__label']] = r['protein_segment__slug']
                 r['display_generic_number__label'] = re.sub(r'\.[\d]+', '', r['display_generic_number__label'])
                 r_class_translate[r['generic_number__label']] = r['display_generic_number__label']
@@ -1062,8 +1062,8 @@ def InteractionBrowserData(request):
                                     all_pdbs_pairs[coord] = {}
                                 all_pdbs_pairs[coord][pair] = p
             cache.set("all_pdbs_aa_pairs",all_pdbs_pairs,60*60*24*7) #Cache results
-        residues = Residue.objects.filter(protein_conformation__protein__entry_name__in=pdbs
-                ).exclude(generic_number=None).values('pk','sequence_number','generic_number__label','amino_acid','protein_conformation__protein__entry_name','protein_segment__slug','display_generic_number__label').all()
+        residues = Residue.objects.filter(protein__entry_name__in=pdbs
+                ).exclude(generic_number=None).values('pk','sequence_number','generic_number__label','amino_acid','protein__entry_name','protein_segment__slug','display_generic_number__label').all()
         r_lookup = {}
         r_pair_lookup = defaultdict(lambda: defaultdict(lambda: []))
         segm_lookup = {}
@@ -1088,9 +1088,9 @@ def InteractionBrowserData(request):
                 r['generic_number__label'] = r['display_generic_number__label']
 
             r_lookup[r['pk']] = r
-            r_pair_lookup[r['generic_number__label']][r['amino_acid']].append(r['protein_conformation__protein__entry_name'])
+            r_pair_lookup[r['generic_number__label']][r['amino_acid']].append(r['protein__entry_name'])
             segm_lookup[r['generic_number__label']] = r['protein_segment__slug']
-            r_presence_lookup[r['generic_number__label']].append(r['protein_conformation__protein__entry_name'])
+            r_presence_lookup[r['generic_number__label']].append(r['rotein__entry_name'])
             data['segments'].add(r['protein_segment__slug'])
 
             # Generate all distinct (class-specific) GNs for tab4
@@ -2447,7 +2447,7 @@ def DistanceDataGroups(request):
                 data['pos_map'][aa.sequence_number] = aa.amino_acid
                 data['segment_map_full_gn'][aa.family_generic_number] = aa.segment_slug
     else:
-        rs = Residue.objects.filter(protein_conformation__protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
+        rs = Residue.objects.filter(protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
         for r in rs:
             if (not generic):
                 data['pos_map'][r.sequence_number] = r.amino_acid
@@ -3121,7 +3121,7 @@ def DistanceData(request):
                 data['pos_map'][aa.sequence_number] = aa.amino_acid
                 data['segment_map_full_gn'][aa.family_generic_number] = aa.segment_slug
     else:
-        rs = Residue.objects.filter(protein_conformation__protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
+        rs = Residue.objects.filter(protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
         for r in rs:
             if (not generic):
                 data['pos_map'][r.sequence_number] = r.amino_acid
@@ -3358,7 +3358,7 @@ def InteractionData(request):
                     data['pos_map'][aa.sequence_number] = aa.amino_acid
                     data['segment_map_full_gn'][aa.family_generic_number] = aa.segment_slug
         else:
-            rs = Residue.objects.filter(protein_conformation__protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
+            rs = Residue.objects.filter(protein=proteins[0]).prefetch_related('protein_segment','display_generic_number','generic_number')
             for r in rs:
                 if (not generic):
                     data['pos_map'][r.sequence_number] = r.amino_acid

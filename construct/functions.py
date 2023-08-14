@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError, connection
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 from structure.models import Structure
 from construct.models import *
@@ -1208,7 +1208,7 @@ def add_construct(d):
         if 'remark' not in mutation:
             mutation['remark'] = ''
 
-        res_wt = Residue.objects.get(protein_conformation__protein=protein_conformation.protein.parent, sequence_number=mutation['pos'])
+        res_wt = Residue.objects.get(protein=protein_conformation.parent, sequence_number=mutation['pos'])
         # if res_wt.amino_acid != mutation['wt']:
         #     print('aa dont match',construct,mutation['pos'],"annotated wt:", mutation['wt'], "DB wt:",res_wt.amino_acid, "Annotated Mut",mutation['mut'])
 

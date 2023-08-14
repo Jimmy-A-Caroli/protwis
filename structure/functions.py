@@ -13,7 +13,7 @@ from django.conf import settings
 from common.alignment import Alignment
 from common.tools import urlopen_with_retry
 from common.models import WebResource, WebLink, Publication
-from protein.models import Protein, ProteinSegment, ProteinConformation, ProteinState
+from protein.models import Protein, ProteinSegment, ProteinState
 from residue.functions import dgn
 from residue.models import Residue, ResidueGenericNumberEquivalent
 from structure.models import Structure, Rotamer, PdbData, StructureStabilizingAgent, StructureType
@@ -818,16 +818,16 @@ class PossibleKnots():
                 chain1, chain2 = values[0]
                 if not self.receptor.accession:
                     self.receptor = self.receptor.parent
-                region1 = list(Residue.objects.filter(protein_conformation__protein=self.receptor, protein_segment__slug=knot_label.split('-')[0]).values_list('sequence_number', flat=True))
+                region1 = list(Residue.objects.filter(protein=self.receptor, protein_segment__slug=knot_label.split('-')[0]).values_list('sequence_number', flat=True))
                 if len(region1)==0:
-                    region1 = list(Residue.objects.filter(protein_conformation__protein=self.signprot, protein_segment__slug=knot_label.split('-')[0]).values_list('sequence_number', flat=True))
+                    region1 = list(Residue.objects.filter(protein=self.signprot, protein_segment__slug=knot_label.split('-')[0]).values_list('sequence_number', flat=True))
                 if len(region1)==0:
                     raise AssertionError('Protein segment slug error for loop knot: No residues found for {} in {} - {}'.format(knot_label.split('-')[0], self.receptor, self.signprot))
                 if knot_label=='h1ha-hehf':
                     for i in range(0,3):
                         region1.append(region1[-1]+1)
                 for r in values[1]:
-                    region2 = Residue.objects.get(protein_conformation__protein=self.signprot, display_generic_number__label=r)
+                    region2 = Residue.objects.get(protein=self.signprot, display_generic_number__label=r)
                     self.output.append([[chain2,region2.sequence_number],[chain1,region1]])
         return self.output
 
@@ -850,7 +850,7 @@ class PdbChainSelector():
         pdb.retrieve_pdb_file(self.pdb_code, pdir='./', file_format="pdb")
         p = PDB.PDBParser()
         f = 'pdb{}.ent'.format(self.pdb_code.lower())
-        wt_residues = [i for i in Residue.objects.filter(protein_conformation__protein=self.protein).exclude(protein_segment__slug__in=['N-term','C-term'])]
+        wt_residues = [i for i in Residue.objects.filter(protein=self.protein).exclude(protein_segment__slug__in=['N-term','C-term'])]
         gn_residues = [i.sequence_number for i in wt_residues if i.generic_number and i.protein_segment.slug not in ['ECL1','ECL2','ICL3','ECL3']]
         structure = p.get_structure(self.pdb_code, f)
         for chain in structure[0]:
@@ -948,17 +948,17 @@ class PdbStateIdentifier():
 
     def run(self):
         if self.structure_type=='structure':
-            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein.parent)
+            self.parent_prot_conf = self.structure.protein.parent
             ssno = StructureSeqNumOverwrite(self.structure)
             ssno.seq_num_overwrite('pdb')
         elif self.structure_type=='refined':
-            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein)
+            self.parent_prot_conf = self.structure.protein
         elif self.structure_type=='hommod':
-            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.protein)
-        elif self.structure_type=='complex':
-            self.parent_prot_conf = ProteinConformation.objects.get(protein=self.structure.receptor_protein)
+            self.parent_prot_conf = self.structure.protein
+        elif self.structure_type=='af-complex':
+            self.parent_prot_conf = self.structure.protein
         # class A and T
-        if self.parent_prot_conf.protein.family.slug.startswith('001') or self.parent_prot_conf.protein.family.slug.startswith('007'):
+        if self.parent_prot_conf.family.slug.startswith('001') or self.parent_prot_conf.family.slug.startswith('007'):
             tm6 = self.get_residue_distance(self.tm2_gn, self.tm6_gn)
             tm7 = self.get_residue_distance(self.tm3_gn, self.tm7_gn)
             print(tm6, tm7, tm6-tm7)
@@ -971,7 +971,7 @@ class PdbStateIdentifier():
                 elif self.activation_value>self.intermediate_cutoff:
                     self.state = ProteinState.objects.get(slug='active')
         # class B
-        elif self.parent_prot_conf.protein.family.slug.startswith('002') or self.parent_prot_conf.protein.family.slug.startswith('003'):
+        elif self.parent_prot_conf.family.slug.startswith('002') or self.parent_prot_conf.family.slug.startswith('003'):
             tm2_gn_b = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm2_gn, scheme__short_name='GPCRdb(B)').label
             tm6_gn_b = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm6_gn, scheme__short_name='GPCRdb(B)').label
             tm3_gn_b = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm3_gn, scheme__short_name='GPCRdb(B)').label
@@ -988,7 +988,7 @@ class PdbStateIdentifier():
                 elif self.activation_value>self.intermediate_cutoff:
                     self.state = ProteinState.objects.get(slug='active')
         # class C
-        elif self.parent_prot_conf.protein.family.slug.startswith('004'):
+        elif self.parent_prot_conf.family.slug.startswith('004'):
             tm2_gn_c = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm2_gn, scheme__short_name='GPCRdb(C)').label
             tm6_gn_c = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm6_gn, scheme__short_name='GPCRdb(C)').label
             tm3_gn_c = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm3_gn, scheme__short_name='GPCRdb(C)').label
@@ -1007,7 +1007,7 @@ class PdbStateIdentifier():
         # class D
         #########
         # class F
-        elif self.parent_prot_conf.protein.family.slug.startswith('006'):
+        elif self.parent_prot_conf.family.slug.startswith('006'):
             tm2_gn_f = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm2_gn, scheme__short_name='GPCRdb(F)').label
             tm6_gn_f = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm6_gn, scheme__short_name='GPCRdb(F)').label
             tm3_gn_f = ResidueGenericNumberEquivalent.objects.get(default_generic_number__label=self.tm3_gn, scheme__short_name='GPCRdb(F)').label
@@ -1030,22 +1030,22 @@ class PdbStateIdentifier():
 
     def get_residue_distance(self, residue1, residue2):
         try:
-            res1 = Residue.objects.get(protein_conformation__protein=self.structure.protein.parent, display_generic_number__label=dgn(residue1, self.parent_prot_conf))
-            res2 = Residue.objects.get(protein_conformation__protein=self.structure.protein.parent, display_generic_number__label=dgn(residue2, self.parent_prot_conf))
+            res1 = Residue.objects.get(protein=self.structure.protein.parent, display_generic_number__label=dgn(residue1, self.parent_prot_conf))
+            res2 = Residue.objects.get(protein=self.structure.protein.parent, display_generic_number__label=dgn(residue2, self.parent_prot_conf))
             print(res1, res1.id, res2, res2.id)
             try:
                 rota1 = Rotamer.objects.filter(structure=self.structure, residue__sequence_number=res1.sequence_number)
                 if len(rota1)==0:
                     raise Exception
             except:
-                rota1 = Rotamer.objects.filter(structure=self.structure, residue__display_generic_number__label=dgn(residue1, self.structure.protein_conformation))
+                rota1 = Rotamer.objects.filter(structure=self.structure, residue__display_generic_number__label=dgn(residue1, self.structure.protein))
             rota1 = right_rotamer_select(rota1, self.structure.preferred_chain[0])
             try:
                 rota2 = Rotamer.objects.filter(structure=self.structure, residue__sequence_number=res2.sequence_number)
                 if len(rota2)==0:
                     raise Exception
             except:
-                rota2 = Rotamer.objects.filter(structure=self.structure, residue__display_generic_number__label=dgn(residue2, self.structure.protein_conformation))
+                rota2 = Rotamer.objects.filter(structure=self.structure, residue__display_generic_number__label=dgn(residue2, self.structure.protein))
             rota2 = right_rotamer_select(rota2, self.structure.preferred_chain[0])
             rotas = [rota1, rota2]
             io1 = StringIO(rotas[0].pdbdata.pdb)
@@ -1061,8 +1061,8 @@ class PdbStateIdentifier():
                     return self.calculate_CA_distance(r1, r2)
         except:
             try:
-                res1 = Residue.objects.get(protein_conformation=self.parent_prot_conf, display_generic_number__label=dgn(residue1, self.parent_prot_conf))
-                res2 = Residue.objects.get(protein_conformation=self.parent_prot_conf, display_generic_number__label=dgn(residue2, self.parent_prot_conf))
+                res1 = Residue.objects.get(protein=self.parent_prot_conf, display_generic_number__label=dgn(residue1, self.parent_prot_conf))
+                res2 = Residue.objects.get(protein=self.parent_prot_conf, display_generic_number__label=dgn(residue2, self.parent_prot_conf))
                 if self.structure_type=='refined':
                     pdb_data = self.structure.pdb_data.pdb
                 elif self.structure_type=='hommod':
@@ -1106,7 +1106,7 @@ class StructureSeqNumOverwrite():
         ''' Overwrites Residue object sequence numbers in GPCRDB
             @param overwrite_target: 'pdb' if converting pdb to wt, 'wt' if the other way around
         '''
-        resis = Residue.objects.filter(protein_conformation=self.structure.protein_conformation)
+        resis = Residue.objects.filter(protein=self.structure.protein)
         if overwrite_target=='pdb':
             target_dict = self.pdb_wt_table
         elif overwrite_target=='wt':
@@ -1216,11 +1216,11 @@ class StructureBuildCheck():
 
     def check_duplicate_residues(self):
         for s in Structure.objects.all():
-            resis = Residue.objects.filter(protein_conformation=s.protein)
+            resis = Residue.objects.filter(protein=s.protein)
             if len(resis)!=len(resis.values_list('sequence_number').distinct()):
                 for r in resis:
                     try:
-                        Residue.objects.get(protein_conformation=s.protein, sequence_number=r.sequence_number)
+                        Residue.objects.get(protein=s.protein, sequence_number=r.sequence_number)
                     except Residue.MultipleObjectsReturned:
                         if s in self.duplicate_residue_error:
                             self.duplicate_residue_error[s].append(r)
@@ -1230,8 +1230,8 @@ class StructureBuildCheck():
     def check_segment_ends(self, structure):
         key = structure.pdb_code.index
         if key in self.segends_dict:
-            parent_residues = Residue.objects.filter(protein_conformation__protein=structure.protein.parent)
-            structure_residues = Residue.objects.filter(protein_conformation=structure.protein)
+            parent_residues = Residue.objects.filter(protein=structure.protein.parent)
+            structure_residues = Residue.objects.filter(protein=structure.protein)
             annotation = self.segends_dict[key]
             for i in range(1,9):
                 if annotation[str(i)+'e']=='-':
@@ -1290,9 +1290,9 @@ class StructureBuildCheck():
     def check_signprot_struct_residues(self, signprot_complex):
         pdb = PDBParser(PERMISSIVE=True, QUIET=True).get_structure('struct', StringIO(str(signprot_complex.structure.pdb_data.pdb)))[0]
         if signprot_complex.protein.family.slug.startswith('100'):
-            resis = Residue.objects.filter(protein_conformation=ProteinConformation.objects.get(protein__entry_name=signprot_complex.structure.pdb_code.index.lower()+'_a'))
+            resis = Residue.objects.filter(protein=Protein.objects.get(entry_name=signprot_complex.structure.pdb_code.index.lower()+'_a'))
         elif signprot_complex.protein.family.slug.startswith('200'):
-            resis = Residue.objects.filter(protein_conformation=ProteinConformation.objects.get(protein__entry_name=signprot_complex.structure.pdb_code.index.lower()+'_arrestin'))
+            resis = Residue.objects.filter(protein=Protein.objects.get(entry_name=signprot_complex.structure.pdb_code.index.lower()+'_arrestin'))
         if len(pdb[signprot_complex.alpha])!=len(resis):
             print(signprot_complex.structure, len(pdb[signprot_complex.alpha]), len(resis))
 

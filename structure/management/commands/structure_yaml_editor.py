@@ -7,7 +7,7 @@ Created on Mon Feb 06 16:50:57 2020
 from build.management.commands.base_build import Command as BaseBuild
 from django.db.models import Q
 
-from protein.models import Protein, ProteinConformation, ProteinSequenceType, ProteinSource, ProteinState
+from protein.models import Protein, ProteinSequenceType, ProteinSource, ProteinState
 from residue.models import Residue
 from structure.models import Structure, PdbData, StructureType
 from structure.sequence_parser import SequenceParser

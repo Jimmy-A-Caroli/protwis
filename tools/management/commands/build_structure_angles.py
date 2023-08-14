@@ -473,9 +473,9 @@ class Command(BaseCommand):
             """
             start = False
             for i in range(len(qset)-1,0,-1):
-                if not start and qset[i].protein_conformation.protein == x:
+                if not start and qset[i].protein == x:
                     start = i
-                if start and qset[i].protein_conformation.protein != x:
+                if start and qset[i].protein != x:
                     if start != len(qset)-1:
                         del qset[start+1:]
                         return qset[i+1:]
@@ -535,12 +535,12 @@ class Command(BaseCommand):
 
         pids = [ref.protein.id for ref in references]
 
-        qset = Residue.objects.filter(protein_conformation__protein__id__in=pids)
+        qset = Residue.objects.filter(protein__id__in=pids)
         if GN_only:
-            qset = qset.filter(generic_number__label__regex=r'^[1-7]x[0-9]+').order_by('-protein_conformation__protein','-generic_number__label')
+            qset = qset.filter(generic_number__label__regex=r'^[1-7]x[0-9]+').order_by('-protein','-generic_number__label')
         else:
-            qset = qset.order_by('-protein_conformation__protein','-generic_number__label')
-        qset = list(qset.prefetch_related('generic_number', 'protein_conformation__protein','protein_conformation__state'))
+            qset = qset.order_by('-protein','-generic_number__label')
+        qset = list(qset.prefetch_related('generic_number', 'protein','protein__state'))
 
         res_dict = {ref.pdb_code.index:qgen(ref.protein,qset) for ref in references}
 

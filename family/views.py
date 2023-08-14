@@ -7,7 +7,7 @@ from django.views.decorators.cache import cache_page
 
 from common.diagrams_gpcr import DrawHelixBox, DrawSnakePlot
 
-from protein.models import Protein, ProteinFamily, ProteinSegment, ProteinConformation
+from protein.models import Protein, ProteinFamily, ProteinSegment
 from residue.models import Residue,ResidueGenericNumber
 from mutation.models import MutationExperiment
 from structure.models import Structure
@@ -190,21 +190,21 @@ def detail(request, slug):
         mutations_list[mutation.residue.generic_number.label].append([mutation.foldchange,ligand.replace("'", "\\'"),qual])
 
     try:
-        pc = ProteinConformation.objects.get(protein__family__slug=slug, protein__sequence_type__slug='consensus')
-    except ProteinConformation.DoesNotExist:
+        pc = Protein.objects.get(family__slug=slug, sequence_type__slug='consensus')
+    except Protein.DoesNotExist:
         try:
             # In case of single members, not all families have a set consensus - grab the consensus of that single member
-            pc = ProteinConformation.objects.get(protein__family__slug__startswith=slug, protein__sequence_type__slug='consensus')
-        except ProteinConformation.DoesNotExist:
+            pc = Protein.objects.get(family__slug__startswith=slug, sequence_type__slug='consensus')
+        except Protein.DoesNotExist:
             try:
-                pc = ProteinConformation.objects.get(protein__family__slug=slug, protein__species_id=1,
+                pc = Protein.objects.get(family__slug=slug, species_id=1,
                     protein__sequence_type__slug='wt')
-            except ProteinConformation.DoesNotExist:
+            except Protein.DoesNotExist:
                 # In case of single members, not all families have a set consensus - grab the human representative of that single member
-                pc = ProteinConformation.objects.get(protein__family__slug__startswith=slug, protein__species_id=1,
-                    protein__sequence_type__slug='wt')
+                pc = Protein.objects.get(family__slug__startswith=slug, species_id=1,
+                    sequence_type__slug='wt')
 
-    residues = Residue.objects.filter(protein_conformation=pc).order_by('sequence_number').prefetch_related(
+    residues = Residue.objects.filter(protein=pc).order_by('sequence_number').prefetch_related(
         'protein_segment', 'generic_number', 'display_generic_number')
 
     jsondata = {}

@@ -44,12 +44,12 @@ class Command(BaseCommand):
         dump = {}
 
         for c, i in enumerate(isoforms[1:]):
-            
+
             p = '{}_human'.format(i[0].lower())
             print(p)
             protein = Protein.objects.get(entry_name=p, sequence_type__slug='wt', species__common_name='Human')
             wt_seq = protein.sequence
-            rs = Residue.objects.filter(protein_conformation__protein=protein).prefetch_related('protein_segment','display_generic_number','generic_number')
+            rs = Residue.objects.filter(protein=protein).prefetch_related('protein_segment','display_generic_number','generic_number')
             r_lookup = {}
             r_segment = {}
             for r in rs:
@@ -61,7 +61,7 @@ class Command(BaseCommand):
             seq_filename = "protein/data/MSA_GPCR_isoforms/{}_isoform_MSA.fa".format(p.lower())
             with open (seq_filename, "r") as myfile:
                 fasta_raw = myfile.read()
-                fasta=fasta_raw.splitlines() 
+                fasta=fasta_raw.splitlines()
 
 
             wt_seq2=fasta[1]
@@ -142,7 +142,7 @@ class Command(BaseCommand):
                                 segment = r_lookup[i-gaps][0]
                                 if segment not in count_segment:
                                     count_segment[segment] = 0
-                                count_segment[segment] += 1  
+                                count_segment[segment] += 1
 
                     result_segment = {}
                     for segment, value in r_segment.items():
@@ -196,6 +196,3 @@ class Command(BaseCommand):
     # print(fasta_raw)
     # data['wt2']=fasta[1]
     # data['pre_aligned']=fasta[1+int(iso)*2]
-
-
-                            

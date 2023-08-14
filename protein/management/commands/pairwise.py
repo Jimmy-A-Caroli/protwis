@@ -1,6 +1,6 @@
 from build.management.commands.base_build import Command as BaseBuild
 from django.conf import settings
-from protein.models import Protein, ProteinSegment, ProteinConformation, ProteinState
+from protein.models import Protein, ProteinSegment, ProteinState
 from structure.models import Structure, Rotamer
 from structure.functions import BlastSearch
 from Bio.Blast import NCBIXML, NCBIWWW
@@ -9,14 +9,14 @@ from Bio import pairwise2
 import subprocess, shlex, os
 
 
-class Command(BaseBuild):  
+class Command(BaseBuild):
 	help = 'Blastp search custom dbs'
 
 	def add_arguments(self, parser):
 		super(Command, self).add_arguments(parser=parser)
 		parser.add_argument('-p1', help='Entry name or sequence of protein 1', default=False, type=str)
 		parser.add_argument('-p2', help='Entry name or sequence of protein 2', default=False, type=str)
-	
+
 	def handle(self, *args, **options):
 		p1 = Protein.objects.filter(entry_name=options['p1'])
 		if len(p1)==0:

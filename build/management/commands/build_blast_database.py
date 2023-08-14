@@ -46,7 +46,7 @@ class Command(BaseCommand):
             # Process sequences to obtain bundle only
             segment_start = ProteinSegment.objects.get(slug="TM1")
             segment_end = ProteinSegment.objects.get(slug="TM7")
-            residues = Residue.objects.filter(protein_conformation__protein=protein, protein_segment_id__gte=segment_start.pk, protein_segment_id__lte=segment_end.pk) \
+            residues = Residue.objects.filter(protein=protein, protein_segment_id__gte=segment_start.pk, protein_segment_id__lte=segment_end.pk) \
                         .order_by("id").values_list("amino_acid", flat=True)
             protein.sequence = "".join(residues)
 

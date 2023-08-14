@@ -102,23 +102,31 @@ def calculate_interactions(pdb, session=None, peptide=None):
         os.makedirs(tempdir)
         # os.chmod(tempdir, 0o777)
     if not session:
+        print('Checking PDB')
         check_pdb(projectdir, pdb)
+        print('Checking Dirs')
         checkdirs(projectdir, pdb)
         pdb_location = projectdir + 'pdbs/' + pdb + '.pdb'
+        print('Finding ligand')
         hetlist_display = find_interacting_ligand(pdb_location, pdb)
         # Defining a shared parser
         parser = PDBParser(QUIET=True)
+        print('getting structure')
         scroller = parser.get_structure(pdb, pdb_location)
+        print('create ligands and poseview')
         create_ligands_and_poseview(hetlist_display, scroller, projectdir, pdb, peptide) #ignore_het (should be global), inchikeys, smiles (should not be used)
+        print('Build ligand info')
         hetlist, ligand_charged, ligand_donors, ligand_atoms, ligand_acceptors, ligandcenter, ligand_rings = build_ligand_info(
                                                                                                                 scroller, hetlist_display,
                                                                                                                 projectdir, pdb, peptide, hetlist,
                                                                                                                 ligand_atoms, ligand_charged, ligand_donors,
                                                                                                                 ligand_acceptors, ligandcenter, ligand_rings)
+        print('Finding interactions')
         summary_results, new_results, results = find_interactions(
                                                     scroller, projectdir, pdb, peptide,
                                                     hetlist, ligandcenter, radius, summary_results,
                                                     new_results, results, hydrophob_radius, ligand_rings, ligand_charged)
+        print('Analyze interactions')
         summary_results, new_results, sortedresults = analyze_interactions(
                                                         projectdir, pdb, results, ligand_donors,
                                                         ligand_acceptors, ligand_charged, new_results,
@@ -341,7 +349,6 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                     hetflag= 'pep'
                 if peptide and chain.id!=peptide:
                     continue
-
                 # REMEMBER TO PARSE ONLY THE ACTUAL LIGAND
                 if hetflag in lig_het.keys():
                     if (hetflag not in hetlist) or (chain.id==peptide):
@@ -356,6 +363,7 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                             ligand_donors[hetflag] = []
                             ligand_acceptors[hetflag] = []
                             count_atom_ligand[hetflag] = 0
+                            print('creating the mol2 from: ' + projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + '.pdb')
                             mol2 = MolFromPDBFile(projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + ".pdb")
                             if not mol2:
                                 mol2 = MolFromPDBFile(projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + ".pdb", sanitize=False)
@@ -369,12 +377,17 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                                     mol2 = AllChem.AssignBondOrdersFromTemplate(refmol=refmol, mol=mol2)
                                 except:
                                     pass
+                            print('adding H to mol2')
                             mol2 = Chem.AddHs(mol2)
+                            print('calculating rings')
                             rings = Chem.rdmolops.GetSSSR(mol2)
+                            print(len(rings))
                             ringlist = []
-                            if rings > 0:
+                            if len(rings) > 0:
                                 counter = -1
+                                print('hello2!')
                                 ri = mol2.GetRingInfo()
+                                print('hello!')
                                 for ring in ri.BondRings():
                                     counter +=1
                                     center = Vector(0.0, 0.0, 0.0)
@@ -389,13 +402,14 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                                                 center += a_vector
                                                 atomlist.append(atom.GetIdx())
                                                 vectorlist.append(a_vector)
+                                        print('calculate center')
                                         center = center / members
                                         normal1 = center - vectorlist[0]
                                         normal2 = center - vectorlist[2]
                                         # normal = Vector(np.cross(normal1,normal2
                                         normal = Vector(np.cross([normal1[0],normal1[1],normal1[2]],[normal2[0],normal2[1],normal2[2]]))
                                         ringlist.append([atomlist, center, normal, vectorlist])
-
+                            print('check first vector')
                             ligand_rings[hetflag] = ringlist
 
                             fdefName = os.path.join(RDConfig.RDDataDir,'BaseFeatures.fdef')
@@ -424,7 +438,7 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                                             positions_hs = mol2.GetConformer().GetAtomPosition(j)
                                             temphatoms.append(Vector(positions_hs))
                                     ligand_donors[hetflag].append([chargevector, temphatoms])
-
+                        print('check second vector')
                         # Function to get ligand centers to maybe skip some residues
                         check = 0
                         center = Vector(0.0, 0.0, 0.0)
@@ -456,6 +470,7 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                                     ligand_atoms[hetflag] = []
                                 ligand_atoms[hetflag].append([count_atom_ligand[hetflag], atom_vector, het_atom])
                                 count_atom_ligand[hetflag] += 1
+                        print('check third vector')
                         center2 = center / count_atom_ligand[hetflag]
                         ligandcenter[hetflag] = [center2, count_atom_ligand[hetflag],center]
 
@@ -1197,7 +1212,7 @@ def StructureDetails(request, pdbname):
     crystal = Structure.objects.get(pdb_code__index=pdbname)
     p = Protein.objects.get(protein=crystal.protein)
 
-    residuelist = Residue.objects.filter(protein_conformation__protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
     lookup = {}
 
     residues_lookup = {}
@@ -1261,9 +1276,9 @@ def StructureDetails(request, pdbname):
 
     for segment in segments:
         data[segment.slug] = OrderedDict()
-        residues = Residue.objects.filter(protein_segment=segment,  protein_conformation__protein=p,
-                                          generic_number__label__in=residue_table_list).prefetch_related('protein_conformation__protein',
-                                                                                                         'protein_conformation__state', 'protein_segment',
+        residues = Residue.objects.filter(protein_segment=segment,  protein=p,
+                                          generic_number__label__in=residue_table_list).prefetch_related('protein',
+                                                                                                         'state', 'protein_segment',
                                                                                                          'generic_number', 'display_generic_number', 'generic_number__scheme',
                                                                                                          'alternative_generic_numbers__scheme')
         for scheme in numbering_schemes:
@@ -1287,7 +1302,7 @@ def StructureDetails(request, pdbname):
                     pos = residue.generic_number
                     if scheme == pos.scheme:
                         data[segment.slug][pos.label]['seq'][proteins.index(
-                            residue.protein_conformation.protein)] = str(residue)
+                            residue.protein)] = str(residue)
                     else:
                         if scheme.slug not in data[segment.slug][pos.label].keys():
                             data[segment.slug][pos.label][
@@ -1296,7 +1311,7 @@ def StructureDetails(request, pdbname):
                             data[segment.slug][pos.label][
                                 scheme.slug] += " " + alternative.label
                         data[segment.slug][pos.label]['seq'][proteins.index(
-                            residue.protein_conformation.protein)] = str(residue)
+                            residue.protein)] = str(residue)
                 else:
                     if scheme.slug not in data[segment.slug][pos.label].keys():
                         data[segment.slug][pos.label][
@@ -1305,7 +1320,7 @@ def StructureDetails(request, pdbname):
                         data[segment.slug][pos.label][
                             scheme.slug] += " " + alternative.label
                     data[segment.slug][pos.label]['seq'][proteins.index(
-                        residue.protein_conformation.protein)] = str(residue)
+                        residue.protein)] = str(residue)
 
     # Preparing the dictionary of list of lists. Dealing with tripple nested
     # dictionary in django templates is a nightmare
@@ -1321,7 +1336,7 @@ def StructureDetails(request, pdbname):
     context['data'] = flattened_data
     context['number_of_schemes'] = len(numbering_schemes)
 
-    residuelist = Residue.objects.filter(protein_conformation__protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
     HelixBox = DrawHelixBox(
                 residuelist, p.get_protein_class(), str(p), nobuttons=1)
     SnakePlot = DrawSnakePlot(
@@ -1425,16 +1440,16 @@ def fragment(request):
 
 def check_residue(protein, pos, aa):
     residue = Residue.objects.filter(
-        protein_conformation=protein, sequence_number=pos)
+        protein=protein, sequence_number=pos)
     if residue.exists():
         residue = Residue.objects.get(
-            protein_conformation=protein, sequence_number=pos)
+            protein=protein, sequence_number=pos)
         if residue.amino_acid != aa:
             residue.amino_acid = aa
             residue.save()
     else:
         residue, created = Residue.objects.get_or_create(
-            protein_conformation=protein, sequence_number=pos, amino_acid=aa)
+            protein=protein, sequence_number=pos, amino_acid=aa)
         # continue #SKIP THESE -- mostly fusion residues that aren't mapped
         # yet.
     return residue
@@ -1691,9 +1706,9 @@ def calculate(request, redirect=None):
 
             for segment in segments:
                 data[segment.slug] = OrderedDict()
-                residues = Residue.objects.filter(protein_segment=segment,  protein_conformation__protein__in=proteins,
-                                                  generic_number__label__in=residue_table_list).prefetch_related('protein_conformation__protein',
-                                                                                                                 'protein_conformation__state', 'protein_segment',
+                residues = Residue.objects.filter(protein_segment=segment,  protein__in=proteins,
+                                                  generic_number__label__in=residue_table_list).prefetch_related('protein',
+                                                                                                                 'state', 'protein_segment',
                                                                                                                  'generic_number', 'display_generic_number', 'generic_number__scheme',
                                                                                                                  'alternative_generic_numbers__scheme')
                 for scheme in numbering_schemes:
@@ -1717,7 +1732,7 @@ def calculate(request, redirect=None):
                             pos = residue.generic_number
                             if scheme == pos.scheme:
                                 data[segment.slug][pos.label]['seq'][proteins.index(
-                                    residue.protein_conformation.protein)] = str(residue)
+                                    residue.protein)] = str(residue)
                             else:
                                 if scheme.slug not in data[segment.slug][pos.label].keys():
                                     data[segment.slug][pos.label][
@@ -1726,7 +1741,7 @@ def calculate(request, redirect=None):
                                     data[segment.slug][pos.label][
                                         scheme.slug] += " " + alternative.label
                                 data[segment.slug][pos.label]['seq'][proteins.index(
-                                    residue.protein_conformation.protein)] = str(residue)
+                                    residue.protein)] = str(residue)
                         else:
                             if scheme.slug not in data[segment.slug][pos.label].keys():
                                 data[segment.slug][pos.label][
@@ -1735,7 +1750,7 @@ def calculate(request, redirect=None):
                                 data[segment.slug][pos.label][
                                     scheme.slug] += " " + alternative.label
                             data[segment.slug][pos.label]['seq'][proteins.index(
-                                residue.protein_conformation.protein)] = str(residue)
+                                residue.protein)] = str(residue)
 
             # Preparing the dictionary of list of lists. Dealing with tripple
             # nested dictionary in django templates is a nightmare
@@ -1918,7 +1933,7 @@ def excel(request, slug, **response_kwargs):
 
 def ajax(request, slug, **response_kwargs):
 
-    residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
     lookup = {}
 
     for r in residuelist:
@@ -1948,7 +1963,7 @@ def ajax(request, slug, **response_kwargs):
 
 
 def ajaxLigand(request, slug, ligand, **response_kwargs):
-    residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein__entry_name=slug).prefetch_related('protein_segment','display_generic_number','generic_number')
     lookup = {}
 
     for r in residuelist:

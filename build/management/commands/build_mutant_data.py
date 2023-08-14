@@ -555,7 +555,7 @@ class Command(BaseBuild):
                     continue
 
 
-                res=Residue.objects.filter(protein_conformation__protein=protein,amino_acid=r['mutation_from'], sequence_number=r['mutation_pos']) #FIXME MAKE AA CHECK
+                res=Residue.objects.filter(protein=protein,amino_acid=r['mutation_from'], sequence_number=r['mutation_pos']) #FIXME MAKE AA CHECK
                 if res.exists():
                     res=res.get()
                 else:
@@ -564,7 +564,7 @@ class Command(BaseBuild):
                     if protein.entry_name in ["ada2a_human", "ada2a_pig", "ada2a_mouse"]:
                         if isinstance(r['mutation_pos'], str):
                             r['mutation_pos'] = int(r['mutation_pos'])
-                        res=Residue.objects.filter(protein_conformation__protein=protein,amino_acid=r['mutation_from'], sequence_number=r['mutation_pos'] + 15)
+                        res=Residue.objects.filter(protein=protein,amino_acid=r['mutation_from'], sequence_number=r['mutation_pos'] + 15)
                         if res.exists():
                             res=res.get()
                             failed = False

@@ -1,6 +1,6 @@
 from build.management.commands.base_build import Command as BaseBuild
 
-from protein.models import Protein, ProteinConformation, ProteinSequenceType, ProteinSource, ProteinState
+from protein.models import Protein, ProteinSequenceType, ProteinSource, ProteinState
 from residue.models import Residue, ResidueNumberingScheme
 from signprot.models import SignprotComplex
 from structure.functions import create_structure_rotamer, get_pdb_ids, fetch_signprot_data, build_signprot_struct
@@ -70,12 +70,11 @@ class Command(BaseBuild):
                                                              residue_numbering_scheme=ResidueNumberingScheme.objects.get(slug='can'),
                                                              sequence_type=ProteinSequenceType.objects.get(slug="mod"), source=ProteinSource.objects.get(name="OTHER"),
                                                              species=sc.protein.species)
-            protconf, created = ProteinConformation.objects.get_or_create(protein=protein, state=ProteinState.objects.get(slug='active'))
 
             pw2 = pairwise2.align.localms(protein.parent.sequence, structure_seq, 3, -4, -3, -1)
             ref_seq, temp_seq = str(pw2[0][0]), str(pw2[0][1])
 
-            parent_residues = Residue.objects.filter(protein_conformation__protein=protein.parent)
+            parent_residues = Residue.objects.filter(protein=protein.parent)
 
             bulked_rotamers = []
             r_c, s_c = 0, 0
@@ -88,7 +87,7 @@ class Command(BaseBuild):
                     res.amino_acid = t
                     res.display_generic_number = parent_residues[r_c].display_generic_number
                     res.generic_number = parent_residues[r_c].generic_number
-                    res.protein_conformation = protconf
+                    res.protein = protein
                     res.protein_segment = parent_residues[r_c].protein_segment
                     res.save()
                     rot = create_structure_rotamer(chain[nums[s_c]], res, sc.structure)
@@ -117,6 +116,6 @@ class Command(BaseBuild):
 
 
     def purge(self):
-        Residue.objects.filter(protein_conformation__protein__entry_name__endswith='_arrestin')
-        ProteinConformation.objects.filter(protein__entry_name__endswith='_arrestin').delete()
+        Residue.objects.filter(protein__entry_name__endswith='_arrestin')
+        Protein.objects.filter(entry_name__endswith='_arrestin').delete()
         Protein.objects.filter(entry_name__endswith='_arrestin').delete()

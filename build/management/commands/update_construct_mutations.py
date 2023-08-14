@@ -905,7 +905,7 @@ class Command(BaseCommand):
                     wt_aa = m.wild_type_amino_acid
                     annotated_effect = "Not identified in PDB -- perhaps delete?"
 
-                    res = Residue.objects.get(protein_conformation__protein=protein.parent, sequence_number=pos)
+                    res = Residue.objects.get(protein=protein.parent, sequence_number=pos)
                     seg = res.protein_segment.slug
                     if res.generic_number:
                         gn = res.generic_number.label
@@ -935,7 +935,7 @@ class Command(BaseCommand):
                     pos = m['pos']
                     wt_aa = m['wt']
                     annotated_effect = m['type']
-                    res = Residue.objects.get(protein_conformation__protein=protein.parent, sequence_number=pos)
+                    res = Residue.objects.get(protein=protein.parent, sequence_number=pos)
                     seg = res.protein_segment.slug
                     if res.generic_number:
                         gn = res.generic_number.label
@@ -1030,7 +1030,7 @@ class Command(BaseCommand):
                             break
                     if found:
                         # print('It was however found in pdb! ADDING')
-                        res_wt = Residue.objects.get(protein_conformation__protein=protein.parent, sequence_number=m['pos'])
+                        res_wt = Residue.objects.get(protein=protein.parent, sequence_number=m['pos'])
                         mut = ConstructMutation.objects.create(construct=c, sequence_number=m['pos'],wild_type_amino_acid= m['wt_aa'],mutated_amino_acid=m['mut_aa'], residue=res_wt)
                         pdbs_has.append(c_pdb)
                     else:

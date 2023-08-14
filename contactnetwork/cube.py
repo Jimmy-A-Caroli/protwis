@@ -11,7 +11,7 @@ from ligand.models import LigandPeptideStructure
 from residue.functions import DummyResidue
 from io import StringIO
 
-from protein.models import ProteinConformation
+from protein.models import Protein
 
 from structure.models import Structure, StructureExtraProteins
 
@@ -105,7 +105,7 @@ def compute_interactions(pdb_name, do_interactions=False, do_complexes=False, do
                             for atom in residue.get_atoms()]
 
             # TOFIX: Current workaround is forcing _a to pdb for indicating alpha-subunit
-            residues_sign = ProteinConformation.objects.get(protein__entry_name=pdb_name+extension).residue_set.exclude(generic_number=None).all().prefetch_related('generic_number')
+            residues_sign = Protein.objects.get(entry_name=pdb_name+extension).residue_set.exclude(generic_number=None).all().prefetch_related('generic_number')
 
             # grab labels from sign protein
             dbres_sign = {}
@@ -166,7 +166,7 @@ def compute_interactions(pdb_name, do_interactions=False, do_complexes=False, do
         except SignprotComplex.DoesNotExist:
 #            print("No complex definition found for", pdb_name)
             log = "No complex definition found for " + pdb_name
-        except ProteinConformation.DoesNotExist:
+        except Protein.DoesNotExist:
             print("No protein conformation definition found for signaling protein of ", pdb_name)
 #            log = "No protein conformation definition found for signaling protein of " + pdb_name
 

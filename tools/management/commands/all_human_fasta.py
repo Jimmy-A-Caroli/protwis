@@ -30,7 +30,7 @@ class Command(BaseCommand):
         f = open('human.fasta', 'w')
         # ps = Protein.objects.filter(Q(source__name='SWISSPROT') | Q(source__name='TREMBL'),web_links__web_resource__slug='uniprot').all().prefetch_related('web_links__web_resource')
         #ps = Protein.objects.filter(source__name='SWISSPROT', species__common_name='Human').all().prefetch_related('web_links__web_resource').order_by('entry_name')
-        ps = ProteinConformation.objects.filter(protein__sequence_type__slug='wt', protein__species__common_name="Human", protein__family__slug__starts_with='001').all().prefetch_related('web_links__web_resource').order_by('entry_name')
+        ps = Protein.objects.filter(sequence_type__slug='wt', species__common_name="Human", family__slug__starts_with='001').all().prefetch_related('web_links__web_resource').order_by('entry_name')
         print('total:',len(ps))
         mapping = OrderedDict()
         for p in ps:

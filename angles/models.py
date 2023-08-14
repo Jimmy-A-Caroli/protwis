@@ -50,7 +50,7 @@ def get_angle_averages(pdbs,s_lookup,normalized = False, standard_deviation = Fa
 
     # Deduce class
     gpcr_class = Structure.objects.filter(pdb_code__index__in=pdbs_upper
-                ).values_list('protein_conformation__protein__parent__family__parent__parent__parent__slug', flat=True).distinct()
+                ).values_list('protein__parent__family__parent__parent__parent__slug', flat=True).distinct()
     if len(gpcr_class)>1:
         print('ERROR mix of classes!', gpcr_class)
     else:
@@ -63,15 +63,15 @@ def get_angle_averages(pdbs,s_lookup,normalized = False, standard_deviation = Fa
     if not s_lookup:
         # Get the list of unique protein_families among pdbs
         structures = Structure.objects.filter(pdb_code__index__in=pdbs_upper
-             ).select_related('protein_conformation__protein'
+             ).select_related('protein'
              ).values('pk','pdb_code__index',
-                    'protein_conformation__protein__parent__entry_name',
-                    'protein_conformation__protein__parent__name',
-                    'protein_conformation__protein__entry_name')
+                    'protein__parent__entry_name',
+                    'protein__parent__name',
+                    'protein__entry_name')
         pfs = set()
         s_lookup = {}
         for s in structures:
-            protein, pdb_name,pf  = [s['protein_conformation__protein__parent__entry_name'],s['protein_conformation__protein__entry_name'],s['protein_conformation__protein__parent__name']]
+            protein, pdb_name,pf  = [s['protein__parent__entry_name'],s['protein__entry_name'],s['protein__parent__name']]
             s_lookup[s['pk']] = [protein, pdb_name,pf]
             pfs |= {pf}
     group_angles = {}

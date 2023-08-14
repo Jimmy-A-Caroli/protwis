@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import connection
 
 from build.management.commands.base_build import Command as BaseBuild
-from protein.models import ProteinConformation, ProteinSegment, ProteinAnomaly, ProteinConformationTemplateStructure
+from protein.models import ProteinSegment, ProteinAnomaly
 from structure.models import StructureSegment
 from residue.models import Residue
 from residue.functions import *
@@ -34,8 +34,8 @@ class Command(BaseBuild):
     with open(default_segment_length_file_path, 'r') as default_segment_length_file:
         segment_length = yaml.load(default_segment_length_file, Loader=yaml.FullLoader)
 
-    pconfs = ProteinConformation.objects.order_by('protein__parent', 'id').prefetch_related(
-            'protein__residue_numbering_scheme__parent', 'protein__genes', 'template_structure')
+    pconfs = Protein.objects.order_by('parent', 'id').prefetch_related(
+            'residue_numbering_scheme__parent', 'genes', 'template_structure')
 
     def handle(self, *args, **options):
         try:

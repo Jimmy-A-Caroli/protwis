@@ -1,6 +1,6 @@
 from build.management.commands.base_build import Command as BaseBuild
 from django.conf import settings
-from protein.models import Protein, ProteinSegment, ProteinConformation, ProteinState, ProteinFamily
+from protein.models import Protein, ProteinSegment, ProteinState, ProteinFamily
 from structure.models import Structure, Rotamer
 from structure.functions import BlastSearch
 from Bio.Blast import NCBIXML, NCBIWWW

@@ -14,7 +14,7 @@ from common.definitions import AMINO_ACIDS, AMINO_ACID_GROUPS, STRUCTURAL_RULES
 from construct.models import *
 from construct.functions import *
 from construct.tool import *
-from protein.models import Protein, ProteinConformation, ProteinSegment
+from protein.models import Protein, ProteinSegment
 from structure.models import Structure
 from mutation.models import Mutation
 from residue.models import ResiduePositionSet
@@ -40,7 +40,7 @@ def detail(request, slug):
     c = Construct.objects.defer('schematics','snakecache').get(name=slug)
 
     # get residues
-    residues = Residue.objects.filter(protein_conformation__protein=c.protein).order_by('sequence_number').prefetch_related(
+    residues = Residue.objects.filter(protein=c.protein).order_by('sequence_number').prefetch_related(
         'protein_segment', 'generic_number', 'display_generic_number')
 
     residues_lookup = {}
@@ -77,7 +77,7 @@ class ConstructStatistics(TemplateView):
 
         #PREPARE DATA
         proteins_ids = Construct.objects.all().values_list('protein', flat = True)
-        pconfs = ProteinConformation.objects.filter(protein_id__in=proteins_ids).filter(residue__display_generic_number__label__in=['1.50x50','7.50x50','8.50x50','5.50x50','6.50x50','3.50x50','4.50x50']).values_list('protein__entry_name','residue__sequence_number','residue__display_generic_number__label')
+        pconfs = Protein.objects.filter(id__in=proteins_ids).filter(residue__display_generic_number__label__in=['1.50x50','7.50x50','8.50x50','5.50x50','6.50x50','3.50x50','4.50x50']).values_list('protein__entry_name','residue__sequence_number','residue__display_generic_number__label')
 
         x50s = {}
         for pc in pconfs:
@@ -85,7 +85,7 @@ class ConstructStatistics(TemplateView):
                 x50s[pc[0]] = {}
             x50s[pc[0]][pc[2].replace(".50","")] = pc[1]
         # print(x50s)
-        pconfs = ProteinConformation.objects.filter(protein_id__in=proteins_ids).filter(residue__protein_segment__slug__in=['TM3','TM4','TM5','TM6']).values('protein__entry_name','residue__protein_segment__slug').annotate(start=Min('residue__sequence_number'),GN=Max('residue__display_generic_number__label'),GN2=Min('residue__display_generic_number__label'),end=Max('residue__sequence_number'))
+        pconfs = Protein.objects.filter(id__in=proteins_ids).filter(residue__protein_segment__slug__in=['TM3','TM4','TM5','TM6']).values('protein__entry_name','residue__protein_segment__slug').annotate(start=Min('residue__sequence_number'),GN=Max('residue__display_generic_number__label'),GN2=Min('residue__display_generic_number__label'),end=Max('residue__sequence_number'))
         # print(pconfs)
         # x50s = {}
         track_anamalities = {}
@@ -118,13 +118,13 @@ class ConstructStatistics(TemplateView):
             #     x50s[pc[0]] = {}
             # x50s[pc[0]][pc[2]] = pc[1]
         # print(track_anamalities)
-        pconfs = ProteinConformation.objects.filter(protein_id__in=proteins_ids).prefetch_related('protein').filter(residue__protein_segment__slug='TM1').annotate(start=Min('residue__sequence_number'))
+        pconfs = Protein.objects.filter(id__in=proteins_ids).filter(residue__protein_segment__slug='TM1').annotate(start=Min('residue__sequence_number'))
         #pconfs = ProteinConformation.objects.filter(protein_id__in=proteins).filter(residue__generic_number__label__in=['1x50']).values_list('protein__entry_name','residue__sequence_number','residue__generic_number__label')
         tm1_start = {}
         for pc in pconfs:
             tm1_start[pc.protein.entry_name] = pc.start
 
-        pconfs = ProteinConformation.objects.filter(protein_id__in=proteins_ids).prefetch_related('protein').filter(residue__protein_segment__slug='C-term').annotate(start=Min('residue__sequence_number'),end=Max('residue__sequence_number'))
+        pconfs = Protein.objects.filter(id__in=proteins_ids).filter(residue__protein_segment__slug='C-term').annotate(start=Min('residue__sequence_number'),end=Max('residue__sequence_number'))
         cterm_start = {}
         cterm_end = {}
         for pc in pconfs:
@@ -155,14 +155,14 @@ class ConstructStatistics(TemplateView):
                 mutations.append((mutation,entry_name,pdb,p_class))
                 if mutation.sequence_number not in positions:
                     positions.append(mutation.sequence_number)
-        rs = Residue.objects.filter(protein_conformation__protein__entry_name__in=proteins, sequence_number__in=positions).prefetch_related('generic_number','protein_conformation__protein','annotations__data_type')
+        rs = Residue.objects.filter(protein__entry_name__in=proteins, sequence_number__in=positions).prefetch_related('generic_number','protein','annotations__data_type')
 
         rs_lookup = {}
         gns = []
         for r in rs:
             if not r.generic_number: #skip non gn
                 continue
-            entry_name = r.protein_conformation.protein.entry_name
+            entry_name = r.protein.entry_name
             pos = r.sequence_number
             # segment = r.protein_segment.slug
             if entry_name not in rs_lookup:
@@ -170,10 +170,10 @@ class ConstructStatistics(TemplateView):
             if pos not in rs_lookup[entry_name]:
                 rs_lookup[entry_name][pos] = r
 
-        rs = Residue.objects.filter(protein_conformation__protein__id__in=proteins_ids, protein_segment__slug__in=['N-term','C-term'],annotations__data_type__slug='dynamine').prefetch_related('generic_number','protein_segment','protein_conformation__protein','annotations__data_type')
+        rs = Residue.objects.filter(protein__id__in=proteins_ids, protein_segment__slug__in=['N-term','C-term'],annotations__data_type__slug='dynamine').prefetch_related('generic_number','protein_segment','protein','annotations__data_type')
         rs_annotations = {}
         for r in rs:
-            entry_name = r.protein_conformation.protein.entry_name
+            entry_name = r.protein.entry_name
             pos = r.sequence_number
             segment = r.protein_segment.slug
             if entry_name not in rs_annotations:
@@ -1235,7 +1235,7 @@ class ConstructTable(TemplateView):
                 mutations.append((mutation,entry_name,pdb,p_class,c.name))
                 if mutation.sequence_number not in positions:
                     positions.append(mutation.sequence_number)
-        rs = Residue.objects.filter(protein_conformation__protein__entry_name__in=proteins, sequence_number__in=positions).prefetch_related('generic_number','protein_conformation__protein','protein_segment')
+        rs = Residue.objects.filter(protein__entry_name__in=proteins, sequence_number__in=positions).prefetch_related('generic_number','protein','protein_segment')
 
         #print(classes)
 
@@ -1321,7 +1321,7 @@ class ConstructTable(TemplateView):
         rs_lookup = {}
         gns = []
         for r in rs:
-            entry_name = r.protein_conformation.protein.entry_name
+            entry_name = r.protein.entry_name
             pos = r.sequence_number
             segment = r.protein_segment.slug
             if entry_name not in rs_lookup:
@@ -1423,13 +1423,13 @@ class ConstructMutations(TemplateView):
                 mutations.append((mutation,entry_name,pdb,p_class,c.name,p))
                 if mutation.sequence_number not in positions:
                     positions.append(mutation.sequence_number)
-        rs = Residue.objects.filter(protein_conformation__protein__entry_name__in=proteins, sequence_number__in=positions).prefetch_related('generic_number','protein_conformation__protein','protein_segment')
+        rs = Residue.objects.filter(protein__entry_name__in=proteins, sequence_number__in=positions).prefetch_related('generic_number','protein','protein_segment')
 
         rs_lookup = {}
         gns = []
         for r in rs:
             # print("r",r)
-            entry_name = r.protein_conformation.protein.entry_name
+            entry_name = r.protein.entry_name
             pos = r.sequence_number
             segment = r.protein_segment.slug
             if entry_name not in rs_lookup:
@@ -1506,7 +1506,7 @@ def stabilisation_browser(request):
         class_interactions = ResidueFragmentInteraction.objects.filter(
             structure_ligand_pair__structure__protein__family__slug__startswith=c, structure_ligand_pair__annotated=True).exclude(interaction_type__slug='acc').prefetch_related(
             'rotamer__residue__generic_number','interaction_type',
-            'rotamer__residue__protein_conformation__protein__parent__family')
+            'rotamer__residue__protein__parent__family')
 
         generic = {}
         for i in class_interactions:
@@ -1514,7 +1514,7 @@ def stabilisation_browser(request):
                 gn = i.rotamer.residue.generic_number.label
             else:
                 continue
-            protein = i.rotamer.residue.protein_conformation.protein.parent.family.slug
+            protein = i.rotamer.residue.protein.parent.family.slug
             if gn not in generic.keys():
                 generic[gn] = set()
 
@@ -1857,22 +1857,22 @@ def conservation_table(prot_classes, gen_nums):
         .only(
             "amino_acid",
             "generic_number__label",
-            "protein_conformation__protein__species_id",
-            "protein_conformation__protein__source_id",
-            "protein_conformation__protein__family__parent__parent__parent__name")\
+            "protein__species_id",
+            "protein__source_id",
+            "protein__family__parent__parent__parent__name")\
         .prefetch_related(
-            "protein_conformation__protein__family__parent__parent__parent",
-            "protein_conformation__protein__species",
-            "protein_conformation__protein__source",
+            "protein__family__parent__parent__parent",
+            "protein__species",
+            "protein__source",
             "generic_number")\
         .filter(
-            protein_conformation__protein__family__parent__parent__parent__name__in=list(prot_classes),
-            protein_conformation__protein__species_id="1", protein_conformation__protein__source_id="1",
+            protein__family__parent__parent__parent__name__in=list(prot_classes),
+            protein__species_id="1", protein__source_id="1",
             generic_number__label__in=list(gen_nums))\
         .values(
             'amino_acid',
-            'protein_conformation__protein__family__parent__parent__parent__name',
-            "protein_conformation__protein__family__parent__name",
+            'protein__family__parent__parent__parent__name',
+            "protein__family__parent__name",
             "generic_number__label")\
         .annotate(Count('amino_acid'))
 
@@ -1880,14 +1880,14 @@ def conservation_table(prot_classes, gen_nums):
     # position, for either a given protein class or receptor family.
     for dic in residues:
         prot_row = table.setdefault(
-            (dic['protein_conformation__protein__family__parent__parent__parent__name'], dic['generic_number__label']),
+            (dic['protein__family__parent__parent__parent__name'], dic['generic_number__label']),
             {'total':0})
         prot_row['total'] += dic['amino_acid__count']
         prot_row.setdefault(dic['amino_acid'], 0)
         prot_row[dic['amino_acid']] += dic['amino_acid__count']
 
         rec_row = table.setdefault(
-            (dic['protein_conformation__protein__family__parent__name'], dic['generic_number__label']), {'total':0})
+            (dic['protein__family__parent__name'], dic['generic_number__label']), {'total':0})
         rec_row['total'] += dic['amino_acid__count']
         rec_row.setdefault(dic['amino_acid'], 0)
         rec_row[dic['amino_acid']] += dic['amino_acid__count']
@@ -2345,13 +2345,13 @@ def align(request):
     # print(annotations)
 
     if len(s_ids):
-        rs = Residue.objects.filter(protein_conformation__protein__in=proteins, protein_segment__slug__in=s_ids).prefetch_related(
-        'protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+        rs = Residue.objects.filter(protein__in=proteins, protein_segment__slug__in=s_ids).prefetch_related(
+        'protein', 'protein_state', 'protein_segment',
         'generic_number__scheme', 'display_generic_number__scheme')
     else:
         s_ids = ['N-term','TM1','ICL1','TM2','ECL1','TM3','ICL2','TM4','ECL2','TM5','ICL3','TM6','ECL3','TM7','ICL4','H8','C-term']
-        rs = Residue.objects.filter(protein_conformation__protein__in=proteins).prefetch_related(
-        'protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+        rs = Residue.objects.filter(protein__in=proteins).prefetch_related(
+        'protein', 'protein__state', 'protein_segment',
         'generic_number__scheme', 'display_generic_number__scheme')
 
     # print("residues",len(rs))
@@ -2388,15 +2388,15 @@ def align(request):
     track_unaligned = {}
 
     #Find all possible generic numbers, to ensure gaps
-    for r in rs.order_by('protein_conformation__id','sequence_number'):
-        if segment!=r.protein_segment.slug or protein!=r.protein_conformation.protein.entry_name:
+    for r in rs.order_by('protein__id','sequence_number'):
+        if segment!=r.protein_segment.slug or protein!=r.protein.entry_name:
             no_encountered_gn = True
             length = 0
             length_before = 0
             length_after = 0
 
         segment = r.protein_segment.slug
-        protein = r.protein_conformation.protein.entry_name
+        protein = r.protein.entry_name
 
         if protein not in protein_lookup:
             protein_lookup[protein] = {}

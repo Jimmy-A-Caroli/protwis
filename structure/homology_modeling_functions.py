@@ -1,6 +1,6 @@
 from django.conf import settings
 
-from protein.models import Protein, ProteinConformation, ProteinAnomaly, ProteinState, ProteinSegment
+from protein.models import Protein, ProteinAnomaly, ProteinState, ProteinSegment
 from residue.models import Residue
 from residue.functions import dgn, ggn
 from structure.models import *
@@ -103,11 +103,11 @@ class GPCRDBParsingPDB(object):
             except:
                 return '/', '/'
 
-    def gn_comparer(self, gn1, gn2, protein_conformation):
+    def gn_comparer(self, gn1, gn2, protein):
         '''
         '''
-        res1 = Residue.objects.get(protein_conformation=protein_conformation, display_generic_number__label=dgn(gn1,protein_conformation))
-        res2 = Residue.objects.get(protein_conformation=protein_conformation, display_generic_number__label=dgn(gn2,protein_conformation))
+        res1 = Residue.objects.get(protein=protein, display_generic_number__label=dgn(gn1,protein))
+        res2 = Residue.objects.get(protein=protein, display_generic_number__label=dgn(gn2,protein))
         return res1.sequence_number-res2.sequence_number
 
     def gn_indecer(self, gn, delimiter, direction):
@@ -207,12 +207,12 @@ class GPCRDBParsingPDB(object):
                         residue__display_generic_number__label=dgn(gn,structure.protein),
                         structure__preferred_chain=structure.preferred_chain))
             else:
-                residue = Residue.objects.get(protein_conformation__protein=structure.protein, sequence_number=gn)
+                residue = Residue.objects.get(protein=structure.protein, sequence_number=gn)
                 rotamer = list(Rotamer.objects.filter(structure__protein=structure.protein,
                         residue=residue, structure__preferred_chain=structure.preferred_chain))
                 if just_nums==False:
                     try:
-                        gn = ggn(Residue.objects.get(protein_conformation__protein=structure.protein,
+                        gn = ggn(Residue.objects.get(protein=structure.protein,
                                                     sequence_number=gn).display_generic_number.label)
                     except:
                         pass
@@ -282,7 +282,7 @@ class GPCRDBParsingPDB(object):
         residue_array = []
         # pdb_struct = PDB.PDBParser(QUIET=True).get_structure(structure.pdb_code.index, io)[0]
 
-        residues = Residue.objects.filter(protein_conformation__protein=structure.protein)
+        residues = Residue.objects.filter(protein=structure.protein)
         gn_list = []
         for i in residues:
             try:
@@ -328,8 +328,8 @@ class GPCRDBParsingPDB(object):
             assign_gn = as_gn.GenericNumbering(pdb_file=io, pdb_code=structure.pdb_code.index, sequence_parser=True)
             pdb_struct = assign_gn.assign_generic_numbers_with_sequence_parser()
             pref_chain = structure.preferred_chain
-            parent_prot_conf = ProteinConformation.objects.get(protein=structure.protein.parent)
-            parent_residues = Residue.objects.filter(protein_conformation=parent_prot_conf)
+            parent_prot_conf = structure.protein.parent
+            parent_residues = Residue.objects.filter(protein=parent_prot_conf)
             last_res = list(parent_residues)[-1].sequence_number
             if len(pref_chain)>1:
                 pref_chain = pref_chain[0]
@@ -375,12 +375,12 @@ class GPCRDBParsingPDB(object):
                     try:
                         found_res, found_gn = None, None
                         try:
-                            found_res = Residue.objects.get(protein_conformation__protein=structure.protein,
+                            found_res = Residue.objects.get(protein=structure.protein,
                                                             sequence_number=gn)
                         except:
                             # Exception for res 317 in 5VEX, 5VEW
                             if structure.pdb_code.index in ['5VEX','5VEW'] and gn=='317' and res[0].get_parent().get_resname()=='CYS':
-                                found_res = Residue.objects.get(protein_conformation=parent_prot_conf,
+                                found_res = Residue.objects.get(protein=parent_prot_conf,
                                                                 sequence_number=gn)
                             #####################################
                         found_gn = str(ggn(found_res.display_generic_number.label)).replace('x','.')
@@ -399,7 +399,7 @@ class GPCRDBParsingPDB(object):
                     except:
                         if res[0].get_parent().get_resname()=='YCM' or res[0].get_parent().get_resname()=='CSD':
                             try:
-                                found_res = Residue.objects.get(protein_conformation=parent_prot_conf, sequence_number=gn)
+                                found_res = Residue.objects.get(protein=parent_prot_conf, sequence_number=gn)
                             except:
                                 continue
                             if found_res.protein_segment.slug[0] not in ['T','H']:
@@ -414,7 +414,7 @@ class GPCRDBParsingPDB(object):
     @staticmethod
     def create_g_alpha_pdb_array(signprot_complex):
         segments = ProteinSegment.objects.filter(proteinfamily='Alpha')
-        residues = Residue.objects.filter(protein_conformation__protein__entry_name=signprot_complex.structure.pdb_code.index.lower()+'_a')
+        residues = Residue.objects.filter(protein__entry_name=signprot_complex.structure.pdb_code.index.lower()+'_a')
         pdb_array = OrderedDict()
         parse = GPCRDBParsingPDB()
         for s in segments:
@@ -505,7 +505,7 @@ class ImportHomologyModel():
         for i in self.receptor_segments:
             reference_dict[i] = OrderedDict()
             main_pdb_array[i] = OrderedDict()
-        resis = Residue.objects.filter(protein_conformation__protein__entry_name=self.receptor)
+        resis = Residue.objects.filter(protein__entry_name=self.receptor)
         for res in modelchain:
             seqnum = res.get_id()[1]
             this_res = resis.get(sequence_number=seqnum)
@@ -583,7 +583,7 @@ class ImportHomologyModel():
                     pdb_re = re.search('SSBOND\s+\d+\s+CYS\sR\s+(\d+)\s+CYS\sR\s+(\d+)', line)
                     num1 = pdb_re.group(1)
                     num2 = pdb_re.group(2)
-                    res1, res2 = list(Residue.objects.filter(protein_conformation__protein__entry_name=self.receptor, sequence_number__in=[num1, num2]))
+                    res1, res2 = list(Residue.objects.filter(protein__entry_name=self.receptor, sequence_number__in=[num1, num2]))
                     if res1.display_generic_number!=None:
                         gn1 = ggn(res1.display_generic_number.label)
                     else:
@@ -602,7 +602,7 @@ class DummyStructure():
     def __init__(self, preferred_chain):
         self.preferred_chain = preferred_chain
         self.pdb_code = DummyPDBCode()
-        self.protein_conformation = ProteinConformation(protein=Protein(entry_name='AF', parent=Protein(entry_name='AF')))
+        self.protein = Protein(entry_name='AF', parent=Protein(entry_name='AF'))
 
     def __str__(self):
         return self.pdb_code.index

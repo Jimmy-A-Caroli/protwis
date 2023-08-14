@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import connection
 from django.db import IntegrityError
 
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinFamily, ProteinAlias,
+from protein.models import (Protein, ProteinState, ProteinFamily, ProteinAlias,
         ProteinSequenceType, Species, Gene, ProteinSource, ProteinSegment)
 from residue.models import (ResidueNumberingScheme, ResidueGenericNumber, Residue, ResidueGenericNumberEquivalent)
 from mutational_landscape.models import NaturalMutations, PTMs
@@ -108,7 +108,7 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    res=Residue.objects.get(protein_conformation__protein=p, sequence_number=sequence_number)
+                    res=Residue.objects.get(protein=p, sequence_number=sequence_number)
                 except:
                     # self.logger.warning('No residue number (GAP - position) for', sequence_number, "in ", p.name, "")
                     continue
@@ -153,7 +153,7 @@ class Command(BaseCommand):
                     continue
 
                 try:
-                    res=Residue.objects.get(protein_conformation__protein=p, sequence_number=sequence_number)
+                    res=Residue.objects.get(protein=p, sequence_number=sequence_number)
                 except:
                     continue
                 if res:

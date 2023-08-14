@@ -67,6 +67,7 @@ class Structure(models.Model):
     gprot_bound_likeness = models.DecimalField(max_digits=5, decimal_places=2, null=True)
     sodium = models.BooleanField(default=False)
     signprot_complex = models.ForeignKey('signprot.SignprotComplex', null=True, on_delete=models.SET_NULL, related_name='signprot_complex')
+    stats_text = models.ForeignKey('StatsText', null=True, on_delete=models.CASCADE)
     mammal = models.BooleanField(default=False) #whether the species of the structure is mammal
     closest_to_human = models.BooleanField(default=False) # A boolean to say if the receptor/state of this structure is the closest structure to human
 
@@ -137,6 +138,17 @@ class Structure(models.Model):
                 tmp.append(line)
         return '\n'.join(tmp)
 
+    def get_prot_gprot_pair(self):
+        if self.protein.accession:
+            pgp = ProteinCouplings.objects.filter(protein=self.protein, g_protein__slug=self.signprot_complex.protein.family.parent.slug, source='GuideToPharma')
+        else:
+            pgp = ProteinCouplings.objects.filter(protein=self.protein.parent, g_protein__slug=self.signprot_complex.protein.family.parent.slug, source='GuideToPharma')
+        if len(pgp)>0:
+            return pgp[0].transduction
+        else:
+            return 'no evidence'
+
+
     class Meta():
         db_table = 'structure'
 
@@ -191,37 +203,37 @@ class StructurepLDDT(models.Model):
     class Meta():
         db_table = 'structure_plddt'
 
+#
+# class StructureComplexModel(models.Model):
+#     receptor_protein = models.ForeignKey('protein.Protein', related_name='+', on_delete=models.CASCADE)
+#     sign_protein = models.ForeignKey('protein.Protein', related_name='+', on_delete=models.CASCADE)
+#     main_template = models.ForeignKey('structure.Structure', on_delete=models.CASCADE)
+#     pdb_data = models.ForeignKey('PdbData', null=True, on_delete=models.CASCADE)
+#     version = models.DateField()
+#     # prot_signprot_pair = models.ForeignKey('protein.ProteinCouplings', related_name='+', on_delete=models.CASCADE, null=True)
+#     stats_text = models.ForeignKey('StatsText', on_delete=models.CASCADE)
 
-class StructureComplexModel(models.Model):
-    receptor_protein = models.ForeignKey('protein.Protein', related_name='+', on_delete=models.CASCADE)
-    sign_protein = models.ForeignKey('protein.Protein', related_name='+', on_delete=models.CASCADE)
-    main_template = models.ForeignKey('structure.Structure', on_delete=models.CASCADE)
-    pdb_data = models.ForeignKey('PdbData', null=True, on_delete=models.CASCADE)
-    version = models.DateField()
-    # prot_signprot_pair = models.ForeignKey('protein.ProteinCouplings', related_name='+', on_delete=models.CASCADE, null=True)
-    stats_text = models.ForeignKey('StatsText', on_delete=models.CASCADE)
-
-    def __repr__(self):
-        return '<ComplexHomologyModel: '+str(self.receptor_protein.entry_name)+'-'+str(self.sign_protein.entry_name)+'>'
-
-    def __str__(self):
-        return '<ComplexHomologyModel: '+str(self.receptor_protein.entry_name)+'-'+str(self.sign_protein.entry_name)+'>'
-
-    class Meta():
-        db_table = 'structure_complex_model'
-
-    def get_cleaned_pdb(self):
-        return self.pdb_data.pdb
-
-    def get_prot_gprot_pair(self):
-        if self.receptor_protein.accession:
-            pgp = ProteinCouplings.objects.filter(protein=self.receptor_protein, g_protein__slug=self.sign_protein.family.parent.slug, source='GuideToPharma')
-        else:
-            pgp = ProteinCouplings.objects.filter(protein=self.receptor_protein.parent, g_protein__slug=self.sign_protein.family.parent.slug, source='GuideToPharma')
-        if len(pgp)>0:
-            return pgp[0].transduction
-        else:
-            return 'no evidence'
+#     def __repr__(self):
+#         return '<ComplexHomologyModel: '+str(self.receptor_protein.entry_name)+'-'+str(self.sign_protein.entry_name)+'>'
+#
+#     def __str__(self):
+#         return '<ComplexHomologyModel: '+str(self.receptor_protein.entry_name)+'-'+str(self.sign_protein.entry_name)+'>'
+#
+#     class Meta():
+#         db_table = 'structure_complex_model'
+#
+#     def get_cleaned_pdb(self):
+#         return self.pdb_data.pdb
+#
+    # def get_prot_gprot_pair(self):
+    #     if self.receptor_protein.accession:
+    #         pgp = ProteinCouplings.objects.filter(protein=self.receptor_protein, g_protein__slug=self.sign_protein.family.parent.slug, source='GuideToPharma')
+    #     else:
+    #         pgp = ProteinCouplings.objects.filter(protein=self.receptor_protein.parent, g_protein__slug=self.sign_protein.family.parent.slug, source='GuideToPharma')
+    #     if len(pgp)>0:
+    #         return pgp[0].transduction
+    #     else:
+    #         return 'no evidence'
 
 
 class StatsText(models.Model):
@@ -319,7 +331,7 @@ class StructureType(models.Model):
 class StructureExtraProteins(models.Model):
     structure = models.ForeignKey('structure.Structure', on_delete=models.CASCADE, null=True, related_name='extra_proteins')
     wt_protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True)
-    protein_conformation = models.ForeignKey('protein.ProteinConformation', on_delete=models.CASCADE, null=True)
+    protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True)
     display_name = models.CharField(max_length=20)
     note = models.CharField(max_length=50, null=True)
     chain = models.CharField(max_length=1)

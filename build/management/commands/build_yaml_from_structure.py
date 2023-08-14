@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import connection
 
 from residue.models import Residue
-from protein.models import Protein, ProteinConformation, ProteinSegment
+from protein.models import Protein, ProteinSegment
 
 from optparse import make_option
 from datetime import datetime
@@ -11,7 +11,7 @@ import logging, os, yaml
 
 
 class Command(BaseCommand):
-    
+
     def add_arguments(self, parser):
         parser.add_argument('filename', nargs='+', type=str)
 
@@ -19,27 +19,27 @@ class Command(BaseCommand):
     structure_build_data_dir = os.sep.join([settings.DATA_DIR, 'structure_data'])
 
     csv_fields = {
-        'id' : 0, 
-        'prot_name' : 1, 
-        'class' : 2, 
-        'pdb_code' : 3, 
-        'endogenous_ligand' :4, 
-        'resolution' : 5, 
-        'xray_ligand' : 6, 
-        'ligand_role' : 7, 
-        'chain' : 8, 
-        'pubmed_id' : 9, 
-        'date' : 10, 
-        'G_protein' : 11, 
-        'stabilizing_agent' : 12, 
-        'n-term' : 13, 
-        'icl1' : 14, 
-        'ecl1' : 15, 
-        'icl2' : 16, 
-        'ecl2.1' : 17, 
-        'ecl2.2' : 18, 
-        'icl3' : 19, 
-        'ecl3m' : 20, 
+        'id' : 0,
+        'prot_name' : 1,
+        'class' : 2,
+        'pdb_code' : 3,
+        'endogenous_ligand' :4,
+        'resolution' : 5,
+        'xray_ligand' : 6,
+        'ligand_role' : 7,
+        'chain' : 8,
+        'pubmed_id' : 9,
+        'date' : 10,
+        'G_protein' : 11,
+        'stabilizing_agent' : 12,
+        'n-term' : 13,
+        'icl1' : 14,
+        'ecl1' : 15,
+        'icl2' : 16,
+        'ecl2.1' : 17,
+        'ecl2.2' : 18,
+        'icl3' : 19,
+        'ecl3m' : 20,
         'c-term' : 21,
         }
 
@@ -61,10 +61,10 @@ class Command(BaseCommand):
     def create_yaml(self, data):
 
         yaml_pdb_data = {
-            'pdb' : data[self.csv_fields['pdb_code']], 
+            'pdb' : data[self.csv_fields['pdb_code']],
             'resolution' : data[self.csv_fields['resolution']],
             'publication_date' : data[self.csv_fields['date']][:10],
-            'pubmed_id' : data[self.csv_fields['pubmed_id']],                       
+            'pubmed_id' : data[self.csv_fields['pubmed_id']],
             }
 
         if data[self.csv_fields['ligand_role']] == 'Agonist' and data[self.csv_fields['G_protein']] != 'None':
@@ -109,7 +109,7 @@ class Command(BaseCommand):
         segments = ProteinSegment.objects.all()
         for segment in segments:
             resi = list(Residue.objects.filter(protein_segment = segment,
-                protein_conformation__protein__entry_name = prot_entry_name).order_by('sequence_number'))
+                protein__entry_name = prot_entry_name).order_by('sequence_number'))
             try:
                 if resi:
                     output[segment.slug] = [resi[0].sequence_number, resi[-1].sequence_number]

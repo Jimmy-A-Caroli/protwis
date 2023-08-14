@@ -17,7 +17,7 @@ from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.views import AbsTargetSelection
 from contactnetwork.models import InteractingResiduePair
 from mutation.models import MutationExperiment
-from protein.models import (Gene, Protein, ProteinAlias, ProteinConformation, ProteinFamily,
+from protein.models import (Gene, Protein, ProteinAlias, ProteinFamily,
                             ProteinCouplings, ProteinSegment)
 
 from residue.models import (Residue, ResidueGenericNumberEquivalent, ResiduePositionSet)
@@ -729,14 +729,14 @@ def familyDetail(request, slug):
 
     interaction_list = {}  ###FIXME - always empty
     try:
-        pc = ProteinConformation.objects.get(protein__family__slug=slug, protein__sequence_type__slug='consensus')
-    except ProteinConformation.DoesNotExist:
+        pc = Protein.objects.get(family__slug=slug, sequence_type__slug='consensus')
+    except Protein.DoesNotExist:
         try:
-            pc = ProteinConformation.objects.get(protein__family__slug=slug, protein__species_id=1,
-                                                 protein__sequence_type__slug='wt')
+            pc = Protein.objects.get(family__slug=slug, species_id=1,
+                                    sequence_type__slug='wt')
         except:
             try:
-                pc = ProteinConformation.objects.filter(protein__family__slug=slug, protein__sequence_type__slug='wt').first()
+                pc = Protein.objects.filter(amily__slug=slug, sequence_type__slug='wt').first()
             except:
                 return HttpResponse("No consensus was generated for this protein family")
 
@@ -746,7 +746,7 @@ def familyDetail(request, slug):
     except:
         return HttpResponse("No consensus was generated for this protein family")
 
-    residues = Residue.objects.filter(protein_conformation=pc).order_by('sequence_number').prefetch_related(
+    residues = Residue.objects.filter(proteinn=pc).order_by('sequence_number').prefetch_related(
         'protein_segment', 'generic_number', 'display_generic_number')
 
     jsondata = {}
@@ -804,13 +804,13 @@ def familyDetail(request, slug):
 
 @cache_page(60 * 60 * 24 * 7)
 def Ginterface(request, protein=None):
-    residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=protein).prefetch_related(
+    residuelist = Residue.objects.filter(protein__entry_name=protein).prefetch_related(
         'protein_segment', 'display_generic_number', 'generic_number')
     SnakePlot = DrawSnakePlot(
         residuelist, "Class A (Rhodopsin)", protein, nobuttons=1)
 
     # TEST
-    gprotein_residues = Residue.objects.filter(protein_conformation__protein__entry_name='gnaz_human').prefetch_related(
+    gprotein_residues = Residue.objects.filter(protein__entry_name='gnaz_human').prefetch_related(
         'protein_segment', 'display_generic_number', 'generic_number')
     gproteinplot = DrawGproteinPlot(
         gprotein_residues, "Gprotein", protein)
@@ -950,7 +950,7 @@ def ajaxInterface(request, slug, **response_kwargs):
         jsondata = {}
         for x, residue in enumerate(rsets.residue_position.all()):
             try:
-                pos = str(list(Residue.objects.filter(protein_conformation__protein__entry_name=slug,
+                pos = str(list(Residue.objects.filter(protein__entry_name=slug,
                                                       display_generic_number__label=residue.label))[0])
             except:
                 print("Protein has no residue position at", residue.label)
@@ -986,7 +986,7 @@ def ajaxBarcode(request, slug, cutoff, **response_kwargs):
             SignprotBarcode.objects.filter(protein__entry_name=slug, seq_identity=0, paralog_score=0).values_list(
                 'residue__display_generic_number__label', flat=True))
 
-        all_positions = Residue.objects.filter(protein_conformation__protein__entry_name=slug).prefetch_related(
+        all_positions = Residue.objects.filter(protein__entry_name=slug).prefetch_related(
             'display_generic_number')
 
         for res in all_positions:
@@ -1061,10 +1061,8 @@ def signprotdetail(request, slug):
     # mutations
     mutations = MutationExperiment.objects.filter(protein=p)
 
-    # get residues
-    pc = ProteinConformation.objects.get(protein=p)
 
-    residues = Residue.objects.filter(protein_conformation=pc).order_by('sequence_number').prefetch_related(
+    residues = Residue.objects.filter(protein=p).order_by('sequence_number').prefetch_related(
         'protein_segment', 'generic_number', 'display_generic_number')
 
     # process residues and return them in chunks of 10
@@ -1132,7 +1130,7 @@ def interface_dataset():
 
     complex_struc_ids = [co.structure_id for co in complex_objs]
     # protein conformations for those
-    prot_conf = ProteinConformation.objects.filter(protein__entry_name__in=complex_names).values_list('id', flat=True)
+    prot_conf = Protein.objects.filter(entry_name__in=complex_names).values_list('id', flat=True)
 
     interaction_sort_order = [
         "ionic",
@@ -1144,7 +1142,7 @@ def interface_dataset():
 
     # getting all the signal protein residues for those protein conformations
     prot_residues = Residue.objects.filter(
-        protein_conformation__in=prot_conf
+        protein__in=prot_conf
     ).values_list('id', flat=True)
 
     interactions = InteractingResiduePair.objects.filter(
@@ -1211,7 +1209,7 @@ def AJAX_Interactions(request):
     # fetching the id of the selected structures
     complex_struc_ids = [co.structure_id for co in complex_objs]
     # protein conformations for those
-    prot_conf = ProteinConformation.objects.filter(protein__entry_name__in=complex_names).values_list('id', flat=True)
+    prot_conf = Protein.objects.filter(entry_name__in=complex_names).values_list('id', flat=True)
     # correct receptor entry names - the ones with '_a' appended
 
     interaction_sort_order = [
@@ -1224,7 +1222,7 @@ def AJAX_Interactions(request):
 
     # getting all the signal protein residues for those protein conformations
     prot_residues = Residue.objects.filter(
-        protein_conformation__in=prot_conf
+        protein__in=prot_conf
     ).values_list('id', flat=True)
 
     interactions = InteractingResiduePair.objects.filter(
@@ -1274,16 +1272,15 @@ def AJAX_Interactions(request):
 
     prot_conf_ids = list(conf_ids)
     remaining_residues = Residue.objects.filter(
-        protein_conformation_id__in=prot_conf_ids,
+        protein_id__in=prot_conf_ids,
     ).prefetch_related(
-        "protein_conformation",
-        "protein_conformation__protein",
-        "protein_conformation__structure"
+        "protein",
+        "protein__structure"
     ).values(
-        rec_id=F('protein_conformation__protein__id'),
-        name=F('protein_conformation__protein__parent__name'),
-        entry_name=F('protein_conformation__protein__parent__entry_name'),
-        pdb_id=F('protein_conformation__structure__pdb_code__index'),
+        rec_id=F('protein__id'),
+        name=F('protein__parent__name'),
+        entry_name=F('protein__parent__entry_name'),
+        pdb_id=F('structure__pdb_code__index'),
         rec_aa=F('amino_acid'),
         rec_gn=F('generic_number__label'),
     ).exclude(

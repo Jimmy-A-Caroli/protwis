@@ -252,7 +252,7 @@ class SequenceParser(object):
 
         for segment in ProteinSegment.objects.all():
             resi = []
-            for r in Residue.objects.filter(protein_conformation__protein=self.wt.id, protein_segment=segment):
+            for r in Residue.objects.filter(protein=self.wt.id, protein_segment=segment):
                 if self.mapping[c][r.sequence_number].resnum is not None:
                     resi.append(self.mapping[c][r.sequence_number].resnum)
             if resi == []:
@@ -267,7 +267,7 @@ class SequenceParser(object):
         The maximum length of ICL3 is 230 aa, and fusion proteins usualy have significantly different numbers, i.e. exceeding the 230 gap between TM5 and 6.
 
         The maximum allowed gap size can be evaluated automaticaly, but it is fairly costly:
-        max([len(Residue.objects.filter(protein_segment=11, protein_conformation__protein=x)) for x in Protein.objects.filter(species=1)])
+        max([len(Residue.objects.filter(protein_segment=11, protein=x)) for x in Protein.objects.filter(species=1)])
         """
 
         rnumbers = [int(x.id[1]) for x in self.residues[chain_id]]
@@ -336,12 +336,12 @@ class SequenceParser(object):
             if self.wt==None:
                 try:
                     self.wt = Protein.objects.get(entry_name=str(alignment[1].hit_def))
-                    wt_resi = list(Residue.objects.filter(protein_conformation__protein=self.wt.id))
+                    wt_resi = list(Residue.objects.filter(protein=self.wt.id))
                     self.mapping[chain_id] = {x.sequence_number: ParsedResidue(x.amino_acid, x.sequence_number, str(x.display_generic_number) if x.display_generic_number else None, x.protein_segment) for x in wt_resi}
                 except:
                     pass
             else:
-                wt_resi = list(Residue.objects.filter(protein_conformation__protein=self.wt.id))
+                wt_resi = list(Residue.objects.filter(protein=self.wt.id))
                 self.mapping[chain_id] = {x.sequence_number: ParsedResidue(x.amino_acid, x.sequence_number, str(x.display_generic_number) if x.display_generic_number else None, x.protein_segment) for x in wt_resi}
             if alignment[1].hsps[0].expect > .5 and residues:
                 # self.fusions.append(AuxProtein(residues))
@@ -407,7 +407,7 @@ class SequenceParser(object):
             if w == c:
                 if seqres:
                     self.mapping[chain.id][starting_aa + offset].seqres=True
-                r = Residue.objects.get(sequence_number=offset+self.wt_seq_start, protein_conformation__protein=self.wt.id)
+                r = Residue.objects.get(sequence_number=offset+self.wt_seq_start, protein=self.wt.id)
                 if r.display_generic_number is not None:
                     self.mapping[chain_id][starting_aa + offset].add_gpcrdb(r.display_generic_number)
                 offset += 1
@@ -558,7 +558,7 @@ class SequenceParserPW(object):
         self.struct_id = self.seqres[0].id.split(':')[0]
         self.wt = Structure.objects.get(pdb_code__index=self.struct_id).protein.parent
         self.wt_seq = str(self.wt.sequence)
-        self.wt_seq_start = Residue.objects.filter(protein_conformation__protein=self.wt.id).order_by("sequence_number")[0].sequence_number
+        self.wt_seq_start = Residue.objects.filter(protein=self.wt.id).order_by("sequence_number")[0].sequence_number
 
         # a dictionary of per chain lists of peptides found in the pdb
         self.pdb_seq = {}
@@ -600,7 +600,7 @@ class SequenceParserPW(object):
             if w == c:
                 if seqres:
                     self.mapping[chain.id][offset+self.wt_seq_start].seqres=True
-                r = Residue.objects.get(sequence_number=offset+self.wt_seq_start, protein_conformation__protein=self.wt.id)
+                r = Residue.objects.get(sequence_number=offset+self.wt_seq_start, protein=self.wt.id)
                 if r.display_generic_number is not None:
                     self.mapping[chain.id][offset+self.wt_seq_start].add_gpcrdb(r.display_generic_number)
                 offset += 1

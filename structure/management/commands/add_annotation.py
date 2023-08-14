@@ -82,7 +82,7 @@ class Command(BaseCommand):
                 self.download_pdb(s)
                 structure = Bio.PDB.PDBParser(QUIET=True).get_structure(s, self.pdb_path)
                 parent_protein = Protein.objects.get(entry_name=data['protein'])
-                parent_residues = Residue.objects.filter(protein_conformation__protein=parent_protein)
+                parent_residues = Residue.objects.filter(protein=parent_protein)
                 parent_seq = parent_protein.sequence
 
                 # Check for fusion protein

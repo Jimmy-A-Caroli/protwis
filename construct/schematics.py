@@ -1,4 +1,4 @@
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 from structure.models import Structure
 
@@ -46,7 +46,7 @@ def generate_schematic(c):
     summary['crystallization_chems'] = ''
     if c.crystallization:
         for clist in c.crystallization.chemical_lists.all():
-            # summary['crystallization_chems'] += """{}<br>""".format(clist.name)    
+            # summary['crystallization_chems'] += """{}<br>""".format(clist.name)
             for chem in clist.chemicals.prefetch_related('chemical').all():
                 summary['crystallization_chems'] += """{} ({} {})<br>""".format(chem.chemical.name,chem.concentration,chem.concentration_unit)
 
@@ -90,7 +90,7 @@ def generate_schematic(c):
         if aux.start:
             if aux.start==19 and aux.insert_type.name=='auto':
                 continue
-            if aux.start in insert:    
+            if aux.start in insert:
                 print("ERROR Multiple inserts at same position",aux.start,c.name,aux)
                 # if insert[aux.start].insert_type.name =='fusion':
                 #     #continue to next
@@ -101,7 +101,7 @@ def generate_schematic(c):
             for i in range(aux.start,aux.end+1):
                 annotations[i] = [aux.insert_type.name,'Insertion<br>Protein_type: '+aux.insert_type.name,aux]
                 json_annotations[i] = ['ins','Insertion<br>Protein_type: '+aux.insert_type.name,"purple","white"]
-            
+
             insert[aux.start].append(aux)
 
         if aux.position.startswith('N-term'):
@@ -125,7 +125,7 @@ def generate_schematic(c):
     # print('%s function took %0.3f ms' % ('2', (time2-time1)*1000.0))
 
     # get residues
-    residues = Residue.objects.filter(protein_conformation__protein=c.protein).order_by('sequence_number').prefetch_related(
+    residues = Residue.objects.filter(protein=c.protein).order_by('sequence_number').prefetch_related(
         'protein_segment', 'generic_number', 'display_generic_number')
 
 
@@ -363,22 +363,22 @@ def generate_schematic(c):
     for i, r in enumerate(residues):
         # title of segment to be written out for the first residue in each segment
         segment_title = False
-        
+
         # keep track of last residues segment (for marking borders)
         if r.protein_segment.slug != last_segment:
             last_segment = r.protein_segment.slug
             border = True
-        
+
         # if on a border, is there room to write out the title? If not, write title in next chunk
         if i == 0 or (border and len(last_segment) <= (chunk_size - i % chunk_size)):
             segment_title = True
             border = False
             title_cell_skip += len(last_segment) # skip cells following title (which has colspan > 1)
-        
+
         if i and i % chunk_size == 0:
             r_chunks.append(r_buffer)
             r_buffer = []
-        
+
         if r.sequence_number in annotations:
             annotation = annotations[r.sequence_number]
         else:
@@ -431,22 +431,22 @@ def generate_schematic(c):
             # r_buffer.append((r, segment_title, title_cell_skip,deletion[r.sequence_number+1]))
             r_buffer.append((None, segment_title, title_cell_skip,deletion[r.sequence_number-1]))
             nudge -= 1
-     
+
         # keep track of last residues segment (for marking borders)
         if r.protein_segment.slug != last_segment:
             last_segment = r.protein_segment.slug
             border = True
-        
+
         # if on a border, is there room to write out the title? If not, write title in next chunk
         if i == 0 or (border and len(last_segment) <= (chunk_size - (i-nudge) % chunk_size)):
             segment_title = True
             border = False
             title_cell_skip += len(last_segment) # skip cells following title (which has colspan > 1)
-        
+
         if len(r_buffer) and i and (i-nudge) % chunk_size == 0:
             r_chunks_custom.append(r_buffer)
             r_buffer = []
-        
+
         if r.sequence_number in annotations:
             annotation = annotations[r.sequence_number]
         else:
@@ -568,7 +568,7 @@ def generate_schematic(c):
                     extra = "bg-"+r[3][1]
                 except:
                     extra = ""
-                if r[0]: 
+                if r[0]:
                     if r[0].protein_segment.id % 2 == 0:
                         extra = "bg-success"
                     else:
@@ -712,7 +712,7 @@ def generate_schematic(c):
 
 
     results['schematic_2_c'] = c_schematic_table
-        
+
     results['summary'] = summary
 
     time2 = time.time()
@@ -753,7 +753,7 @@ def create_block(chunk):
                 extra = r[3][1]
                 extra += "top"
 
-            if blank: 
+            if blank:
                 temp += """<td class="seqv seqv-segment no-wrap" colspan="{}">&nbsp;</td>""".format(str(blank))
                 blank = 0
             temp += """<td class="seqv seqv-segment no-wrap {}" colspan="{}">
@@ -762,10 +762,10 @@ def create_block(chunk):
             blank_max = blank_max-i
         else:
             blank += 1
-            if blank > blank_max: 
+            if blank > blank_max:
                 blank = blank_max
 
-    if blank: 
+    if blank:
         temp += """<td class="seqv seqv-segment no-wrap" colspan="{}">&nbsp;</td>""".format(str(blank))
     temp += """</tr><tr>"""
     for r in chunk:
@@ -776,7 +776,7 @@ def create_block(chunk):
                 extra = "bg-"+r[3][1]
             except:
                 extra = ""
-            if r[0]: 
+            if r[0]:
                 if r[0].protein_segment.id % 2 == 0:
                     extra = "bg-success"
                 else:
@@ -793,7 +793,7 @@ def create_block(chunk):
             if r[1] and r[3]:
                 if r[3][0] == 'insert':
                     # print(text,r)
-                    name = r[3][2].insert_type.subtype 
+                    name = r[3][2].insert_type.subtype
                     # print(name)
                     extra = r[3][1]
                     if name==fusion_protein_name:

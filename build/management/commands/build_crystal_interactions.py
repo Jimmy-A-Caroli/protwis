@@ -68,8 +68,8 @@ class Command(BaseBuild):
 
                 # Get the residues
                 try:
-                    res1 = Residue.objects.get(sequence_number=res1_seq_num, protein_conformation=conformation)
-                    res2 = Residue.objects.get(sequence_number=res2_seq_num, protein_conformation=conformation)
+                    res1 = Residue.objects.get(sequence_number=res1_seq_num, protein=conformation)
+                    res2 = Residue.objects.get(sequence_number=res2_seq_num, protein=conformation)
                 except Residue.DoesNotExist:
                     self.logger.warning('Error with pair between %s and %s (%s)' % (res1_seq_num,res2_seq_num,conformation))
                     continue

@@ -2,6 +2,7 @@
 from common.diagrams_gpcr import DrawHelixBox, DrawSnakePlot
 from common.diagrams_gprotein import DrawGproteinPlot
 from django.db import models
+from structure.models import Structure
 from residue.models import (Residue, ResidueDataPoint, ResidueDataType,
                             ResidueGenericNumberEquivalent,
                             ResidueNumberingScheme)
@@ -14,7 +15,7 @@ class Protein(models.Model):
     source = models.ForeignKey('ProteinSource', on_delete=models.CASCADE)
     residue_numbering_scheme = models.ForeignKey('residue.ResidueNumberingScheme', on_delete=models.CASCADE, null=True)
     sequence_type = models.ForeignKey('ProteinSequenceType', on_delete=models.CASCADE)
-    states = models.ManyToManyField('ProteinState', through='ProteinConformation')
+    states = models.ManyToManyField('ProteinState', through='Structure')
     web_links = models.ManyToManyField('common.WebLink')
     entry_name = models.SlugField(max_length=100, unique=True)
     accession = models.CharField(max_length=100, db_index=True, null=True)
@@ -43,27 +44,27 @@ class Protein(models.Model):
         return tmp.name
 
     def get_helical_box(self):
-        residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
+        residuelist = Residue.objects.filter(protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
         return DrawHelixBox(residuelist,self.get_protein_class(),str(self))
 
     def get_snake_plot(self):
-        residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
+        residuelist = Residue.objects.filter(protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
         return DrawSnakePlot(residuelist,self.get_protein_class(),str(self))
 
     def get_helical_box_no_buttons(self):
-        residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
+        residuelist = Residue.objects.filter(protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
         return DrawHelixBox(residuelist,self.get_protein_class(),str(self), nobuttons=1)
 
     def get_snake_plot_no_buttons(self):
-        residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
+        residuelist = Residue.objects.filter(protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
         return DrawSnakePlot(residuelist,self.get_protein_class(),str(self), nobuttons=1)
 
     def get_gprotein_plot(self):
-        residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
+        residuelist = Residue.objects.filter(protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
         return DrawGproteinPlot(residuelist,self.get_protein_class(),str(self))
 
     def get_arrestin_plot(self):
-        residuelist = Residue.objects.filter(protein_conformation__protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
+        residuelist = Residue.objects.filter(protein__entry_name=str(self)).prefetch_related('protein_segment','display_generic_number','generic_number')
         return DrawArrestinPlot(residuelist,self.get_protein_class(),str(self))
 
     def get_protein_family(self):
@@ -78,29 +79,13 @@ class Protein(models.Model):
             tmp = tmp.parent
         return tmp.name
 
-
-class ProteinConformation(models.Model):
-    protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
-    state = models.ForeignKey('ProteinState', on_delete=models.CASCADE)
-    protein_anomalies = models.ManyToManyField('protein.ProteinAnomaly')
-
-    # non-database attributes
-    identity = 0 # % identity to a reference sequence in an alignment
-    similarity = 0 # % similarity to a reference sequence in an alignment (% BLOSUM62 score > 0)
-    similarity_score = 0 # similarity score to a reference sequence in an alignment (sum of BLOSUM62 scores)
-    alignment = 0 # residues formatted for use in an Alignment class
-    alignment_list = 0 # FIXME redundant, remove when dependecies are removed
-
-    def __str__(self):
-        return self.protein.entry_name + " (" + self.state.slug + ")"
-
     def generate_sites(self):
         self.sodium_pocket()
 
     @property
     def is_sodium(self):
         # Avoid filter, to utilise if site_protein_conformation is prefetched, otherwise it generates a DB call
-        for s in self.site_protein_conformation.all():
+        for s in self.site_protein.all():
             if s.site.slug=='sodium_pocket':
                 return True
         return False
@@ -111,30 +96,80 @@ class ProteinConformation(models.Model):
         except:
             site = Site.objects.create(slug='sodium_pocket', name='Sodium ion pocket')
         try:
-            ex_site = IdentifiedSites.objects.get(protein_conformation=self)
+            ex_site = IdentifiedSites.objects.get(protein=self)
 
             if len(ex_site.residues.all())==2 and ex_site.site==site:
                 return
             else:
                 raise Exception
         except:
-            resis = Residue.objects.filter(protein_conformation=self, display_generic_number__label__in=[dgn('2x50', self),
+            resis = Residue.objects.filter(protein=self, display_generic_number__label__in=[dgn('2x50', self),
                                                                                                          dgn('3x39', self)])
-            parent_resis = Residue.objects.filter(protein_conformation__protein=self.protein.parent, display_generic_number__label__in=[dgn('2x50', self),
+            parent_resis = Residue.objects.filter(protein=self.protein.parent, display_generic_number__label__in=[dgn('2x50', self),
                                                                                                                                         dgn('3x39', self)])
             if len(resis)==2:
                 if resis[0].amino_acid in ['D','E'] and resis[1].amino_acid in ['S','T']:
-                    istate, created = IdentifiedSites.objects.get_or_create(protein_conformation=self, site=site)
+                    istate, created = IdentifiedSites.objects.get_or_create(protein=self, site=site)
                     if created:
                         istate.residues.add(resis[0], resis[1])
 
-    class Meta():
-        ordering = ('id', )
-        db_table = "protein_conformation"
+
+# class ProteinConformation(models.Model):
+#     protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
+#     state = models.ForeignKey('ProteinState', on_delete=models.CASCADE)
+#     protein_anomalies = models.ManyToManyField('protein.ProteinAnomaly')
+#
+#     # non-database attributes
+#     identity = 0 # % identity to a reference sequence in an alignment
+#     similarity = 0 # % similarity to a reference sequence in an alignment (% BLOSUM62 score > 0)
+#     similarity_score = 0 # similarity score to a reference sequence in an alignment (sum of BLOSUM62 scores)
+#     alignment = 0 # residues formatted for use in an Alignment class
+#     alignment_list = 0 # FIXME redundant, remove when dependecies are removed
+#
+#     def __str__(self):
+#         return self.protein.entry_name + " (" + self.state.slug + ")"
+#
+#     def generate_sites(self):
+#         self.sodium_pocket()
+#
+#     @property
+#     def is_sodium(self):
+#         # Avoid filter, to utilise if site_protein_conformation is prefetched, otherwise it generates a DB call
+#         for s in self.site_protein_conformation.all():
+#             if s.site.slug=='sodium_pocket':
+#                 return True
+#         return False
+#
+#     def sodium_pocket(self):
+#         try:
+#             site = Site.objects.get(slug='sodium_pocket')
+#         except:
+#             site = Site.objects.create(slug='sodium_pocket', name='Sodium ion pocket')
+#         try:
+#             ex_site = IdentifiedSites.objects.get(protein_conformation=self)
+#
+#             if len(ex_site.residues.all())==2 and ex_site.site==site:
+#                 return
+#             else:
+#                 raise Exception
+#         except:
+#             resis = Residue.objects.filter(protein_conformation=self, display_generic_number__label__in=[dgn('2x50', self),
+#                                                                                                          dgn('3x39', self)])
+#             parent_resis = Residue.objects.filter(protein=self.protein.parent, display_generic_number__label__in=[dgn('2x50', self),
+#                                                                                                                                         dgn('3x39', self)])
+#             if len(resis)==2:
+#                 if resis[0].amino_acid in ['D','E'] and resis[1].amino_acid in ['S','T']:
+#                     istate, created = IdentifiedSites.objects.get_or_create(protein_conformation=self, site=site)
+#                     if created:
+#                         istate.residues.add(resis[0], resis[1])
+#
+#     class Meta():
+#         ordering = ('id', )
+#         db_table = "protein_conformation"
 
 
 class IdentifiedSites(models.Model):
-    protein_conformation = models.ForeignKey('protein.ProteinConformation', related_name='site_protein_conformation', on_delete=models.CASCADE)
+    protein = models.ForeignKey('Protein', related_name='site_protein', on_delete=models.CASCADE)
     site = models.ForeignKey('Site', on_delete=models.CASCADE)
     residues = models.ManyToManyField('residue.Residue', related_name='site_residue')
 
@@ -311,8 +346,8 @@ class ProteinAnomalyRule(models.Model):
     class Meta():
         db_table = 'protein_anomaly_rule'
 
-class ProteinConformationTemplateStructure(models.Model):
-    protein_conformation = models.ForeignKey('ProteinConformation', on_delete=models.CASCADE)
+class ProteinTemplateStructure(models.Model):
+    protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
     protein_segment = models.ForeignKey('ProteinSegment', on_delete=models.CASCADE)
     structure = models.ForeignKey('structure.Structure', on_delete=models.CASCADE)
 
@@ -321,7 +356,7 @@ class ProteinConformationTemplateStructure(models.Model):
                + " " + self.structure.pdb_code.index
 
     class Meta():
-        db_table = 'protein_conformation_template_structure'
+        db_table = 'protein_template_structure'
 
 class ProteinCouplings(models.Model):
     protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
@@ -351,4 +386,4 @@ def dgn(gn, protein_conformation):
     """Convert generic number to display generic number."""
     scheme = ResidueNumberingScheme.objects.get(slug=protein_conformation.protein.residue_numbering_scheme.slug)
     convert_gn = ResidueGenericNumberEquivalent.objects.get(label=gn, scheme=scheme).default_generic_number.label
-    return Residue.objects.get(protein_conformation=protein_conformation, generic_number__label=convert_gn).display_generic_number.label
+    return Residue.objects.get(protein=protein_conformation, generic_number__label=convert_gn).display_generic_number.label

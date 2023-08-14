@@ -59,10 +59,10 @@ def getHotspots(request):
         protein_dictionary[p.entry_name]["ligand_type"] = p.family.parent.parent.short()
 
     # SEQUENCE: number of same amino acids per position in class
-    residues = Residue.objects.filter(protein_conformation__protein__in = class_proteins)\
+    residues = Residue.objects.filter(protein__in = class_proteins)\
                     .exclude(generic_number=None)\
                     .values('generic_number__label','amino_acid')\
-                    .annotate(number_occurrences=Count("protein_conformation"))\
+                    .annotate(number_occurrences=Count("protein"))\
                     .order_by('generic_number__label') # Necessary otherwise the key is used -> messing up the count
 
     seq_conservation = {}
@@ -94,15 +94,15 @@ def getHotspots(request):
                 .exclude(structure_ligand_pair__annotated=False)\
                 .exclude(rotamer__residue__generic_number=None)\
                 .exclude(rotamer__residue__generic_number=None)\
-                .values("rotamer__residue__protein_conformation__protein__parent__entry_name", "rotamer__residue__generic_number__label")\
+                .values("rotamer__residue__protein__parent__entry_name", "rotamer__residue__generic_number__label")\
                 .annotate(unique_contacts=Count("rotamer__structure", distinct=True))\
-                .order_by('rotamer__residue__protein_conformation__protein__parent__entry_name', "rotamer__residue__generic_number__label")
+                .order_by('rotamer__residue__protein__parent__entry_name', "rotamer__residue__generic_number__label")
 
     contact_count = {}
     for entry in list(ligand_interactions):
-        if not entry["rotamer__residue__protein_conformation__protein__parent__entry_name"] in contact_count:
-            contact_count[entry["rotamer__residue__protein_conformation__protein__parent__entry_name"]] = {}
-        contact_count[entry["rotamer__residue__protein_conformation__protein__parent__entry_name"]][entry["rotamer__residue__generic_number__label"]] = entry["unique_contacts"]
+        if not entry["rotamer__residue__protein__parent__entry_name"] in contact_count:
+            contact_count[entry["rotamer__residue__protein__parent__entry_name"]] = {}
+        contact_count[entry["rotamer__residue__protein__parent__entry_name"]][entry["rotamer__residue__generic_number__label"]] = entry["unique_contacts"]
 
     #data["contact_count"] = contact_count
 

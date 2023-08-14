@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import connection
 from django.db.models import Count
 
-from protein.models import Protein, ProteinConformation, ProteinAnomaly, ProteinState, ProteinSegment
+from protein.models import Protein, ProteinAnomaly, ProteinState, ProteinSegment
 from residue.models import Residue, ResidueGenericNumber
 from structure.models import *
 
@@ -35,8 +35,8 @@ class Command(BaseBuild):
         with open(os.sep.join([settings.DATA_DIR, 'structure_data','annotation','xtal_segends.yaml']), 'r') as anno_f:
             annotations = yaml.load(anno_f, Loader=yaml.FullLoader)
         for s in structures:
-            resis = Residue.objects.filter(protein_conformation__protein=s.protein).prefetch_related('display_generic_number','protein_segment')
-            wt_resis = Residue.objects.filter(protein_conformation__protein=s.protein.parent)
+            resis = Residue.objects.filter(protein=s.protein).prefetch_related('display_generic_number','protein_segment')
+            wt_resis = Residue.objects.filter(protein=s.protein.parent)
 
             wt_gn = wt_resis.exclude(display_generic_number=None).count()
             s_gn = resis.exclude(display_generic_number=None).count()
@@ -55,7 +55,7 @@ class Command(BaseBuild):
             c = 0
             segments = OrderedDict((i,[]) for i in segments_query_obj)
             x50s = [i.display_generic_number.label for i in resis.filter(display_generic_number__label__in=['1.50x50', '2.50x50', '3.50x50', '4.50x50', '5.50x50', '6.50x50', '7.50x50'])]
-            parent_x50_resis = Residue.objects.filter(protein_conformation__protein=s.protein.parent,
+            parent_x50_resis = Residue.objects.filter(protein=s.protein.parent,
                                                       display_generic_number__label__in=['1.50x50', '2.50x50', '3.50x50', '4.50x50', '5.50x50', '6.50x50', '7.50x50']).prefetch_related('display_generic_number')
             missing_helices[s] = []
             missing_a_helix = False

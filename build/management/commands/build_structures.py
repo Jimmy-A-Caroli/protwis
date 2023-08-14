@@ -6,7 +6,7 @@ from django.db import IntegrityError
 
 from build.management.commands.base_build import Command as BaseBuild
 from build.management.commands.build_ligand_functions import get_or_create_ligand, match_id_via_unichem
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinAnomaly, ProteinAnomalyType,
+from protein.models import (Protein, ProteinState, ProteinAnomaly, ProteinAnomalyType,
     ProteinSegment)
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, Residue, ResidueGenericNumberEquivalent
 from common.models import WebLink, WebResource, Publication
@@ -292,10 +292,11 @@ class Command(BaseBuild):
         i = 1
 
         # Checking Na+ atom in xtal
-        parent_prot_conf = ProteinConformation.objects.get(protein=structure.protein.parent)
+        # parent_prot_conf = ProteinConformation.objects.get_or_create(protein=structure.protein.parent, state=structure.state)
+        # parent_prot_conf = Protein.objects.get(id=structure.protein.id)
         try:
-            wt_2x50 = Residue.objects.get(protein_conformation=parent_prot_conf, display_generic_number__label=dgn('2x50',parent_prot_conf))
-            wt_3x39 = Residue.objects.get(protein_conformation=parent_prot_conf, display_generic_number__label=dgn('3x39',parent_prot_conf))
+            wt_2x50 = Residue.objects.get(protein=structure.protein.parent, display_generic_number__label=dgn('2x50',structure.protein.parent))
+            wt_3x39 = Residue.objects.get(protein=structure.protein.parent, display_generic_number__label=dgn('3x39',structure.protein.parent))
             if wt_2x50.amino_acid=='D' and wt_3x39.amino_acid=='S':
                 if chain[wt_2x50.sequence_number].get_resname()=='ASP' and chain[wt_3x39.sequence_number].get_resname()=='SER':
                     v_2x50 = chain[wt_2x50.sequence_number]['OD1'].get_vector()
@@ -374,7 +375,7 @@ class Command(BaseBuild):
 
         parent_seq_protein = str(structure.protein.parent.sequence)
         # print(structure.protein_conformation.protein.parent.entry_name)
-        rs = Residue.objects.filter(protein_conformation__protein=structure.protein.parent).prefetch_related('display_generic_number','generic_number','protein_segment')
+        rs = Residue.objects.filter(protein=structure.protein.parent).prefetch_related('display_generic_number','generic_number','protein_segment')
 
         if structure.pdb_code.index.upper() in self.xtal_seg_ends:
             seg_ends = self.xtal_seg_ends[structure.pdb_code.index.upper()]
@@ -617,7 +618,7 @@ class Command(BaseBuild):
         # print("seg res not mapped",gaps)
 
         pdb = structure.pdb_data.pdb
-        protein_conformation=structure.protein
+        protein = structure.protein
         temp = ''
         check = 0
         errors = 0
@@ -675,7 +676,7 @@ class Command(BaseBuild):
                             residue = Residue()
                             residue.sequence_number = int(check.strip())
                             residue.amino_acid = AA[residue_name.upper()]
-                            residue.protein_conformation = protein_conformation
+                            residue.protein = protein
 
                             try:
                                 seq_num_pos = pdbseq[chain][residue.sequence_number][0]
@@ -1076,6 +1077,7 @@ class Command(BaseBuild):
                     prev_segment = res.protein_segment
 
         bulked_res = Residue.objects.bulk_create(residues_bulk)
+        print(bulked_res)
         #bulked_rot = PdbData.objects.bulk_create(rotamer_data_bulk)
         bulked_rot = rotamer_data_bulk
 
@@ -1108,6 +1110,7 @@ class Command(BaseBuild):
     def build_contact_network(self,s,pdb_code):
         try:
             # interacting_pairs, distances  = compute_interactions(pdb_code, save_to_db=True)
+            print('data for computing interactions: {}'.format(pdb_code))
             compute_interactions(pdb_code, do_interactions=True, do_peptide_ligand=True, save_to_db=True)
         except:
             self.logger.error('Error with computing interactions (%s)' % (pdb_code))
@@ -1196,11 +1199,13 @@ class Command(BaseBuild):
         # else:
         #     pdbs = self.parsed_structures[positions[0]:positions[1]]
         pdbs = self.parsed_structures.pdb_ids
-        while count.value<len(pdbs):
+        print('lets start parsing!')
+        while count.value<5: #len(pdbs):
             with lock:
                 pdb_id = pdbs[count.value]
                 count.value +=1
 
+            print('The count is {} and the structure is {}'.format(count.value, pdb_id))
             sd = self.parsed_structures.structures[pdb_id]
             # is this a representative structure (will be used to guide structure-based alignments)?
             representative = False
@@ -1232,7 +1237,7 @@ class Command(BaseBuild):
 
             # create a structure record
             try:
-                s = Structure.objects.get(protein_conformation__protein=con)
+                s = Structure.objects.get(protein=con)
 
                 # If update_flag is true then update existing structures
                 # Otherwise only make new structures
@@ -1274,12 +1279,12 @@ class Command(BaseBuild):
 
             # protein conformation
             try:
-                s.protein = ProteinConformation.objects.get(protein=con)
-            except ProteinConformation.DoesNotExist:
-                self.logger.error('Protein conformation for construct {} does not exists'.format(con))
+                s.protein = con
+            except Protein.DoesNotExist:
+                self.logger.error('Protein for construct {} does not exists'.format(con))
                 continue
-            if s.state is not state:
-                ProteinConformation.objects.filter(protein=con).update(state=ps)
+            # if s.state is not state:
+            #     Protein.objects.filter(protein=con).update(state=ps)
 
             # get the PDB file and save to DB
             sd['pdb'] = sd['name'].upper()
@@ -1427,6 +1432,8 @@ class Command(BaseBuild):
 
             # save structure before adding M2M relations
             s.save()
+            print('first structure save!')
+            print(s)
             # StructureLigandInteraction.objects.filter(structure=s).delete()
 
             # ligands
@@ -1535,7 +1542,8 @@ class Command(BaseBuild):
                         if i.pdb_reference != pdb_reference:
                             i.pdb_reference = pdb_reference
                             i.save()
-
+                            print('Saved structure ligand interactions!')
+                            print(i)
             # protein anomalies
             anomaly_entry = self.xtal_anomalies[s.protein.parent.entry_name]
             segment_codes = {'1':'TM1','12':'ICL1','2':'TM2','23':'ECL1','3':'TM3','34':'ICL2','4':'TM4','5':'TM5','6':'TM6','7':'TM7'}
@@ -1558,6 +1566,7 @@ class Command(BaseBuild):
                         all_constrictions[segment] = [val]
 
             scheme = s.protein.residue_numbering_scheme
+            print('Added scheme!')
             if len(all_bulges)>0:
                 pa_slug = 'bulge'
                 try:
@@ -1588,6 +1597,7 @@ class Command(BaseBuild):
                             pa, created = ProteinAnomaly.objects.get(anomaly_type=pab, generic_number=gn)
 
                         s.protein_anomalies.add(pa)
+
             if len(all_constrictions)>0:
                 pa_slug = 'constriction'
                 try:
@@ -1642,15 +1652,17 @@ class Command(BaseBuild):
 
             # save structure
             s.save()
+            print('Second structure svae!')
+            print(s)
             #Delete previous interaction data to prevent errors.
             ResidueFragmentInteraction.objects.filter(structure_ligand_pair__structure=s).delete()
             #Remove previous Rotamers/Residues to prepare repopulate
             Fragment.objects.filter(structure=s).delete()
             Rotamer.objects.filter(structure=s).delete()
-            Residue.objects.filter(protein_conformation__protein=s.protein).delete()
+            Residue.objects.filter(protein=s.protein).delete()
 
             d = {}
-
+            print('First Try! Fetch Pdb Info')
             try:
                 current = time.time()
                 #protein = Protein.objects.filter(entry_name=s.protein_conformation).get()
@@ -1669,6 +1681,9 @@ class Command(BaseBuild):
 
                 self.construct_errors.append(s)
 
+            print('Try executed!')
+            print(d)
+            print('Second try! Create rotamers!')
             try:
                 current = time.time()
                 self.create_rotamers(s,pdb_path,d)
@@ -1679,6 +1694,8 @@ class Command(BaseBuild):
                 diff = round(end - current,1)
                 self.logger.info('Create resides/rotamers done for {}. {} seconds.'.format(
                             s.protein.entry_name, diff))
+                print('Create resides/rotamers done for {}. {} seconds.'.format(
+                            s.protein.entry_name, diff))
             except Exception as msg:
                 print(msg)
                 print('ERROR WITH ROTAMERS {}'.format(sd['pdb']))
@@ -1686,18 +1703,22 @@ class Command(BaseBuild):
 
                 self.rotamer_errors.append(s)
 
+            print('Third Try! Generate Sites!')
             try:
                 s.protein.generate_sites()
             except:
                 pass
 
             if self.run_contactnetwork:
+                print('Running contactnetwork!')
                 try:
                     current = time.time()
+                    print('Building Contact Network!')
                     self.build_contact_network(s, sd['pdb'])
                     end = time.time()
                     diff = round(end - current,1)
                     self.logger.info('Create contactnetwork done for {}. {} seconds.'.format(s.protein.entry_name, diff))
+                    print('Create contactnetwork done for {}. {} seconds.'.format(s.protein.entry_name, diff))
                 except Exception as msg:
                     print(msg)
                     print('ERROR WITH CONTACTNETWORK {}'.format(sd['pdb']))
@@ -1708,6 +1729,7 @@ class Command(BaseBuild):
             for ligand in ligands:
                 if ligand['type'].strip() in ['small molecule', 'protein', 'peptide'] and ligand['in_structure']:
                     try:
+                        print('Running Ligand Interactions!')
                         current = time.time()
                         peptide_chain = ""
                         if ligand['chain']!='':
@@ -1716,11 +1738,15 @@ class Command(BaseBuild):
                         # if not os.path.isdir(mypath):
                         #     #Only run calcs, if not already in temp
                         # runcalculation(sd['pdb'],peptide_chain)
+                        print('Performing Calculations!')
                         data_results = runcalculation_2022(sd['pdb'], peptide_chain)
+                        print('Parsing Calculations!')
                         self.parsecalculation(sd['pdb'], data_results, False)
                         end = time.time()
                         diff = round(end - current,1)
                         self.logger.info('Interaction calculations done for {}. {} seconds.'.format(
+                                    s.protein.entry_name, diff))
+                        print('Interaction calculations done for {}. {} seconds.'.format(
                                     s.protein.entry_name, diff))
                     except Exception as msg:
                         print(msg)

@@ -4,7 +4,7 @@ from django.db import connection
 from django.db import IntegrityError
 
 from build.management.commands.base_build import Command as BaseBuild
-from protein.models import Protein, ProteinConformation, ProteinSegment, ProteinFamily
+from protein.models import Protein, ProteinSegment, ProteinFamily
 from residue.functions import *
 
 import os
@@ -23,8 +23,7 @@ class Command(BaseBuild):
     segments = ProteinSegment.objects.filter(partial=False)
     all_segments = {ps.slug: ps for ps in ProteinSegment.objects.all()}  # all segments dict for faster lookups
 
-    pconfs = ProteinConformation.objects.filter(protein__species__id=1).prefetch_related(
-        'protein__residue_numbering_scheme__parent')
+    pconfs = Protein.objects.filter(species__id=1).prefetch_related('protein__residue_numbering_scheme__parent')
 
     schemes = parse_scheme_tables(generic_numbers_source_dir)
 
@@ -55,7 +54,7 @@ class Command(BaseBuild):
 
         for pconf in pconfs:
             # read reference positions for this protein
-            ref_position_file_path = os.sep.join([self.ref_position_source_dir, pconf.protein.entry_name + '.yaml'])
+            ref_position_file_path = os.sep.join([self.ref_position_source_dir, pconf.entry_name + '.yaml'])
             ref_positions = load_reference_positions(ref_position_file_path)
 
             # look for automatically generated ref positions if annotations are not found
@@ -69,13 +68,12 @@ class Command(BaseBuild):
                 # is this the second iteration of this function? We want all proteins with reference positions to be
                 # processed before looking for positions for those who lack them
                 if iteration == 2:
-                    self.logger.info("Reference positions for {} not annotated, looking for a template".format(
-                        pconf.protein))
+                    self.logger.info("Reference positions for {} not annotated, looking for a template".format(pconf))
 
                     # required information about this protein
                     up = {}
-                    up['entry_name'] = pconf.protein.entry_name
-                    up['sequence'] = pconf.protein.sequence
+                    up['entry_name'] = pconf.entry_name
+                    up['sequence'] = pconf.sequence
 
                     # find closest protein (by family) to get ref positions
                     # - level 3 parent family
@@ -86,8 +84,8 @@ class Command(BaseBuild):
                     template_found = False
 
                     # try level1 families first, then level2, then level3
-                    parent_family_levels = [pconf.protein.family.parent, pconf.protein.family.parent.parent,
-                        pconf.protein.family.parent.parent.parent]
+                    parent_family_levels = [pconf.family.parent, pconf.family.parent.parent,
+                        pconf.family.parent.parent.parent]
                     for parent_family in parent_family_levels:
                         if template_found:
                             break
@@ -118,7 +116,7 @@ class Command(BaseBuild):
                                     break
                     else:
                         if not template_found:
-                            self.logger.error('No template reference positions found for {}'.format(pconf.protein))
+                            self.logger.error('No template reference positions found for {}'.format(pconf))
                 else:
                     continue
             elif iteration == 2:
@@ -178,7 +176,7 @@ class Command(BaseBuild):
                                         + 'segment {}. Skipping.'.format(segment.slug, next_segment.slug))
                                     continue
                             else:
-                                segment_end = len(pconf.protein.sequence)
+                                segment_end = len(pconf.sequence)
 
                             if next_segment:
                                 if (next_segment.slug in settings.REFERENCE_POSITIONS and ref_positions and
@@ -190,7 +188,7 @@ class Command(BaseBuild):
                                     continue
                             else:
                                 # for the last segment, the end is the last residue of the sequence
-                                segment_end = len(pconf.protein.sequence)
+                                segment_end = len(pconf.sequence)
 
                     else:
                         if segment.fully_aligned:
@@ -200,8 +198,7 @@ class Command(BaseBuild):
                             continue
                         else:
                             # log the missing reference position
-                            self.logger.warning('Reference position missing for segment {} in {}'.format(segment,
-                                pconf))
+                            self.logger.warning('Reference position missing for segment {} in {}'.format(segment,pconf))
 
                 if unaligned_segment:
                     segment_start = sequence_number_counter + 1
@@ -216,7 +213,7 @@ class Command(BaseBuild):
                             continue
                     else:
                         # for the last segment, the end is the last residue of the sequence
-                        segment_end = len(pconf.protein.sequence)
+                        segment_end = len(pconf.sequence)
 
                     aligned_segment_start = None
                     aligned_segment_end = None

@@ -291,31 +291,31 @@ class Command(BaseCommand):
             struct_parent_pks = set([struct[5] for struct in struct_combs])
 
             # Collect unique wildtype GNs per parent protein ID
-            wildtype_gns = Residue.objects.filter(protein_conformation__protein_id__in=struct_parent_pks,
-                protein_conformation__protein__sequence_type__slug="wt") \
+            wildtype_gns = Residue.objects.filter(protein_id__in=struct_parent_pks,
+                protein__sequence_type__slug="wt") \
                 .exclude(generic_number=None) \
-                .values_list("protein_conformation__protein_id") \
-                .order_by("protein_conformation__protein_id") \
+                .values_list("protein_id") \
+                .order_by("protein_id") \
                 .annotate(gns=ArrayAgg("generic_number_id"))
 
             wildtype_gns_dict = {entry[0]:set(entry[1]) for entry in wildtype_gns}
 
             # Collect bundle GNs + H8 per structure
-            gns_bundle = Residue.objects.filter(protein_conformation_id__in=struct_conf_pks) \
+            gns_bundle = Residue.objects.filter(protein_id__in=struct_conf_pks) \
                 .filter(protein_segment__slug__in=['TM1','TM2','TM3','TM4','TM5','TM6','TM7','H8']) \
                 .exclude(generic_number=None) \
-                .values_list("protein_conformation_id") \
-                .order_by("protein_conformation_id") \
+                .values_list("protein_id") \
+                .order_by("protein_id") \
                 .annotate(gns=ArrayAgg("generic_number_id"))
 
             gns_bundle_dict = {entry[0]:set(entry[1]) for entry in gns_bundle}
 
             # Collect remaining (mainly loop) GNs per structure
-            gns_other = Residue.objects.filter(protein_conformation_id__in=struct_conf_pks) \
+            gns_other = Residue.objects.filter(protein_id__in=struct_conf_pks) \
                 .exclude(protein_segment__slug__in=['TM1','TM2','TM3','TM4','TM5','TM6','TM7','H8']) \
                 .exclude(generic_number=None) \
-                .values_list("protein_conformation_id") \
-                .order_by("protein_conformation_id") \
+                .values_list("protein_id") \
+                .order_by("protein_id") \
                 .annotate(gns=ArrayAgg("generic_number_id"))
 
             gns_other_dict = {entry[0]:set(entry[1]) for entry in gns_other}

@@ -7,7 +7,7 @@ from django.db import IntegrityError
 
 from build.management.commands.base_build import Command as BaseBuild
 from build.management.commands.build_ligand_functions import get_or_create_ligand, match_id_via_unichem
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinAnomaly, ProteinAnomalyType,
+from protein.models import (Protein, ProteinState, ProteinAnomaly, ProteinAnomalyType,
     ProteinSegment)
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, Residue, ResidueGenericNumberEquivalent
 from common.models import WebLink, WebResource, Publication
@@ -224,10 +224,11 @@ class Command(BaseBuild):
         i = 1
 
         # Checking Na+ atom in xtal
-        parent_prot_conf = ProteinConformation.objects.get(protein=struct.protein)
+        # parent_prot_conf = ProteinConformation.objects.get(protein=struct.protein)
+        parent_prot_conf = struct.protein
         try:
-            wt_2x50 = Residue.objects.get(protein_conformation=parent_prot_conf, display_generic_number__label=dgn('2x50',parent_prot_conf))
-            wt_3x39 = Residue.objects.get(protein_conformation=parent_prot_conf, display_generic_number__label=dgn('3x39',parent_prot_conf))
+            wt_2x50 = Residue.objects.get(protein=parent_prot_conf, display_generic_number__label=dgn('2x50',parent_prot_conf))
+            wt_3x39 = Residue.objects.get(protein=parent_prot_conf, display_generic_number__label=dgn('3x39',parent_prot_conf))
             if wt_2x50.amino_acid=='D' and wt_3x39.amino_acid=='S':
                 if chain[wt_2x50.sequence_number].get_resname()=='ASP' and chain[wt_3x39.sequence_number].get_resname()=='SER':
                     v_2x50 = chain[wt_2x50.sequence_number]['OD1'].get_vector()
@@ -277,7 +278,7 @@ class Command(BaseBuild):
 
         parent_seq_protein = str(struct.protein.sequence)
         # print(structure.protein_conformation.protein.parent.entry_name)
-        rs = Residue.objects.filter(protein_conformation__protein=struct.protein).prefetch_related('display_generic_number','generic_number','protein_segment')
+        rs = Residue.objects.filter(protein=struct.protein).prefetch_related('display_generic_number','generic_number','protein_segment')
         #retrieve segment ends from wild type
         if struct.protein.entry_name in self.non_xtal_seg_ends:
             seg_ends = self.non_xtal_seg_ends[struct.protein.entry_name]
@@ -323,7 +324,7 @@ class Command(BaseBuild):
                 mapped_seq[i-gaps] = [r,ref_positions[i]]
 
         pdb = struct.pdb_data.pdb
-        protein_conformation=struct.protein
+        residue_protein=struct.protein
         temp = ''
         check = 0
         errors = 0
@@ -369,7 +370,7 @@ class Command(BaseBuild):
                         residue = Residue()
                         residue.sequence_number = int(check.strip())
                         residue.amino_acid = AA[residue_name.upper()]
-                        residue.protein_conformation = protein_conformation
+                        residue.protein = residue_protein
                         try:
                             seq_num_pos = pdbseq[chain][residue.sequence_number][0]
                         except:
@@ -654,7 +655,7 @@ class Command(BaseBuild):
                 chain = line[21]
                 residue_name = line[17:20].title() #use title to get GLY to Gly so it matches
 
-        bulked_res = Residue.objects.filter(protein_conformation__protein=struct.protein)
+        bulked_res = Residue.objects.filter(protein=struct.protein)
         bulked_rot = rotamer_data_bulk #Rotamer.objects.filter(structure__protein_conformation__protein=struct.protein_conformation.protein)
         rotamer_bulk = []
         for i,res in enumerate(bulked_res):
@@ -826,17 +827,7 @@ class Command(BaseBuild):
             struct.representative = representative
             struct.state = ps
             struct.author_state = ps
-
-            # protein conformation
-            try:
-                struct.protein = ProteinConformation.objects.get(protein=con)
-            except ProteinConformation.DoesNotExist:
-                self.logger.error('Protein conformation for construct {} does not exists'.format(con))
-                continue
-
-            if struct.state is not state:
-                ProteinConformation.objects.filter(protein=con).update(state=ps)
-
+            struct.protein = con
 
             pdb_path = sd['location']
             if not os.path.isfile(pdb_path):

@@ -13,7 +13,7 @@ from django.core.management.base import BaseCommand
 from django.core.management.color import no_style
 from django.db import IntegrityError, connection
 from common.tools import urlopen_with_retry, test_model_updates
-from protein.models import (Gene, Protein, ProteinAlias, ProteinConformation,
+from protein.models import (Gene, Protein, ProteinAlias,
                             ProteinFamily, ProteinSegment,
                             ProteinSequenceType, ProteinSource, ProteinState, Species)
 from residue.models import (Residue, ResidueGenericNumber,
@@ -107,8 +107,6 @@ class Command(BaseCommand):
                     # fetch protein for protein conformation
                     pr, c = Protein.objects.get_or_create(accession=row['AccessionID'])
 
-                    # fetch protein conformation
-                    pc, c = ProteinConformation.objects.get_or_create(protein_id=pr)
                 else:
                     continue
             except:
@@ -134,7 +132,7 @@ class Command(BaseCommand):
                 if not row[aln_pos] == '-':
 
                     try:
-                        Residue.objects.get_or_create(sequence_number=sequence_number, protein_conformation=pc,
+                        Residue.objects.get_or_create(sequence_number=sequence_number, protein=pr,
                                                       amino_acid=row[aln_pos], generic_number=rgn, display_generic_number=rgn,
                                                       protein_segment=ps)
                         sequence_number += 1
@@ -208,13 +206,11 @@ class Command(BaseCommand):
                     self.can_create_arrestins(pfm, rns, accession, up)
 
                     # add new can protein conformations
-                    try:
-                        arrestin = Protein.objects.get(accession=accession)
-
-                        pc, created = ProteinConformation.objects.get_or_create(protein=arrestin, state=state)
-                        self.logger.info('Created protein conformation')
-                    except Exception as msg:
-                        self.logger.error('Failed to create protein conformation', msg)
+                    # try:
+                    #     arrestin = Protein.objects.get(accession=accession)
+                    #     self.logger.info('Created protein conformation')
+                    # except Exception as msg:
+                    #     self.logger.error('Failed to create protein conformation', msg)
 
     def can_create_arrestins(self, family, residue_numbering_scheme, accession, uniprot):
         # get/create protein source

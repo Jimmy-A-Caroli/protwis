@@ -164,7 +164,7 @@ class Validation():
             atom_lists.append(atom_list)
 
         ### Fetching TM data from GPCRdb
-        TM_nums = Residue.objects.filter(protein_conformation__protein__entry_name=receptor, protein_segment__slug__in=['TM1', 'TM2', 'TM3', 'TM4', 'TM5', 'TM6', 'TM7']).values_list('sequence_number', flat=True)
+        TM_nums = Residue.objects.filter(protein__entry_name=receptor, protein_segment__slug__in=['TM1', 'TM2', 'TM3', 'TM4', 'TM5', 'TM6', 'TM7']).values_list('sequence_number', flat=True)
         TM_target_atom_list = [i for i in atom_lists[0] if i.get_parent().id[1] in TM_nums]
         TM_target_backbone_atom_list = [i for i in TM_target_atom_list if i.id in ['N','CA','C']]
         TM_atom_num = len(TM_target_atom_list)

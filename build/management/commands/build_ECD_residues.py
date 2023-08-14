@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import connection
 from django.db import IntegrityError
 
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinFamily, ProteinAlias,
+from protein.models import (Protein, ProteinState, ProteinFamily, ProteinAlias,
         ProteinSequenceType, Species, Gene, ProteinSource, ProteinSegment, ProteinAnomaly)
 
 from residue.models import (ResidueNumberingScheme, ResidueGenericNumber, Residue, ResidueGenericNumberEquivalent)
@@ -72,8 +72,7 @@ class Command(BaseBuild):
 
 		for entry_name, val in wt_annotation.items():
 			protein = Protein.objects.get(entry_name=entry_name)
-			prot_conf = ProteinConformation.objects.get(protein=protein)
-			residues = Residue.objects.filter(protein_conformation=prot_conf, protein_segment__slug__in=['N-term', 'TM1'])
+			residues = Residue.objects.filter(protein=protein, protein_segment__slug__in=['N-term', 'TM1'])
 			annotation_dict = OrderedDict()
 			anomalies_to_add = []
 			for anom, has_anom in self.anomalies[entry_name].items():

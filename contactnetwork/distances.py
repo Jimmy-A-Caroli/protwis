@@ -125,7 +125,7 @@ class Distances():
         # common_gn.sort()
 
 
-        res = Residue.objects.filter(protein_conformation__in=self.pconfs) \
+        res = Residue.objects.filter(protein__in=self.pconfs) \
                         .exclude(generic_number=None) \
                         .exclude(generic_number__label__contains='8x') \
                         .exclude(generic_number__label__contains='12x') \
@@ -143,7 +143,7 @@ class Distances():
         return common_gn
 
     def fetch_conserved_gns_tm(self):
-        res = Residue.objects.filter(protein_conformation__in=self.pconfs) \
+        res = Residue.objects.filter(protein__in=self.pconfs) \
                         .exclude(generic_number=None) \
                         .exclude(generic_number__label__contains='8x') \
                         .exclude(generic_number__label__contains='12x') \
@@ -431,7 +431,7 @@ class Distances():
                 temp.fetch_distances_tm()
 
 #                    .filter(generic_number__label__in=self.filter_gns) \
-                structure_gn = Residue.objects.filter(protein_conformation__in=temp.pconfs) \
+                structure_gn = Residue.objects.filter(protein__in=temp.pconfs) \
                     .exclude(generic_number=None) \
                     .exclude(generic_number__label__startswith='8x') \
                     .exclude(generic_number__label__startswith='12x') \

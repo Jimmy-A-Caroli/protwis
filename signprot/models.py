@@ -1,5 +1,5 @@
 from django.db import models
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from structure.models import StructureStabilizingAgent, PdbData
 from common.models import WebLink, Publication
 
@@ -24,7 +24,7 @@ class SignprotStructure(models.Model):
 class SignprotStructureExtraProteins(models.Model):
     structure = models.ForeignKey('SignprotStructure', on_delete=models.CASCADE, null=True, related_name='extra_proteins')
     wt_protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True)
-    protein_conformation = models.ForeignKey('protein.ProteinConformation', on_delete=models.CASCADE, null=True)
+    # protein_conformation = models.ForeignKey('protein.ProteinConformation', on_delete=models.CASCADE, null=True)
     display_name = models.CharField(max_length=20)
     note = models.CharField(max_length=50, null=True)
     chain = models.CharField(max_length=1)

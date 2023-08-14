@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 
-from protein.models import ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 
 import os
@@ -43,14 +43,13 @@ class Command(BaseCommand):
 
     def update_loops(self):
         # fetch all wild-type proteins
-        pcs = ProteinConformation.objects.filter(protein__sequence_type__slug='wt', protein__species_id=1,
-            state__slug=settings.DEFAULT_PROTEIN_STATE).select_related('protein')
+        pcs = Protein.objects.filter(sequence_type__slug='wt', species_id=1)
 
         for pc in pcs:
             export_data = {}
 
             # get reference position file to update
-            ref_file_path = os.sep.join([self.export_dir_path, pc.protein.entry_name + '.yaml'])
+            ref_file_path = os.sep.join([self.export_dir_path, pc.entry_name + '.yaml'])
             try:
                 with open(ref_file_path) as ref_file:
                     export_data = yaml.load(ref_file, Loader=yaml.FullLoader)
@@ -65,16 +64,16 @@ class Command(BaseCommand):
             icl1_ref = False
             ecl1_ref = False
             icl2_ref = False
-            rs = Residue.objects.filter(protein_conformation=pc).select_related('generic_number')
+            rs = Residue.objects.filter(protein=pc).select_related('generic_number')
             for res_num, r in enumerate(rs):
-                if not pc.protein.family.slug.startswith('003'):
+                if not pc.family.slug.startswith('003'):
                     # ICL1
                     if r.generic_number and r.generic_number.label == '1x50':
                         icl1_ref = r.sequence_number
                     if icl1_ref and r.protein_segment.id == 3 and r.sequence_number == icl1_ref+13:
                         ordered_export_data['12x50'] = r.sequence_number
 
-                if pc.protein.family.slug.startswith('001'):
+                if pc.family.slug.startswith('001'):
                     # ECL1
                     try:
                         res_plus_two = rs[res_num+2]
@@ -93,9 +92,9 @@ class Command(BaseCommand):
 
             # ECL2 for all classes
             try:
-                tm3_cys = Residue.objects.get(protein_conformation=pc, generic_number__label='3x25')
+                tm3_cys = Residue.objects.get(proteinn=pc, generic_number__label='3x25')
                 if tm3_cys.amino_acid == 'C':
-                    ecl_2_residues = Residue.objects.filter(protein_conformation=pc, protein_segment_id=9)
+                    ecl_2_residues = Residue.objects.filter(protein=pc, protein_segment_id=9)
                     for residue in ecl_2_residues:
                         if residue.amino_acid == 'C':
                             ordered_export_data['45x50'] = residue.sequence_number

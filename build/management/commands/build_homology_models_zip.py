@@ -194,19 +194,19 @@ class Command(BaseBuild):
             m_s = self.get_structures(main_structure)
             r_prot = Protein.objects.get(entry_name=gpcr_prot)
             s_prot = Protein.objects.get(entry_name=sign_prot)
-            StructureComplexModel.objects.get_or_create(receptor_protein=r_prot, sign_protein=s_prot, main_template=m_s, pdb_data=pdb, version=build_date, stats_text=stats_text)
+            Structure.objects.get_or_create(protein=r_prot, signprot_complex=s_prot, pdb_data=pdb, publication_date=build_date, stats_text=stats_text)
         else:
             s_state = ProteinState.objects.get(name=state)
             m_s = self.get_structures(main_structure)
             prot = Protein.objects.get(entry_name=gpcr_prot)
-            sm, _ = Structure.objects.get_or_create(protein=prot, state=s_state, pdb_data=pdb, publication_date=build_date, structure_type='af-gpcr', preferred_chain='A')
+            sm, _ = Structure.objects.get_or_create(protein=prot, state=s_state, pdb_data=pdb, publication_date=build_date, structure_type__slug='af-gpcr', preferred_chain='A')
             if main_structure=='AF':
                 p = PDB.PDBParser().get_structure('model', os.sep.join([path, modelname, modelname+'.pdb']))[0]
                 resis = []
                 for chain in p:
                     for res in chain:
                         plddt = res['C'].get_bfactor()
-                        res_obj = Residue.objects.get(protein_conformation__protein=prot, sequence_number=res.get_id()[1])
+                        res_obj = Residue.objects.get(protein=prot, sequence_number=res.get_id()[1])
                         r = StructurepLDDT(structure_model=sm, residue=res_obj, pLDDT=plddt)
                         resis.append(r)
                 StructurepLDDT.objects.bulk_create(resis)

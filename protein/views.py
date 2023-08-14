@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.urls import reverse
 
-from protein.models import Protein, ProteinConformation, ProteinAlias, ProteinFamily, Gene, ProteinSegment
+from protein.models import Protein, ProteinAlias, ProteinFamily, Gene, ProteinSegment
 from residue.models import Residue
 from structure.models import Structure, StructureExtraProteins
 # from structure.views import StructureBrowser
@@ -72,9 +72,6 @@ def detail(request, slug):
         pf = pf.parent
     families.reverse()
 
-    # get default conformation
-    pc = ProteinConformation.objects.get(protein=p)
-
     # get protein aliases
     aliases = ProteinAlias.objects.filter(protein=p).values_list('name', flat=True)
 
@@ -91,7 +88,7 @@ def detail(request, slug):
     structures = Structure.objects.filter(protein__parent=p)
 
     # get residues
-    residues = Residue.objects.filter(protein_conformation=pc).order_by('sequence_number').prefetch_related(
+    residues = Residue.objects.filter(protein=p).order_by('sequence_number').prefetch_related(
         'protein_segment', 'generic_number', 'display_generic_number')
 
     mutations = MutationExperiment.objects.filter(protein=p)
@@ -468,7 +465,7 @@ def AlignIsoformWildtype(request):
     data['isoforms'] = {}
     protein = Protein.objects.get(entry_name__startswith=p.lower(), sequence_type__slug='wt', species__common_name='Human')
     parent_seq = protein.sequence
-    rs = Residue.objects.filter(protein_conformation__protein=protein).prefetch_related('protein_segment','display_generic_number','generic_number')
+    rs = Residue.objects.filter(protein=protein).prefetch_related('protein_segment','display_generic_number','generic_number')
     data['res'] = {}
     data['same'] = "true"
     for r in rs:

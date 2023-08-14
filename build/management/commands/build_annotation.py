@@ -8,7 +8,7 @@ from django.db import transaction
 from build.management.commands.base_build import Command as BaseBuild
 from residue.models import Residue
 from residue.functions import *
-from protein.models import Protein, ProteinConformation, ProteinSegment, ProteinFamily
+from protein.models import Protein, ProteinSegment, ProteinFamily
 
 from common.tools import test_model_updates
 from Bio import pairwise2
@@ -79,7 +79,7 @@ class Command(BaseBuild):
     all_segments = {ps.slug: ps for ps in ProteinSegment.objects.all()}  # all segments dict for faster lookups
     schemes = parse_scheme_tables(generic_numbers_source_dir)
 
-    pconfs = list(ProteinConformation.objects.filter(protein__sequence_type__slug='wt').all())
+    pconfs = list(Protein.objects.filter(sequence_type__slug='wt').all())
     pw_aln_error = ['celr3_mouse','celr3_human','gpr98_human']
 
     track_rf_annotations = {}
@@ -271,7 +271,7 @@ class Command(BaseBuild):
     def check_if_residues(self):
         fail = False
         for p in self.pconfs:
-            if Residue.objects.filter(protein_conformation=p).count():
+            if Residue.objects.filter(proteinn=p).count():
                 pass
             else:
                 print("No residues for ",p)
@@ -311,7 +311,7 @@ class Command(BaseBuild):
             # print(p.protein.entry_name)
             # continue
             # Residue.objects.filter(protein_conformation=p).delete()
-            if Residue.objects.filter(protein_conformation=p).count():
+            if Residue.objects.filter(protein=p).count():
                 # print(counter,entry_name,"already done")
                 continue
             else:
@@ -491,7 +491,7 @@ class Command(BaseBuild):
                     print('failed 2nd try')
                 self.logger.error('Error saving residues for {}'.format(pconf))
 
-            rs = Residue.objects.filter(protein_conformation=pconf).order_by('sequence_number')
+            rs = Residue.objects.filter(protein=pconf).order_by('sequence_number')
 
             ThroughModel = Residue.alternative_generic_numbers.through
             bulk = []

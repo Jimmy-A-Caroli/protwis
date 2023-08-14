@@ -181,7 +181,7 @@ class Command(BaseCommand):
                                 res_gn = pdb[segment][col[1]]
 
                                 try:
-                                    res = Residue.objects.get(protein_conformation=pc, generic_number__label=res_gn)
+                                    res = Residue.objects.get(protein=pc, generic_number__label=res_gn)
                                     export_value = pdbs[pdb_code][segment][col[0]] = res.amino_acid + str(res.sequence_number)
                                     found += 1
                                 except Residue.DoesNotExist:
@@ -196,7 +196,7 @@ class Command(BaseCommand):
                                             gen_index += 1
                                             search_gn = sgn[0] + 'x' + str(gen_index)
                                             try:
-                                                res = Residue.objects.get(protein_conformation=pc,
+                                                res = Residue.objects.get(protein=pc,
                                                     generic_number__label=search_gn)
                                                 seq_num = res.sequence_number - (gen_index - ori_gen_index)
                                                 aa = pc.protein.parent.sequence[seq_num-1]
@@ -213,7 +213,7 @@ class Command(BaseCommand):
                                             gen_index -= 1
                                             search_gn = sgn[0] + 'x' + str(gen_index)
                                             try:
-                                                res = Residue.objects.get(protein_conformation=pc,
+                                                res = Residue.objects.get(protein=pc,
                                                     generic_number__label=search_gn)
                                                 seq_num = res.sequence_number + (ori_gen_index - gen_index)
                                                 aa = pc.protein.parent.sequence[seq_num-1]

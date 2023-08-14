@@ -87,7 +87,7 @@ class InteractingPair:
         # Temporary mapping G-proteins using static variable mapping
         # G-prot numbering_schemes
         gprot = self.mapping[pdb][self.res2.id[1]];
-        selected = Residue.objects.filter(sequence_number=gprot, protein_conformation__protein__entry_name="gnas2_human")
+        selected = Residue.objects.filter(sequence_number=gprot, protein__entry_name="gnas2_human")
         gprot_gn = selected[0].display_generic_number
         text = '[\'{0}\',\'{1}\',{2},\'{3}\',\'{4}\',\'{5}\',{6},\'{7}\', ["'.format(self.res1.parent.id, three_to_one(self.res1.get_resname()), self.res1.id[1], generic, self.res2.parent.id, three_to_one(self.res2.get_resname()), self.res2.id[1], gprot_gn)
         first = True

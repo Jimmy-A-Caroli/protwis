@@ -11,7 +11,7 @@ Alignment = getattr(__import__(
     ), 'Alignment')
 
 from common.definitions import AA_ZSCALES, AMINO_ACIDS, AMINO_ACID_GROUPS, AMINO_ACID_GROUP_NAMES, AMINO_ACID_GROUP_PROPERTIES, ZSCALES
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 from signprot.models import SignprotComplex
 
@@ -619,7 +619,7 @@ class SequenceSignature:
         Args:
             ref_prot ([Protein]): A protein to suggest the mutations for.
         """
-        residues =  { x.generic_number.label: x for x in Residue.objects.filter(protein_conformation=ref_prot) if x.generic_number is not None }
+        residues =  { x.generic_number.label: x for x in Residue.objects.filter(protein=ref_prot) if x.generic_number is not None }
         output = OrderedDict() # A list of lists in the values
         for s, gns in self.common_segments.items():
             for pos, resi in enumerate(gns):
@@ -1287,13 +1287,13 @@ class SignatureMatch():
             complex_objs = SignprotComplex.objects.prefetch_related('structure__protein').values_list('structure__protein__parent_id', flat=True)
             class_proteins = class_proteins.exclude(id__in=complex_objs)
 
-        class_a_pcf = ProteinConformation.objects.order_by(
-            'protein__family__slug',
-            'protein__entry_name'
+        class_a_pcf = Protein.objects.order_by(
+            'family__slug',
+            'entry_name'
             ).filter(
-                protein__in=class_proteins,
-                protein__sequence_type__slug='wt'
-            ).exclude(protein__entry_name__endswith='-consensus').prefetch_related('protein','protein__family__parent','protein__species')
+                pk__in=class_proteins,
+                sequence_type__slug='wt'
+            ).exclude(entry_name__endswith='-consensus').prefetch_related('family__parent','species')
 
         relevant_gns_total = []
         for segment in  self.relevant_segments:
@@ -1301,13 +1301,13 @@ class SignatureMatch():
                 relevant_gns_total.append(pos)
 
         resi = Residue.objects.filter(
-            protein_conformation__in=class_a_pcf,
+            protein__in=class_a_pcf,
             generic_number__label__in=relevant_gns_total
-            ).prefetch_related('generic_number','protein_conformation')
+            ).prefetch_related('generic_number','protein')
         resi_dict_all = {}
         for r in resi:
             if r.generic_number:
-                pcf = r.protein_conformation.pk
+                pcf = r.protein.pk
                 if pcf not in resi_dict_all:
                     resi_dict_all[pcf] = {}
                 resi_dict_all[pcf][r.generic_number.label] = r
@@ -1337,13 +1337,13 @@ class SignatureMatch():
         if signprot:
             seq_type_slug.append('mod')
 
-        pcfs = ProteinConformation.objects.order_by(
-            'protein__family__slug',
-            'protein__entry_name'
+        pcfs = Protein.objects.order_by(
+            'family__slug',
+            'entry_name'
             ).filter(
-                protein__in=protein_set,
-                protein__sequence_type__slug__in=seq_type_slug
-                ).exclude(protein__entry_name__endswith='-consensus').prefetch_related('protein')
+                pk__in=protein_set,
+                sequence_type__slug__in=seq_type_slug
+                ).exclude(entry_name__endswith='-consensus')
 
         relevant_gns_total = []
         for segment in  self.relevant_segments:
@@ -1351,13 +1351,13 @@ class SignatureMatch():
                 relevant_gns_total.append(pos)
 
         resi = Residue.objects.filter(
-            protein_conformation__in=pcfs,
+            protein__in=pcfs,
             generic_number__label__in=relevant_gns_total
-            ).prefetch_related('generic_number','protein_conformation')
+            ).prefetch_related('generic_number','protein')
         resi_dict_all = {}
         for r in resi:
             if r.generic_number:
-                pcf = r.protein_conformation.pk
+                pcf = r.protein.pk
                 if pcf not in resi_dict_all:
                     resi_dict_all[pcf] = {}
                 resi_dict_all[pcf][r.generic_number.label] = r
@@ -1390,7 +1390,7 @@ class SignatureMatch():
                 for idx, pos in enumerate(self.relevant_gn[self.schemes[0][0]][segment].keys()):
                     relevant_gns_total.append(pos)
             resi = Residue.objects.filter(
-                protein_conformation=pcf,
+                protein=pcf,
                 generic_number__label__in=relevant_gns_total
                 ).prefetch_related('generic_number')
             resi_dict = {}

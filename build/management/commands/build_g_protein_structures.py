@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db import connection
 from django.db import IntegrityError
 
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinFamily, ProteinAlias,
+from protein.models import (Protein, ProteinState, ProteinFamily, ProteinAlias,
         ProteinSequenceType, Species, Gene, ProteinSource, ProteinSegment)
 from residue.models import (ResidueNumberingScheme, ResidueGenericNumber, Residue, ResidueGenericNumberEquivalent)
 from signprot.models import SignprotComplex, SignprotStructure, SignprotStructureExtraProteins
@@ -63,8 +63,7 @@ class Command(BaseBuild):
         startTime = datetime.datetime.now()
         self.options = options
         if self.options["purge_complex"]:
-            Residue.objects.filter(protein_conformation__protein__entry_name__endswith="_a", protein_conformation__protein__family__parent__parent__name="Alpha").delete()
-            ProteinConformation.objects.filter(protein__entry_name__endswith="_a", protein__family__parent__parent__name="Alpha").delete()
+            Residue.objects.filter(protein__entry_name__endswith="_a", protein__family__parent__parent__name="Alpha").delete()
             Protein.objects.filter(entry_name__endswith="_a", family__parent__parent__name="Alpha").delete()
             self.tracker = {}
             test_model_updates(self.all_models, self.tracker, initialize=True)
@@ -113,7 +112,7 @@ class Command(BaseBuild):
         #         count.value +=1
         for sc in scs:
             # Building protein and protconf objects for g protein structure in complex
-            self.logger.info("Protein, ProteinConformation and Residue build for alpha subunit of {} is building".format(sc))
+            self.logger.info("Protein and Residue build for alpha subunit of {} is building".format(sc))
             try:
                 # Alpha subunit
                 try:
@@ -131,14 +130,6 @@ class Command(BaseBuild):
                     alpha_protein.source = ProteinSource.objects.get(name="OTHER")
                     alpha_protein.species = sc.protein.species
                     alpha_protein.save()
-
-                try:
-                    alpha_protconf = ProteinConformation.objects.get(protein__entry_name=sc.structure.pdb_code.index.lower()+"_a")
-                except:
-                    alpha_protconf = ProteinConformation()
-                    alpha_protconf.protein = alpha_protein
-                    alpha_protconf.state = ProteinState.objects.get(slug="active")
-                    alpha_protconf.save()
 
                 pdbp = PDBParser(PERMISSIVE=True, QUIET=True)
                 s = pdbp.get_structure("struct", StringIO(sc.structure.pdb_data.pdb))
@@ -159,7 +150,7 @@ class Command(BaseBuild):
                     print('Structure seq:')
                     print(structure_seq)
 
-                resis = Residue.objects.filter(protein_conformation__protein=sc.protein)
+                resis = Residue.objects.filter(protein=sc.protein)
                 num_i = 0
                 temp_seq2 = ""
                 pdb_num_dict = OrderedDict()
@@ -247,7 +238,7 @@ class Command(BaseBuild):
                 # Check if HN is mutated to GNAI1 for the scFv16 stabilizer
                 if sc.protein.entry_name!='gnai1_human' and len(remaining_mismatches)>0:
                     target_HN = resis.filter(protein_segment__slug='HN')
-                    gnai1_HN = Residue.objects.filter(protein_conformation__protein__entry_name='gnai1_human', protein_segment__slug='HN')
+                    gnai1_HN = Residue.objects.filter(protein__entry_name='gnai1_human', protein_segment__slug='HN')
                     pdb_HN_seq = ''
                     for num, val in pdb_num_dict.items():
                         if num<=target_HN.reverse()[0].sequence_number:
@@ -427,19 +418,19 @@ class Command(BaseBuild):
                             else:
                                 pdb_num_dict[r[0].get_id()[1]][1] = pdb_wt_dict[r[0]]
                         if sc.structure.pdb_code.index=='7JVQ':
-                            pdb_num_dict[198][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=346)
-                            pdb_num_dict[235][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=383)
+                            pdb_num_dict[198][1] = Residue.objects.get(protein=sc.protein, sequence_number=346)
+                            pdb_num_dict[235][1] = Residue.objects.get(protein=sc.protein, sequence_number=383)
                         elif sc.structure.pdb_code.index=='6PB0':
-                            pdb_num_dict[205][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=205)
+                            pdb_num_dict[205][1] = Residue.objects.get(protein=sc.protein, sequence_number=205)
                         elif sc.structure.pdb_code.index=='7RYC':
-                            pdb_num_dict[1198][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=314)
-                            pdb_num_dict[1110][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=230)
+                            pdb_num_dict[1198][1] = Residue.objects.get(protein=sc.protein, sequence_number=314)
+                            pdb_num_dict[1110][1] = Residue.objects.get(protein=sc.protein, sequence_number=230)
                         elif sc.structure.pdb_code.index=='7P00':
-                            pdb_num_dict[272][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=271)
+                            pdb_num_dict[272][1] = Residue.objects.get(protein=sc.protein, sequence_number=271)
                         elif sc.structure.pdb_code.index in ['7EIB','7F2O']:
-                            pdb_num_dict[256][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=271)
+                            pdb_num_dict[256][1] = Residue.objects.get(protein=sc.protein, sequence_number=271)
                         elif sc.structure.pdb_code.index in ['7F9Y','7F9Z','7MBY']:
-                            pdb_num_dict[289][1] = Residue.objects.get(protein_conformation__protein=sc.protein, sequence_number=271)
+                            pdb_num_dict[289][1] = Residue.objects.get(protein=sc.protein, sequence_number=271)
 
                 ### Custom alignment fix for 6WHA, 7MBY mini-Gq/Gi/Gs chimera
                 elif sc.structure.pdb_code.index in ['6WHA']:
@@ -480,7 +471,7 @@ class Command(BaseBuild):
                         res_obj.amino_acid = AA[val[0].get_resname()]
                         res_obj.display_generic_number = val[1].display_generic_number
                         res_obj.generic_number = val[1].generic_number
-                        res_obj.protein_conformation = alpha_protconf
+                        res_obj.protein = alpha_protein
                         res_obj.protein_segment = val[1].protein_segment
                         res_obj.save()
                         rot = create_structure_rotamer(val[0], res_obj, sc.structure)
@@ -490,11 +481,11 @@ class Command(BaseBuild):
                 if self.options["debug"]:
                     pprint.pprint(pdb_num_dict)
                 Rotamer.objects.bulk_create(bulked_rotamers)
-                self.logger.info("Protein, ProteinConformation and Residue build for alpha subunit of {} is finished".format(sc))
+                self.logger.info("Protein and Residue build for alpha subunit of {} is finished".format(sc))
             except Exception as msg:
                 if self.options["debug"]:
                     print("Error: ", sc, msg)
-                self.logger.info("Protein, ProteinConformation and Residue build for alpha subunit of {} has failed".format(sc))
+                self.logger.info("Protein and Residue build for alpha subunit of {} has failed".format(sc))
 
     @staticmethod
     def get_next_presumed_cgn(res):
@@ -517,7 +508,6 @@ class Command(BaseBuild):
             alpha_sep = SignprotStructureExtraProteins()
             alpha_sep.wt_protein = alpha_prot
             alpha_sep.structure = ss
-            alpha_sep.protein_conformation = ProteinConformation.objects.get(protein=alpha_prot)
             alpha_sep.display_name = self.display_name_lookup[alpha_prot.family.name]
             alpha_sep.note = None
             alpha_sep.chain = data["alpha_chain"]
@@ -534,7 +524,6 @@ class Command(BaseBuild):
             beta_sep = SignprotStructureExtraProteins()
             beta_sep.wt_protein = beta_prot
             beta_sep.structure = ss
-            beta_sep.protein_conformation = ProteinConformation.objects.get(protein=beta_prot)
             beta_sep.display_name = self.display_name_lookup[beta_prot.name]
             beta_sep.note = None
             beta_sep.chain = data["beta_chain"]
@@ -547,7 +536,6 @@ class Command(BaseBuild):
             gamma_sep = SignprotStructureExtraProteins()
             gamma_sep.wt_protein = gamma_prot
             gamma_sep.structure = signprot_structure
-            gamma_sep.protein_conformation = ProteinConformation.objects.get(protein=gamma_prot)
             gamma_sep.display_name = self.display_name_lookup[gamma_prot.name]
             gamma_sep.note = None
             gamma_sep.chain = data["gamma_chain"]

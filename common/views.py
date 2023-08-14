@@ -13,7 +13,7 @@ Alignment = getattr(__import__('common.alignment_' + settings.SITE_NAME, fromlis
 
 from common.selection import SimpleSelection, Selection, SelectionItem
 from ligand.models import AssayExperiment, BiasedData, BalancedLigands
-from structure.models import Structure, StructureComplexModel
+from structure.models import Structure
 from protein.models import Protein, ProteinFamily, ProteinSegment, Species, ProteinSource, ProteinSet, ProteinCouplings
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, ResidueGenericNumberEquivalent, ResiduePositionSet, Residue
 from interaction.forms import PDBform
@@ -1234,13 +1234,13 @@ def AddToSelection(request):
         elif selection_subtype == 'structure_complex_receptor':
             receptor, signprot = selection_id.split('-')
             try:
-                scm = StructureComplexModel.objects.get(receptor_protein__entry_name=receptor, sign_protein__entry_name=signprot)
-            except StructureComplexModel.DoesNotExist:
-                scm = StructureComplexModel.objects.get(receptor_protein__parent__entry_name=selection_id, sign_protein__entry_name=signprot)
+                scm = Structure.objects.get(structure_type__slug='af-complex', protein__entry_name=receptor, signprot_complex__protein__entry_name=signprot)
+            except Structure.DoesNotExist:
+                scm = Structure.objects.get(structure_type__slug='af-complex', protein__parent__entry_name=selection_id, signprot_complex__protein__entry_name=signprot)
             o.append(scm)
 
         elif selection_subtype == 'structure_complex_signprot':
-            o.append(StructureComplexModel.objects.filter(sign_protein__entry_name=selection_id)[0])
+            o.append(Structure.objects.filter(structure_type__slug='af-complex', signprot_complex__protein__entry_name=selection_id)[0])
 
         elif selection_subtype == 'structure_model':
             state = selection_id.split('_')[-1]
@@ -1644,7 +1644,7 @@ def SelectAlignableResidues(request):
     return render(request, 'common/selection_lists.html', selection.dict('segments'))
 
 def get_protein_segment_ids(protein, seg_ids_all):
-    seg_ids = Residue.objects.filter(protein_conformation__protein=protein).order_by('protein_segment__id').distinct('protein_segment__id').values_list('protein_segment', flat=True)
+    seg_ids = Residue.objects.filter(protein=protein).order_by('protein_segment__id').distinct('protein_segment__id').values_list('protein_segment', flat=True)
     for s in seg_ids:
         if s not in seg_ids_all:
             seg_ids_all.append(s)

@@ -125,7 +125,7 @@ class Command(BaseBuild):
         dynamine, created = ResidueDataType.objects.get_or_create(
             slug=slugify("dynamine"), name="Dynamine Prediction")
         residues = Residue.objects.filter(
-            protein_conformation__protein=protein).all()
+            protein=protein).all()
 
         c = 0
         if "results" in r and protein.entry_name in r["results"]["predictions"]:

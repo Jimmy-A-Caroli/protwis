@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError
 from common.tools import test_model_updates
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 from structure.models import Structure
 from construct.models import (Construct,Crystallization,CrystallizationLigandConc,ChemicalType,Chemical,ChemicalConc,ChemicalList,

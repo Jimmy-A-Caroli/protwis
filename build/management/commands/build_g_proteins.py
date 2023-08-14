@@ -28,7 +28,7 @@ from django.utils.text import slugify
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management.color import no_style
 from django.db import IntegrityError, connection
-from protein.models import (Gene, Protein, ProteinAlias, ProteinConformation,
+from protein.models import (Gene, Protein, ProteinAlias,
                             ProteinFamily, Species, ProteinSegment,
                             ProteinSequenceType, ProteinSource, ProteinState)
 from residue.models import (Residue, ResidueGenericNumber,
@@ -128,8 +128,8 @@ class Command(BaseCommand):
 
                 human_and_orths = self.cgn_add_proteins()
                 self.logger.info('PASS: cgn_add_proteins')
-                self.update_protein_conformation(human_and_orths)
-                self.logger.info('PASS: update_protein_conformation')
+                # self.update_protein_conformation(human_and_orths)
+                # self.logger.info('PASS: update_protein_conformation')
                 self.create_barcode()
                 self.logger.info('PASS: create_barcode')
                 self.add_other_subunits()
@@ -163,9 +163,8 @@ class Command(BaseCommand):
         fam = Protein.objects.filter(family=proteinfamily)
         for prot in fam:
             for i, j in enumerate(prot.sequence):
-                prot_conf = ProteinConformation.objects.get(protein=prot)
                 r = Residue(sequence_number=i + 1, amino_acid=j, display_generic_number=None, generic_number=None,
-                            protein_conformation=prot_conf, protein_segment=None)
+                            protein=prot, protein_segment=None)
                 bulk.append(r)
                 if len(bulk) % 10000 == 0:
                     self.logger.info('Inserted bulk {} (Index:{})'.format(len(bulk), i))
@@ -199,8 +198,6 @@ class Command(BaseCommand):
                                                           sequence=up['sequence'], family=proteinfamily, parent=None,
                                                           residue_numbering_scheme=None, sequence_type=pst,
                                                           source=source, species=species)
-            state = ProteinState.objects.get(slug='active')
-            prot_conf, created = ProteinConformation.objects.get_or_create(protein=prot, state=state)
 
     def fetch_missing_uniprot_files(self):
         """
@@ -395,11 +392,11 @@ class Command(BaseCommand):
 
     def purge_other_subunit_residues(self):
         try:
-            Residue.objects.filter(protein_conformation__protein__family__parent__name="Beta").delete()
+            Residue.objects.filter(protein__family__parent__name="Beta").delete()
         except:
             self.logger.warning('Existing Residue data cannot be deleted')
         try:
-            Residue.objects.filter(protein_conformation__protein__family__parent__name="Gamma").delete()
+            Residue.objects.filter(protein__family__parent__name="Gamma").delete()
         except:
             self.logger.warning('Existing Residue data cannot be deleted')
 
@@ -428,7 +425,7 @@ class Command(BaseCommand):
                 continue
 
             try:
-                cgn = Residue.objects.get(protein_conformation__protein=p, display_generic_number__label=CGN)
+                cgn = Residue.objects.get(protein=p, display_generic_number__label=CGN)
             except:
                 # self.logger.warning('No residue number (GAP - position) for', CGN, "in ", p.name, "")
                 continue
@@ -483,9 +480,7 @@ class Command(BaseCommand):
                 # fetch protein for protein conformation
                 pr, c = Protein.objects.get_or_create(accession=row['Uniprot_ACC'])
 
-                # fetch protein conformation
-                pc, c = ProteinConformation.objects.get_or_create(protein_id=pr)
-                temp['proteins'][row['Uniprot_ACC']] = [pr, pc]
+                temp['proteins'][row['Uniprot_ACC']] = [pr]
 
             # fetch residue generic number
             rgnsp = []
@@ -516,7 +511,7 @@ class Command(BaseCommand):
                 temp['segment'][row['CGN'].split(".")[1]] = ps
 
             try:
-                bulk_r = Residue(sequence_number=row['Position'], protein_conformation=pc, amino_acid=row['Residue'],
+                bulk_r = Residue(sequence_number=row['Position'], protein=pr, amino_acid=row['Residue'],
                                  generic_number=rgn, display_generic_number=rgn, protein_segment=ps)
                 # self.logger.info("Residues added to db")
                 bulk.append(bulk_r)
@@ -542,19 +537,19 @@ class Command(BaseCommand):
         self.logger.info('Inserted bulk {} (Index:{})'.format(len(bulk), index))
         Residue.objects.bulk_create(bulk)
 
-    def update_protein_conformation(self, gprotein_list):
-        # gprotein_list=['gnaz_human','gnat3_human', 'gnat2_human', 'gnat1_human', 'gnas2_human', 'gnaq_human', 'gnao_human', 'gnal_human', 'gnai3_human', 'gnai2_human','gnai1_human', 'gna15_human', 'gna14_human', 'gna12_human', 'gna11_human', 'gna13_human']
-        state = ProteinState.objects.get(slug='active')
-
-        # add new cgn protein conformations
-        for g in gprotein_list:
-            gp = Protein.objects.get(accession=g)
-
-            try:
-                pc, created = ProteinConformation.objects.get_or_create(protein=gp, state=state)
-                self.logger.info('Created protein conformation')
-            except:
-                self.logger.error('Failed to create protein conformation')
+    # def update_protein_conformation(self, gprotein_list):
+    #     # gprotein_list=['gnaz_human','gnat3_human', 'gnat2_human', 'gnat1_human', 'gnas2_human', 'gnaq_human', 'gnao_human', 'gnal_human', 'gnai3_human', 'gnai2_human','gnai1_human', 'gna15_human', 'gna14_human', 'gna12_human', 'gna11_human', 'gna13_human']
+    #     state = ProteinState.objects.get(slug='active')
+    #
+    #     # add new cgn protein conformations
+    #     for g in gprotein_list:
+    #         gp = Protein.objects.get(accession=g)
+    #
+    #         try:
+    #             pc, created = ProteinConformation.objects.get_or_create(protein=gp, state=state)
+    #             self.logger.info('Created protein conformation')
+    #         except:
+    #             self.logger.error('Failed to create protein conformation')
 
         self.update_genericresiduenumber_and_proteinsegments(gprotein_list)
 

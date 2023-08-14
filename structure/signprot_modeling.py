@@ -1,4 +1,4 @@
-from protein.models import Protein, ProteinConformation, ProteinSegment, ProteinFamily
+from protein.models import Protein, ProteinSegment, ProteinFamily
 from residue.models import Residue
 from structure.models import *
 from structure.functions import update_template_source, compare_and_update_template_source
@@ -103,7 +103,7 @@ class SignprotModeling():
             self.target_signprot = Protein.objects.get(entry_name=self.signprot)
         else:
             self.target_signprot = self.signprot_complex.protein
-        self.signprot_protconf = ProteinConformation.objects.get(protein=self.target_signprot)
+        self.signprot_protconf = self.target_signprot
         sign_a = GProteinAlignment()
         sign_a.run_alignment(self.target_signprot, structure_signprot)
         signprot_pdb_array = parse.create_g_alpha_pdb_array(self.signprot_complex)
@@ -114,7 +114,7 @@ class SignprotModeling():
         sign_a = self.match_alignment_to_pdb_array(sign_a, signprot_pdb_array)
 
         # Initiate complex part of template source
-        source_resis = Residue.objects.filter(protein_conformation__protein=self.target_signprot)
+        source_resis = Residue.objects.filter(protein=self.target_signprot)
         for res in source_resis:
             if res.protein_segment.slug not in self.template_source:
                 self.template_source[res.protein_segment.slug] = OrderedDict()
@@ -186,7 +186,7 @@ class SignprotModeling():
                 signprot_pdb_array[seg] = new_seg_dict
 
             # remove h1ha residues as those are usually distorted
-            h1ha = Residue.objects.filter(protein_conformation__protein=alt_signprot_complex.protein, protein_segment__slug='h1ha')
+            h1ha = Residue.objects.filter(protein=alt_signprot_complex.protein, protein_segment__slug='h1ha')
             h1ha_dict = OrderedDict()
             for h in h1ha:
                 h1ha_dict[h.generic_number.label] = 'x'
@@ -249,9 +249,9 @@ class SignprotModeling():
             for template in alpha_templates:
                 try:
                     struct_prot = Protein.objects.get(entry_name=template.pdb_code.index.lower()+'_a')
-                    start_res = Residue.objects.get(protein_conformation__protein=struct_prot, display_generic_number__label=start_gn)
-                    end_res = Residue.objects.get(protein_conformation__protein=struct_prot, display_generic_number__label=end_gn)
-                    resis = Residue.objects.filter(protein_conformation__protein=struct_prot, sequence_number__in=list(range(start_res.sequence_number, end_res.sequence_number+1)))
+                    start_res = Residue.objects.get(protein=struct_prot, display_generic_number__label=start_gn)
+                    end_res = Residue.objects.get(protein=struct_prot, display_generic_number__label=end_gn)
+                    resis = Residue.objects.filter(protein=struct_prot, sequence_number__in=list(range(start_res.sequence_number, end_res.sequence_number+1)))
                 except Residue.DoesNotExist:
                     continue
                 target_range = len(range(i[0]-4,i[1]+5))
@@ -310,13 +310,13 @@ class SignprotModeling():
                 loop_length = len(sign_a.reference_dict[r_seg])
                 ref_loop = [i for i in list(sign_a.reference_dict[r_seg].values()) if i not in ['x','-']]
                 ref_keys = [i for i in list(sign_a.reference_dict[r_seg].keys()) if i not in ['x','-']]
-                ref_loop_residues = Residue.objects.filter(protein_conformation__protein=self.target_signprot, protein_segment__slug=r_seg)
+                ref_loop_residues = Residue.objects.filter(protein=self.target_signprot, protein_segment__slug=r_seg)
                 temp_loop = [i for i in list(sign_a.template_dict[t_seg].values()) if i not in ['x','-']]
                 temp_keys = [i for i in list(sign_a.template_dict[t_seg].keys()) if i not in ['x','-']]
                 if alt_complex_struct and r_seg in segs_for_alt_complex_struct:
-                    temp_loop_residues = Residue.objects.filter(protein_conformation__protein=alt_signprot_complex.protein, protein_segment__slug=r_seg)
+                    temp_loop_residues = Residue.objects.filter(protein=alt_signprot_complex.protein, protein_segment__slug=r_seg)
                 else:
-                    temp_loop_residues = Residue.objects.filter(protein_conformation__protein=structure_signprot, protein_segment__slug=r_seg)
+                    temp_loop_residues = Residue.objects.filter(protein=structure_signprot, protein_segment__slug=r_seg)
                 ref_out, temp_out, align_out = OrderedDict(), OrderedDict(), OrderedDict()
                 # ref is longer
                 if len(ref_loop)>len(temp_loop):

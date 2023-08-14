@@ -3,7 +3,7 @@ from rest_framework import serializers
 from interaction.models import ResidueFragmentInteraction
 from ligand.models import Endogenous_GTP, LigandID
 from mutation.models import MutationRaw
-from protein.models import Protein, ProteinConformation, ProteinFamily, Species, ProteinSource, ProteinSegment
+from protein.models import Protein, ProteinFamily, Species, ProteinSource, ProteinSegment
 from residue.models import Residue, ResidueNumberingScheme, ResidueGenericNumber
 from structure.models import Structure
 from contactnetwork.models import InteractionPeptide
@@ -19,13 +19,6 @@ class ProteinSerializer(serializers.ModelSerializer):
         model = Protein
         fields = ('entry_name', 'name', 'accession', 'family', 'species', 'source', 'residue_numbering_scheme',
             'sequence','genes')
-
-
-class ProteinFromConformationSerializer(serializers.ModelSerializer):
-    protein = serializers.SlugRelatedField(read_only=True, slug_field='entry_name')
-    class Meta:
-        model = ProteinConformation
-        fields = ('protein', )
 
 
 class ParentProteinFamilySerializer(serializers.ModelSerializer):
@@ -112,14 +105,6 @@ class ResidueExtendedSerializer(serializers.ModelSerializer):
         model = Residue
         fields = ('sequence_number', 'amino_acid', 'protein_segment', 'display_generic_number',
             'alternative_generic_numbers')
-
-
-class StructureSerializer(serializers.ModelSerializer):
-    pdb_code = serializers.SlugRelatedField(read_only=True, slug_field='index')
-    protein_conformation = ProteinFromConformationSerializer()
-    class Meta:
-        model = Structure
-        fields = ('pdb_code', 'resolution', 'protein_conformation')
 
 
 class StructureLigandInteractionSerializer(serializers.ModelSerializer):

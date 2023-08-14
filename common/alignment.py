@@ -13,7 +13,7 @@ from common.definitions import *
 from django.conf import settings
 from django.core.cache import cache, caches
 from django.db.models import Q
-from protein.models import (Protein, ProteinConformation, ProteinFamily,
+from protein.models import (Protein, ProteinFamily,
                             ProteinSegment, ProteinState)
 from residue.functions import dgn, ggn
 from residue.models import (Residue, ResidueGenericNumber, ResidueNumberingScheme)
@@ -113,12 +113,12 @@ class Alignment:
 
         # fetch the selected conformations of the protein
         # FIXME take many conformational states into account
-        try:
-            pconf = ProteinConformation.objects.get(protein=protein)
-        except ProteinConformation.DoesNotExist:
-            raise Exception ('Protein conformation {} not found for protein {}'.format(self.states[0],
-                                                                                       protein.entry_name))
-
+        pconf = protein
+        # try:
+        #     pconf = ProteinConformation.objects.get(protein=protein)
+        # except ProteinConformation.DoesNotExist:
+        #     raise Exception ('Protein conformation {} not found for protein {}'.format(self.states[0],
+        #                                                                                protein.entry_name))
         self.proteins.insert(0, pconf)
         self.update_numbering_schemes()
         self.stats_done = False
@@ -133,9 +133,9 @@ class Alignment:
         """Load a list of protein objects into the alignment."""
         # fetch all conformations of selected proteins
         # FIXME only show inactive?
-        protein_conformations = ProteinConformation.objects.order_by('protein__family__slug',
-                                                                     'protein__entry_name').filter(protein__in=proteins).select_related('protein__residue_numbering_scheme',
-                                                                                                                                        'protein__species', 'state')
+        protein_conformations = Protein.objects.order_by('family__slug',
+                                                         'entry_name').filter(pk__in=proteins).select_related('residue_numbering_scheme',
+                                                                                                              'species', 'state')
         pconfs = OrderedDict()
         for pconf in protein_conformations:
             pconf_label = pconf.__str__()
@@ -328,7 +328,7 @@ class Alignment:
     def build_alignment(self):
         """Fetch selected residues from DB and build an alignment."""
         # AJK: prevent prefetching all data for large alignments before checking #residues (DB + memory killer)
-        rs = Residue.objects.filter(protein_segment__slug__in=self.segments, protein_conformation__in=self.proteins)
+        rs = Residue.objects.filter(protein_segment__slug__in=self.segments, protein__in=self.proteins)
 
 
         self.number_of_residues_total = len(rs)
@@ -344,13 +344,13 @@ class Alignment:
             # fetch segment residues
             if not self.ignore_alternative_residue_numbering_schemes and len(self.numbering_schemes) > 1:
                 rs = Residue.objects.filter(
-                    protein_segment__slug__in=self.segments, protein_conformation__in=self.proteins).prefetch_related(
-                    'protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+                    protein_segment__slug__in=self.segments, protein__in=self.proteins).prefetch_related(
+                    'protein', 'protein__state', 'protein_segment',
                     'generic_number__scheme', 'display_generic_number__scheme', 'alternative_generic_numbers__scheme')
             else:
                 rs = Residue.objects.filter(
-                    protein_segment__slug__in=self.segments, protein_conformation__in=self.proteins).prefetch_related(
-                    'protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+                    protein_segment__slug__in=self.segments, protein__in=self.proteins).prefetch_related(
+                    'protein', 'protein__state', 'protein_segment',
                     'generic_number__scheme', 'display_generic_number__scheme')
 
             # If segment flagged to only include the alignable residues, exclude the ones with no GN
@@ -364,14 +364,14 @@ class Alignment:
                     if not self.ignore_alternative_residue_numbering_schemes and len(self.numbering_schemes) > 1:
                         crs[segment] = Residue.objects.filter(
                             generic_number__label__in=self.segments[segment],
-                            protein_conformation__in=self.proteins).prefetch_related(
-                            'protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+                            protein__in=self.proteins).prefetch_related(
+                            'protein', 'protein__state', 'protein_segment',
                             'generic_number__scheme', 'display_generic_number__scheme', 'alternative_generic_numbers__scheme')
                     else:
                         crs[segment] = Residue.objects.filter(
                             generic_number__label__in=self.segments[segment],
-                            protein_conformation__in=self.proteins).prefetch_related(
-                            'protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+                            protein__in=self.proteins).prefetch_related(
+                            'protein', 'protein__state', 'protein_segment',
                             'generic_number__scheme', 'display_generic_number__scheme')
 
             # create a dict of proteins, segments and residues
@@ -383,7 +383,7 @@ class Alignment:
                 ps = r.protein_segment.slug
 
                 # identifiers for protein/state
-                pcid = r.protein_conformation.protein.entry_name + "-" + r.protein_conformation.state.slug
+                pcid = r.protein.entry_name + "-" + r.state.slug
 
                 # update protein dict
                 if pcid not in proteins:
@@ -514,7 +514,7 @@ class Alignment:
                 if segment == self.custom_segment_label or self.use_residue_groups:
                     for r in crs[segment]:
                         ps = segment
-                        pcid = r.protein_conformation.protein.entry_name + "-" + r.protein_conformation.state.slug
+                        pcid = r.protein.entry_name + "-" + r.protein.state.slug
                         if pcid not in proteins:
                             proteins[pcid] = {}
                         if ps not in proteins[pcid]:
@@ -1500,7 +1500,7 @@ class AlignedReferenceTemplate(Alignment):
         similarity_table = OrderedDict()
         # DOUBLE CHECK MAIN TEMPLATE PROTEIN **JIMMY**
         self.main_template_protein = self.main_template_structure.protein.parent
-        ref_seq = Residue.objects.filter(protein_conformation__protein=self.reference_protein,
+        ref_seq = Residue.objects.filter(protein=self.reference_protein,
                                          protein_segment__slug=self.segment_labels[0])
         x50_ref = False
         for i in ref_seq:
@@ -1510,9 +1510,9 @@ class AlignedReferenceTemplate(Alignment):
                     break
             except:
                 pass
-        prot_conf = ProteinConformation.objects.get(protein=self.reference_protein)
+        prot_conf = Protein.objects.get(protein=self.reference_protein)
         segment_order = []
-        for i in list(Residue.objects.filter(protein_conformation=prot_conf)):
+        for i in list(Residue.objects.filter(protein=prot_conf)):
             if i.protein_segment.slug not in segment_order:
                 segment_order.append(i.protein_segment.slug)
         prev_seg = segment_order[segment_order.index(self.segment_labels[0])-1]
@@ -1538,10 +1538,11 @@ class AlignedReferenceTemplate(Alignment):
         for struct, similarity in self.provide_similarity_table.items():
             protein = struct.protein.parent
             if protein==self.main_template_protein:
-                main_temp_seq = Residue.objects.filter(protein_conformation__protein=struct.protein,
+                main_temp_seq = Residue.objects.filter(protein=struct.protein,
                                                        protein_segment__slug=self.segment_labels[0])
-                parent = ProteinConformation.objects.get(protein=struct.protein.parent)
-                main_temp_parent = Residue.objects.filter(protein_conformation=parent,
+
+                parent = Protein.objects.get(protein=struct.protein.parent)
+                main_temp_parent = Residue.objects.filter(protein=parent,
                                                           protein_segment__slug=self.segment_labels[0])
                 try:
                     if self.segment_labels[0]=='ECL2' and ref_ECL2!=None:
@@ -1593,14 +1594,14 @@ class AlignedReferenceTemplate(Alignment):
             else:
                 temp_length, temp_length1, temp_length2 = [],[],[]
                 try:
-                    alt_last_gn = Residue.objects.get(protein_conformation__protein=struct.protein,
+                    alt_last_gn = Residue.objects.get(protein=struct.protein,
                                                       display_generic_number__label=dgn(last_before_gn,
                                                                                         struct.protein))
-                    alt_first_gn= Residue.objects.get(protein_conformation__protein=struct.protein,
+                    alt_first_gn= Residue.objects.get(protein=struct.protein,
                                                       display_generic_number__label=dgn(first_after_gn,
                                                                                         struct.protein))
                     temp_length = alt_first_gn.sequence_number-alt_last_gn.sequence_number-1
-                    alt_seq = Residue.objects.filter(protein_conformation__protein=struct.protein, protein_segment__slug=self.segment_labels[0])
+                    alt_seq = Residue.objects.filter(protein=struct.protein, protein_segment__slug=self.segment_labels[0])
                     if self.segment_labels[0]=='ECL2' and ref_ECL2!=None:
                         alt_ECL2 = self.ECL2_slicer(alt_seq)
                         alt_rota = [x for x in Rotamer.objects.filter(structure=struct, residue__in=alt_ECL2[1]) if x.pdbdata.pdb.startswith('COMPND')==False]
@@ -1622,9 +1623,9 @@ class AlignedReferenceTemplate(Alignment):
                         continue
                     before_nums = list(range(alt_last_gn.sequence_number-3, alt_last_gn.sequence_number+1))
                     after_nums = list(range(alt_first_gn.sequence_number, alt_first_gn.sequence_number+4))
-                    alt_before8 = Residue.objects.filter(protein_conformation__protein=protein,
+                    alt_before8 = Residue.objects.filter(protein=protein,
                                                          sequence_number__in=before_nums)
-                    alt_after8 = Residue.objects.filter(protein_conformation__protein=protein,
+                    alt_after8 = Residue.objects.filter(protein=protein,
                                                         sequence_number__in=after_nums)
                     alt_before_gns = [ggn(r.display_generic_number.label) for r in alt_before8]
                     alt_after_gns = [ggn(r.display_generic_number.label) for r in alt_after8]
@@ -1657,7 +1658,7 @@ class AlignedReferenceTemplate(Alignment):
         alt_temps_gn = []
         if self.segment_labels[0]!='ECL2' or self.segment_labels[0]=='ECL2' and x50_ref==True:
             for entry in temp_list:
-                res_list = [i for i in list(Residue.objects.filter(protein_conformation=entry[0].protein_conformation,
+                res_list = [i for i in list(Residue.objects.filter(protein=entry[0].protein,
                                                                    protein_segment__slug=self.segment_labels[0]))]
                 for i in res_list:
                     try:

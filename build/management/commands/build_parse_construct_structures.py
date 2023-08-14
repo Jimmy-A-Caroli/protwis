@@ -3,7 +3,7 @@ from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError
 
-from protein.models import Protein, ProteinConformation
+from protein.models import Protein
 from residue.models import Residue
 from structure.models import Structure
 from structure.sequence_parser import SequenceParser
@@ -54,8 +54,6 @@ class Command(BaseCommand):
             if filename[-3:]!='pdb' and filename[-3:]!='ent':
                 continue
             root, ext = os.path.splitext(os.path.basename(filename))
-            print(filename)
-            print(root)
             filepath = os.sep.join([self.construct_data_dir, filename])
             self.logger.info("Working on a file: {}".format(filename))
             header = parse_pdb_header(filepath)

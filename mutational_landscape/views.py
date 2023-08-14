@@ -12,7 +12,7 @@ from django.views.decorators.cache import cache_page
 
 import hashlib
 
-from protein.models import Protein, ProteinConformation, ProteinFamily, Gene
+from protein.models import Protein, ProteinFamily, Gene
 from residue.models import Residue, ResiduePositionSet
 from mutational_landscape.models import NaturalMutations, PTMs, NHSPrescribings
 
@@ -130,7 +130,7 @@ def render_variants(request, protein=None, family=None, download=None, receptor_
         for residue in micro_switches_rset.residue_position.all():
             ms_label.append(residue.label)
 
-        ms_object = Residue.objects.filter(protein_conformation__protein=proteins[0], generic_number__label__in=ms_label)
+        ms_object = Residue.objects.filter(protein=proteins[0], generic_number__label__in=ms_label)
         ms_sequence_numbers = []
         for ms in ms_object:
             ms_sequence_numbers.append(ms.sequence_number)
@@ -141,7 +141,7 @@ def render_variants(request, protein=None, family=None, download=None, receptor_
         for residue in sodium_pocket_rset.residue_position.all():
             sp_label.append(residue.label)
 
-        sp_object = Residue.objects.filter(protein_conformation__protein=proteins[0], generic_number__label__in=ms_label)
+        sp_object = Residue.objects.filter(protein=proteins[0], generic_number__label__in=ms_label)
         sp_sequence_numbers = []
         for sp in sp_object:
             sp_sequence_numbers.append(sp.sequence_number)
@@ -181,10 +181,10 @@ def render_variants(request, protein=None, family=None, download=None, receptor_
 
         # Fixes fatal error - in case of receptor family selection (e.g. H1 receptors)
         if target_type == 'family' and len(proteins[0].family.slug) < 15:
-            pc = ProteinConformation.objects.get(protein__family__name=familyname, protein__sequence_type__slug='consensus')
-            residuelist = Residue.objects.filter(protein_conformation=pc).order_by('sequence_number').prefetch_related('protein_segment', 'generic_number', 'display_generic_number')
+            pc = Protein.objects.get(family__name=familyname, sequence_type__slug='consensus')
+            residuelist = Residue.objects.filter(protein=pc).order_by('sequence_number').prefetch_related('protein_segment', 'generic_number', 'display_generic_number')
         else:
-            residuelist = Residue.objects.filter(protein_conformation__protein=proteins[0]).prefetch_related('protein_segment', 'display_generic_number', 'generic_number')
+            residuelist = Residue.objects.filter(protein=proteins[0]).prefetch_related('protein_segment', 'display_generic_number', 'generic_number')
 
         jsondata = {}
         for NM in NMs:
@@ -309,7 +309,7 @@ def ajaxNaturalMutation(request, slug, **response_kwargs):
     for residue in micro_switches_rset.residue_position.all():
         ms_label.append(residue.label)
 
-    ms_object = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__label__in=ms_label)
+    ms_object = Residue.objects.filter(protein__entry_name=slug, generic_number__label__in=ms_label)
     ms_sequence_numbers = []
     for ms in ms_object:
         ms_sequence_numbers.append(ms.sequence_number)
@@ -320,7 +320,7 @@ def ajaxNaturalMutation(request, slug, **response_kwargs):
     for residue in sodium_pocket_rset.residue_position.all():
         sp_label.append(residue.label)
 
-    sp_object = Residue.objects.filter(protein_conformation__protein__entry_name=slug, generic_number__label__in=ms_label)
+    sp_object = Residue.objects.filter(protein__entry_name=slug, generic_number__label__in=ms_label)
     sp_sequence_numbers = []
     for sp in sp_object:
         sp_sequence_numbers.append(sp.sequence_number)
@@ -608,14 +608,14 @@ def get_functional_sites(protein):
     for residue in micro_switches_rset.residue_position.all():
         ms_label.append(residue.label)
 
-    ms_object = list(Residue.objects.filter(protein_conformation__protein=protein, generic_number__label__in=ms_label).values_list('id', flat=True).distinct())
+    ms_object = list(Residue.objects.filter(protein=protein, generic_number__label__in=ms_label).values_list('id', flat=True).distinct())
 
     ## SODIUM POCKET
     sodium_pocket_rset = ResiduePositionSet.objects.get(name="Sodium ion pocket")
     sp_label = []
     for residue in sodium_pocket_rset.residue_position.all():
         sp_label.append(residue.label)
-    sp_object = list(Residue.objects.filter(protein_conformation__protein=protein, generic_number__label__in=ms_label).values_list('id', flat=True).distinct())
+    sp_object = list(Residue.objects.filter(protein=protein, generic_number__label__in=ms_label).values_list('id', flat=True).distinct())
 
 
     ## G PROTEIN INTERACTION POSITIONS
@@ -624,7 +624,7 @@ def get_functional_sites(protein):
     gprotein_generic_set = []
     for residue in rset.residue_position.all():
         gprotein_generic_set.append(residue.label)
-    GP_object = list(Residue.objects.filter(protein_conformation__protein=protein, generic_number__label__in=gprotein_generic_set).values_list('id', flat=True).distinct())
+    GP_object = list(Residue.objects.filter(protein=protein, generic_number__label__in=gprotein_generic_set).values_list('id', flat=True).distinct())
 
     ### GET LB INTERACTION DATA
     ## get also ortholog proteins, which might have been crystallised to extract

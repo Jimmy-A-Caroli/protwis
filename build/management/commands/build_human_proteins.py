@@ -4,7 +4,7 @@ from django.db import connection
 from django.db import IntegrityError
 
 from build.management.commands.base_build import Command as BaseBuild
-from protein.models import (Protein, ProteinConformation, ProteinState, ProteinFamily, ProteinAlias,
+from protein.models import (Protein, ProteinState, ProteinFamily, ProteinAlias,
         ProteinSequenceType, Species, Gene, ProteinSource, ProteinSegment)
 from common.models import WebResource, WebLink
 from residue.models import ResidueNumberingScheme
@@ -230,8 +230,6 @@ class Command(BaseBuild):
                 defaults={'name': settings.DEFAULT_PROTEIN_STATE.title()})
         except IntegrityError:
             ps = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
-
-        pc = ProteinConformation.objects.create(protein=p, state=ps)
 
         # protein uniprot links
         if accession:
