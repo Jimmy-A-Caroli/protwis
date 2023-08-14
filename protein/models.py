@@ -2,7 +2,7 @@
 from common.diagrams_gpcr import DrawHelixBox, DrawSnakePlot
 from common.diagrams_gprotein import DrawGproteinPlot
 from django.db import models
-from structure.models import Structure
+# from structure.models import Structure
 from residue.models import (Residue, ResidueDataPoint, ResidueDataType,
                             ResidueGenericNumberEquivalent,
                             ResidueNumberingScheme)
@@ -33,6 +33,35 @@ class Protein(models.Model):
             return self.name
         else:
             return self.entry_name
+
+    @property
+    def is_sodium(self):
+        # Avoid filter, to utilise if site_protein_conformation is prefetched, otherwise it generates a DB call
+        for s in self.site_protein.all():
+            if s.site.slug=='sodium_pocket':
+                return True
+        return False
+
+    def sodium_pocket(self):
+        try:
+            site = Site.objects.get(slug='sodium_pocket')
+        except:
+            site = Site.objects.create(slug='sodium_pocket', name='Sodium ion pocket')
+        try:
+            ex_site = IdentifiedSites.objects.get(protein=self)
+
+            if len(ex_site.residues.all())==2 and ex_site.site==site:
+                return
+            else:
+                raise Exception
+        except:
+            resis = Residue.objects.filter(protein=self, display_generic_number__label__in=[dgn('2x50', self), dgn('3x39', self)])
+            parent_resis = Residue.objects.filter(protein=self.protein.parent, display_generic_number__label__in=[dgn('2x50', self), dgn('3x39', self)])
+            if len(resis)==2:
+                if resis[0].amino_acid in ['D','E'] and resis[1].amino_acid in ['S','T']:
+                    istate, created = IdentifiedSites.objects.get_or_create(protein=self, site=site)
+                    if created:
+                        istate.residues.add(resis[0], resis[1])
 
     class Meta():
         db_table = 'protein'
@@ -81,37 +110,6 @@ class Protein(models.Model):
 
     def generate_sites(self):
         self.sodium_pocket()
-
-    @property
-    def is_sodium(self):
-        # Avoid filter, to utilise if site_protein_conformation is prefetched, otherwise it generates a DB call
-        for s in self.site_protein.all():
-            if s.site.slug=='sodium_pocket':
-                return True
-        return False
-
-    def sodium_pocket(self):
-        try:
-            site = Site.objects.get(slug='sodium_pocket')
-        except:
-            site = Site.objects.create(slug='sodium_pocket', name='Sodium ion pocket')
-        try:
-            ex_site = IdentifiedSites.objects.get(protein=self)
-
-            if len(ex_site.residues.all())==2 and ex_site.site==site:
-                return
-            else:
-                raise Exception
-        except:
-            resis = Residue.objects.filter(protein=self, display_generic_number__label__in=[dgn('2x50', self),
-                                                                                                         dgn('3x39', self)])
-            parent_resis = Residue.objects.filter(protein=self.protein.parent, display_generic_number__label__in=[dgn('2x50', self),
-                                                                                                                                        dgn('3x39', self)])
-            if len(resis)==2:
-                if resis[0].amino_acid in ['D','E'] and resis[1].amino_acid in ['S','T']:
-                    istate, created = IdentifiedSites.objects.get_or_create(protein=self, site=site)
-                    if created:
-                        istate.residues.add(resis[0], resis[1])
 
 
 # class ProteinConformation(models.Model):

@@ -30,7 +30,7 @@ from django.core.management.color import no_style
 from django.db import IntegrityError, connection
 from protein.models import (Gene, Protein, ProteinAlias,
                             ProteinFamily, Species, ProteinSegment,
-                            ProteinSequenceType, ProteinSource, ProteinState)
+                            ProteinSequenceType, ProteinSource)
 from residue.models import (Residue, ResidueGenericNumber,
                             ResidueGenericNumberEquivalent,
                             ResidueNumberingScheme)

@@ -3,7 +3,7 @@ from rest_framework import serializers
 from interaction.models import ResidueFragmentInteraction
 from ligand.models import Endogenous_GTP, LigandID
 from mutation.models import MutationRaw
-from protein.models import Protein, ProteinFamily, Species, ProteinSource, ProteinSegment
+from protein.models import Protein, ProteinFamily, Species, ProteinSegment
 from residue.models import Residue, ResidueNumberingScheme, ResidueGenericNumber
 from structure.models import Structure
 from contactnetwork.models import InteractionPeptide

@@ -112,14 +112,14 @@ class Command(BaseCommand):
                 #Checking if the protein exists in the db
                 try:
                     pconf = Protein.objects.get(entry_name=prot_name)
-                except Protein.DoesNotExist as e:
+                except Protein.DoesNotExist:
                     missing_proteins.append(prot_name)
                     continue
                 #Checking if given residue already exists in the db
                 try:
                     Residue.objects.get(protein=pconf.id, sequence_number=res_num)
                     continue
-                except Residue.DoesNotExist as e:
+                except Residue.DoesNotExist:
                     pass
 
                 r = Residue()
