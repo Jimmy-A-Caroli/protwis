@@ -264,15 +264,15 @@ class Command(BaseBuild):
         if os.path.exists('./structure/complex_models_zip/'):
             for i in os.listdir('./structure/complex_models_zip/'):
                 os.remove('./structure/complex_models_zip/'+i)
-        try:
-            StructureComplexModelSeqSim.objects.all().delete()
-        except:
-            self.logger.warning('StructureComplexModelSeqSim data cannot be deleted')
-        try:
-            StructureComplexModelStatsRotamer.objects.all().delete()
-        except:
-            self.logger.warning('StructureComplexModelStatsRotamer data cannot be deleted')
-        try:
-            StructureComplexModel.objects.all().delete()
-        except:
-            self.logger.warning('StructureComplexModel data cannot be deleted')
+        # try:
+        #     StructureComplexModelSeqSim.objects.all().delete()
+        # except:
+        #     self.logger.warning('StructureComplexModelSeqSim data cannot be deleted')
+        # try:
+        #     StructureComplexModelStatsRotamer.objects.all().delete()
+        # except:
+        #     self.logger.warning('StructureComplexModelStatsRotamer data cannot be deleted')
+        # try:
+        #     StructureComplexModel.objects.all().delete()
+        # except:
+        #     self.logger.warning('StructureComplexModel data cannot be deleted')

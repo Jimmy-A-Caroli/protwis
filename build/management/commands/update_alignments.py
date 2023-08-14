@@ -159,7 +159,7 @@ class Command(BaseBuild):
                         self.logger.info('Segment records not found for {} in template structure {}, looking for alternatives'.format(
                             segment, segment_template_structure))
                         if not segment.fully_aligned:
-                            segment_tpl = ProteinConformationTemplateStructure.objects.get(protein_conformation=pconf,
+                            segment_tpl = ProteinTemplateStructure.objects.get(protein_conformation=pconf,
                                 protein_segment=segment)
                             try:
                                 main_tpl_ss = StructureSegment.objects.get(structure=segment_tpl.structure,
@@ -191,7 +191,7 @@ class Command(BaseBuild):
                         self.logger.info("Template residues for {} in {} not found, looking for alternatives!".format(
                             segment, pconf))
                         if not segment.fully_aligned:
-                            segment_tpl = ProteinConformationTemplateStructure.objects.get(protein_conformation=pconf,
+                            segment_tpl = ProteinTemplateStructure.objects.get(protein_conformation=pconf,
                                 protein_segment=segment)
                             try:
                                 tsrrn = Residue.objects.get(

@@ -3,8 +3,8 @@ from django.conf import settings
 from django.db import connection
 
 from build.management.commands.base_build import Command as BaseBuild
-from protein.models import (Protein, ProteinConformation, ProteinSequenceType, ProteinSegment,
-    ProteinConformationTemplateStructure)
+from protein.models import (Protein, ProteinSequenceType, ProteinSegment,
+    ProteinTemplateStructure)
 from structure.models import Structure
 from common.alignment import Alignment
 
@@ -36,7 +36,7 @@ class Command(BaseBuild):
         'protein__parent__family')
 
     # fetch all protein conformations
-    pconfs = ProteinConformation.objects.all().prefetch_related('protein__family', 'template_structure')
+    pconfs = Protein.objects.all().prefetch_related('protein__family', 'template_structure')
 
     def handle(self, *args, **options):
         # run with profiling
@@ -67,7 +67,7 @@ class Command(BaseBuild):
         # find templates
         for pconf in pconfs:
             # filter structure sequence queryset to include only sequences from within the same class
-            pconf_class = pconf.protein.family.slug[:3]
+            pconf_class = pconf.family.slug[:3]
             class_sps = self.structures.filter(
                 protein__parent__family__slug__startswith=pconf_class)
             sps = []
@@ -92,7 +92,7 @@ class Command(BaseBuild):
             for segment in self.segments:
                 template = self.find_segment_template(pconf, sps_str, [segment])
                 template_structure = self.fetch_template_structure(self.structures, template.protein.parent.entry_name)
-                pcts, created = ProteinConformationTemplateStructure.objects.get_or_create(protein_conformation=pconf,
+                pcts, created = ProteinTemplateStructure.objects.get_or_create(protein=pconf,
                     protein_segment=segment, defaults={'structure': template_structure})
                 if pcts.structure != template_structure:
                     pcts.structure = template_structure

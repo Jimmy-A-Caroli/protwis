@@ -228,8 +228,10 @@ class Command(BaseBuild):
         try:
             ps, created = ProteinState.objects.get_or_create(slug=settings.DEFAULT_PROTEIN_STATE,
                 defaults={'name': settings.DEFAULT_PROTEIN_STATE.title()})
+            self.logger.info('Created protein state for protein {}'.format(p.entry_name))
         except IntegrityError:
             ps = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
+            self.logger.info('Failed creating protein state for protein {}'.format(p.entry_name))
 
         # protein uniprot links
         if accession:

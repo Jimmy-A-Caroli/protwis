@@ -4,7 +4,7 @@ from django.conf import settings
 
 
 from protein.models import Protein, ProteinState
-from structure.models import Structure,, StructureComplexModel, StatsText, PdbData, StructurepLDDT
+from structure.models import Structure, StatsText, PdbData, StructurepLDDT
 import structure.assign_generic_numbers_gpcr as as_gn
 from residue.models import Residue
 
@@ -90,11 +90,11 @@ class Command(BaseBuild):
                 os.chdir('../../')
 
         if options['c'] and options['purge']:
-            for s in StructureComplexModel.objects.all():
+            for s in Structure.objects.filter(structure_type__slug='af-complex'):
                 s.pdb_data.delete()
                 s.main_template.refined = False
                 s.main_template.save()
-            StructureComplexModel.objects.all().delete()
+            Structure.objects.filter(structure_type__slug='af-complex').delete()
         elif options['purge']:
             for s in Structure.objects.filter(structure_type__slug='af-gpcr'):
                 s.pdb_data.delete()

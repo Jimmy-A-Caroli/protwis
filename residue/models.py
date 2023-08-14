@@ -3,7 +3,7 @@ import common.definitions as definitions
 
 
 class Residue(models.Model):
-    protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
+    protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE)
     protein_segment = models.ForeignKey('protein.ProteinSegment', null=True, on_delete=models.CASCADE)
     generic_number = models.ForeignKey('ResidueGenericNumber', related_name='compare', null=True, on_delete=models.CASCADE)
     display_generic_number = models.ForeignKey('ResidueGenericNumber', related_name='display', null=True, on_delete=models.CASCADE)
