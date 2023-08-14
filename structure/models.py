@@ -329,9 +329,9 @@ class StructureType(models.Model):
 
 
 class StructureExtraProteins(models.Model):
-    structure = models.ForeignKey('structure.Structure', on_delete=models.CASCADE, null=True, related_name='extra_proteins')
-    wt_protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True)
-    protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True)
+    structure = models.ForeignKey('structure.Structure', on_delete=models.CASCADE, null=True, related_name='complex_protein')
+    wt_protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True, related_name='wt_protein')
+    protein = models.ForeignKey('protein.Protein', on_delete=models.CASCADE, null=True, related_name='extra_protein')
     display_name = models.CharField(max_length=20)
     note = models.CharField(max_length=50, null=True)
     chain = models.CharField(max_length=1)

@@ -15,7 +15,7 @@ class Protein(models.Model):
     source = models.ForeignKey('ProteinSource', on_delete=models.CASCADE)
     residue_numbering_scheme = models.ForeignKey('residue.ResidueNumberingScheme', on_delete=models.CASCADE, null=True)
     sequence_type = models.ForeignKey('ProteinSequenceType', on_delete=models.CASCADE)
-    states = models.ManyToManyField('ProteinState', through='Structure')
+    states = models.ManyToManyField('protein.ProteinState')
     web_links = models.ManyToManyField('common.WebLink')
     entry_name = models.SlugField(max_length=100, unique=True)
     accession = models.CharField(max_length=100, db_index=True, null=True)
@@ -167,7 +167,7 @@ class Protein(models.Model):
 
 
 class IdentifiedSites(models.Model):
-    protein = models.ForeignKey('Protein', related_name='site_protein', on_delete=models.CASCADE)
+    protein = models.ForeignKey('Protein', related_name='site_protein', on_delete=models.CASCADE, null=True)
     site = models.ForeignKey('Site', on_delete=models.CASCADE)
     residues = models.ManyToManyField('residue.Residue', related_name='site_residue')
 
@@ -345,7 +345,7 @@ class ProteinAnomalyRule(models.Model):
         db_table = 'protein_anomaly_rule'
 
 class ProteinTemplateStructure(models.Model):
-    protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
+    protein = models.ForeignKey('Protein', on_delete=models.CASCADE, null=True)
     protein_segment = models.ForeignKey('ProteinSegment', on_delete=models.CASCADE)
     structure = models.ForeignKey('structure.Structure', on_delete=models.CASCADE)
 
