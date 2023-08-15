@@ -295,7 +295,7 @@ class Command(BaseBuild):
             with lock:
                 p = self.pconfs[count.value]
                 count.value +=1
-            entry_name = p.protein.entry_name
+            entry_name = p.entry_name
             ref_positions = None
             counter += 1
             missing_x50s = []
@@ -316,8 +316,8 @@ class Command(BaseBuild):
                 continue
             else:
                 # print(counter,p)
-                if p.protein.species.common_name != "Human" and entry_name not in proteins:
-                    human_ortholog = Protein.objects.filter(family=p.protein.family, sequence_type__slug='wt', species__common_name='Human')
+                if p.species.common_name != "Human" and entry_name not in proteins:
+                    human_ortholog = Protein.objects.filter(family=p.family, sequence_type__slug='wt', species__common_name='Human')
                     # custom ortholog pairings for simple sequence mapping
                     if entry_name.startswith('5ht5b_'):
                         human_ortholog = Protein.objects.filter(entry_name='5ht5a_human')
@@ -336,8 +336,8 @@ class Command(BaseBuild):
                             continue
                         if human_ortholog.entry_name in proteins:
                             # print(counter,entry_name,'check sequences')
-                            ref_positions, aligned_gn_mismatch_gap = self.compare_human_to_orthologue(human_ortholog, p.protein, self.non_xtal_seg_end[human_ortholog.entry_name],counter)
-                            s = p.protein.sequence
+                            ref_positions, aligned_gn_mismatch_gap = self.compare_human_to_orthologue(human_ortholog, p, self.non_xtal_seg_end[human_ortholog.entry_name],counter)
+                            s = p.sequence
                             v = self.non_xtal_seg_end[human_ortholog.entry_name]
                             new_v = {}
                             # print(v)
@@ -373,7 +373,6 @@ class Command(BaseBuild):
                                             # print(entry_name,"tranlated ",x50," no index in ortholog, deleting pconf and protein")
                                             self.logger.info('{} tranlated {} no index in ortholog, deleting pconf and protein'.format(entry_name,x50))
                                             failed = True
-                                            p.protein.delete()
                                             p.delete()
                                             break
                                 else:
@@ -406,7 +405,6 @@ class Command(BaseBuild):
                     else:
                         # pass
                         self.logger.warning('{}  has no human template, deleting'.format(entry_name))
-                        p.protein.delete()
                         p.delete()
                         failed = True
                         #continue
@@ -501,11 +499,11 @@ class Command(BaseBuild):
             ThroughModel.objects.bulk_create(bulk)
             end = time.time()
             diff = round(end - current,1)
-            self.logger.info('{} {} residues ({}) {}s alignment {}'.format(p.protein.entry_name,len(rs),human_ortholog,diff,aligned_gn_mismatch_gap))
+            self.logger.info('{} {} residues ({}) {}s alignment {}'.format(p.entry_name,len(rs),human_ortholog,diff,aligned_gn_mismatch_gap))
             # print('{} {} residues ({}) {}s alignment {}'.format(p.protein.entry_name,len(rs),human_ortholog,diff,aligned_gn_mismatch_gap))
             if aligned_gn_mismatch_gap>20:
                 #print(p.protein.entry_name,len(rs),"residues","(",human_ortholog,")",diff,"s", " Unaligned generic numbers: ",aligned_gn_mismatch_gap)
-                self.logger.warning('{} {} residues ({}) {}s MANY ERRORS IN ALIGNMENT {}'.format(p.protein.entry_name,len(rs),human_ortholog,diff,aligned_gn_mismatch_gap))
+                self.logger.warning('{} {} residues ({}) {}s MANY ERRORS IN ALIGNMENT {}'.format(p.entry_name,len(rs),human_ortholog,diff,aligned_gn_mismatch_gap))
 
         self.logger.info('COMPLETED ANNOTATIONS PROCESS {}'.format(positions))
         # print('COMPLETED ANNOTATIONS PROCESS {} {} {}'.format(iteration,positions,datetime.datetime.strftime(

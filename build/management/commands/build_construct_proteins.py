@@ -86,8 +86,8 @@ class Command(BaseBuild):
 
             # fetch the parent protein
             try:
-                ppc = Protein.objects.prefetch_related('protein__family', 'protein__species',
-                    'protein__residue_numbering_scheme').get(entry_name=sd['protein'].lower())
+                ppc = Protein.objects.prefetch_related('family', 'species',
+                    'residue_numbering_scheme').get(entry_name=sd['protein'].lower())
             except Protein.DoesNotExist:
                 # abort if parent protein is not found
                 print('Parent protein {} for construct {} not found, aborting!'.format(
@@ -116,24 +116,24 @@ class Command(BaseBuild):
             if not Protein.objects.filter(name=sd['name']).exists():
                 # create a protein record
                 p = Protein()
-                p.parent = ppc.protein
-                p.family = ppc.protein.family
-                p.species = ppc.protein.species
-                p.residue_numbering_scheme = ppc.protein.residue_numbering_scheme
+                p.parent = ppc
+                p.family = ppc.family
+                p.species = ppc.species
+                p.residue_numbering_scheme = ppc.residue_numbering_scheme
                 p.sequence_type= sequence_type
                 p.source = protein_source
                 p.entry_name = slugify(strip_tags(sd['name']))
                 p.name = sd['name']
-                p.sequence = ppc.protein.sequence
+                p.sequence = ppc.sequence
 
                 # save protein (construct)
                 try:
                     p.save()
                     self.logger.info('Created construct {} with parent protein {}'.format(p.name,
-                        ppc.protein.entry_name))
+                        ppc.entry_name))
                 except:
                     self.logger.error('Failed creating construct {} with parent protein {}'.format(p.name,
-                        ppc.protein.entry_name))
+                        ppc.entry_name))
                     continue
             else:
                 p = Protein.objects.get(name=sd['name'])

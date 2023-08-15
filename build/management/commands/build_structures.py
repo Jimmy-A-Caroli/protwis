@@ -1211,7 +1211,7 @@ class Command(BaseBuild):
         #     pdbs = self.parsed_structures[positions[0]:positions[1]]
         pdbs = self.parsed_structures.pdb_ids
         print('lets start parsing!')
-        while count.value<5: #len(pdbs):
+        while count.value<len(pdbs): 
             with lock:
                 pdb_id = pdbs[count.value]
                 count.value +=1
