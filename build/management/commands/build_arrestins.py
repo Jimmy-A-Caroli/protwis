@@ -203,7 +203,7 @@ class Command(BaseCommand):
                         continue
 
                     # Create new Protein
-                    self.can_create_arrestins(pfm, rns, accession, up)
+                    self.can_create_arrestins(pfm, rns, accession, up, state)
 
                     # add new can protein conformations
                     # try:
@@ -212,7 +212,7 @@ class Command(BaseCommand):
                     # except Exception as msg:
                     #     self.logger.error('Failed to create protein conformation', msg)
 
-    def can_create_arrestins(self, family, residue_numbering_scheme, accession, uniprot):
+    def can_create_arrestins(self, family, residue_numbering_scheme, accession, uniprot, state):
         # get/create protein source
         try:
             source, created = ProteinSource.objects.get_or_create(name=uniprot['source'],
@@ -251,6 +251,7 @@ class Command(BaseCommand):
         p.family = family
         p.species = species
         p.source = source
+        p.state = state
         p.residue_numbering_scheme = residue_numbering_scheme
         p.sequence_type = sequence_type
 

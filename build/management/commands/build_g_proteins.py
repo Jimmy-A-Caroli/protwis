@@ -28,7 +28,7 @@ from django.utils.text import slugify
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management.color import no_style
 from django.db import IntegrityError, connection
-from protein.models import (Gene, Protein, ProteinAlias,
+from protein.models import (Gene, Protein, ProteinAlias, ProteinState,
                             ProteinFamily, Species, ProteinSegment,
                             ProteinSequenceType, ProteinSource)
 from residue.models import (Residue, ResidueGenericNumber,
@@ -748,6 +748,7 @@ class Command(BaseCommand):
         p.family = family
         p.species = species
         p.source = source
+        p.state = ProteinState.objects.get(slug='active')
         p.residue_numbering_scheme = residue_numbering_scheme
         p.sequence_type = sequence_type
 

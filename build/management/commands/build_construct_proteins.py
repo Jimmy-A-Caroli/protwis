@@ -119,6 +119,7 @@ class Command(BaseBuild):
                 p.parent = ppc
                 p.family = ppc.family
                 p.species = ppc.species
+                p.state = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
                 p.residue_numbering_scheme = ppc.residue_numbering_scheme
                 p.sequence_type= sequence_type
                 p.source = protein_source

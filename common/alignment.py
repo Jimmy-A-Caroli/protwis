@@ -135,7 +135,7 @@ class Alignment:
         # FIXME only show inactive?
         protein_conformations = Protein.objects.order_by('family__slug',
                                                          'entry_name').filter(pk__in=proteins).select_related('residue_numbering_scheme',
-                                                                                                              'species', 'state')
+                                                                                                              'species')
         pconfs = OrderedDict()
         for pconf in protein_conformations:
             pconf_label = pconf.__str__()
@@ -295,14 +295,14 @@ class Alignment:
         """Update numbering scheme list."""
         self.numbering_schemes = {}
         for pc in self.proteins:
-            if pc.protein.residue_numbering_scheme.slug not in self.numbering_schemes:
-                rnsn = pc.protein.residue_numbering_scheme.name
+            if pc.residue_numbering_scheme.slug not in self.numbering_schemes:
+                rnsn = pc.residue_numbering_scheme.name
                 try:
                     #New way of breaking down the numbering scheme
-                    rnsn_parent = prot.protein.residue_numbering_scheme.parent.short_name
+                    rnsn_parent = pc.residue_numbering_scheme.parent.short_name
                 except:
                     rnsn_parent = ''
-                self.numbering_schemes[pc.protein.residue_numbering_scheme.slug] = (rnsn, rnsn_parent)
+                self.numbering_schemes[pc.residue_numbering_scheme.slug] = (rnsn, rnsn_parent)
 
         # order and convert numbering scheme dict to tuple
         self.numbering_schemes = sorted([(x[0], x[1][0], x[1][1]) for x in self.numbering_schemes.items()], key=itemgetter(0))
@@ -383,7 +383,10 @@ class Alignment:
                 ps = r.protein_segment.slug
 
                 # identifiers for protein/state
-                pcid = r.protein.entry_name + "-" + r.state.slug
+                try:
+                    pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                except:
+                    pcid = r.protein.entry_name + "-active"
 
                 # update protein dict
                 if pcid not in proteins:
@@ -514,7 +517,11 @@ class Alignment:
                 if segment == self.custom_segment_label or self.use_residue_groups:
                     for r in crs[segment]:
                         ps = segment
-                        pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                        # pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                        try:
+                            pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                        except:
+                            pcid = r.protein.entry_name + "-active"
                         if pcid not in proteins:
                             proteins[pcid] = {}
                         if ps not in proteins[pcid]:
@@ -546,13 +553,17 @@ class Alignment:
                     position_counter = 1
 
                     # numbering scheme
-                    ns_slug = pc.protein.residue_numbering_scheme.slug
+                    ns_slug = pc.residue_numbering_scheme.slug
 
                     # loop all positions in this segment
                     for pos in positions:
                         try:
                             # find the residue record from the dict defined above
-                            pcid = pc.protein.entry_name + "-" + pc.state.slug
+                            # pcid = pc.protein.entry_name + "-" + pc.protein.state.slug
+                            try:
+                                pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                            except:
+                                pcid = r.protein.entry_name + "-active"
                             r = proteins[pcid][segment][pos]
 
                             # add position to the list of positions that are not empty
@@ -795,7 +806,7 @@ class Alignment:
 
             # AJK: optimized for speed - split into multiple steps
             for i, p in enumerate(self.unique_proteins):
-                entry_name = p.protein.entry_name
+                entry_name = p.entry_name
                 # print(entry_name)
                 for j, s in p.alignment.items():
                     if i == 0:

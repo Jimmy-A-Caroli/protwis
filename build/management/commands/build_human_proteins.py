@@ -218,20 +218,23 @@ class Command(BaseBuild):
         p.name = name
         p.sequence = uniprot['sequence']
 
+        # protein conformations
+        try:
+            ps, created = ProteinState.objects.get_or_create(slug=settings.DEFAULT_PROTEIN_STATE,
+                defaults={'name': settings.DEFAULT_PROTEIN_STATE.title()})
+            p.state = ps
+            self.logger.info('Created protein state for protein {}'.format(p.entry_name))
+        except IntegrityError:
+            ps = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
+            p.state = ps
+            self.logger.info('Failed creating protein state for protein {}'.format(p.entry_name))
+
         try:
             p.save()
             self.logger.info('Created protein {}'.format(p.entry_name))
         except Exception as e:
             self.logger.error('Failed creating protein {} {}'.format(p.entry_name, str(e)))
 
-        # protein conformations
-        try:
-            ps, created = ProteinState.objects.get_or_create(slug=settings.DEFAULT_PROTEIN_STATE,
-                defaults={'name': settings.DEFAULT_PROTEIN_STATE.title()})
-            self.logger.info('Created protein state for protein {}'.format(p.entry_name))
-        except IntegrityError:
-            ps = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
-            self.logger.info('Failed creating protein state for protein {}'.format(p.entry_name))
 
         # protein uniprot links
         if accession:

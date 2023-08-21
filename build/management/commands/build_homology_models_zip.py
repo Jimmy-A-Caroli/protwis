@@ -92,17 +92,17 @@ class Command(BaseBuild):
         if options['c'] and options['purge']:
             for s in Structure.objects.filter(structure_type__slug='af-complex'):
                 s.pdb_data.delete()
-                s.main_template.refined = False
-                s.main_template.save()
+                s.refined = False
+                s.refined.save()
             Structure.objects.filter(structure_type__slug='af-complex').delete()
         elif options['purge']:
             for s in Structure.objects.filter(structure_type__slug='af-gpcr'):
                 s.pdb_data.delete()
-                # try:
-                #     s.main_template.refined = False
-                #     s.main_template.save()
-                # except AttributeError:
-                #     pass
+                try:
+                    s.refined = False
+                    s.refined.save()
+                except AttributeError:
+                    pass
             Structure.objects.filter(structure_type__slug='af-gpcr').delete()
         if options['c']:
             path = './structure/complex_models_zip/'

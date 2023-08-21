@@ -126,6 +126,7 @@ class Command(BaseBuild):
                     alpha_protein.sequence = sc.protein.sequence
                     alpha_protein.family = sc.protein.family
                     alpha_protein.parent = sc.protein
+                    alpha_protein.state = sc.structure.state
                     alpha_protein.residue_numbering_scheme = sc.protein.residue_numbering_scheme
                     alpha_protein.sequence_type = ProteinSequenceType.objects.get(slug="mod")
                     alpha_protein.source = ProteinSource.objects.get(name="OTHER")
