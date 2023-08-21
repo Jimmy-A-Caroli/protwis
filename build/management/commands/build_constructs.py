@@ -87,7 +87,7 @@ class Command(BaseCommand):
                         p.parent = ppc.protein
                         p.family = ppc.protein.family
                         p.species = ppc.protein.species
-                        p.state = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
+                        # p.state = ProteinState.objects.get(slug=settings.DEFAULT_PROTEIN_STATE)
                         p.residue_numbering_scheme = ppc.protein.residue_numbering_scheme
                         p.sequence_type, created = ProteinSequenceType.objects.get_or_create(slug='mod',
                             defaults={'name': 'Modified'})

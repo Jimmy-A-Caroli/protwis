@@ -748,7 +748,7 @@ class Command(BaseCommand):
         p.family = family
         p.species = species
         p.source = source
-        p.state = ProteinState.objects.get(slug='active')
+        # p.state = ProteinState.objects.get(slug='active')
         p.residue_numbering_scheme = residue_numbering_scheme
         p.sequence_type = sequence_type
 

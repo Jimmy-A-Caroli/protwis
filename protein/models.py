@@ -15,8 +15,7 @@ class Protein(models.Model):
     source = models.ForeignKey('ProteinSource', on_delete=models.CASCADE)
     residue_numbering_scheme = models.ForeignKey('residue.ResidueNumberingScheme', on_delete=models.CASCADE, null=True)
     sequence_type = models.ForeignKey('ProteinSequenceType', on_delete=models.CASCADE)
-    state = models.ForeignKey('ProteinState', on_delete=models.CASCADE, null=True)
-    # states = models.ManyToManyField('protein.ProteinState')
+    # state = models.ForeignKey('ProteinState', on_delete=models.CASCADE, null=True)
     web_links = models.ManyToManyField('common.WebLink')
     entry_name = models.SlugField(max_length=100, unique=True)
     accession = models.CharField(max_length=100, db_index=True, null=True)
@@ -124,7 +123,7 @@ class Protein(models.Model):
 #     similarity_score = 0 # similarity score to a reference sequence in an alignment (sum of BLOSUM62 scores)
 #     alignment = 0 # residues formatted for use in an Alignment class
 #     alignment_list = 0 # FIXME redundant, remove when dependecies are removed
-#
+
 #     def __str__(self):
 #         return self.protein.entry_name + " (" + self.state.slug + ")"
 #

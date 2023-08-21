@@ -383,10 +383,11 @@ class Alignment:
                 ps = r.protein_segment.slug
 
                 # identifiers for protein/state
-                try:
-                    pcid = r.protein.entry_name + "-" + r.protein.state.slug
-                except:
-                    pcid = r.protein.entry_name + "-active"
+                pcid = r.protein.entry_name
+                # try:
+                #     pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                # except:
+                #     pcid = r.protein.entry_name + "-active"
 
                 # update protein dict
                 if pcid not in proteins:
@@ -517,11 +518,11 @@ class Alignment:
                 if segment == self.custom_segment_label or self.use_residue_groups:
                     for r in crs[segment]:
                         ps = segment
-                        # pcid = r.protein.entry_name + "-" + r.protein.state.slug
-                        try:
-                            pcid = r.protein.entry_name + "-" + r.protein.state.slug
-                        except:
-                            pcid = r.protein.entry_name + "-active"
+                        pcid = r.protein.entry_name
+                        # try:
+                        #     pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                        # except:
+                        #     pcid = r.protein.entry_name + "-active"
                         if pcid not in proteins:
                             proteins[pcid] = {}
                         if ps not in proteins[pcid]:
@@ -559,11 +560,11 @@ class Alignment:
                     for pos in positions:
                         try:
                             # find the residue record from the dict defined above
-                            # pcid = pc.protein.entry_name + "-" + pc.protein.state.slug
-                            try:
-                                pcid = r.protein.entry_name + "-" + r.protein.state.slug
-                            except:
-                                pcid = r.protein.entry_name + "-active"
+                            pcid = pc.protein.entry_name #+ "-" + pc.protein.state.slug
+                            # try:
+                            #     pcid = r.protein.entry_name + "-" + r.protein.state.slug
+                            # except:
+                            #     pcid = r.protein.entry_name + "-active"
                             r = proteins[pcid][segment][pos]
 
                             # add position to the list of positions that are not empty
