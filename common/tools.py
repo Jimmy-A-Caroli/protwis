@@ -99,7 +99,7 @@ def fetch_from_cache(path, file_id):
     if os.path.isfile(cache_file_path):
         try:
             with open(cache_file_path) as cache_file:
-                return yaml.load(cache_file, Loader=yaml.FullLoader)
+                return yaml.load(cache_file, Loader=yaml.Loader)
         except TypeError as msg:
             print('WARNING: cannot properly open {} with TypeError: {}'.format(cache_file_path, msg))
             return None

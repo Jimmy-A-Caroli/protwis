@@ -39,6 +39,7 @@ import gc
 import pandas as pd
 from collections import OrderedDict
 from datetime import datetime, date
+from io import StringIO
 import json
 from urllib.request import urlopen
 from Bio.PDB import parse_pdb_header
@@ -675,7 +676,9 @@ class Command(BaseBuild):
         try:
             # interacting_pairs, distances  = compute_interactions(pdb_code, save_to_db=True)
             compute_interactions(location, protein=protein, lig=ligand, do_peptide_ligand=True, save_to_db=True, file_input=True)
-        except:
+        except Exception as msg:
+            print('ERROR IN COMPUTE INTERACTIONS!!!')
+            print(msg)
             print('Error with computing interactions (%s)' % (location))
             self.logger.error('Error with computing interactions (%s)' % (location))
             return
@@ -776,6 +779,7 @@ class Command(BaseBuild):
         # setting up processes
         complexes = self.parsed_structures.complexes
         complexes = list(set(complexes)) #removing duplicates
+        # complexes = complexes[:10]
         while count.value < len(complexes):
             print('******************************************')
             cmpx = complexes[count.value]

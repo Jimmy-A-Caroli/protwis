@@ -1,9 +1,10 @@
 from contactnetwork.residue import *
 from Bio.PDB.Polypeptide import *
 from contactnetwork.models import *
-
+from Bio.PDB import PDBParser
+import numpy as np
 from residue.models import Residue
-
+from io import StringIO
 import math
 
 class InteractingPair:
@@ -118,8 +119,89 @@ class InteractingPair:
         Interaction.objects.bulk_create(bulk)
 
     def save_peptide_interactions(self, peptide):
-        pair, _ = InteractingPeptideResiduePair.objects.get_or_create(peptide_amino_acid_three_letter=self.dbres2.three_letter, peptide_amino_acid=self.dbres2.amino_acid, peptide_sequence_number=self.dbres2.sequence_number,
-                                                                            peptide=peptide, receptor_residue=self.dbres1)
+        one_to_three = {
+            "A": "ALA",
+            "R": "ARG",
+            "N": "ASN",
+            "D": "ASP",
+            "C": "CYS",
+            "Q": "GLN",
+            "E": "GLU",
+            "G": "GLY",
+            "H": "HIS",
+            "I": "ILE",
+            "L": "LEU",
+            "K": "LYS",
+            "M": "MET",
+            "F": "PHE",
+            "P": "PRO",
+            "S": "SER",
+            "T": "THR",
+            "W": "TRP",
+            "Y": "TYR",
+            "V": "VAL",
+        }
+        # Define the residue names and residue numbers for the two residues
+        residue1_name = one_to_three[self.dbres1.amino_acid]
+        residue1_number = self.dbres1.sequence_number
+        residue2_name = one_to_three[self.dbres2.amino_acid]
+        residue2_number = self.dbres2.sequence_number
+        # Create a PDB parser
+        parser = PDBParser(QUIET=True)
+        # Create a StringIO object to simulate reading from a file-like object
+        pdb_io = StringIO(peptide.structure.pdb_data.pdb)
+        # Parse the PDB file
+        pdb_struct = parser.get_structure("protein", pdb_io)
+        # Iterate through the structure and find the Cα atoms of the specified residues
+        receptor_ca = None
+        receptor_cb = None
+        peptide_ca = None
+        peptide_cb = None
+        distance = None
+        angle_degrees = None
+        for model in pdb_struct:
+            for chain in model:
+                for res in chain:
+                    if res.get_resname() == residue1_name and res.get_id()[1] == residue1_number:
+                            receptor_ca = res["CA"].get_coord()
+                            if residue1_name != 'GLY':
+                                receptor_cb = res["CB"].get_coord()
+                    elif res.get_resname() == residue2_name and res.get_id()[1] == residue2_number:
+                            peptide_ca = res["CA"].get_coord()
+                            if residue2_name != 'GLY':
+                                peptide_cb = res["CB"].get_coord()
+        # Check if both Cα atoms were found
+        if receptor_ca is not None and peptide_ca is not None:
+            # Calculate the Euclidean distance between the Cα atoms
+            distance = round(np.linalg.norm(receptor_ca - peptide_ca), 2)
+            # Calculate vectors for ca1-ca2 (ligand Cα to receptor Cα) and ca2-CB (ligand Cα to receptor Carbon-Beta)
+            if residue1_name == 'GLY':
+                vector_receptor = receptor_ca - peptide_ca
+            else:
+                vector_receptor = receptor_cb - receptor_ca
+            if residue2_name == 'GLY':
+                vector_peptide = receptor_ca - peptide_ca
+            else:
+                vector_peptide = peptide_cb - peptide_ca
+            # Calculate the dot product between the vectors
+            dot_product = np.dot(vector_receptor, vector_peptide)
+            # Calculate the magnitudes (norms) of the vectors
+            magnitude_receptor = np.linalg.norm(vector_receptor)
+            magnitude_peptide = np.linalg.norm(vector_peptide)
+            # Calculate the cosine of the angle between the vectors using the dot product and magnitudes
+            cosine_angle = dot_product / (magnitude_receptor * magnitude_peptide)
+            # Calculate the angle in radians using the arccosine function (cosine rule)
+            angle_radians = np.arccos(cosine_angle)
+            # Convert the angle from radians to degrees
+            angle_degrees = round(np.degrees(angle_radians), 2)
+
+        pair, _ = InteractingPeptideResiduePair.objects.get_or_create(peptide_amino_acid_three_letter=self.dbres2.three_letter,
+                                                                      peptide_amino_acid=self.dbres2.amino_acid,
+                                                                      peptide_sequence_number=self.dbres2.sequence_number,
+                                                                      peptide=peptide,
+                                                                      receptor_residue=self.dbres1,
+                                                                      ca_distance=distance,
+                                                                      ca_cb_angle=angle_degrees)
         bulk = []
         for i in self.get_interactions():
             ip = InteractionPeptide(interacting_peptide_pair=pair, peptide_atom=i.atomname_residue2, receptor_atom=i.atomname_residue1, interaction_type=i.get_type(), specific_type=i.get_details(), interaction_level=i.get_level())

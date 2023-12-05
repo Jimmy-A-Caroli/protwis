@@ -145,10 +145,12 @@ class StructurePeptideLigandInteractionSerializer(serializers.ModelSerializer):
     receptor_amino_acid = serializers.ReadOnlyField(source='interacting_peptide_pair__receptor_residue__amino_acid')
     receptor_residue_number = serializers.ReadOnlyField(source='interacting_peptide_pair__receptor_residue__sequence_number')
     receptor_residue_generic_number = serializers.ReadOnlyField(source='interacting_peptide_pair__receptor_residue__display_generic_number__label')
+    ca_distance = serializers.ReadOnlyField(source='interacting_peptide_pair__ca_distance')
+    ca_cb_angle = serializers.ReadOnlyField(source='interacting_peptide_pair__ca_cb_angle')
     interaction_type = serializers.ReadOnlyField()
     interaction_level = serializers.ReadOnlyField()
     interaction_count = serializers.ReadOnlyField()
-    interacting_peptide_pair_id = serializers.ReadOnlyField()
+
 
     class Meta:
         model = InteractionPeptide

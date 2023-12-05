@@ -1103,7 +1103,6 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
         if len(queryset) == 0:
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__model__protein__accession__iexact=value)
 
-
         queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
                             'interacting_peptide_pair__peptide__ligand__name',
                             'interacting_peptide_pair__peptide__chain',
@@ -1113,7 +1112,8 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             'interacting_peptide_pair__receptor_residue__amino_acid',
                             'interacting_peptide_pair__receptor_residue__sequence_number',
                             'interacting_peptide_pair__receptor_residue__display_generic_number__label',
-                            'interacting_peptide_pair_id',
+                            'interacting_peptide_pair__ca_cb_angle',
+                            'interacting_peptide_pair__ca_distance',
                             'interaction_type', 'interaction_level').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
                             ).annotate(
                                 interaction_count=Count('interaction_type')

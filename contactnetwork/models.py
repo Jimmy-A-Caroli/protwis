@@ -12,7 +12,6 @@ class InteractingResiduePair(models.Model):
     res1 = models.ForeignKey('residue.Residue', related_name='residue1', on_delete=models.CASCADE)
     res2 = models.ForeignKey('residue.Residue', related_name='residue2', on_delete=models.CASCADE)
 
-
     @classmethod
     def truncate(cls):
         from django.db import connection
@@ -52,6 +51,8 @@ class InteractingPeptideResiduePair(models.Model):
     peptide_sequence_number = models.IntegerField(null=False)
     peptide = models.ForeignKey('ligand.LigandPeptideStructure', related_name='peptide', on_delete=models.CASCADE)
     receptor_residue = models.ForeignKey('residue.Residue', related_name='receptor_residue', on_delete=models.CASCADE)
+    ca_distance =  models.CharField(max_length=10, null=True)
+    ca_cb_angle =  models.CharField(max_length=10, null=True)
 
     def __str__(self):
         return '<{}{}-{}>'.format(self.peptide_amino_acid_three_letter, self.peptide_sequence_number, self.receptor_residue)
