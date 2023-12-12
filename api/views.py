@@ -1092,17 +1092,13 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
     \nThe inserted value will be queried in the following order: PDB code --> UniProt entry name --> UniProt accession
     \nBy default, UniProt values (entry name and accession) will be queried to AlphaFold Models interaction data
     """
+
     serializer_class = StructurePeptideLigandInteractionSerializer
 
     def get_queryset(self):
-        value = self.kwargs.get('value')
-        #trying different inputs: pdb_code, entry_name, accession_number
-        queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index__iexact=value)
-        if len(queryset) == 0:
-            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__model__protein__entry_name__iexact=value)
-        if len(queryset) == 0:
-            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__model__protein__accession__iexact=value)
+        pdb_code = self.kwargs.get('pdb_code')
 
+        queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index__iexact=pdb_code)
         queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
                             'interacting_peptide_pair__peptide__ligand__name',
                             'interacting_peptide_pair__peptide__chain',
@@ -1112,14 +1108,39 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             'interacting_peptide_pair__receptor_residue__amino_acid',
                             'interacting_peptide_pair__receptor_residue__sequence_number',
                             'interacting_peptide_pair__receptor_residue__display_generic_number__label',
-                            'interacting_peptide_pair__ca_cb_angle',
-                            'interacting_peptide_pair__ca_distance',
                             'interaction_type', 'interaction_level').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
                             ).annotate(
                                 interaction_count=Count('interaction_type')
                             ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
 
         return queryset
+
+    # def get_queryset(self):
+    #     value = self.kwargs.get('value')
+    #     #trying different inputs: pdb_code, entry_name, accession_number
+    #     queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index__iexact=value)
+    #     if len(queryset) == 0:
+    #         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__model__protein__entry_name__iexact=value)
+    #     if len(queryset) == 0:
+    #         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__model__protein__accession__iexact=value)
+    #
+    #     queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
+    #                         'interacting_peptide_pair__peptide__ligand__name',
+    #                         'interacting_peptide_pair__peptide__chain',
+    #                         'interacting_peptide_pair__peptide_amino_acid',
+    #                         'interacting_peptide_pair__peptide_amino_acid_three_letter',
+    #                         'interacting_peptide_pair__peptide_sequence_number',
+    #                         'interacting_peptide_pair__receptor_residue__amino_acid',
+    #                         'interacting_peptide_pair__receptor_residue__sequence_number',
+    #                         'interacting_peptide_pair__receptor_residue__display_generic_number__label',
+    #                         'interacting_peptide_pair__ca_cb_angle',
+    #                         'interacting_peptide_pair__ca_distance',
+    #                         'interaction_type', 'interaction_level').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
+    #                         ).annotate(
+    #                             interaction_count=Count('interaction_type')
+    #                         ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+    #
+    #     return queryset
 
 class MutantList(generics.ListAPIView):
 
