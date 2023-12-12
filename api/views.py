@@ -1108,6 +1108,8 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             'interacting_peptide_pair__receptor_residue__amino_acid',
                             'interacting_peptide_pair__receptor_residue__sequence_number',
                             'interacting_peptide_pair__receptor_residue__display_generic_number__label',
+                            'interacting_peptide_pair__ca_cb_angle',
+                            'interacting_peptide_pair__ca_distance',
                             'interaction_type', 'interaction_level').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
                             ).annotate(
                                 interaction_count=Count('interaction_type')

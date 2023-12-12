@@ -145,16 +145,29 @@ class StructurePeptideLigandInteractionSerializer(serializers.ModelSerializer):
     receptor_amino_acid = serializers.ReadOnlyField(source='interacting_peptide_pair__receptor_residue__amino_acid')
     receptor_residue_number = serializers.ReadOnlyField(source='interacting_peptide_pair__receptor_residue__sequence_number')
     receptor_residue_generic_number = serializers.ReadOnlyField(source='interacting_peptide_pair__receptor_residue__display_generic_number__label')
+    ca_distance = serializers.ReadOnlyField(source='interacting_peptide_pair__ca_distance')
+    ca_cb_angle = serializers.ReadOnlyField(source='interacting_peptide_pair__ca_cb_angle')
     interaction_type = serializers.ReadOnlyField()
     interaction_level = serializers.ReadOnlyField()
     interaction_count = serializers.ReadOnlyField()
 
     class Meta:
         model = InteractionPeptide
-        fields = ('pdb_code', 'ligand_name', 'ligand_chain', 'peptide_amino_acid', 'peptide_amino_acid_three_letter', 'peptide_residue_number',
-                  'receptor_amino_acid', 'receptor_residue_number', 'receptor_residue_generic_number', 'interaction_type', 'interaction_level', 'interaction_count')
+        fields = ('pdb_code',
+                  'ligand_name',
+                  'ligand_chain',
+                  'peptide_amino_acid',
+                  'peptide_amino_acid_three_letter',
+                  'peptide_residue_number',
+                  'receptor_amino_acid',
+                  'receptor_residue_number',
+                  'receptor_residue_generic_number',
+                  'ca_distance',
+                  'ca_cb_angle',
+                  'interaction_type',
+                  'interaction_level',
+                  'interaction_count')
 
-    
     # pdb_code = serializers.ReadOnlyField(source='interacting_peptide_pair__peptide__structure__pdb_code__index')
     # ligand_name = serializers.ReadOnlyField(source='interacting_peptide_pair__peptide__ligand__name')
     # ligand_chain = serializers.ReadOnlyField(source='interacting_peptide_pair__peptide__chain')
@@ -172,9 +185,9 @@ class StructurePeptideLigandInteractionSerializer(serializers.ModelSerializer):
     #
     #
     # class Meta:
-    #     model = InteractionPeptide
-    #     fields = ('pdb_code', 'ligand_name', 'ligand_chain', 'peptide_amino_acid', 'peptide_amino_acid_three_letter', 'peptide_residue_number',
-    #               'receptor_amino_acid', 'receptor_residue_number', 'receptor_residue_generic_number', 'ca_distance', 'ca_cb_angle', 'interaction_level', 'interaction_count', 'interaction_id')
+        # model = InteractionPeptide
+        # fields = ('pdb_code', 'ligand_name', 'ligand_chain', 'peptide_amino_acid', 'peptide_amino_acid_three_letter', 'peptide_residue_number',
+        #           'receptor_amino_acid', 'receptor_residue_number', 'receptor_residue_generic_number', 'ca_distance', 'ca_cb_angle', 'interaction_level', 'interaction_count', 'interaction_id')
 
 
 class ComplexInteractionSerializer(serializers.ModelSerializer):
