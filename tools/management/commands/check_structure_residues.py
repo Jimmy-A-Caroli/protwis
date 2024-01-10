@@ -22,9 +22,9 @@ class Command(BaseBuild):
     def add_arguments(self, parser):
         super(Command, self).add_arguments(parser=parser)
         parser.add_argument('--verbose', help='Print specific outliers', default=False, action='store_true')
-    #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
+
     def handle(self, *args, **options):
-        structures = Structure.objects.all().prefetch_related('protein__parent','pdb_code').annotate(dc=Count('distances'))
+        structures = Structure.objects.all().exclude(structure_type__slug__startswith='af-').prefetch_related('protein_conformation__protein__parent','pdb_code').annotate(dc=Count('distances'))
         structures_with_issue = []
         missing_helices = {}
         segments_query_obj = ProteinSegment.objects.filter(proteinfamily="GPCR")

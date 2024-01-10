@@ -143,7 +143,7 @@ def get_angles(request):
 
             data['headers2'] = [{"title" : "Class<br/>Min"},{"title" : "Class<br/>Avg"},{"title" : "Class<br/>Max"}]
 
-        query = Angle.objects.filter(structure__pdb_code__index__in=pdbs2).prefetch_related("residue__generic_number") \
+        query = Angle.objects.filter(structure__pdb_code__isndex__in=pdbs2).prefetch_related("residue__generic_number") \
                 .values("residue__generic_number__label") \
                 .annotate(min_aangle = Min('a_angle'), avg_aangle=ArrayAgg('a_angle'), max_aangle = Max('a_angle'), \
                     min_bangle = Min('b_angle'), avg_bangle=ArrayAgg('b_angle'), max_bangle = Max('b_angle'), \

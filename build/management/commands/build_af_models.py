@@ -777,7 +777,6 @@ class Command(BaseBuild):
         # setting up processes
         complexes = self.parsed_structures.complexes
         complexes = list(set(complexes)) #removing duplicates
-        complexes = complexes[730:]
         while count.value < len(complexes):
             print('******************************************')
             cmpx = complexes[count.value]
@@ -827,7 +826,6 @@ class Command(BaseBuild):
             struct.representative = representative
             struct.state = ps
             struct.author_state = ps
-            struct.protein = con
 
             pdb_path = sd['location']
             if not os.path.isfile(pdb_path):

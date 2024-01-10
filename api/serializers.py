@@ -133,25 +133,26 @@ class StructurePeptideLigandInteractionSerializer(serializers.ModelSerializer):
     interaction_type = serializers.ReadOnlyField()
     interaction_level = serializers.ReadOnlyField()
     interaction_count = serializers.ReadOnlyField()
+    interacting_peptide_pair_id = serializers.ReadOnlyField()
 
     class Meta:
         model = InteractionPeptide
         fields = ('pdb_code', 'ligand_name', 'ligand_chain', 'peptide_amino_acid', 'peptide_amino_acid_three_letter', 'peptide_residue_number',
-                  'receptor_amino_acid', 'receptor_residue_number', 'receptor_residue_generic_number', 'interaction_type', 'interaction_level', 'interaction_count')
+                  'receptor_amino_acid', 'receptor_residue_number', 'receptor_residue_generic_number', 'interacting_peptide_pair_id', 'interaction_level', 'interaction_count', 'interaction_id')
 
 
 class ComplexInteractionSerializer(serializers.ModelSerializer):
-    pdb_code = serializers.ReadOnlyField(
-        source='interacting_pair__res1_id__protein_conformation__protein__entry_name')
+    id = serializers.ReadOnlyField(
+        source='interacting_pair__referenced_structure__pdb_code__index')
 
     receptor = serializers.ReadOnlyField(
         source='interacting_pair__res1_id__protein_conformation__protein__parent__entry_name')
-    receptor_generic_residue_number = serializers.ReadOnlyField(source='interacting_pair__res1_id__generic_number__label')
+    receptor_generic_residue_number = serializers.ReadOnlyField(source='interacting_pair__res1_id__display_generic_number__label')
     receptor_residue_number = serializers.ReadOnlyField(source='interacting_pair__res1_id__sequence_number')
 
     gprotein = serializers.ReadOnlyField(
         source='interacting_pair__res1_id__protein_conformation__protein__parent__entry_name')
-    gprotein_generic_residue_number = serializers.ReadOnlyField(source='interacting_pair__res2_id__generic_number__label')
+    gprotein_generic_residue_number = serializers.ReadOnlyField(source='interacting_pair__res2_id__display_generic_number__label')
     gprotein_residue_number = serializers.ReadOnlyField(source='interacting_pair__res2_id__sequence_number')
 
     interaction_type = serializers.ReadOnlyField()
@@ -159,7 +160,7 @@ class ComplexInteractionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Interaction
-        fields = ('pdb_code',
+        fields = ('id',
                   'receptor', 'receptor_generic_residue_number', 'receptor_residue_number',
                   'gprotein', 'gprotein_generic_residue_number', 'gprotein_residue_number',
                   'interaction_type', 'interaction_level')

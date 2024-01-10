@@ -72,8 +72,8 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-        #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
-        self.ss = Structure.objects.all()
+
+        self.ss = Structure.objects.all().exclude(structure_type__slug__startswith='af-')
         self.structure_data_dir = os.sep.join([settings.DATA_DIR, 'structure_data', 'structures'])
         if self.purge:
             self.purge_contact_network()

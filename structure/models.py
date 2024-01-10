@@ -70,6 +70,7 @@ class Structure(models.Model):
     stats_text = models.ForeignKey('StatsText', null=True, on_delete=models.CASCADE)
     mammal = models.BooleanField(default=False) #whether the species of the structure is mammal
     closest_to_human = models.BooleanField(default=False) # A boolean to say if the receptor/state of this structure is the closest structure to human
+    build_check = models.BooleanField(default=False)
 
     def __str__(self):
         return self.pdb_code.index
@@ -97,7 +98,7 @@ class Structure(models.Model):
             save_line = False
             if pref_chain:
                 # or 'refined' bit needs rework, it fucks up the extraction
-                if (line.startswith('ATOM') or line.startswith('HET')) and (line[21] == self.preferred_chain[0] or 'refined' in self.pdb_code.index):
+                if (line.startswith('ATOM') or line.startswith('HET')) and line[21] == self.preferred_chain[0]:
                 # if (line.startswith('ATOM') or line.startswith('HET')) and (line[21] == self.preferred_chain[0]):
                     save_line = True
             else:
@@ -315,7 +316,7 @@ class StructureType(models.Model):
         if self.name=="X-ray diffraction":
             return "X-ray"
         elif self.name=="Electron microscopy":
-            return "cryo-EM"
+            return "Cryo-EM"
         elif self.name=="Electron crystallography":
             return "MicroED"
         else:

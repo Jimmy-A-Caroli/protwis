@@ -35,7 +35,7 @@ class Command(BaseBuild):
 					fasta = ''
 					### xtal preset
 					if options['make_db']==['xtal']:
-						structs = Structure.objects.all() #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
+						structs = Structure.objects.all().exclude(structure_type__slug__startswith='af-')
 						for i in structs:
 							if i.protein.parent not in prots:
 								prots.append(i.protein.parent)

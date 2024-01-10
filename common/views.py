@@ -17,6 +17,7 @@ from structure.models import Structure
 from protein.models import Protein, ProteinFamily, ProteinSegment, Species, ProteinSource, ProteinSet, ProteinCouplings
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, ResidueGenericNumberEquivalent, ResiduePositionSet, Residue
 from interaction.forms import PDBform
+from signprot.models import SignprotStructure
 from construct.tool import FileUploadForm
 
 from svglib.svglib import SvgRenderer
@@ -1044,7 +1045,7 @@ class AbsSegmentSelection(TemplateView):
     description = 'Select sequence segments in the middle column. You can expand helices and select individual' \
         + ' residues by clicking on the down arrows next to each helix.\n\nSelected segments will appear in the' \
         + ' right column, where you can edit the list.\n\nOnce you have selected all your segments, click the green' \
-        + ' button.'
+        + ' button. \n\n'
     documentation_url = settings.DOCUMENTATION_URL
     docs = False
     segment_list = True
@@ -1222,7 +1223,8 @@ def AddToSelection(request):
 
         elif selection_subtype == 'set':
             o.append(ProteinSet.objects.get(pk=selection_id))
-
+        # AddToSelection('reference', 'structure',  $(this).children().eq(11).text()+"_refined");
+        # 4IAQ
         elif selection_subtype == 'structure':
             o.append(Structure.objects.get(pdb_code__index=selection_id.upper()))
 
@@ -1230,6 +1232,21 @@ def AddToSelection(request):
             selection_subtype = 'structure'
             for pdb_code in selection_id.split(","):
                 o.append(Structure.objects.get(pdb_code__index=pdb_code.upper()))
+
+        elif selection_subtype == 'signprot_many':
+            selection_subtype = 'structure'
+            for pdb_code in selection_id.split(","):
+                try:
+                    o.append(SignprotStructure.objects.get(pdb_code__index=pdb_code.upper()))
+                except SignprotStructure.DoesNotExist:
+                    o.append(Structure.objects.get(pdb_code__index=pdb_code.upper()))
+
+        elif selection_subtype == 'signprot':
+            selection_subtype = 'structure'
+            try:
+                o.append(SignprotStructure.objects.get(pdb_code__index=selection_id.upper()))
+            except SignprotStructure.DoesNotExist:
+                o.append(Structure.objects.get(pdb_code__index=selection_id.upper()))
 
         elif selection_subtype == 'structure_complex_receptor':
             receptor, signprot = selection_id.split('-')
@@ -1251,7 +1268,7 @@ def AddToSelection(request):
                 sm = Structure.objects.get(protein__parent__entry_name=entry_name, state__name=state, structure_type__slug__startswith='af-')
             o.append(sm)
 
-        elif selection_subtype == 'structure_models_many':
+        elif selection_subtype == 'structure_model_many':
             selection_subtype = 'structure_model'
             for model in selection_id.split(","):
                 state = model.split('_')[-1]
@@ -1320,7 +1337,6 @@ def RemoveFromSelection(request):
 
     # remove the selected item to the selection
     selection.remove(selection_type, selection_subtype, selection_id)
-
     # export simple selection that can be serialized
     simple_selection = selection.exporter()
 
@@ -1364,6 +1380,26 @@ def ClearSelection(request):
     request.session['selection'] = simple_selection
 
     return render(request, 'common/selection_lists.html', selection.dict(selection_type))
+
+def CheckSelection(request):
+    """Check all selected items of the selected type from the session"""
+    selection_type = request.GET['selection_type']
+
+    # get simple selection from session
+    simple_selection = request.session.get('selection', False)
+
+    # create full selection and import simple selection (if it exists)
+    selection = Selection()
+    if simple_selection:
+        selection.importer(simple_selection)
+
+    if selection_type == 'reference':
+        tot = len(selection.reference)
+    else:
+        tot = len(selection.targets)
+
+    return JsonResponse({'total': tot})
+
 
 def SelectRange(request):
     """Adds generic numbers within the given range"""
@@ -1557,7 +1593,6 @@ def SelectAlignableResidues(request):
     selection = Selection()
     if simple_selection:
         selection.importer(simple_selection)
-
     if "protein_type" in request.GET:
         if request.GET['protein_type'] == 'gprotein':
             segmentlist = definitions.G_PROTEIN_SEGMENTS
@@ -1596,6 +1631,7 @@ def SelectAlignableResidues(request):
 
         if simple_selection and simple_selection.targets:
             for t in simple_selection.targets:
+                print(t.type)
                 if t.type == 'family':
                     proteins = Protein.objects.filter(family__slug__startswith=t.item.slug)
                     t_prot = proteins[0]

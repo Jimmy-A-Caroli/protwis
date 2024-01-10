@@ -32,7 +32,7 @@ class Command(BaseBuild):
 
     # fetch representative (inactive) structures FIXME add active structure??
     structures = Structure.objects.filter(representative=True,
-        state__slug=settings.DEFAULT_PROTEIN_STATE).prefetch_related(
+        state__slug=settings.DEFAULT_PROTEIN_STATE).exclude(structure_type__slug__startswith='af-').prefetch_related(
         'protein__parent__family')
 
     # fetch all protein conformations

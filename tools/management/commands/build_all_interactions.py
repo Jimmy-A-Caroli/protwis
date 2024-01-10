@@ -14,8 +14,8 @@ class Command(BaseBuild):
     help = "Function to calculate interaction for all GPCR structures."
 
     logger = logging.getLogger(__name__)
-    pdbs = Structure.objects.all().values_list('pdb_code__index', flat=True)
-    #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
+    pdbs = Structure.objects.all().exclude(structure_type__slug__startswith='af-').values_list('pdb_code__index', flat=True)
+
 
     def add_arguments(self, parser):
         parser.add_argument('-p', '--proc',

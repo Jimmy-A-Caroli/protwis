@@ -30,9 +30,7 @@ class Command(BaseCommand):
 
 
 
-    def handle(self, *args, **options):
-        #DO WE NEED TO EXCLUDE MODELS? **JIMMY**
-        for s in Structure.objects.all().order_by('protein__parent__entry_name'):
+        for s in Structure.objects.all().exclude(structure_type__slug__startswith='af-').order_by('protein__parent__entry_name'):
             slug = str(s)
             pc = Protein.objects.filter(entry_name=slug.lower()).get()
             rs = pc.residue_set.filter(generic_number__label='34x50')
