@@ -290,7 +290,7 @@ class ServeComplexModels(TemplateView):
 
             context['structure_complex_model'] = complex_models
 
-        except StructureComplexModel.DoesNotExist as e:
+        except Structure.DoesNotExist as e:
             pass
 
         return context

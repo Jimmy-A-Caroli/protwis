@@ -8,7 +8,7 @@ from django.conf import settings
 from interaction.models import ResidueFragmentInteraction, StructureLigandInteraction, ResidueFragmentInteractionType
 from interaction.forms import PDBform
 from ligand.models import Ligand, LigandType, LigandRole
-from structure.models import Structure, PdbData, Rotamer, Fragment, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureRMSD, StructurepLDDT, StructureAFScores
+from structure.models import Structure, PdbData, Rotamer, Fragment, StructureExtraProteins, StructureVectors, StructureRMSD, StructurepLDDT, StructureAFScores
 from structure.assign_generic_numbers_gpcr import GenericNumbering
 from protein.models import Protein, ProteinSegment
 from residue.models import Residue, ResidueGenericNumberEquivalent, ResidueNumberingScheme
