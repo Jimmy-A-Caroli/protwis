@@ -108,7 +108,7 @@ class Command(BaseBuild):
                     pass
             Structure.objects.filter(structure_type__slug='af-signprot-refined').delete()
         elif options['purge']:
-            for s in StructureModel.objects.all():
+            for s in Structure.objects.filter(structure_type__slug__startswith='af-'):
                 try:
                     s.pdb_data.delete()
                 except:

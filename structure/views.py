@@ -583,7 +583,7 @@ def ComplexModelDetails(request, header, refined=False):
     if not refined:
         scores = StructureAFScores.objects.get(structure=model)
         #Need to build the plDDT colors
-        model_plddt = StructureModelpLDDT.objects.filter(structure=model).order_by('residue__protein__id').prefetch_related('residue','residue__protein','residue__protein_segment')
+        model_plddt = StructurepLDDT.objects.filter(structure=model).order_by('residue__protein__id').prefetch_related('residue','residue__protein','residue__protein_segment')
         avg_plddt = model_plddt.aggregate(Avg('pLDDT'))
         residues_plddt = {}
         for item in model_plddt:

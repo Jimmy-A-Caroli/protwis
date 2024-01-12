@@ -8,7 +8,7 @@ from django.conf import settings
 from interaction.models import ResidueFragmentInteraction, StructureLigandInteraction, ResidueFragmentInteractionType
 from interaction.forms import PDBform
 from ligand.models import Ligand, LigandType, LigandRole
-from structure.models import Structure, PdbData, Rotamer, Fragment, StructureModel, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureModelRMSD, StructureModelpLDDT, StructureAFScores
+from structure.models import Structure, PdbData, Rotamer, Fragment, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureRMSD, StructurepLDDT, StructureAFScores
 from structure.assign_generic_numbers_gpcr import GenericNumbering
 from protein.models import Protein, ProteinSegment
 from residue.models import Residue, ResidueGenericNumberEquivalent, ResidueNumberingScheme
@@ -1591,7 +1591,7 @@ def ComplexDetails(request, pdbname):
     else:
         scores = StructureAFScores()
     #Need to build the plDDT colors
-    model_plddt = StructureModelpLDDT.objects.filter(structure=model)
+    model_plddt = StructurepLDDT.objects.filter(structure=model)
     residues_plddt = {}
     for item in model_plddt:
         residues_plddt[item.residue.id] = [item.residue, item.pLDDT]

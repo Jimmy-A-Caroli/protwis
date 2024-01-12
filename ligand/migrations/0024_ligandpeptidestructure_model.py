@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ligandpeptidestructure',
             name='model',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='structure.StructureModel'),
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='structure.Structure'),
         ),
     ]

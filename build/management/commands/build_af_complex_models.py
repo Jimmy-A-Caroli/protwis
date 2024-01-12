@@ -8,7 +8,7 @@ from residue.models import Residue
 from common.models import WebLink, WebResource, Publication
 from common.tools import test_model_updates
 from common.definitions import G_PROTEIN_DISPLAY_NAME as g_prot_dict
-from structure.models import Structure, StructureType, PdbData, Rotamer, Fragment, StructureExtraProteins, StructureAFScores, StructureModelpLDDT
+from structure.models import Structure, StructureType, PdbData, Rotamer, Fragment, StructureExtraProteins, StructureAFScores, StructurepLDDT
 from construct.functions import *
 
 from contactnetwork.models import *
@@ -965,11 +965,11 @@ class Command(BaseBuild):
                             res_obj = Residue.objects.get(protein=beta_protconf.protein, sequence_number=res.get_id()[1])
                         elif chain.get_id()=='D':
                             res_obj = Residue.objects.get(protein=gamma_protconf.protein, sequence_number=res.get_id()[1])
-                        r = StructureModelpLDDT(structure=struct, residue=res_obj, pLDDT=plddt)
+                        r = StructurepLDDT(structure=struct, residue=res_obj, pLDDT=plddt)
                         resis.append(r)
                     except Residue.DoesNotExist:
                         continue
-            StructureModelpLDDT.objects.bulk_create(resis)
+            StructurepLDDT.objects.bulk_create(resis)
 
             # try:
             current = time.time()
