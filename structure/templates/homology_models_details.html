@@ -165,9 +165,9 @@ canvas {
     </div>
     <div class="col-md-9">
         {% if not model.protein.accession %}
-            <a href="/protein/{{ model_main_template.protein_conformation.protein.parent.entry_name }}">{{ model_main_template.protein_conformation.protein.parent.family.name|safe }}</a> (sequence similarity: {{ main_template_seqsim }}%) PDB: <a href="../{{ model_main_template.pdb_code.index }}">{{ model_main_template.pdb_code.index }}</a>
+            <a href="/protein/{{ model_main_template.protein.parent.entry_name }}">{{ model_main_template.protein.parent.family.name|safe }}</a> (sequence similarity: {{ main_template_seqsim }}%) PDB: <a href="../{{ model_main_template.pdb_code.index }}">{{ model_main_template.pdb_code.index }}</a>
         {% else %}
-            <a href="/protein/{{ model.main_template.protein_conformation.protein.parent.entry_name }}">{{ model.main_template.protein_conformation.protein.parent.family.name|safe }}</a> (sequence similarity: {{ main_template_seqsim }}%) PDB: <a href="../{{ model.main_template.pdb_code.index }}">{{ model.main_template.pdb_code.index }}</a>
+            <a href="/protein/{{ model.main_template.protein.parent.entry_name }}">{{ model.main_template.protein.parent.family.name|safe }}</a> (sequence similarity: {{ main_template_seqsim }}%) PDB: <a href="../{{ model.main_template.pdb_code.index }}">{{ model.main_template.pdb_code.index }}</a>
 
             <div class="btn-group", style="padding: 0px 0px 5px 5px;">
                 <a id="align_btn" class="btn btn-primary btn-mini " href="javascript:void(0)" style="padding: 2px 5px;">Align</a>
@@ -201,7 +201,7 @@ canvas {
                 {% for prot, bts in backbone_templates.items %}
                     {% for bt in bts %}
                         <div class="graphcolor" style="background-color:{{ bt.color }}; width: 20px; height: 10px; margin-bottom: 5px; border:solid black;"></div>
-                        {{ bt.pdb_code.index }} ({{ bt.protein_conformation.protein.parent.name|safe}}) <br>
+                        {{ bt.pdb_code.index }} ({{ bt.protein.parent.name|safe}}) <br>
                     {% endfor %}
                 {% endfor %}
                         <div class="graphcolor" style="background-color:white; width: 20px; height: 10px; margin-bottom: 5px; border: solid black;"></div>
@@ -311,14 +311,14 @@ canvas {
                                 <td>-</td>
                             {% endif %}
                             {% if rota.backbone_template %}
-                                <td><a href="/protein/{{ rota.backbone_template.protein_conformation.protein.parent.entry_name }}">{{ rota.backbone_template.protein_conformation.protein.parent.name|safe }}</a></td>
+                                <td><a href="/protein/{{ rota.backbone_template.protein.parent.entry_name }}">{{ rota.backbone_template.protein.parent.name|safe }}</a></td>
                                 <td><a href="../{{ rota.backbone_template.pdb_code.index }}">{{ rota.backbone_template.pdb_code.index|safe }}</a></td>
                             {% else %}
                                 <td>AlphaFold</td>
                                 <td>AlphaFold</td>
                             {% endif %}
                             {% if rota.rotamer_template %}
-                                <td><a href="/protein/{{ rota.rotamer_template.protein_conformation.protein.parent.entry_name }}">{{ rota.rotamer_template.protein_conformation.protein.parent.name|safe }}</a></td>
+                                <td><a href="/protein/{{ rota.rotamer_template.protein.parent.entry_name }}">{{ rota.rotamer_template.protein.parent.name|safe }}</a></td>
                                 <td><a href="../{{ rota.rotamer_template.pdb_code.index }}">{{ rota.rotamer_template.pdb_code.index|safe }}</a></td>
                             {% else %}
                                 <td>AlphaFold</td>

@@ -403,8 +403,8 @@ class Biosensor(models.Model):
         db_table = 'protein_couplings_biosensor'
 
 
-def dgn(gn, protein_conformation):
+def dgn(gn, protein):
     """Convert generic number to display generic number."""
-    scheme = ResidueNumberingScheme.objects.get(slug=protein_conformation.protein.residue_numbering_scheme.slug)
+    scheme = ResidueNumberingScheme.objects.get(slug=protein.residue_numbering_scheme.slug)
     convert_gn = ResidueGenericNumberEquivalent.objects.get(label=gn, scheme=scheme).default_generic_number.label
     return Residue.objects.get(protein=protein_conformation, generic_number__label=convert_gn).display_generic_number.label

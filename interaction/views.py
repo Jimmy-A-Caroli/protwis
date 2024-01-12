@@ -1452,17 +1452,17 @@ def ComplexDetails(request, pdbname):
     """
     pdbname = pdbname
 
-    structures = Interaction.objects.values('interacting_pair__referenced_structure__protein_conformation__protein__entry_name', 'interacting_pair__referenced_structure__signprot_complex__protein__entry_name').filter(
+    structures = Interaction.objects.values('interacting_pair__referenced_structure__protein__entry_name', 'interacting_pair__referenced_structure__signprot_complex__protein__entry_name').filter(
         interacting_pair__referenced_structure__pdb_code__index=pdbname).annotate(numRes=Count('pk', distinct=True)).order_by('-numRes')
     resn_list = ''
 
     crystal = Structure.objects.get(pdb_code__index=pdbname)
     if crystal.structure_type.slug.startswith('af-'):
-        p = Protein.objects.get(id=crystal.protein_conformation.protein.id)
+        p = Protein.objects.get(id=crystal.protein.id)
     else:
-        p = Protein.objects.get(protein=crystal.protein_conformation.protein)
+        p = Protein.objects.get(protein=crystal.protein)
 
-    residuelist = Residue.objects.filter(protein_conformation__protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
     lookup = {}
 
     residues_lookup = {}
@@ -1521,9 +1521,9 @@ def ComplexDetails(request, pdbname):
 
     for segment in segments:
         data[segment.slug] = OrderedDict()
-        residues = Residue.objects.filter(protein_segment=segment,  protein_conformation__protein=p,
-                                          generic_number__label__in=residue_table_list).prefetch_related('protein_conformation__protein',
-                                                                                                         'protein_conformation__state', 'protein_segment',
+        residues = Residue.objects.filter(protein_segment=segment,  protein=p,
+                                          generic_number__label__in=residue_table_list).prefetch_related('protein',
+                                                                                                         'state', 'protein_segment',
                                                                                                          'generic_number', 'display_generic_number', 'generic_number__scheme',
                                                                                                          'alternative_generic_numbers__scheme')
         for scheme in numbering_schemes:
@@ -1547,7 +1547,7 @@ def ComplexDetails(request, pdbname):
                     pos = residue.generic_number
                     if scheme == pos.scheme:
                         data[segment.slug][pos.label]['seq'][proteins.index(
-                            residue.protein_conformation.protein)] = str(residue)
+                            residue.protein)] = str(residue)
                     else:
                         if scheme.slug not in data[segment.slug][pos.label].keys():
                             data[segment.slug][pos.label][
@@ -1556,7 +1556,7 @@ def ComplexDetails(request, pdbname):
                             data[segment.slug][pos.label][
                                 scheme.slug] += " " + alternative.label
                         data[segment.slug][pos.label]['seq'][proteins.index(
-                            residue.protein_conformation.protein)] = str(residue)
+                            residue.protein)] = str(residue)
                 else:
                     if scheme.slug not in data[segment.slug][pos.label].keys():
                         data[segment.slug][pos.label][
@@ -1565,7 +1565,7 @@ def ComplexDetails(request, pdbname):
                         data[segment.slug][pos.label][
                             scheme.slug] += " " + alternative.label
                     data[segment.slug][pos.label]['seq'][proteins.index(
-                        residue.protein_conformation.protein)] = str(residue)
+                        residue.protein)] = str(residue)
 
     # Preparing the dictionary of list of lists. Dealing with tripple nested
     # dictionary in django templates is a nightmare
@@ -1581,7 +1581,7 @@ def ComplexDetails(request, pdbname):
     context['data'] = flattened_data
     context['number_of_schemes'] = len(numbering_schemes)
 
-    residuelist = Residue.objects.filter(protein_conformation__protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein=p).prefetch_related('protein_segment','display_generic_number','generic_number')
     HelixBox = DrawHelixBox(residuelist, p.get_protein_class(), str(p), nobuttons=1)
 
     ### Implementing same code for calculating the interactions plot

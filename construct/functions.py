@@ -105,7 +105,7 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
     pdbdata_raw = None
     if model == True:
         try:
-            structure = Structure.objects.filter(protein_conformation__protein=protein, structure_type__slug='alphafold').get()
+            structure = Structure.objects.filter(protein=protein, structure_type__slug='alphafold').get()
             if structure.pdb_data.pdb:
                 pdbdata_raw = structure.pdb_data.pdb
         except:
@@ -1189,7 +1189,6 @@ def add_construct(d):
 
     protein = Protein.objects.filter(entry_name=d['construct_crystal']['uniprot']).get()
     structure = Structure.objects.filter(pdb_code__index=d['construct_crystal']['pdb'].upper()).get()
-    protein_conformation = structure.protein
 
     construct = Construct()
     construct.protein = protein
@@ -1225,7 +1224,7 @@ def add_construct(d):
         if 'remark' not in mutation:
             mutation['remark'] = ''
 
-        res_wt = Residue.objects.get(protein=protein_conformation.parent, sequence_number=mutation['pos'])
+        res_wt = Residue.objects.get(protein=structure.protein.parent, sequence_number=mutation['pos'])
         # if res_wt.amino_acid != mutation['wt']:
         #     print('aa dont match',construct,mutation['pos'],"annotated wt:", mutation['wt'], "DB wt:",res_wt.amino_acid, "Annotated Mut",mutation['mut'])
 

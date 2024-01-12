@@ -209,7 +209,7 @@ class Command(BaseBuild):
                          'D':8, 'C':6, 'R':11, 'P':7, 'Q':9, 'N':8, 'W':14}
 
 
-        entry_name = struct.protein_conformation.protein.entry_name
+        entry_name = struct.protein.entry_name
 
         s = self.parsed_pdb
 
@@ -248,18 +248,18 @@ class Command(BaseBuild):
                     pdbseq[chain][pos] = [i, AA[residue.resname]]
                     i += 1
 
-        parent_seq_protein = str(struct.protein_conformation.protein.sequence)
+        parent_seq_protein = str(struct.protein.sequence)
         # print(structure.protein_conformation.protein.parent.entry_name)
-        rs = Residue.objects.filter(protein_conformation__protein=struct.protein_conformation.protein).prefetch_related('display_generic_number','generic_number','protein_segment')
+        rs = Residue.objects.filter(protein=struct.protein).prefetch_related('display_generic_number','generic_number','protein_segment')
         #retrieve segment ends from wild type
-        if struct.protein_conformation.protein.entry_name in self.non_xtal_seg_ends:
-            seg_ends = self.non_xtal_seg_ends[struct.protein_conformation.protein.entry_name]
+        if struct.protein.entry_name in self.non_xtal_seg_ends:
+            seg_ends = self.non_xtal_seg_ends[struct.protein.entry_name]
             # k = next(iter(seg_ends))
             # seg_ends.pop(k)
         else:
             seg_ends = []
             # print('No SEG ENDS info for {}'.format(structure.pdb_code.index))
-            print('No SEG ENDS info for {}'.format(struct.protein_conformation.protein.entry_name))
+            print('No SEG ENDS info for {}'.format(struct.protein.entry_name))
         parent_seq = ""
         for i,r in enumerate(rs, 1): #required to match WT position to a record (for duplication of GN values)
             # wt_lookup[r.sequence_number] = r
@@ -267,7 +267,7 @@ class Command(BaseBuild):
             parent_seq += r.amino_acid
 
         if len(wt_lookup)==0:
-            print("No residues for", struct.protein_conformation.protein.entry_name)
+            print("No residues for", struct.protein.entry_name)
             return None
         #align WT with structure seq -- make gaps penalties big, so to avoid too much overfitting
         pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -5, -2)
@@ -296,7 +296,7 @@ class Command(BaseBuild):
                 mapped_seq[i-gaps] = [r,ref_positions[i]]
 
         pdb = struct.pdb_data.pdb
-        protein_conformation=struct.protein_conformation
+        protein=struct.protein
         temp = ''
         check = 0
         errors = 0
@@ -342,7 +342,7 @@ class Command(BaseBuild):
                         residue = Residue()
                         residue.sequence_number = int(check.strip())
                         residue.amino_acid = AA[residue_name.upper()]
-                        residue.protein_conformation = protein_conformation
+                        residue.protein = protein
                         try:
                             seq_num_pos = pdbseq[chain][residue.sequence_number][0]
                         except:
@@ -599,7 +599,7 @@ class Command(BaseBuild):
                                         generic_change += 1
                                         # print(residue.protein_segment.slug[0:2])
                                         if residue.protein_segment.slug[0:2]=="TM" or 1==1:
-                                            if debug: print(struct.protein_conformation.protein.entry_name,residue.amino_acid,"XTAL POS",residue.sequence_number, "WT POS",wt_r.sequence_number,"XTAL:",residue.protein_segment,"WT:",wt_r.protein_segment)
+                                            if debug: print(struct.protein.entry_name,residue.amino_acid,"XTAL POS",residue.sequence_number, "WT POS",wt_r.sequence_number,"XTAL:",residue.protein_segment,"WT:",wt_r.protein_segment)
                                             pass
 
                             # print('aa ',residue.sequence_number,residue.amino_acid,residue.display_generic_number, residue.protein_segment)
@@ -627,7 +627,7 @@ class Command(BaseBuild):
                 chain = line[21]
                 residue_name = line[17:20].title() #use title to get GLY to Gly so it matches
 
-        bulked_res = Residue.objects.filter(protein_conformation__protein=struct.protein_conformation.protein)
+        bulked_res = Residue.objects.filter(protein=struct.protein)
         bulked_rot = rotamer_data_bulk #Rotamer.objects.filter(structure__protein_conformation__protein=struct.protein_conformation.protein)
         rotamer_bulk = []
         for i,res in enumerate(bulked_res):
@@ -689,7 +689,7 @@ class Command(BaseBuild):
                 structure.pdb_data = pdbdata
                 structure.save()
 
-            protein = structure.protein_conformation
+            protein = structure.protein
             lig_key = list(data.keys())[0]
             #/tmp/interactions/pdbs/oprd_mouse/oprd_mouse-1643-rank0.pdb
             prot_pep = sd['location'].split('/')[-1].split('-r')[0]
@@ -780,7 +780,7 @@ class Command(BaseBuild):
             # create a structure record
             # check if there is a ligand
             try:
-                struct = Structure.objects.get(protein_conformation__protein=con, pdb_code__index=sd['pdb'], structure_type__slug='af-signprot')
+                struct = Structure.objects.get(protein=con, pdb_code__index=sd['pdb'], structure_type__slug='af-signprot')
             except Structure.DoesNotExist:
                 struct = Structure()
 
@@ -800,17 +800,6 @@ class Command(BaseBuild):
             struct.state = ps
             struct.author_state = ps
 
-            # protein conformation
-            try:
-                struct.protein_conformation = ProteinConformation.objects.get(protein=con)
-            except ProteinConformation.DoesNotExist:
-                self.logger.error('Protein conformation for construct {} does not exists'.format(con))
-                continue
-
-            # if struct.protein_conformation.state is not state:
-            #     ProteinConformation.objects.filter(protein=con).update(state=ps)
-
-
             pdb_path = sd['location']
 
             header = ''
@@ -827,7 +816,7 @@ class Command(BaseBuild):
                 except FileNotFoundError:
                     print('File {} does not exist. Skipping'.format(pdb_path))
                     continue
-            
+
             ### GPCR GN assign
             try:
                 pdb_struct = StringIO(pdbdata_raw)
@@ -920,20 +909,20 @@ class Command(BaseBuild):
             #     self.logger.error('Error with rotamers for {}'.format(sd['pdb']))
             #     self.rotamer_errors.append(struct)
 
-            try:
-                struct.protein_conformation.generate_sites()
-            except:
-                pass
+            # try:
+            #     struct.protein_conformation.generate_sites()
+            # except:
+            #     pass
 
             ##### SIGNPROT
             beta_gamma = sd['beta_gamma']
             signprot = Protein.objects.get(entry_name=sd['signprot'])
-            signprot_conf = ProteinConformation.objects.get(protein=signprot)
+            # signprot_conf = ProteinConformation.objects.get(protein=signprot)
             if beta_gamma:
-                beta_protconf = ProteinConformation.objects.get(protein__entry_name='gbb1_human')
-                gamma_protconf = ProteinConformation.objects.get(protein__entry_name='gbg2_human')
+                beta_protconf = Protein.objects.get(entry_name='gbb1_human')
+                gamma_protconf = Protein.objects.get(entry_name='gbg2_human')
                 sc = SignprotComplex.objects.get_or_create(alpha='B', protein=signprot, structure=struct,
-                                                           beta_chain='C', gamma_chain='D', beta_protein=beta_protconf.protein, gamma_protein=gamma_protconf.protein)
+                                                           beta_chain='C', gamma_chain='D', beta_protein=beta_protconf, gamma_protein=gamma_protconf)
             else:
                 sc = SignprotComplex.objects.get_or_create(alpha='B', protein=signprot, structure=struct,
                                                            beta_chain=None, gamma_chain=None, beta_protein=None, gamma_protein=None)
@@ -955,10 +944,10 @@ class Command(BaseBuild):
 
             ##### StructureExtraProteins
             g_prot_dict[signprot.entry_name.split('_')[0].upper()]
-            sep = StructureExtraProteins.objects.get_or_create(display_name=g_prot_dict[signprot.entry_name.split('_')[0].upper()], note=None, chain='B', category='G alpha', wt_coverage=100, protein_conformation=signprot_conf, structure=struct, wt_protein=signprot)
+            sep = StructureExtraProteins.objects.get_or_create(display_name=g_prot_dict[signprot.entry_name.split('_')[0].upper()], note=None, chain='B', category='G alpha', wt_coverage=100, structure=struct, wt_protein=signprot)
             if beta_gamma:
-                sep_beta = StructureExtraProteins.objects.get_or_create(display_name='G&beta;1', note=None, chain='C', category='G beta', wt_coverage=100, protein_conformation=beta_protconf, structure=struct, wt_protein=beta_protconf.protein)
-                sep_beta = StructureExtraProteins.objects.get_or_create(display_name='G&gamma;2', note=None, chain='D', category='G gamma', wt_coverage=100, protein_conformation=gamma_protconf, structure=struct, wt_protein=gamma_protconf.protein)
+                sep_beta = StructureExtraProteins.objects.get_or_create(display_name='G&beta;1', note=None, chain='C', category='G beta', wt_coverage=100, structure=struct, wt_protein=beta_protconf.protein)
+                sep_beta = StructureExtraProteins.objects.get_or_create(display_name='G&gamma;2', note=None, chain='D', category='G gamma', wt_coverage=100, structure=struct, wt_protein=gamma_protconf.protein)
             # g beta - TO BE ADDED
             # g gamma - TO BE ADDED
 
@@ -969,13 +958,13 @@ class Command(BaseBuild):
                     plddt = res['C'].get_bfactor()
                     try:
                         if chain.get_id()=='A':
-                            res_obj = Residue.objects.get(protein_conformation__protein=con, sequence_number=res.get_id()[1])
+                            res_obj = Residue.objects.get(protein=con, sequence_number=res.get_id()[1])
                         elif chain.get_id()=='B':
-                            res_obj = Residue.objects.get(protein_conformation__protein=signprot, sequence_number=res.get_id()[1])
+                            res_obj = Residue.objects.get(protein=signprot, sequence_number=res.get_id()[1])
                         elif chain.get_id()=='C':
-                            res_obj = Residue.objects.get(protein_conformation__protein=beta_protconf.protein, sequence_number=res.get_id()[1])
+                            res_obj = Residue.objects.get(protein=beta_protconf.protein, sequence_number=res.get_id()[1])
                         elif chain.get_id()=='D':
-                            res_obj = Residue.objects.get(protein_conformation__protein=gamma_protconf.protein, sequence_number=res.get_id()[1])
+                            res_obj = Residue.objects.get(protein=gamma_protconf.protein, sequence_number=res.get_id()[1])
                         r = StructureModelpLDDT(structure=struct, residue=res_obj, pLDDT=plddt)
                         resis.append(r)
                     except Residue.DoesNotExist:
@@ -988,7 +977,7 @@ class Command(BaseBuild):
             self.build_contact_network(sd['location'], receptor=struct, signprot=signprot)
             end = time.time()
             diff = round(end - current,1)
-            print('Create contactnetwork done for {}.'.format(struct.protein_conformation.protein.entry_name))
+            print('Create contactnetwork done for {}.'.format(struct.protein.entry_name))
             # except Exception as msg:
             #     print(msg)
             #     print('ERROR WITH CONTACTNETWORK {}'.format(sd['pdb']))

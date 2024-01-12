@@ -583,13 +583,13 @@ def ComplexModelDetails(request, header, refined=False):
     if not refined:
         scores = StructureAFScores.objects.get(structure=model)
         #Need to build the plDDT colors
-        model_plddt = StructureModelpLDDT.objects.filter(structure=model).order_by('residue__protein_conformation__protein__id').prefetch_related('residue','residue__protein_conformation__protein','residue__protein_segment')
+        model_plddt = StructureModelpLDDT.objects.filter(structure=model).order_by('residue__protein__id').prefetch_related('residue','residue__protein','residue__protein_segment')
         avg_plddt = model_plddt.aggregate(Avg('pLDDT'))
         residues_plddt = {}
         for item in model_plddt:
-            if item.residue.protein_conformation.protein not in residues_plddt:
-                residues_plddt[item.residue.protein_conformation.protein] = {}
-            residues_plddt[item.residue.protein_conformation.protein][item.residue.id] = [item.residue, item.pLDDT]
+            if item.residue.protein not in residues_plddt:
+                residues_plddt[item.residue.protein] = {}
+            residues_plddt[item.residue.protein][item.residue.id] = [item.residue, item.pLDDT]
 
     (chains, gpcr_aminoacids, gprot_aminoacids, protein_interactions, gpcr_aminoacids_strict, gprot_aminoacids_strict, protein_interactions_strict,
      residues_browser, interactions_metadata, gprot_order, receptor_order, matching_dict, matching_dict_strict, residues_lookup,
@@ -611,8 +611,8 @@ def ComplexModelDetails(request, header, refined=False):
         # a.calculate_similarity()
         # main_template_seqsim = a.proteins[1].similarity
         # else:
-        receptor_residues = Residue.objects.filter(protein_conformation__protein=model.protein_conformation.protein).prefetch_related('protein_conformation__protein', 'protein_conformation__protein__parent', 'display_generic_number', 'protein_segment')
-        signprot_residues = Residue.objects.filter(protein_conformation__protein=model.signprot_complex.protein).prefetch_related('protein_conformation__protein', 'protein_conformation__protein__parent', 'display_generic_number', 'protein_segment')
+        receptor_residues = Residue.objects.filter(rotein=model.protein).prefetch_related('protein', 'protein__parent', 'display_generic_number', 'protein_segment')
+        signprot_residues = Residue.objects.filter(protein=model.signprot_complex.protein).prefetch_related('protein', 'protein__parent', 'display_generic_number', 'protein_segment')
 
         receptor_rotamers, signprot_rotamers = parse_model_statsfile(model.stats_text.stats_text, receptor_residues, signprot_residues)
 
@@ -634,11 +634,11 @@ def ComplexModelDetails(request, header, refined=False):
 
         for n in bb_temps2.values():
             for s in n:
-                if s.protein_conformation.protein.parent not in bb_temps:
-                    bb_temps[s.protein_conformation.protein.parent] = [s]
+                if s.protein.parent not in bb_temps:
+                    bb_temps[s.protein.parent] = [s]
                 else:
-                    if s not in bb_temps[s.protein_conformation.protein.parent]:
-                        bb_temps[s.protein_conformation.protein.parent].append(s)
+                    if s not in bb_temps[s.protein.parent]:
+                        bb_temps[s.protein.parent].append(s)
                         break
 
         return render(request,'complex_models_details.html',{'model': model, 'receptor_rotamers': receptor_rotamers, 'signprot_rotamers': signprot_rotamers, 'backbone_templates': bb_temps, 'backbone_templates_number': len(backbone_templates),
@@ -1022,7 +1022,7 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
 def complex_interactions(model):
     ### Gathering interaction info and structuring JS data
     interactions = Interaction.objects.filter(interacting_pair__referenced_structure=model,
-                                              interacting_pair__res2__protein_conformation__protein__family__slug__startswith='100').prefetch_related(
+                                              interacting_pair__res2__protein__family__slug__startswith='100').prefetch_related(
                                                                              'interacting_pair__res1', 'interacting_pair__res2',
                                                                              'interacting_pair__res1__display_generic_number', 'interacting_pair__res2__display_generic_number',
                                                                              'interacting_pair__res1__protein_segment', 'interacting_pair__res2__protein_segment')
@@ -1217,11 +1217,11 @@ def complex_interactions(model):
     struc = SignprotComplex.objects.filter(structure=model).prefetch_related(
         'structure__pdb_code',
         'structure__stabilizing_agents',
-        'structure__protein_conformation__protein',
-        'structure__protein_conformation__protein__parent',
-        'structure__protein_conformation__protein__species',
-        'structure__protein_conformation__protein__parent__parent__parent',
-        'structure__protein_conformation__protein__family__parent__parent__parent__parent',
+        'structure__protein',
+        'structure__protein__parent',
+        'structure__protein__species',
+        'structure__protein__parent__parent__parent',
+        'structure__protein__family__parent__parent__parent__parent',
         'structure__stabilizing_agents',
         'structure__signprot_complex__protein__family__parent__parent__parent__parent',
     )
@@ -1232,17 +1232,17 @@ def complex_interactions(model):
         s = s.structure
         r['pdb_id'] = s.pdb_code.index
         try:
-            r['name'] = s.protein_conformation.protein.parent.short()
+            r['name'] = s.protein.parent.short()
         except:
-            r['name'] = s.protein_conformation.protein.short()
+            r['name'] = s.protein.short()
         try:
-            r['entry_name'] = s.protein_conformation.protein.parent.entry_name
+            r['entry_name'] = s.protein.parent.entry_name
         except:
-            r['entry_name'] = s.protein_conformation.protein.entry_name
-        r['class'] = s.protein_conformation.protein.get_protein_class()
-        r['family'] = s.protein_conformation.protein.get_protein_family()
-        r['conf_id'] = s.protein_conformation.id
-        r['organism'] = s.protein_conformation.protein.species.common_name
+            r['entry_name'] = s.protein.entry_name
+        r['class'] = s.protein.get_protein_class()
+        r['family'] = s.protein.get_protein_family()
+        r['conf_id'] = s.id
+        r['organism'] = s.protein.species.common_name
         try:
             r['gprot'] = s.get_stab_agents_gproteins()
         except Exception:
@@ -1257,7 +1257,7 @@ def complex_interactions(model):
     gprot_order = json.dumps(list(gprotein_order))
     receptor_order = json.dumps(receptor_order)
 
-    residuelist = Residue.objects.filter(protein_conformation__protein=model.protein_conformation.protein).prefetch_related('protein_segment','display_generic_number','generic_number')
+    residuelist = Residue.objects.filter(protein=model.protein).prefetch_related('protein_segment','display_generic_number','generic_number')
     lookup = {}
 
     residues_lookup = {}

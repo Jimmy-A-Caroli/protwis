@@ -3989,8 +3989,8 @@ class HelixEndsModeling(HomologyModeling):
         #                                       ('TM5',[[],[]]),('TM6',[[],[]]),('TM7',[[],['5UNF','5UNG','5UNH']]),('H8',[[],[]])])
         self.debug = debug
 
-    def find_ends(self, structure, protein_conformation):
-        raw_res = Residue.objects.filter(protein=protein_conformation).exclude(
+    def find_ends(self, structure, protein):
+        raw_res = Residue.objects.filter(protein=protein).exclude(
                                     protein_segment=None).order_by('protein_segment_id').distinct('protein_segment_id')
         raw_segs = [i.protein_segment for i in raw_res]
         ends = []
@@ -3998,9 +3998,9 @@ class HelixEndsModeling(HomologyModeling):
             if i.slug[0] not in ['T','H']:
                 continue
             end = SegmentEnds()
-            end.start = list(Residue.objects.filter(protein=protein_conformation,
+            end.start = list(Residue.objects.filter(protein=protein,
                                                     protein_segment__slug=i))[0].sequence_number
-            end.end = list(Residue.objects.filter(protein=protein_conformation,
+            end.end = list(Residue.objects.filter(protein=protein,
                                                   protein_segment__slug=i))[-1].sequence_number
             end.protein_segment = i
             ends.append([end, structure])
@@ -5475,9 +5475,9 @@ class Bulges(object):
         self.bulge_templates = []
         self.template = None
 
-    def check_range(self, gn_list, protein_conformation, num):
-        check = [dgn(i,protein_conformation) for i in gn_list]
-        check_list = [i.sequence_number for i in list(Residue.objects.filter(protein=protein_conformation,
+    def check_range(self, gn_list, protein, num):
+        check = [dgn(i,protein) for i in gn_list]
+        check_list = [i.sequence_number for i in list(Residue.objects.filter(protein=protein,
                                                                              display_generic_number__label__in=check))]
         ref_list = list(range(check_list[0],check_list[0]+num))
         if ref_list==check_list:

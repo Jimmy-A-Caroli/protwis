@@ -65,7 +65,7 @@ def compute_interactions(pdb_name, protein=None, signprot=None, lig=None, do_int
     else:
         # Ensure that the PDB name is lowercase
         pdb_name = pdb_name.lower()
-        struc = Structure.objects.get(protein_conformation__protein__entry_name=pdb_name)
+        struc = Structure.objects.get(protein__entry_name=pdb_name)
         # Get the pdb structure
         pdb_io = StringIO(struc.pdb_data.pdb)
         # Get the preferred chain

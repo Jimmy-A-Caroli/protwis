@@ -591,11 +591,11 @@
                 <tr model_id='{{model.pk}}'>
                     <td class="text-center"><input class="alt" type="checkbox" id="{{ model.pk }}"></td>
                     <td style="text-align:center;"><a target="_blank" href="complex_models/{{ model.pdb_code__index }}"><img width="14px" height="20px" class="model-link" src="{% static 'home/images/model-surface.png' %}"></a></div></td>
-                    <td class="text-center"><a target="_blank" href="/protein/{{ model.protein_conformation__protein__entry_name }}"><img width="12px" height="12px" class="gpcrdb-link" src="{% static 'home/logo/gpcr/main.png' %}"></a></td>
-                    <td><a target="_blank" href="http://www.uniprot.org/uniprot/{{ model.protein_conformation__protein__accession }}">{{ model.protein_conformation__protein__entry_name|entry_short }}</a></td>
-                    <td><span>{{ model.protein_conformation__protein__name|receptor_short|safe }}</span></td>
-                    <td>{{ model.protein_conformation__protein__family__parent__name }}</td>
-                    <td>{{ model.protein_conformation__protein__family__parent__parent__parent__name|cut_classname }}</td>
+                    <td class="text-center"><a target="_blank" href="/protein/{{ model.protein__entry_name }}"><img width="12px" height="12px" class="gpcrdb-link" src="{% static 'home/logo/gpcr/main.png' %}"></a></td>
+                    <td><a target="_blank" href="http://www.uniprot.org/uniprot/{{ model.protein__accession }}">{{ model.protein__entry_name|entry_short }}</a></td>
+                    <td><span>{{ model.protein__name|receptor_short|safe }}</span></td>
+                    <td>{{ model.protein__family__parent__name }}</td>
+                    <td>{{ model.protein__family__parent__parent__parent__name|cut_classname }}</td>
                     <td><a href="/signprot/{{ model.signprot_complex_protein__entry_name }}">{{ model.signprot_complex__protein__family__name|gprot_short }}</a></td>
                     <td>{{ model.signprot_complex__protein__family__parent__name }}</td>
                     <td>{{ model.heterotrimer }}</td>
@@ -617,7 +617,7 @@
                         <td>-</td>
                     {% endif %}
                     <td>{{ model.publication_date|date:"Y-m-d" }}</td>
-                    <td style="display:none;">{{ model.protein_conformation__protein__entry_name }}</td>
+                    <td style="display:none;">{{ model.protein__entry_name }}</td>
                     <td style="display:none;">{{ model.pdb_code__index }}</td>
                 </tr>
                 {% endfor %}

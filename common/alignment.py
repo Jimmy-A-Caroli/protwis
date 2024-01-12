@@ -133,17 +133,17 @@ class Alignment:
         """Load a list of protein objects into the alignment."""
         # fetch all conformations of selected proteins
         # FIXME only show inactive?
-        protein_conformations = Protein.objects.order_by('family__slug',
-                                                         'entry_name').filter(pk__in=proteins).select_related('residue_numbering_scheme',
-                                                                                                              'species')
+        protein_set = Protein.objects.order_by('family__slug',
+                                            'entry_name').filter(pk__in=proteins).select_related('residue_numbering_scheme',
+                                                                                                 'species')
         pconfs = OrderedDict()
-        for pconf in protein_conformations:
+        for pconf in protein_set:
             pconf_label = pconf.__str__()
             if pconf_label not in pconfs:
                 pconfs[pconf_label] = {}
             pconfs[pconf_label] = pconf
 
-        for pconf_label, pconf in pconfs.items():
+        for pconf_label, pconf in protein_set.items():
             self.proteins.append(pconf)
         self.update_numbering_schemes()
         self.stats_done = False

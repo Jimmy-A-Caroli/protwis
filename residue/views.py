@@ -248,7 +248,7 @@ class ResidueTablesDisplay(TemplateView):
         data = OrderedDict()
         for segment in segments:
             data[segment.slug] = OrderedDict()
-            residues = Residue.objects.filter(protein_segment=segment, protein_conformation__protein__in=proteins, generic_number__isnull=False).prefetch_related('protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+            residues = Residue.objects.filter(protein_segment=segment, protein__in=proteins, generic_number__isnull=False).prefetch_related('protein', 'state', 'protein_segment',
                 'generic_number__scheme', 'display_generic_number__scheme', 'alternative_generic_numbers__scheme')
             for scheme in numbering_schemes:
                 if scheme == default_scheme and scheme.slug == settings.DEFAULT_NUMBERING_SCHEME:
@@ -263,26 +263,26 @@ class ResidueTablesDisplay(TemplateView):
                 #probably no alternatives for GProts and Arrestins (?)
                 pos = residue.generic_number
                 if len(alternatives) == 0:
-                    data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                    data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                 else:
                     for alternative in alternatives:
                         scheme = alternative.scheme
                         if default_scheme.slug == settings.DEFAULT_NUMBERING_SCHEME:
                             pos = residue.generic_number
                             if scheme == pos.scheme:
-                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                             else:
                                 if scheme.slug not in data[segment.slug][pos.label].keys():
                                     data[segment.slug][pos.label][scheme.slug] = alternative.label
                                 if alternative.label not in data[segment.slug][pos.label][scheme.slug]:
                                     data[segment.slug][pos.label][scheme.slug] += " "+alternative.label
-                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                         else:
                             if scheme.slug not in data[segment.slug][pos.label].keys():
                                 data[segment.slug][pos.label][scheme.slug] = alternative.label
                             if alternative.label not in data[segment.slug][pos.label][scheme.slug]:
                                 data[segment.slug][pos.label][scheme.slug] += " "+alternative.label
-                            data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                            data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
 
         # Preparing the dictionary of list of lists. Dealing with tripple nested dictionary in django templates is a nightmare
         flattened_data = OrderedDict.fromkeys([x.slug for x in segments], [])
@@ -392,7 +392,7 @@ class ResidueFunctionBrowser(TemplateView):
             # Optionally include the curation with the following filter: structure_ligand_pair__annotated=True
             class_a_interactions = ResidueFragmentInteraction.objects.filter(
                 structure_ligand_pair__structure__protein__family__slug__startswith="001").exclude(interaction_type__type='hidden')\
-                .values("rotamer__residue__generic_number__label").annotate(unique_receptors=Count("rotamer__residue__protein_conformation__protein__family_id", distinct=True))
+                .values("rotamer__residue__generic_number__label").annotate(unique_receptors=Count("rotamer__residue__protein__family_id", distinct=True))
 
             rfb_panel["ligand_binding"] = {entry["rotamer__residue__generic_number__label"] : entry["unique_receptors"] for entry in list(class_a_interactions)}
 
@@ -819,7 +819,7 @@ def render_residue_table_excel(request):
     data = OrderedDict()
     for segment in segments:
         data[segment.slug] = OrderedDict()
-        residues = Residue.objects.filter(protein_segment=segment, protein_conformation__protein__in=proteins, generic_number__isnull=False).prefetch_related('protein_conformation__protein', 'protein_conformation__state', 'protein_segment',
+        residues = Residue.objects.filter(protein_segment=segment, protein__in=proteins, generic_number__isnull=False).prefetch_related('protein', 'state', 'protein_segment',
             'generic_number__scheme', 'display_generic_number__scheme', 'alternative_generic_numbers__scheme')
         for scheme in numbering_schemes:
             if scheme == default_scheme and scheme.slug == settings.DEFAULT_NUMBERING_SCHEME:
@@ -833,25 +833,25 @@ def render_residue_table_excel(request):
             alternatives = residue.alternative_generic_numbers.all()
             pos = residue.generic_number
             if len(alternatives) == 0:
-                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
             for alternative in alternatives:
                 scheme = alternative.scheme
                 if default_scheme.slug == settings.DEFAULT_NUMBERING_SCHEME:
                     pos = residue.generic_number
                     if scheme == pos.scheme:
-                        data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                        data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                     else:
                         if scheme.slug not in data[segment.slug][pos.label].keys():
                             data[segment.slug][pos.label][scheme.slug] = alternative.label
                         if alternative.label not in data[segment.slug][pos.label][scheme.slug]:
                             data[segment.slug][pos.label][scheme.slug] += " "+alternative.label
-                        data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                        data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
                 else:
                     if scheme.slug not in data[segment.slug][pos.label].keys():
                         data[segment.slug][pos.label][scheme.slug] = alternative.label
                     if alternative.label not in data[segment.slug][pos.label][scheme.slug]:
                         data[segment.slug][pos.label][scheme.slug] += " "+alternative.label
-                    data[segment.slug][pos.label]['seq'][proteins.index(residue.protein_conformation.protein)] = str(residue)
+                    data[segment.slug][pos.label]['seq'][proteins.index(residue.protein)] = str(residue)
 
     # Preparing the dictionary of list of lists. Dealing with tripple nested dictionary in django templates is a nightmare
     flattened_data = OrderedDict.fromkeys([x.slug for x in segments], [])

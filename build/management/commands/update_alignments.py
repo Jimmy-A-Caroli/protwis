@@ -76,13 +76,13 @@ class Command(BaseBuild):
 
         for pconf in pconfs:
             # skip protein conformations without a template (consensus sequences)
-            if not pconf.template_structure:
-                continue
-            else:
-                template_structure = pconf.template_structure
+            # if not pconf.template_structure:
+            #     continue
+            # else:
+            #     template_structure = pconf.template_structure
 
             # get the sequence number of the first residue for this protein conformation
-            pconf_residues = Residue.objects.filter(protein_conformation=pconf)
+            pconf_residues = Residue.objects.filter(protein=pconf)
             if pconf_residues.exists():
                 sequence_number_counter = pconf_residues[0].sequence_number - 1
             else:
@@ -91,26 +91,26 @@ class Command(BaseBuild):
             # read reference positions for this protein
             ref_position_file_paths = [
                 # canonical ref positions
-                os.sep.join([self.ref_position_source_dir, pconf.protein.entry_name + '.yaml']),
+                os.sep.join([self.ref_position_source_dir, pconf.entry_name + '.yaml']),
                 # auto-generated ref positions
-                os.sep.join([self.auto_ref_position_source_dir, pconf.protein.entry_name + '.yaml']),
+                os.sep.join([self.auto_ref_position_source_dir, pconf.entry_name + '.yaml']),
             ]
-            if pconf.protein.parent:
+            if pconf.parent:
                 parent_ref_position_file_paths = [
                     # parent ref positions
-                    os.sep.join([self.ref_position_source_dir, pconf.protein.parent.entry_name + '.yaml']),
+                    os.sep.join([self.ref_position_source_dir, pconf.parent.entry_name + '.yaml']),
                     # parent auto-generated ref positions
-                    os.sep.join([self.auto_ref_position_source_dir, pconf.protein.parent.entry_name + '.yaml']),
+                    os.sep.join([self.auto_ref_position_source_dir, pconf.parent.entry_name + '.yaml']),
                 ]
                 ref_position_file_paths += parent_ref_position_file_paths
 
             for file_path in ref_position_file_paths:
                 ref_positions = load_reference_positions(file_path)
                 if ref_positions:
-                    self.logger.info("Reference positions for {} found in {}".format(pconf.protein, file_path))
+                    self.logger.info("Reference positions for {} found in {}".format(pconf, file_path))
                     break
             else:
-                self.logger.error("No reference positions found for {}, skipping".format(pconf.protein))
+                self.logger.error("No reference positions found for {}, skipping".format(pconf))
                 continue
 
             # remove empty values from reference positions
@@ -120,7 +120,7 @@ class Command(BaseBuild):
                     del ref_positions[position]
 
             # protein anomalies in main template
-            main_tpl_pas = template_structure.protein_anomalies.all()
+            # main_tpl_pas = template_structure.protein_anomalies.all()
             main_tpl_pa_labels = []
             for main_tpl_pa in main_tpl_pas:
                 main_tpl_pa_labels.append(main_tpl_pa.generic_number.label)
@@ -131,12 +131,11 @@ class Command(BaseBuild):
             # determine segment ranges, and update residues residues
             nseg = len(segments)
             for i, segment in enumerate(segments):
-                self.logger.info("Updating segment borders for {} of {}, using template {}".format(segment.slug, pconf,
-                    template_structure))
+                self.logger.info("Updating segment borders for {} of {}, using template {}".format(segment.slug, pconf))
 
                 # segment template structure (only differs from the main template if segment is missing in main
                 # structure, and segment is not fully aligned)
-                segment_template_structure = template_structure
+                # segment_template_structure = template_structure
 
                 # should this segment be aligned? This value is updated below
                 unaligned_segment = True
@@ -159,7 +158,7 @@ class Command(BaseBuild):
                         self.logger.info('Segment records not found for {} in template structure {}, looking for alternatives'.format(
                             segment, segment_template_structure))
                         if not segment.fully_aligned:
-                            segment_tpl = ProteinTemplateStructure.objects.get(protein_conformation=pconf,
+                            segment_tpl = ProteinTemplateStructure.objects.get(protein=pconf,
                                 protein_segment=segment)
                             try:
                                 main_tpl_ss = StructureSegment.objects.get(structure=segment_tpl.structure,
@@ -185,17 +184,17 @@ class Command(BaseBuild):
                     # template segment reference residue number
                     try:
                         tsrrn = Residue.objects.get(
-                            protein_conformation__protein=segment_template_structure.protein,
+                            protein=segment_template_structure.protein,
                             generic_number__label=segment_ref_position)
                     except Residue.DoesNotExist:
                         self.logger.info("Template residues for {} in {} not found, looking for alternatives!".format(
                             segment, pconf))
                         if not segment.fully_aligned:
-                            segment_tpl = ProteinTemplateStructure.objects.get(protein_conformation=pconf,
+                            segment_tpl = ProteinTemplateStructure.objects.get(protein=pconf,
                                 protein_segment=segment)
                             try:
                                 tsrrn = Residue.objects.get(
-                                    protein_conformation__protein=segment_tpl.structure.protein,
+                                    protein=segment_tpl.structure.protein,
                                     generic_number__label=segment_ref_position)
                                 main_tpl_ss = StructureSegment.objects.get(structure=segment_tpl.structure,
                                     protein_segment=segment)
@@ -230,11 +229,11 @@ class Command(BaseBuild):
                         # if there exists a structure for this particular protein, don't use the rules
                         ignore_rules = False
 
-                        if pconf.protein.parent:
+                        if pconf.parent:
                             # use parent protein for constructs and other non wild-type sequences
-                            current_protein = pconf.protein.parent
+                            current_protein = pconf.parent
                         else:
-                            current_protein = pconf.protein
+                            current_protein = pconf
                         current_protein_genes = current_protein.genes.order_by('position')
                         if current_protein_genes.count():
                             current_gene = current_protein_genes[0]
@@ -247,7 +246,7 @@ class Command(BaseBuild):
 
                         # get a list of generic numbers in main template
                         main_tpl_gn_labels = Residue.objects.filter(
-                            protein_conformation__protein=segment_template_structure.protein, generic_number__isnull=False,
+                            protein=segment_template_structure.protein, generic_number__isnull=False,
                             protein_segment=segment).values_list('generic_number__label', flat=True)
 
                         for pa, parss in anomaly_rule_sets[segment.slug].items():
@@ -269,11 +268,11 @@ class Command(BaseBuild):
                                     for rule in rules:
                                         # fetch the residue in question
                                         try:
-                                            r = Residue.objects.get(protein_conformation=pconf,
+                                            r = Residue.objects.get(protein=pconf,
                                                 generic_number=rule.generic_number)
                                         except Residue.DoesNotExist:
                                             self.logger.warning('Residue {} in {} not found, skipping'.format(
-                                                rule.generic_number.label, pconf.protein.entry_name))
+                                                rule.generic_number.label, pconf.entry_name))
                                             continue
 
                                         # does the rule break the set? Then go to next set..
@@ -371,7 +370,7 @@ class Command(BaseBuild):
                 else:
                     segment_start = sequence_number_counter + 1
                     if i == (nseg-1):
-                        segment_end = len(pconf.protein.sequence)
+                        segment_end = len(pconf.sequence)
                     else:
                         segment_end = 0 # will be updated in the next iteration
 

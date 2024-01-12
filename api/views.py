@@ -323,9 +323,9 @@ class StructureModelsList(views.APIView):
 
         structures = Structure.objects.filter(structure_type__slug__startswith='af-peptide')
 
-        structures = structures.prefetch_related('protein_conformation__protein__parent__species', 'pdb_code',
-            'protein_conformation__protein__parent__family', 'protein_conformation__protein__parent__species',
-            'protein_conformation__protein__parent__family__parent__parent__parent',
+        structures = structures.prefetch_related('protein__parent__species', 'pdb_code',
+            'protein__parent__family', 'protein__parent__species',
+            'protein__parent__family__parent__parent__parent',
             'publication__web_link', 'publication__web_link__web_resource', 'structure_type',
             'structureligandinteraction_set__ligand',
             'structureligandinteraction_set__ligand__ligand_type',
@@ -338,10 +338,10 @@ class StructureModelsList(views.APIView):
             # essential fields
             structure_data = {
                 'pdb_code': structure.pdb_code.index,
-                'protein': structure.protein_conformation.protein.entry_name,
-                'class': structure.protein_conformation.protein.family.parent.parent.parent.name,
-                'family': structure.protein_conformation.protein.family.slug,
-                'species': structure.protein_conformation.protein.species.latin_name,
+                'protein': structure.protein.entry_name,
+                'class': structure.protein.family.parent.parent.parent.name,
+                'family': structure.protein.family.slug,
+                'species': structure.protein.species.latin_name,
                 'preferred_chain': structure.preferred_chain,
                 'resolution': structure.resolution,
                 'publication_date': structure.publication_date,
@@ -1075,15 +1075,15 @@ class ComplexInteractions(generics.ListAPIView):
 
         queryset = Interaction.objects.filter(
             interacting_pair__referenced_structure__pdb_code__index=struct_id,
-            interacting_pair__res2_id__protein_conformation__protein__family__slug__startswith='100'
+            interacting_pair__res2_id__protein__family__slug__startswith='100'
         ).values(
-            'interacting_pair__res1_id__protein_conformation__protein__entry_name',
-            'interacting_pair__res1_id__protein_conformation__protein',
-            'interacting_pair__res1_id__protein_conformation__protein__parent',
+            'interacting_pair__res1_id__protein__entry_name',
+            'interacting_pair__res1_id__protein',
+            'interacting_pair__res1_id__protein__parent',
             'interacting_pair__res1_id__sequence_number',
             'interacting_pair__res1_id__display_generic_number__label',
-            'interacting_pair__res2_id__protein_conformation__protein',
-            'interacting_pair__res2_id__protein_conformation__protein__parent',
+            'interacting_pair__res2_id__protein',
+            'interacting_pair__res2_id__protein__parent',
             'interacting_pair__res2_id__sequence_number',
             'interacting_pair__res2_id__display_generic_number__label',
             'interaction_type',
@@ -1301,9 +1301,9 @@ class PeptideInteractionCADistances(views.APIView):
         }
         if interaction_id is not None:
             interaction_record = InteractingPeptideResiduePair.objects.filter(id=test_id)[0]
-            conformation_id = interaction_record.receptor_residue.protein_conformation.id
+            conformation_id = interaction_record.receptor_residue.protein.id
             peptide_amino, peptide_pos, receptor_residue = interaction_record.peptide_amino_acid_three_letter, interaction_record.peptide_sequence_number, interaction_record.receptor_residue
-            struct = Structure.objects.filter(protein_conformation=conformation_id)[0]
+            struct = Structure.objects.filter(protein=conformation_id)[0]
 
             # Create a StringIO object to simulate reading from a file-like object
             pdb_io = StringIO(struct.pdb_data.pdb)
