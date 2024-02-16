@@ -142,10 +142,16 @@ class InteractingPair:
             "V": "VAL",
         }
         # Define the residue names and residue numbers for the two residues
-        residue1_name = one_to_three[self.dbres1.amino_acid]
-        residue1_number = self.dbres1.sequence_number
-        residue2_name = one_to_three[self.dbres2.amino_acid]
-        residue2_number = self.dbres2.sequence_number
+        receptor_residue_name = one_to_three[self.dbres1.amino_acid]
+        receptor_residue_number = self.dbres1.sequence_number
+        try:
+            peptide_residue_name = one_to_three[self.dbres2.amino_acid]
+        except KeyError:
+            peptide_residue_name = self.dbres2.three_letter
+        peptide_residue_number = self.dbres2.sequence_number
+        receptor_chain = peptide.structure.preferred_chain
+        peptide_chain = peptide.chain
+
         # Create a PDB parser
         parser = PDBParser(QUIET=True)
         # Create a StringIO object to simulate reading from a file-like object
@@ -159,30 +165,61 @@ class InteractingPair:
         peptide_cb = None
         distance = None
         angle_degrees = None
+        receptor_res = None
         for model in pdb_struct:
             for chain in model:
                 for res in chain:
-                    if res.get_resname() == residue1_name and res.get_id()[1] == residue1_number:
-                            receptor_ca = res["CA"].get_coord()
-                            if residue1_name != 'GLY':
-                                receptor_cb = res["CB"].get_coord()
-                    elif res.get_resname() == residue2_name and res.get_id()[1] == residue2_number:
-                            peptide_ca = res["CA"].get_coord()
-                            if residue2_name != 'GLY':
-                                peptide_cb = res["CB"].get_coord()
+                    if res.get_resname() == receptor_residue_name and res.get_id()[1] == receptor_residue_number and chain.id == receptor_chain:
+                            if not receptor_res:
+                                receptor_res = res
+                                try:
+                                    receptor_ca = res['CA'].get_coord()
+                                except KeyError:
+                                    print('receptor doesnt have a CA, skipping')
+                                    continue
+                                if receptor_residue_name != 'GLY':
+                                    receptor_cb = res['CB'].get_coord()
+                                else:
+                                    n_atom = res['N'].coord
+                                    ca_atom = res['CA'].coord
+                                    c_atom = res['C'].coord
+                                    # Find the coordinates of cb
+                                    receptor_cb = find_fourth_vertex(Vector(n_atom[0], n_atom[1], n_atom[2]),Vector(ca_atom[0], ca_atom[1], ca_atom[2]),Vector(c_atom[0], c_atom[1], c_atom[2]))
+                    elif res.get_resname() == peptide_residue_name and res.get_id()[1] == peptide_residue_number and chain.id == peptide_chain:
+                            peptide_res = res
+                            try:
+                                peptide_ca = res['CA'].get_coord()
+                            except KeyError:
+                                print('peptide doesnt have a CA, skipping')
+                                continue
+                            if peptide_residue_name != 'GLY':
+                                try:
+                                    peptide_cb = res['CB'].get_coord()
+                                except KeyError:
+                                    n_atom = res['N'].coord
+                                    ca_atom = res['CA'].coord
+                                    c_atom = res['C'].coord
+                                    # Find the coordinates of cb
+                                    peptide_cb = find_fourth_vertex(Vector(n_atom[0], n_atom[1], n_atom[2]),Vector(ca_atom[0], ca_atom[1], ca_atom[2]),Vector(c_atom[0], c_atom[1], c_atom[2]))
+                            else:
+                                n_atom = res['N'].coord
+                                ca_atom = res['CA'].coord
+                                c_atom = res['C'].coord
+                                # Find the coordinates of cb
+                                peptide_cb = find_fourth_vertex(Vector(n_atom[0], n_atom[1], n_atom[2]),Vector(ca_atom[0], ca_atom[1], ca_atom[2]),Vector(c_atom[0], c_atom[1], c_atom[2]))
         # Check if both Cα atoms were found
         if receptor_ca is not None and peptide_ca is not None:
             # Calculate the Euclidean distance between the Cα atoms
             distance = round(np.linalg.norm(receptor_ca - peptide_ca), 2)
             # Calculate vectors for ca1-ca2 (ligand Cα to receptor Cα) and ca2-CB (ligand Cα to receptor Carbon-Beta)
-            if residue1_name == 'GLY':
-                vector_receptor = receptor_ca - peptide_ca
-            else:
-                vector_receptor = receptor_cb - receptor_ca
-            if residue2_name == 'GLY':
-                vector_peptide = receptor_ca - peptide_ca
-            else:
-                vector_peptide = peptide_cb - peptide_ca
+            # if receptor_residue_name == 'GLY':
+            #     vector_receptor = receptor_ca - peptide_ca
+            # else:
+            vector_receptor = receptor_cb - receptor_ca
+            # if peptide_residue_name == 'GLY':
+            #     vector_peptide = receptor_ca - peptide_ca
+            # else:
+            vector_peptide = peptide_cb - peptide_ca
             # Calculate the dot product between the vectors
             dot_product = np.dot(vector_receptor, vector_peptide)
             # Calculate the magnitudes (norms) of the vectors
@@ -619,6 +656,150 @@ class CationPiInteraction(AromaticInteraction):
 #         super().__init__()
 #         self.detail = "water"
 
+
+class Vector(tuple):
+
+    def __new__(cls, x, y, z):
+        return tuple.__new__(cls, (float(x), float(y), float(z)))
+
+    def perp(self, other):
+        dp = self[0]*other[0] + self[1]*other[1] + self[2]*other[2]
+        return Vector(self[0] - dp*other[0],
+                      self[1] - dp*other[1],
+                      self[2] - dp*other[2])
+
+    @property
+    def unit(self):
+        n = sqrt(self[0]*self[0] + self[1]*self[1] + self[2]*self[2])
+        return Vector(self[0]/n, self[1]/n, self[2]/n)
+
+    @property
+    def norm(self):
+        return sqrt(self[0]*self[0] + self[1]*self[1] + self[2]*self[2])
+
+    @property
+    def normsqr(self):
+        return self[0]*self[0] + self[1]*self[1] + self[2]*self[2]
+
+    @property
+    def x(self):
+        return self[0]
+
+    @property
+    def y(self):
+        return self[1]
+
+    @property
+    def z(self):
+        return self[2]
+
+    def __bool__(self):
+        return (self[0]*self[0] + self[1]*self[1] + self[2]*self[2] > 0)
+
+    def __abs__(self):
+        return sqrt(self[0]*self[0] + self[1]*self[1] + self[2]*self[2])
+
+    def __add__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return Vector(self[0]+other[0], self[1]+other[1], self[2]+other[2])
+        else:
+            return NotImplemented
+
+    def __radd__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return Vector(other[0]+self[0], other[1]+self[1], other[2]+self[2])
+        else:
+            return NotImplemented
+
+    def __mul__(self, other):
+        if isinstance(other, (int, float)):
+            return Vector(self[0]*other, self[1]*other, self[2]*other)
+        else:
+            return NotImplemented
+
+    def __rmul__(self, other):
+        if isinstance(other, (int, float)):
+            return Vector(other*self[0], other*self[1], other*self[2])
+        else:
+            return NotImplemented
+
+    def __neg__(self):
+        return Vector(-self[0], -self[1], -self[2])
+
+    def __or__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return self[0]*other[0] + self[1]*other[1] + self[2]*other[2]
+        else:
+            return NotImplemented
+
+    def __ror__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return other[0]*self[0] + other[1]*self[1] + other[2]*self[2]
+        else:
+            return NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return Vector(self[0]-other[0], self[1]-other[1], self[2]-other[2])
+        else:
+            return NotImplemented
+
+    def __rsub__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return Vector(other[0]-self[0], other[1]-self[1], other[2]-self[2])
+        else:
+            return NotImplemented
+
+    def __truediv__(self, other):
+        if isinstance(other, (int, float)):
+            return Vector(self[0]/other, self[1]/other, self[2]/other)
+        else:
+            return NotImplemented
+
+    def __xor__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return Vector(self[1]*other[2] - self[2]*other[1],
+                          self[2]*other[0] - self[0]*other[2],
+                          self[0]*other[1] - self[1]*other[0])
+        else:
+            return NotImplemented
+
+    def __rxor__(self, other):
+        if isinstance(other, (tuple, list)) and len(other) >= 3:
+            return Vector(other[1]*self[2] - other[2]*self[1],
+                          other[2]*self[0] - other[0]*self[2],
+                          other[0]*self[1] - other[1]*self[0])
+        else:
+            return NotImplemented
+
+def find_fourth_vertex(vertex1, vertex2, vertex3, distance1=2.45, distance2=1.53, distance3=2.50):
+    # Use Vector type for the vertices
+    p1 = Vector(vertex1[0], vertex1[1], vertex1[2])
+    p2 = Vector(vertex2[0], vertex2[1], vertex2[2])
+    p3 = Vector(vertex3[0], vertex3[1], vertex3[2])
+
+    # Use float type for the distances
+    r1 = float(distance1)
+    r2 = float(distance2)
+    r3 = float(distance3)
+
+    u_axis = (p2 - p1).unit
+    v_axis = (p3 - p1).perp(u_axis).unit
+    w_axis = u_axis ^ v_axis
+
+    u2 = (p2 - p1) | u_axis
+    u3 = (p3 - p1) | u_axis
+    v3 = (p3 - p1) | v_axis
+
+    u = (r1*r1 - r2*r2 + u2*u2) / (2*u2)
+    v = (r1*r1 - r3*r3 + u3*u3 + v3*v3 - 2*u*u3) / (2*v3)
+    w = sqrt(r1*r1 - u*u - v*v)
+    array = p1 + u*u_axis + v*v_axis - w*w_axis
+
+    return np.array(array, dtype=np.float32)
+            # there is two correct mathematical solutions to the general problem but in our case only the second solution is correct - taking into account the constraints
+            #(p1 + u*u_axis + v*v_axis + w*w_axis,
+            #p1 + u*u_axis + v*v_axis - w*w_axis)
 
 # Return the unit vector for a given vector
 def unit_vector(vector):
