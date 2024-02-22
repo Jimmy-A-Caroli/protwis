@@ -8,7 +8,8 @@ from rest_framework_swagger.views import get_swagger_view
 from rest_framework_swagger.renderers import OpenAPIRenderer, SwaggerUIRenderer
 
 from django.template.loader import render_to_string
-from django.db.models import Prefetch, Q, Min, Count
+from django.db.models import Prefetch, Q, Min, Count, Case, Value, When, CharField
+from django.db.models.functions import Concat
 
 from interaction.models import ResidueFragmentInteraction
 from mutation.models import MutationRaw
