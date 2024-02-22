@@ -150,6 +150,11 @@ class StructurePeptideLigandInteractionSerializer(serializers.ModelSerializer):
     interaction_type = serializers.ReadOnlyField()
     interaction_level = serializers.ReadOnlyField()
     interaction_count = serializers.ReadOnlyField()
+    peptide_atom = serializers.ReadOnlyField()
+    receptor_atom = serializers.ReadOnlyField()
+    peptide_atom_case = serializers.ReadOnlyField()
+    receptor_atom_case = serializers.ReadOnlyField()
+    structural_interaction = serializers.ReadOnlyField()
 
     class Meta:
         model = InteractionPeptide
@@ -166,7 +171,10 @@ class StructurePeptideLigandInteractionSerializer(serializers.ModelSerializer):
                   'ca_cb_angle',
                   'interaction_type',
                   'interaction_level',
-                  'interaction_count')
+                  'interaction_count',
+                  'peptide_atom',
+                  'receptor_atom',
+                  'structural_interaction')
 
     # pdb_code = serializers.ReadOnlyField(source='interacting_peptide_pair__peptide__structure__pdb_code__index')
     # ligand_name = serializers.ReadOnlyField(source='interacting_peptide_pair__peptide__ligand__name')
