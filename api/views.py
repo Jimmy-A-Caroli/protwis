@@ -1151,7 +1151,7 @@ class StructurePeptideLigandInteractions(views.API):
                       'peptide_atom': record['peptide_atom'],
                       'receptor_atom': record['receptor_atom'],
                       'structural_interaction': interaction,
-                      'queried_value': value)
+                      'queried_value': value
             }
             s.append(interaction_info)
 
