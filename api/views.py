@@ -1153,8 +1153,9 @@ class StructurePeptideLigandInteractions(views.APIView):
                           'interaction_count': record['interaction_count'],
                           'peptide_atom': record['peptide_atom'],
                           'receptor_atom': record['receptor_atom'],
+                          'peptide_interaction_root': 'Backbone' if interaction[0] == 'B' else 'Sidechain',
+                          'receptor_interaction_root': 'Backbone' if interaction[1] == 'B' else 'Sidechain',
                           'structural_interaction': interaction,
-                          'queried_value': value
                 }
                 s.append(interaction_info)
 
