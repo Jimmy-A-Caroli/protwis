@@ -1094,8 +1094,8 @@ class StructurePeptideLigandInteractions(views.APIView):
     \nBy default, UniProt values (entry name and accession) will be queried to AlphaFold Models interaction data
     """
 
-    def get(self, request):
-        value = self.kwargs.get('pdb_code')
+    def get(self, request, value=None):
+        # value = self.kwargs.get('pdb_code')
 
         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index=value)
         if len(queryset) == 0:
