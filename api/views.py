@@ -1087,6 +1087,7 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
     """
     Get a list of interactions between structure and peptide ligand
     \n/structure/{value}/peptideinteraction/
+    \n A volte ho l'ansia che mi sale
     \n{value} can be a structure identifier from the Protein Data Bank, e.g. 5VBL
     \n{value} can also be a protein identifier from Uniprot, e.g. adrb2_human
     \n{value} can also be a protein identifier from Uniprot, e.g. P07550
@@ -1104,7 +1105,6 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
         if len(queryset) == 0:
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accession__iexact=value)
 
-
         queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
                             'interacting_peptide_pair__peptide__ligand__name',
                             'interacting_peptide_pair__peptide__chain',
@@ -1121,24 +1121,36 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             'receptor_atom').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
                             ).annotate(
                                 interaction_count=Count('interaction_type')
-                            ).annotate(
-                                peptide_atom_case=Case(
-                                    When(peptide_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
-                                    default=Value('S'),
-                                    output_field=CharField(),
-                                ),
-                                receptor_atom_case=Case(
-                                    When(receptor_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
-                                    default=Value('S'),
-                                    output_field=CharField(),
-                                )
-                            ).annotate(
-                                structural_interaction=Concat(
-                                    'peptide_atom_case',
-                                    'receptor_atom_case',
-                                    output_field=CharField(),
-                                )
                             ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+        for record in queryset:
+            interaction = ''
+            if record['peptide_atom'] in ['N', 'C', 'O', 'CA']:
+                interaction += 'B'
+            else:
+                interaction += 'S'
+            if record['receptor_atom'] in ['N', 'C', 'O', 'CA']:
+                interaction += 'B'
+            else:
+                interaction += 'S'
+            record['structural_interaction'] = interaction
+                            # ).annotate(
+                            #     peptide_atom_case=Case(
+                            #         When(peptide_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
+                            #         default=Value('S'),
+                            #         output_field=CharField(),
+                            #     ),
+                            #     receptor_atom_case=Case(
+                            #         When(receptor_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
+                            #         default=Value('S'),
+                            #         output_field=CharField(),
+                            #     )
+                            # ).annotate(
+                            #     structural_interaction=Concat(
+                            #         'peptide_atom_case',
+                            #         'receptor_atom_case',
+                            #         output_field=CharField(),
+                            #     )
+                            # ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
 
         return queryset
 
