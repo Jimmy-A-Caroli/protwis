@@ -1096,64 +1096,67 @@ class StructurePeptideLigandInteractions(views.APIView):
 
     def get(self, request, value=None):
         # value = self.kwargs.get('pdb_code')
+        s = []
 
         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index=value)
-        if len(queryset) == 0:
+
+        if not queryset.exists():
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__entry_name=value)
-        if len(queryset) == 0:
+            
+        if not queryset.exists():
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accessiont=value)
 
-        queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
-                            'interacting_peptide_pair__peptide__ligand__name',
-                            'interacting_peptide_pair__peptide__chain',
-                            'interacting_peptide_pair__peptide_amino_acid',
-                            'interacting_peptide_pair__peptide_amino_acid_three_letter',
-                            'interacting_peptide_pair__peptide_sequence_number',
-                            'interacting_peptide_pair__receptor_residue__amino_acid',
-                            'interacting_peptide_pair__receptor_residue__sequence_number',
-                            'interacting_peptide_pair__receptor_residue__display_generic_number__label',
-                            'interacting_peptide_pair__ca_distance',
-                            'interacting_peptide_pair__ca_cb_angle',
-                            'interaction_type',
-                            'interaction_level',
-                            'peptide_atom',
-                            'receptor_atom').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
-                            ).annotate(
-                                interaction_count=Count('interaction_type')
-                            ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+        if queryset.exists():
+            queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
+                                'interacting_peptide_pair__peptide__ligand__name',
+                                'interacting_peptide_pair__peptide__chain',
+                                'interacting_peptide_pair__peptide_amino_acid',
+                                'interacting_peptide_pair__peptide_amino_acid_three_letter',
+                                'interacting_peptide_pair__peptide_sequence_number',
+                                'interacting_peptide_pair__receptor_residue__amino_acid',
+                                'interacting_peptide_pair__receptor_residue__sequence_number',
+                                'interacting_peptide_pair__receptor_residue__display_generic_number__label',
+                                'interacting_peptide_pair__ca_distance',
+                                'interacting_peptide_pair__ca_cb_angle',
+                                'interaction_type',
+                                'interaction_level',
+                                'peptide_atom',
+                                'receptor_atom').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
+                                ).annotate(
+                                    interaction_count=Count('interaction_type')
+                                ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
 
-        s = []
-        for record in queryset:
-            interaction = ''
-            if record['peptide_atom'] in ['N', 'C', 'O', 'CA']:
-                interaction += 'B'
-            else:
-                interaction += 'S'
-            if record['receptor_atom'] in ['N', 'C', 'O', 'CA']:
-                interaction += 'B'
-            else:
-                interaction += 'S'
-            interaction_info = {
-                      'pdb_code': record['interacting_peptide_pair__peptide__structure__pdb_code__index'],
-                      'ligand_name': record['interacting_peptide_pair__peptide__ligand__name'],
-                      'ligand_chain': record['interacting_peptide_pair__peptide__chain'],
-                      'peptide_amino_acid': record['interacting_peptide_pair__peptide_amino_acid'],
-                      'peptide_amino_acid_three_letter': record['interacting_peptide_pair__peptide_amino_acid_three_letter'],
-                      'peptide_residue_number': record['interacting_peptide_pair__peptide_sequence_number'],
-                      'receptor_amino_acid': record['interacting_peptide_pair__receptor_residue__amino_acid'],
-                      'receptor_residue_number': record['interacting_peptide_pair__receptor_residue__sequence_number'],
-                      'receptor_residue_generic_number': record['interacting_peptide_pair__receptor_residue__display_generic_number__label'],
-                      'ca_distance': record['interacting_peptide_pair__ca_distance'],
-                      'ca_cb_angle': record['interacting_peptide_pair__ca_cb_angle'],
-                      'interaction_type': record['interaction_type'],
-                      'interaction_level': record['interaction_level'],
-                      'interaction_count': record['interaction_count'],
-                      'peptide_atom': record['peptide_atom'],
-                      'receptor_atom': record['receptor_atom'],
-                      'structural_interaction': interaction,
-                      'queried_value': value
-            }
-            s.append(interaction_info)
+            for record in queryset:
+                interaction = ''
+                if record['peptide_atom'] in ['N', 'C', 'O', 'CA']:
+                    interaction += 'B'
+                else:
+                    interaction += 'S'
+                if record['receptor_atom'] in ['N', 'C', 'O', 'CA']:
+                    interaction += 'B'
+                else:
+                    interaction += 'S'
+                interaction_info = {
+                          'pdb_code': record['interacting_peptide_pair__peptide__structure__pdb_code__index'],
+                          'ligand_name': record['interacting_peptide_pair__peptide__ligand__name'],
+                          'ligand_chain': record['interacting_peptide_pair__peptide__chain'],
+                          'peptide_amino_acid': record['interacting_peptide_pair__peptide_amino_acid'],
+                          'peptide_amino_acid_three_letter': record['interacting_peptide_pair__peptide_amino_acid_three_letter'],
+                          'peptide_residue_number': record['interacting_peptide_pair__peptide_sequence_number'],
+                          'receptor_amino_acid': record['interacting_peptide_pair__receptor_residue__amino_acid'],
+                          'receptor_residue_number': record['interacting_peptide_pair__receptor_residue__sequence_number'],
+                          'receptor_residue_generic_number': record['interacting_peptide_pair__receptor_residue__display_generic_number__label'],
+                          'ca_distance': record['interacting_peptide_pair__ca_distance'],
+                          'ca_cb_angle': record['interacting_peptide_pair__ca_cb_angle'],
+                          'interaction_type': record['interaction_type'],
+                          'interaction_level': record['interaction_level'],
+                          'interaction_count': record['interaction_count'],
+                          'peptide_atom': record['peptide_atom'],
+                          'receptor_atom': record['receptor_atom'],
+                          'structural_interaction': interaction,
+                          'queried_value': value
+                }
+                s.append(interaction_info)
 
         return Response(s)
 
