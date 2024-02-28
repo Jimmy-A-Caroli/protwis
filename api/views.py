@@ -1087,14 +1087,13 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
     """
     Get a list of interactions between structure and peptide ligand
     \n/structure/{value}/peptideinteraction/
-    \n A volte ho l'ansia che mi sale
     \n{value} can be a structure identifier from the Protein Data Bank, e.g. 5VBL
     \n{value} can also be a protein identifier from Uniprot, e.g. adrb2_human
     \n{value} can also be a protein identifier from Uniprot, e.g. P07550
     \nThe inserted value will be queried in the following order: PDB code --> UniProt entry name --> UniProt accession
     \nBy default, UniProt values (entry name and accession) will be queried to AlphaFold Models interaction data
     """
-    serializer_class = StructurePeptideLigandInteractionSerializer
+    # serializer_class = StructurePeptideLigandInteractionSerializer
 
     def get_queryset(self):
         value = self.kwargs.get('value')
@@ -1105,6 +1104,7 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
         if len(queryset) == 0:
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accessiont=value)
 
+        s = []
         queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
                             'interacting_peptide_pair__peptide__ligand__name',
                             'interacting_peptide_pair__peptide__chain',
@@ -1134,6 +1134,7 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                 interaction += 'S'
             record['structural_interaction'] = interaction
             record['queried_value'] = value
+            s.append(record)
 
                             # ).annotate(
                             #     peptide_atom_case=Case(
@@ -1154,7 +1155,7 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             #     )
                             # ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
 
-        return queryset
+        return Response(s)
 
 
     # def get_queryset(self):
