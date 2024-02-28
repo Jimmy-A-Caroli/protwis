@@ -1099,11 +1099,11 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
     def get_queryset(self):
         value = self.kwargs.get('value')
         #trying different inputs: pdb_code, entry_name, accession_number
-        queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index__iexact=value)
+        queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index=value)
         if len(queryset) == 0:
-            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__entry_name__iexact=value)
+            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__entry_name=value)
         if len(queryset) == 0:
-            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accession__iexact=value)
+            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accessiont=value)
 
         queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
                             'interacting_peptide_pair__peptide__ligand__name',
@@ -1133,6 +1133,8 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
             else:
                 interaction += 'S'
             record['structural_interaction'] = interaction
+            record['queried_value'] = value
+
                             # ).annotate(
                             #     peptide_atom_case=Case(
                             #         When(peptide_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
