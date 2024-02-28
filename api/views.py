@@ -1082,7 +1082,7 @@ class ComplexInteractions(generics.ListAPIView):
         return queryset
 
 
-class StructurePeptideLigandInteractions(generics.ListAPIView):
+class StructurePeptideLigandInteractions(views.API):
 
     """
     Get a list of interactions between structure and peptide ligand
@@ -1093,18 +1093,16 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
     \nThe inserted value will be queried in the following order: PDB code --> UniProt entry name --> UniProt accession
     \nBy default, UniProt values (entry name and accession) will be queried to AlphaFold Models interaction data
     """
-    # serializer_class = StructurePeptideLigandInteractionSerializer
 
-    def get_queryset(self):
+    def get(self, request):
         value = self.kwargs.get('value')
-        #trying different inputs: pdb_code, entry_name, accession_number
+
         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index=value)
         if len(queryset) == 0:
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__entry_name=value)
         if len(queryset) == 0:
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accessiont=value)
 
-        s = []
         queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
                             'interacting_peptide_pair__peptide__ligand__name',
                             'interacting_peptide_pair__peptide__chain',
@@ -1114,7 +1112,8 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             'interacting_peptide_pair__receptor_residue__amino_acid',
                             'interacting_peptide_pair__receptor_residue__sequence_number',
                             'interacting_peptide_pair__receptor_residue__display_generic_number__label',
-                            'interacting_peptide_pair_id',
+                            'interacting_peptide_pair__ca_distance',
+                            'interacting_peptide_pair__ca_cb_angle',
                             'interaction_type',
                             'interaction_level',
                             'peptide_atom',
@@ -1122,6 +1121,8 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                             ).annotate(
                                 interaction_count=Count('interaction_type')
                             ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+
+        s = []
         for record in queryset:
             interaction = ''
             if record['peptide_atom'] in ['N', 'C', 'O', 'CA']:
@@ -1132,31 +1133,94 @@ class StructurePeptideLigandInteractions(generics.ListAPIView):
                 interaction += 'B'
             else:
                 interaction += 'S'
-            record['structural_interaction'] = interaction
-            record['queried_value'] = value
-            s.append(record)
-
-                            # ).annotate(
-                            #     peptide_atom_case=Case(
-                            #         When(peptide_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
-                            #         default=Value('S'),
-                            #         output_field=CharField(),
-                            #     ),
-                            #     receptor_atom_case=Case(
-                            #         When(receptor_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
-                            #         default=Value('S'),
-                            #         output_field=CharField(),
-                            #     )
-                            # ).annotate(
-                            #     structural_interaction=Concat(
-                            #         'peptide_atom_case',
-                            #         'receptor_atom_case',
-                            #         output_field=CharField(),
-                            #     )
-                            # ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+            interaction_info = {
+                      'pdb_code': record['interacting_peptide_pair__peptide__structure__pdb_code__index'],
+                      'ligand_name': record['interacting_peptide_pair__peptide__ligand__name'],
+                      'ligand_chain': record['interacting_peptide_pair__peptide__chain'],
+                      'peptide_amino_acid': record['interacting_peptide_pair__peptide_amino_acid'],
+                      'peptide_amino_acid_three_letter': record['interacting_peptide_pair__peptide_amino_acid_three_letter'],
+                      'peptide_residue_number': record['interacting_peptide_pair__peptide_sequence_number'],
+                      'receptor_amino_acid': record['interacting_peptide_pair__receptor_residue__amino_acid'],
+                      'receptor_residue_number': record['interacting_peptide_pair__receptor_residue__sequence_number'],
+                      'receptor_residue_generic_number': record['interacting_peptide_pair__receptor_residue__display_generic_number__label'],
+                      'ca_distance': record['interacting_peptide_pair__ca_distance'],
+                      'ca_cb_angle': record['interacting_peptide_pair__ca_cb_angle'],
+                      'interaction_type': record['interaction_type'],
+                      'interaction_level': record['interaction_level'],
+                      'interaction_count': record['interaction_count'],
+                      'peptide_atom': record['peptide_atom'],
+                      'receptor_atom': record['receptor_atom'],
+                      'structural_interaction': interaction,
+                      'queried_value': value)
+            }
+            s.append(interaction_info)
 
         return Response(s)
 
+
+    # serializer_class = StructurePeptideLigandInteractionSerializer
+    #
+    # def get_queryset(self):
+    #     value = self.kwargs.get('value')
+    #     #trying different inputs: pdb_code, entry_name, accession_number
+    #     queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index=value)
+    #     if len(queryset) == 0:
+    #         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__entry_name=value)
+    #     if len(queryset) == 0:
+    #         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accessiont=value)
+    #
+    #     # s = []
+    #     queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
+    #                         'interacting_peptide_pair__peptide__ligand__name',
+    #                         'interacting_peptide_pair__peptide__chain',
+    #                         'interacting_peptide_pair__peptide_amino_acid',
+    #                         'interacting_peptide_pair__peptide_amino_acid_three_letter',
+    #                         'interacting_peptide_pair__peptide_sequence_number',
+    #                         'interacting_peptide_pair__receptor_residue__amino_acid',
+    #                         'interacting_peptide_pair__receptor_residue__sequence_number',
+    #                         'interacting_peptide_pair__receptor_residue__display_generic_number__label',
+    #                         'interacting_peptide_pair_id',
+    #                         'interaction_type',
+    #                         'interaction_level',
+    #                         'peptide_atom',
+    #                         'receptor_atom').order_by("interacting_peptide_pair__peptide_sequence_number").distinct(
+    #                         ).annotate(
+    #                             interaction_count=Count('interaction_type')
+    #                         ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+    #     for record in queryset:
+    #         interaction = ''
+    #         if record['peptide_atom'] in ['N', 'C', 'O', 'CA']:
+    #             interaction += 'B'
+    #         else:
+    #             interaction += 'S'
+    #         if record['receptor_atom'] in ['N', 'C', 'O', 'CA']:
+    #             interaction += 'B'
+    #         else:
+    #             interaction += 'S'
+    #         record['structural_interaction'] = interaction
+    #         # record['queried_value'] = value
+    #         # s.append(record)
+    #
+    #                         # ).annotate(
+    #                         #     peptide_atom_case=Case(
+    #                         #         When(peptide_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
+    #                         #         default=Value('S'),
+    #                         #         output_field=CharField(),
+    #                         #     ),
+    #                         #     receptor_atom_case=Case(
+    #                         #         When(receptor_atom__in=['N', 'C', 'O', 'CA'], then=Value('B')),
+    #                         #         default=Value('S'),
+    #                         #         output_field=CharField(),
+    #                         #     )
+    #                         # ).annotate(
+    #                         #     structural_interaction=Concat(
+    #                         #         'peptide_atom_case',
+    #                         #         'receptor_atom_case',
+    #                         #         output_field=CharField(),
+    #                         #     )
+    #                         # ).order_by('interacting_peptide_pair__peptide_sequence_number','interacting_peptide_pair__receptor_residue__sequence_number')
+    #
+    #     return queryset
 
     # def get_queryset(self):
     #     value = self.kwargs.get('value')
