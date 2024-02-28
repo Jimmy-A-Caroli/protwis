@@ -1082,7 +1082,7 @@ class ComplexInteractions(generics.ListAPIView):
         return queryset
 
 
-class StructurePeptideLigandInteractions(views.API):
+class StructurePeptideLigandInteractions(views.APIView):
 
     """
     Get a list of interactions between structure and peptide ligand
@@ -1095,7 +1095,7 @@ class StructurePeptideLigandInteractions(views.API):
     """
 
     def get(self, request):
-        value = self.kwargs.get('value')
+        value = self.kwargs.get('pdb_code')
 
         queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__pdb_code__index=value)
         if len(queryset) == 0:
