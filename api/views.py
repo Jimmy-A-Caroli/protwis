@@ -1088,8 +1088,8 @@ class StructurePeptideLigandInteractions(views.APIView):
     Get a list of interactions between structure and peptide ligand
     \n/structure/{value}/peptideinteraction/
     \n{value} can be a structure identifier from the Protein Data Bank, e.g. 5VBL
-    \n{value} can also be a protein identifier from Uniprot, e.g. adrb2_human
-    \n{value} can also be a protein identifier from Uniprot, e.g. P07550
+    \n{value} can also be a protein identifier from Uniprot, e.g. pkr2_human
+    \n{value} can also be a protein identifier from Uniprot, e.g. P30550
     \nThe inserted value will be queried in the following order: PDB code --> UniProt entry name --> UniProt accession
     \nBy default, UniProt values (entry name and accession) will be queried to AlphaFold Models interaction data
     """
@@ -1102,9 +1102,9 @@ class StructurePeptideLigandInteractions(views.APIView):
 
         if not queryset.exists():
             queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__entry_name=value)
-            
+
         if not queryset.exists():
-            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accessiont=value)
+            queryset = InteractionPeptide.objects.filter(interacting_peptide_pair__peptide__structure__protein_conformation__protein__accession=value)
 
         if queryset.exists():
             queryset = queryset.values('interacting_peptide_pair__peptide__structure__pdb_code__index',
