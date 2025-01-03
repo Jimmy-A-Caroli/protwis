@@ -249,7 +249,10 @@ class DrugSectionSelection(TemplateView):
             description = 'Search by target name'
             # Fetch distinct targets and create a dictionary of {target.name: target.id}
             search_data = Drugs.objects.all().prefetch_related('target').distinct('target')
-            search_dict = {drug.target.name: drug.target.id for drug in search_data}
+            search_dict = {
+                f"{drug.target.name.replace(' receptor', '')} ({drug.target.entry_name.replace('_human', '').upper()})": drug.target.id
+                for drug in search_data
+            }
 
             # # Create sankey_dict_serialized using a dictionary comprehension
             # sankey_dict_serialized = {

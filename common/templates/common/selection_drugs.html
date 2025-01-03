@@ -198,17 +198,18 @@
                 <!-- Primary Tabs -->
                 <ul class="nav nav-tabs" id="targetsPrimaryTabs" role="tablist">
                     <li class="active">
-                        <a  id="drugs-table-tab" data-toggle="tab" href="#drugs-table" role="tab" aria-controls="drugs-table" aria-selected="true">Agent/drug-disease pairs</a>
-                    </li>
-                    <li>
                         <a id="sankey-plot-tab" data-toggle="tab" href="#sankey-plot" role="tab" aria-controls="sankey-plot" aria-selected="false">Sankey</a>
                     </li>
+                    <li>
+                        <a  id="drugs-table-tab" data-toggle="tab" href="#drugs-table" role="tab" aria-controls="drugs-table" aria-selected="true">Agent/drug-disease pairs</a>
+                    </li>
+                    
                 </ul>
 
                 <!-- Tab Contents -->
                 <div class="tab-content" id="targetsPrimaryTabsContent">
                     <!-- Drugs Table Tab Pane -->
-                    <div class="tab-pane fade in active" id="drugs-table" role="tabpanel" aria-labelledby="drugs-table-tab">
+                    <div class="tab-pane fade in" id="drugs-table" role="tabpanel" aria-labelledby="drugs-table-tab">
                         <!-- Table Container -->
                         <div style="font-size: 11px; white-space: nowrap;margin-top: 20px;" id="table-container">
                             <table width="100%" class="display compact" id="Table1">
@@ -296,7 +297,7 @@
                     </div>
 
                     <!-- Sankey Plot Tab Pane -->
-                    <div class="tab-pane fade" id="sankey-plot" role="tabpanel" aria-labelledby="sankey-plot-tab">
+                    <div class="tab-pane fade in active" id="sankey-plot" role="tabpanel" aria-labelledby="sankey-plot-tab">
                         <!-- Placeholder for Sankey Plot -->
                         <div id="sankey_plot"></div>
                         <p>
