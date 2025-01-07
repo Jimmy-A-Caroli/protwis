@@ -56,6 +56,16 @@ th .dt-column-title {
 .select2-container--default .select2-selection--multiple{
     overflow: hidden !important;
 }
+.row-count-info {
+    display: inline-block;
+    font-weight: bold;
+    color: #333;
+}
+
+/* .dt-btn, .row-count-info, .text-end {
+    display: inline-block;
+    width: 100%;
+} */
 
 </style>
 
@@ -93,12 +103,21 @@ th .dt-column-title {
               <td colspan="13" style="text-align: center" data-dt-order="disable"></td>
             </tr>
             <tr>
-              <th colspan="3" style="text-align:center">Drug/Agent</th>
-              <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Target</th>
-              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Indication</th>
+              {% if layout == "drugs" %}
+              <th colspan="3" style="text-align:center">Compounds</th>
+              <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Targets</th>
+              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th>
+              {% else %}
+              <th colspan="5" style="text-align:center;">Targets</th>
+              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Compounds</th>
+              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
+              <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th>
+              {% endif %}
+              
             </tr>
             <tr>
+              {% if layout == "drugs" %}
               <th style="text-align: center;">Name</th>
               <th style="text-align: center;">Type</th>
               <th style="text-align: center;">Modality</th>
@@ -112,8 +131,25 @@ th .dt-column-title {
               <th style="text-align: center;">Association score</th>
               <th style="text-align: center;border-left: 1px solid #cccccc;">Max</th>
               <th style="text-align: center;">Approved</th>
+              {% else %}
+              <th style="text-align: center;">Gene</th>
+              <th style="text-align: center;">Protein</th>
+              <th style="text-align: center;">Receptor family</th>
+              <th style="text-align: center;">Ligand type</th>
+              <th style="text-align: center;">Class</th>
+              <th style="text-align: center;border-left: 1px solid #cccccc;">Name</th>
+              <th style="text-align: center;">Type</th>
+              <th style="text-align: center;">Modality</th>
+              <th style="text-align: center;border-left: 1px solid #cccccc">Indication</th>
+              <th style="text-align: center;">ICD11</th>
+              <th style="text-align: center;">Association score</th>
+              <th style="text-align: center;border-left: 1px solid #cccccc;">Max</th>
+              <th style="text-align: center;">Approved</th>
+              {% endif %}
+              
             </tr>
             <tr>
+              {% if layout == "drugs" %}
               <td style="text-align: center;" data-dt-order="disable"></td>
               <td style="text-align: center;" data-dt-order="disable"></td>
               <td style="text-align: center;" data-dt-order="disable"></td>
@@ -127,6 +163,21 @@ th .dt-column-title {
               <td style="text-align: center;" data-dt-order="disable"></td>
               <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
               <td style="text-align: center;" data-dt-order="disable"></td>
+              {% else %}
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+              <td style="text-align: center;" data-dt-order="disable"></td>
+              {% endif %}
             </tr>
           </thead>
         </table>
@@ -211,36 +262,122 @@ function getArrayFromData(gprotein) {
   } return (table);
 }
 
-
 function initializeDataTable(tableId, data) {
   
   // Add common column definitions
-  var columnDefs = [
+  var drugsColumnDefs = [
     { className: "dt-head-center dt-center dt-body-center expand", targets: "_all" },
-    { className: 'border-left', targets: [3, 8, 12] }
-];
+    { className: 'border-left', targets: [3, 8, 11] }
+  ];
+
+  var targetsColumnDefs = [
+    { className: "dt-head-center dt-center dt-body-center expand", targets: "_all" },
+    { className: 'border-left', targets: [5, 8, 11] }
+  ];
+
+  // Select columns based on layout
+  const columnDefs = layout === "drugs" ? drugsColumnDefs : targetsColumnDefs;
   
   // Set order based on layout value: column 3 for "Targets" and column 0 for "Drugs"
-  const order = layout === "targets" ? [3, "asc"] : [0, "asc"];
+  const order = layout === "targets" ? [0, "asc"] : [0, "asc"];
 
-  // Define columns
-  var columns = [
-          {data: "Ligand name", name: "Ligand name"},
-          {data: "Drug type", name: "Drug type"},
-          {data: "Modality", name: "Modality"},
-          {data: "Gene name", name: "Gene name", render: function (data) { return data.replace('_human', '').toUpperCase(); }},
-          {data: "Protein name", name: "Protein name"},
-          {data: "Receptor family", name: "Receptor family"},
-          {data: "Ligand type", name: "Ligand type"},
-          {data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
-          {data: "Indication name", name: "Indication"},
-          {data: "ICD11", name: "ICD11"},
-          // {data: 'ATC', name: "ATC"},
-          {data: 'Association score', name: "Association score",  render: function (data) {return data === "" || data === null ? data : parseFloat(data).toFixed(4);}}, // Format to 4 decimal places
-          {data: "Phase", name: "Max"},
-          {data: "Approved", name: "Approved"}
-                      
-      ];
+  // Define column configurations for "drugs" and "targets"
+  const drugsColumns = [
+      { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) { 
+          if (type === 'display') {
+              if (row && row.LigandID) {
+                  data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+              } else {
+                  data = data || '';
+              }
+          }
+          return data;
+      }},
+      { data: "Drug type", name: "Drug type" },
+      { data: "Modality", name: "Modality" },
+      { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
+          if (type === 'display') {
+              const originalData = data; 
+              const transformedData = data.replace('_human', '').toUpperCase(); 
+              return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+          } else if (type === 'filter') {
+              return data.replace('_human', '').toUpperCase();
+          }
+          return data;
+      }},
+      { data: "Protein name", name: "Protein name" },
+      { data: "Receptor family", name: "Receptor family" },
+      { data: "Ligand type", name: "Ligand type" },
+      { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
+      { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
+          if (type === 'display') {
+              if (row && row.ICD11) {
+                  const transformedData = data || 'Unknown'; 
+                  const link = '/drugs/indication/' + row.ICD11 + '/';
+                  return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
+              } else {
+                  return data || '';
+              }
+          } else if (type === 'filter') {
+              return data || 'Unknown';
+          }
+          return data;
+      }},
+      { data: "ICD11", name: "ICD11" },
+      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }},
+      { data: "Phase", name: "Max" },
+      { data: "Approved", name: "Approved" }
+  ];
+
+  const targetsColumns = [
+      { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
+          if (type === 'display') {
+              const originalData = data; 
+              const transformedData = data.replace('_human', '').toUpperCase(); 
+              return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+          } else if (type === 'filter') {
+              return data.replace('_human', '').toUpperCase();
+          }
+          return data;
+      }},
+      { data: "Protein name", name: "Protein name" },
+      { data: "Receptor family", name: "Receptor family" },
+      { data: "Ligand type", name: "Ligand type" },
+      { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
+      { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) {
+          if (type === 'display') {
+              if (row && row.LigandID) {
+                  data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+              } else {
+                  data = data || '';
+              }
+          }
+          return data;
+      }},
+      { data: "Drug type", name: "Drug type" },
+      { data: "Modality", name: "Modality" },
+      { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
+          if (type === 'display') {
+              if (row && row.ICD11) {
+                  const transformedData = data || 'Unknown'; 
+                  const link = '/drugs/indication/' + row.ICD11 + '/';
+                  return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
+              } else {
+                  return data || '';
+              }
+          } else if (type === 'filter') {
+              return data || 'Unknown';
+          }
+          return data;
+      }},
+      { data: "ICD11", name: "ICD11" },
+      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }},
+      { data: "Phase", name: "Max" },
+      { data: "Approved", name: "Approved" }
+  ];
+
+  // Select columns based on layout
+  const columns = layout === "drugs" ? drugsColumns : targetsColumns;
 
   // Initialize or reinitialize DataTable
   if ($.fn.DataTable.isDataTable(tableId)) {
@@ -248,13 +385,15 @@ function initializeDataTable(tableId, data) {
       table.clear();
       table.rows.add(data);
       table.draw();
+      // Update row count after redrawing
+      const totalRows = table.rows().count();
+      const rowCountText = layout === "targets" ? `Target-compound-disease rows: ${totalRows}` : `Compound-target-disease rows: ${totalRows}`;
+      $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
   } else {
       $(tableId).DataTable({
-          dom: "<'row'<'col-sm-1 dt-btn'B><'col-sm-3'f><'col-sm-'7>>" +  // Buttons and search bar in the same row
-          "<'row'<'col-sm-12'tr>>" +                    // Table rows
-          "<'row'<'col-sm-12'ip>>", // Pagination and info
-
-
+        dom: "<'row align-items-center justify-content-between'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
+              "<'row'<'col-sm-12'tr>>" + 
+              "<'row'<'col-sm-12'ip>>",
           order: order,
           pageLength: 20,
           lengthMenu: [10, 20, { label: 'All', value: -1 }],
@@ -269,7 +408,14 @@ function initializeDataTable(tableId, data) {
           // scrollX: false,
           buttons: [
               { text: 'Reset filters', action: function () { reset_all(); } }
-          ]
+          ],
+          initComplete: function() {
+              // Use `this.api()` to get the table instance inside initComplete
+              const api = this.api(); // Access the DataTable API
+              const totalRows = api.rows().count(); // Use the API to get row count
+              const rowCountText = layout === "targets" ? `Target-compound-disease rows: ${totalRows}` : `Compound-target-disease rows: ${totalRows}`;
+              $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+          }
       });
   }
   var column_filters = [];
@@ -333,6 +479,9 @@ function updateJvenn(gprotein_ID) {
         // Show the table only after the search is clicked
         $('#table-container').show();
 
+        // reset filters
+        reset_all();
+        
         // Pass selected data to initializeDataTable function
         initializeDataTable("#receptor_table", selectedData);
       }
@@ -427,22 +576,164 @@ function updateJvenn(gprotein_ID) {
       }
     }
 
-    $("#label1, #label2, #label3, #label4").css({
-        "font-weight": "bold",
-        "font-size": "20px",
-        "opacity": "1"
+    // Update the content of labels to split into two lines
+      // Dynamically set up the labels
+      gprotein_ID.forEach((label, index) => {
+          // Split the label into the main part and the count
+          const parts = label.split(" ");
+          const mainText = parts.slice(0, -1).join(" "); // Join all except the last part
+          const count = parts[parts.length - 1]; // The last part is the count
+
+          // Dynamically set the label's HTML
+          $(`#label${index + 1}`).html(`${mainText}<br><span class="clickable-part">${count}</span>`);
+      });
+
+     // Base styles for all labels
+    const labelBaseStyles = {
+      "font-weight": "bold",
+      "text-decoration": "none", // Remove underline for the main text
+      "font-size": "18px",
+      "opacity": "1",
+      "cursor": "default", // Only the numbers are clickable
+      "transition": "color 0.3s, text-decoration 0.3s, background-color 0.3s", // Smooth transitions
+      "text-align": "center", // Center-align text
+      "line-height": "1", // Compact line spacing
+      "margin-bottom": "0", // Remove extra spacing after each element
+      "padding-bottom": "0", // Remove padding
+      // "text-shadow": "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" // Thin black outline
+    };
+
+    // Apply individual label styles (color and margin)
+    $("#label1").css({
+      ...labelBaseStyles,
+      "color": "#f5bcbf", // Bright Red
+      "margin-left": "-20px" // Move to the left
     });
+
+    $("#label2").css({
+      ...labelBaseStyles,
+      "color": "#f17270", // Darker Red
+      "margin-left": "-40px" // Move further to the left
+    });
+
+    $("#label3").css({
+      ...labelBaseStyles,
+      "color": "#dd2628", // Even darker Red
+      "margin-left": "40px" // Move to the right
+    });
+
     $("#label4").css({
-        "width": "auto",  // This ensures the div resizes automatically based on the text length
-        "white-space": "nowrap"  // Prevents the text from breaking into multiple lines
+      ...labelBaseStyles,
+      "color": "#2c87c8", // Blue
+      "margin-left": "20px" // Move slightly to the right
     });
+
+    // Style the clickable part (numbers in parentheses)
+    $(".clickable-part").css({
+      "text-decoration": "underline",
+      "text-underline-offset": "3px", // Adjust the offset to move the underline further down
+      "cursor": "pointer", // Make it look clickable
+      "font-size": "16px", // Slightly smaller font size
+      "display": "block", // Display as a block element for stacking
+      "margin-top": "5px", // Add spacing between the lines
+    });
+
+    // Style the clickable part (numbers in parentheses)
+    $(".clickable-part").css({
+      "text-decoration": "underline",
+      "text-underline-offset": "3px", // Adjust the offset to move the underline further down
+      "cursor": "pointer", // Make it look clickable
+      "font-size": "16px", // Slightly smaller font size
+      "display": "block", // Display as a block element for stacking
+      "margin-top": "5px", // Add spacing between the lines
+      "color": "black", // Set the default color to black
+    });
+
+    // Add hover effects to the clickable part, temporarily changing color and reverting to black
+    $(".clickable-part")
+      .off("mouseenter mouseleave") // Remove previous bindings
+      .on("mouseenter", function () {
+        $(this).css({
+          "color": "#0056b3", // Hover color
+          "text-decoration": "underline", // Keep underline
+        });
+      })
+      .on("mouseleave", function () {
+        $(this).css({
+          "color": "black", // Revert to black
+          "text-decoration": "underline", // Keep underline
+        });
+      });
+
+      // Attach click event to the clickable part
+      $(".clickable-part").on("click", function () {
+        // Get the phase text from the parent label, excluding the count
+        const phaseText = $(this).closest("div").clone() // Clone the element to avoid modifying the original
+            .children(".clickable-part") // Remove the count part
+            .remove()
+            .end()
+            .text()
+            .trim(); // Extract text without the count
+
+        const phaseCount = $(this).text().trim(); // e.g., "(XXX)"
+
+        // Concatenate phaseText and phaseCount to form the full phase label
+        const phaseLabel = `${phaseText} ${phaseCount}`; // e.g., "Phase I (XXXX)"
+
+        // Use gdata to get the newline-separated list for the phase
+        const filterValues = gdata[phaseLabel].split("\n").map((item) => item.trim());
+
+        // Define the column to filter by based on layout
+        const filterColumn = layout === "targets" ? "Gene name" : "Ligand name";
+
+        // Filter the fullData based on the selected phase's filter values
+        const selectedData = fullData.filter((row) =>
+          filterValues.includes(row[filterColumn])
+        );
+      // Show the filtered table
+      $("#table-container").show();
+
+      // Reset filters
+      reset_all();
+
+      // Pass the filtered data to initializeDataTable function
+      initializeDataTable("#receptor_table", selectedData);
+      });
+
+      // Apply base styles to the labels
+      $(".number-black").css({
+        "font-weight": "bold",
+        "text-decoration": "underline", 
+        "text-underline-offset": "3px",/* Underline the text */
+        "font-size": "19px",
+        "opacity": "1",
+        "cursor": "pointer", // Makes the labels look clickable
+        "transition": "color 0.3s, text-decoration 0.3s, background-color 0.3s" // Smooth transitions
+      });
+
+    // Add hover effects dynamically
+    $(".number-black").off("mouseenter mouseleave") // Remove previous bindings
+      .on("mouseenter", function () {
+        $(this).css({
+          "color": "#0056b3", /* Darker blue on hover */
+          "text-decoration": "underline", 
+          "text-underline-offset": "3px",// Keep underline
+        });
+      })
+      .on("mouseleave", function () {
+        $(this).css({
+          "color": "Black", /* Reset to original blue */
+          "text-decoration": "underline", 
+          "text-underline-offset": "3px",// Keep underline
+        });
+      });
+
+    $("#label4").css({
+      "width": "auto", // This ensures the div resizes automatically based on the text length
+      "white-space": "nowrap" // Prevents the text from breaking into multiple lines
+    });
+
     $(".number-empty").html("-");
-    // $("#frame").css({
-    //   "left": "50%"
-    // });
-    // $("#module-export").css({
-    //   "left": "750px"
-    // });
   }
 
 updateJvenn(gprotein_ID)
