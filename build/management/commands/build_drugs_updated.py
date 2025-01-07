@@ -428,6 +428,15 @@ class Command(BaseCommand):
                                 continue
 
         if check == None:
+            # perform a check: if all the mapper items are NaN
+            # check if there is a ligand with matching name
+            if all(all(item == 'nan' for item in values) for values in mapper.values()):
+                try:
+                    check = Ligand.objects.get(name=row['Name'])
+                    return check
+                except Ligand.DoesNotExist:
+                    pass
+
             type = Command.fetch_type(row['Drug_Type'])
             #TODO: adjust the length of float numbers
             check, _ = Ligand.objects.get_or_create(name=row['ligand_name'],
@@ -440,6 +449,13 @@ class Command(BaseCommand):
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
                                                     smiles=row['SMILES'])
+
+            # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand
+            for id_type, values in mapper.items():
+                for code in values:
+                    if code != 'nan':
+                        wr = WebResource.objects.get(slug=id_type)
+                        wl, created = LigandID.objects.get_or_create(ligand=check, index=code, web_resource=wr)
         return check
 
     @staticmethod
@@ -476,11 +492,12 @@ class Command(BaseCommand):
                   'drugbank': str(row['DrugBankID']).split(';')}
         for key, values in mapper.items():
             for code in values:
-                try:
-                    check = LigandID.objects.get(index=code, ligand_id=ligand.id, web_resource__slug=key)
-                except LigandID.DoesNotExist:
-                    wr = WebResource.objects.get(slug=key)
-                    LigandID(index=code, web_resource=wr, ligand_id=ligand.id).save()
+                if code != 'nan':
+                    try:
+                        check = LigandID.objects.get(index=code, ligand_id=ligand.id, web_resource__slug=key)
+                    except LigandID.DoesNotExist:
+                        wr = WebResource.objects.get(slug=key)
+                        LigandID(index=code, web_resource=wr, ligand_id=ligand.id).save()
 
     @staticmethod
     def fetch_role(action):
