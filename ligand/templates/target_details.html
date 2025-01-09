@@ -416,6 +416,7 @@
         var other_YADCF_filters_smiles = {sort_as: 'alpha', case_insensitive: false};
         if(mode == 'extended'){
           var smiles_column = 21;
+          var name_column = 1;
           column_filters = column_filters.concat(createYADCFfilters(1, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_text));
           column_filters = column_filters.concat(createYADCFfilters(2, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_num));
           column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Select", false, "exact", "rendered_html", "50px", null, null, null, other_YADCF_filters_text));
@@ -429,6 +430,7 @@
         }else{
           if(!ligand_query){
             var smiles_column = 22;
+            var name_column = 1;
             column_filters = column_filters.concat(createYADCFfilters(1, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_text));
             column_filters = column_filters.concat(createYADCFfilters(2, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_num));
             column_filters = column_filters.concat(createYADCFfilters(3, 2, "multi_select", "select2", "Select", false, "exact", "rendered_html", "50px", null, null, null, other_YADCF_filters_text));
@@ -446,7 +448,8 @@
             // else => we come here => ligand_query == true
             const SSHIFT = {% if ligand_similarity %}1{% else %}0{% endif %};
           
-            var smiles_column = 25 + SSHIFT;
+            var smiles_column = 26 + SSHIFT;
+            var name_column = 1 + SSHIFT;
           
             // If 'ligand_similarity' is true, column 1 is the “Similarity” column (numeric).
             // So apply a range_number filter on that column:
@@ -469,7 +472,7 @@
             column_filters = column_filters.concat(
               createYADCFfilters(
                 1 + SSHIFT,
-                1,
+                4,
                 "multi_select",
                 "select2",
                 "Select",
@@ -477,42 +480,6 @@
                 "exact",
                 "html",
                 "80px",
-                null,
-                null,
-                null,
-                other_YADCF_filters_text
-              )
-            );
-          
-            column_filters = column_filters.concat(
-              createYADCFfilters(
-                2 + SSHIFT,
-                1,
-                "multi_select",
-                "select2",
-                "Select",
-                false,
-                "exact",
-                "html",
-                "80px",
-                null,
-                null,
-                null,
-                other_YADCF_filters_num
-              )
-            );
-          
-            column_filters = column_filters.concat(
-              createYADCFfilters(
-                3 + SSHIFT,
-                2,
-                "multi_select",
-                "select2",
-                "Select",
-                false,
-                "exact",
-                "rendered_html",
-                "50px",
                 null,
                 null,
                 null,
@@ -536,7 +503,7 @@
           
             column_filters = column_filters.concat(
               createYADCFfilters(
-                7 + SSHIFT,
+                8 + SSHIFT,
                 5,
                 "multi_select",
                 "select2",
@@ -554,7 +521,7 @@
           
             column_filters = column_filters.concat(
               createYADCFfilters(
-                12 + SSHIFT,
+                13 + SSHIFT,
                 1,
                 "range_number",
                 null,
@@ -568,7 +535,7 @@
           
             column_filters = column_filters.concat(
               createYADCFfilters(
-                13 + SSHIFT,
+                14 + SSHIFT,
                 1,
                 "multi_select",
                 "select2",
@@ -586,7 +553,7 @@
           
             column_filters = column_filters.concat(
               createYADCFfilters(
-                14 + SSHIFT,
+                15 + SSHIFT,
                 4,
                 "range_number",
                 null,
@@ -600,7 +567,7 @@
           
             column_filters = column_filters.concat(
               createYADCFfilters(
-                18 + SSHIFT,
+                19 + SSHIFT,
                 2,
                 "multi_select",
                 "select2",
@@ -618,7 +585,7 @@
           
             column_filters = column_filters.concat(
               createYADCFfilters(
-                20 + SSHIFT,
+                21 + SSHIFT,
                 5,
                 "range_number",
                 null,
@@ -633,7 +600,7 @@
             // Finally, the SMILES column at (25 + SSHIFT)
             column_filters = column_filters.concat(
               createYADCFfilters(
-                25 + SSHIFT,
+                26 + SSHIFT,
                 1,
                 "multi_select",
                 "select2",
@@ -770,7 +737,7 @@
               csv_data.push('Lig. Name;GPCRdb ID;Ref. Ligand;Vendors;Species;;Assay type;Activ. type;Activ. relation;Activ. value;p-value (-log);Fold selectivity (Potency);Tested GPCRs;Assay descript.;Source; Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles;DOI')
             {% endif %}
             {% if mode == 'compact' %}
-              csv_data.push('Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Potency);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
+              csv_data.push('{% if ligand_similarity %}Similarity;{% endif %}Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Potency);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
             {% endif %}
             for (i = 0; i < checked_data.length; i++) {
                 var csv_row = []
@@ -807,7 +774,7 @@
               csv_data.push('Lig. Name;GPCRdb ID;Ref. Ligand;Vendors;Species;;Assay type;Activ. type;Activ. relation;Activ. value;p-value (-log);Fold selectivity (Affinity);Tested GPCRs;Assay descript.;Source; Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles;DOI')
             {% endif %}
             {% if mode == 'compact' %}
-              csv_data.push('Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Affinity);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
+              csv_data.push('{% if ligand_similarity %}Similarity;{% endif %}Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Affinity);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
             {% endif %}
             
             for (i = 0; i < checked_data.length; i++) {
@@ -843,7 +810,7 @@
             let processed = [];
             for (i = 0; i < checked_data.length; i++) {
                 var div = document.createElement("div");
-                div.innerHTML = checked_data[i][1];
+                div.innerHTML = checked_data[i][name_column];
                 name = div.textContent;
                 if (!processed.includes(name)){
                   let smi_row = checked_data[i][smiles_column] + "\t" + name;
@@ -871,7 +838,7 @@
             let processed = [];
             for (i = 0; i < checked_data.length; i++) {
                 var div = document.createElement("div");
-                div.innerHTML = checked_data[i][1];
+                div.innerHTML = checked_data[i][name_column];
                 name = div.textContent;
                 if (!processed.includes(name)){
                   let smi_row = checked_data[i][smiles_column] + "\t" + name;
@@ -1219,7 +1186,7 @@
                    <th style="border-left: 1px solid black; text-align:left">Species<br /><br /></th>
                    <th style="text-align:left"> </th> <!-- placeholder -->
                    {% if ligand_query %}
-                   <th style="text-align:left">Protein<br />name<br>name</th>
+                   <th style="text-align:left">Protein<br />name</th>
                    <th style="text-align:left">Gene<br />name</th>
                    <th style="text-align:left">Class<br /><br /></th>
                    <th style="text-align:left">Family<br /><br /></th>
