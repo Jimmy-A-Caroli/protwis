@@ -66,11 +66,7 @@
                 <!-- Column 1: Ligand Information (1/3 width) -->
                 <div class="col-md-4">
                     <h3>{{ ligand.ligand_name }}</h3>
-                    {% if ligand.picture is not None %}
-                        {{ ligand.picture|safe }}
-                    {% else %}
-                        <h3>Image not available</h3>
-                    {% endif %}
+					{{ ligand.picture|safe }}
                     <br/>
                     <table class="table table-striped table-bordered">
                         <tr>
@@ -276,11 +272,7 @@
                 <!-- Column 1: Ligand Information (1/3 width) -->
                 <div class="col-md-4">
                     <h3>{{ ligand.ligand_name }}</h3>
-                    {% if ligand.picture is not None %}
-                        {{ ligand.picture|safe }}
-                    {% else %}
-                        <h3>Image not available</h3>
-                    {% endif %}
+					{{ ligand.picture|safe }}
                     <br/>
                 </div>
                 
