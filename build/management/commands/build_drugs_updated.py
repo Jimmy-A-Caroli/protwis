@@ -110,7 +110,7 @@ class Command(BaseCommand):
         all_data = Command.read_csv_data('03_FinalData.csv') #old one:03_FINAL_DATA_UPDATED.csv new one:03_FinalData.csv
         target_data = Command.read_csv_data('08_TargetPrioritazion_AllData.csv')
         atc_codes = Command.read_csv_data('06_ATC_ligand_and_names.csv')
-        opentarget_scores = self.read_csv_data('08_TargetPrioritazion_Data_DiseaseAssociations.csv')
+        opentarget_scores = Command.read_csv_data('08_TargetPrioritazion_Data_DiseaseAssociations.csv')
         #getting the cancer data for each protein
         cancer_data = target_data[['entry_name','Cancer','MaxExpression']]
         #Clean the cancer data from NaN data columns
@@ -449,7 +449,8 @@ class Command(BaseCommand):
                                                     logp=row['XLogP'] if pd.notna(row['XLogP']) else None,
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
-                                                    smiles=row['SMILES'])
+                                                    smiles=row['SMILES'],
+                                                    source = 'Drug Data')
 
             # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand
             for id_type, values in mapper.items():
