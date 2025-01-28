@@ -103,6 +103,7 @@ class Command(BaseCommand):
         Command.create_atc_codes_data(atc_df)
         print("\n\ATC Model built. Performing checks")
         test_model_updates(self.all_models, self.tracker, check=True)
+        print("\n\nChecks completed. Build process completed.")
 
     def setup_data():
         #Loading the two csv files
@@ -227,7 +228,7 @@ class Command(BaseCommand):
             item = {
                 'title': title,
                 'code': code,
-                'uri': uri.split('mms/')[1],
+                'uri': uri.split('mms/')[1] if uri else None,
                 'slug': slug,
                 'parent_slug': parent_slug,  # Store parent slug instead of parent item
                 'level': level
@@ -323,42 +324,42 @@ class Command(BaseCommand):
     def create_drug_data(drug_data):
         #Parse the drug dataframe
         for i, row in drug_data.iterrows():
-            if row['ICD_Code'][0] != 'X':
+            # if row['ICD_Code'][0] != 'X':
             #fetch the ligand or generate a new ligand record if there is no match
-                ligand = Command.fetch_ligand(row)
-                #Then add the different references (PubChem, DrugBank and ChEMBL)
-                #TODO: add also UNII and CAS as values in the ManyToMany
-                Command.add_drug_references(ligand, row)
-                #Fetch the reference protein
-                protein = Command.fetch_protein(row['entry_name'])
-                #fetch the indication
-                indication = Command.fetch_indication(row['ICD_Code'])
-                #Fetch the ligand action (role)
-                moa = Command.fetch_role(row['Action'])
-                #Fetch the inidcation association
-                association = Command.fetch_association(row['entry_name'], row['ICD_Code'])
-                #to be human readable instead of numerical values (ask David)
-                drug, _ = Drugs.objects.get_or_create(charge=row['Charge'],
-                                                          complexity=row['Complexity'],
-                                                          tpsa=row['TPSA'],
-                                                          drug_status=row['Drug_Status'],
-                                                          approval_year=row['Approval_Year'] if pd.notna(row['Approval_Year']) else None,
-                                                          indication_max_phase=row['IndicationMaxPhase'],
-                                                          affected_pathway=row['affected_pathway'] if pd.notna(row['affected_pathway']) else None,
-                                                          somatic_mutation=row['somatic_mutation'] if pd.notna(row['somatic_mutation']) else None,
-                                                          similarity_to_model=row['animal_model'] if pd.notna(row['animal_model']) else None,
-                                                          novelty_score=row['novelty_score'],
-                                                          genetic_association=row['genetic_association'] if pd.notna(row['genetic_association']) else None,
-                                                          indication_status=row['IndicationStatus'],
-                                                          publication_count=row['publication_count'],
-                                                          target_level=row['target_level'],
-                                                          moa=moa,
-                                                          indication=indication,
-                                                          ligand=ligand,
-                                                          disease_association=association,
-                                                          target=protein)
-            else:
-                continue
+            ligand = Command.fetch_ligand(row)
+            #Then add the different references (PubChem, DrugBank and ChEMBL)
+            #TODO: add also UNII and CAS as values in the ManyToMany
+            Command.add_drug_references(ligand, row)
+            #Fetch the reference protein
+            protein = Command.fetch_protein(row['entry_name'])
+            #fetch the indication
+            indication = Command.fetch_indication(row['ICD_Code'])
+            #Fetch the ligand action (role)
+            moa = Command.fetch_role(row['Action'])
+            #Fetch the inidcation association
+            association = Command.fetch_association(row['entry_name'], row['ICD_Code'])
+            #to be human readable instead of numerical values (ask David)
+            drug, _ = Drugs.objects.get_or_create(charge=row['Charge'],
+                                                      complexity=row['Complexity'],
+                                                      tpsa=row['TPSA'],
+                                                      drug_status=row['Drug_Status'],
+                                                      approval_year=row['Approval_Year'] if pd.notna(row['Approval_Year']) else None,
+                                                      indication_max_phase=row['IndicationMaxPhase'],
+                                                      affected_pathway=row['affected_pathway'] if pd.notna(row['affected_pathway']) else None,
+                                                      somatic_mutation=row['somatic_mutation'] if pd.notna(row['somatic_mutation']) else None,
+                                                      similarity_to_model=row['animal_model'] if pd.notna(row['animal_model']) else None,
+                                                      novelty_score=row['novelty_score'],
+                                                      genetic_association=row['genetic_association'] if pd.notna(row['genetic_association']) else None,
+                                                      indication_status=row['IndicationStatus'],
+                                                      publication_count=row['publication_count'],
+                                                      target_level=row['target_level'],
+                                                      moa=moa,
+                                                      indication=indication,
+                                                      ligand=ligand,
+                                                      disease_association=association,
+                                                      target=protein)
+            # else:
+            #     continue
             #Commented for the sake of testing
             #since it's calculated to have more than 300k unique pubs to be added
 
@@ -448,7 +449,8 @@ class Command(BaseCommand):
                                                     logp=row['XLogP'] if pd.notna(row['XLogP']) else None,
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
-                                                    smiles=row['SMILES'])
+                                                    smiles=row['SMILES'],
+                                                    source = 'Drug Data')
 
             # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand
             for id_type, values in mapper.items():
