@@ -47,6 +47,7 @@ th .dt-column-order {
 }
 th .dt-column-title {
     /* padding-left: 24px; */
+    display: inline-block; /* Ensure the text behaves like a block element */
     margin-left: 24px;
 }
 
@@ -61,6 +62,9 @@ th .dt-column-title {
     font-weight: bold;
     color: #333;
 }
+
+
+
 
 /* .dt-btn, .row-count-info, .text-end {
     display: inline-block;
@@ -100,19 +104,27 @@ th .dt-column-title {
         <table width="100%" class="display compact" id="receptor_table">
           <thead>
             <tr>
-              <td colspan="13" style="text-align: center" data-dt-order="disable"></td>
+              <td colspan="18" style="text-align: center" data-dt-order="disable"></td>
             </tr>
             <tr>
               {% if layout == "drugs" %}
-              <th colspan="3" style="text-align:center">Compounds</th>
+              <th colspan="8" style="text-align:center">
+                Compounds
+                <span class="glyphicon glyphicon-info-sign"
+                      data-html="true"
+                      data-toggle="popover"
+                      data-trigger="hover"
+                      data-placement="right"
+                      data-content="The three ATC columns is only shown if Phase IV is included in the data."
+                      style="font-size: 12px; margin-left: 8px;">
+                </span>
+              </th>            
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Targets</th>
-              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
-              <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th>
+              <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               {% else %}
               <th colspan="5" style="text-align:center;">Targets</th>
-              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Compounds</th>
-              <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
-              <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th>
+              <th colspan="8" style="text-align:center;border-left: 1px solid #cccccc;">Compounds</th>
+              <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               {% endif %}
               
             </tr>
@@ -121,62 +133,81 @@ th .dt-column-title {
               <th style="text-align: center;">Name</th>
               <th style="text-align: center;">Type</th>
               <th style="text-align: center;">Modality</th>
-              <th style="text-align: center;border-left: 1px solid #cccccc;">Gene</th>
-              <th style="text-align: center;">Protein</th>
-              <th style="text-align: center;">Receptor family</th>
-              <th style="text-align: center;">Ligand type</th>
-              <th style="text-align: center;">Class</th>
-              <th style="text-align: center;border-left: 1px solid #cccccc">Indication</th>
-              <th style="text-align: center;">ICD11</th>
-              <th style="text-align: center;">Association score</th>
-              <th style="text-align: center;border-left: 1px solid #cccccc;">Max</th>
+              <th style="text-align: center;min-width: 130px;width: 130px;max-width: 130px;">Indication area<br>(ATC)</th>
+              <th style="text-align: center;">Indication<br>(ATC)</th>
+              <th style="text-align: center;">Indication code<br>(ATC)</th>
+              <th style="text-align: center;">In trial</th>
               <th style="text-align: center;">Approved</th>
+              <th style="text-align: center;border-left: 1px solid #cccccc;">Gene</th>
+              <th style="text-align: center; min-width: 90px;width: 90px;max-width: 90px;">Protein</th>
+              <th style="text-align: center;">Receptor<br>family</th>
+              <th style="text-align: center;">Ligand<br>type</th>
+              <th style="text-align: center;">Class</th>
+              <th style="text-align: center;border-left: 1px solid #cccccc">Disease area<br>(ICD11)</th>
+              <th style="text-align: center;">Disease<br>(ICD11)</th>
+              <th style="text-align: center;">Disease code<br>(ICD11)</th>
+              <th style="text-align: center;">Max phase</th>
+              <th style="text-align: center;">Assoc. score</th>
               {% else %}
               <th style="text-align: center;">Gene</th>
               <th style="text-align: center;">Protein</th>
-              <th style="text-align: center;">Receptor family</th>
-              <th style="text-align: center;">Ligand type</th>
+              <th style="text-align: center;">Receptor<br>family</th>
+              <th style="text-align: center;">Ligand<br>type</th>
               <th style="text-align: center;">Class</th>
               <th style="text-align: center;border-left: 1px solid #cccccc;">Name</th>
               <th style="text-align: center;">Type</th>
               <th style="text-align: center;">Modality</th>
-              <th style="text-align: center;border-left: 1px solid #cccccc">Indication</th>
-              <th style="text-align: center;">ICD11</th>
-              <th style="text-align: center;">Association score</th>
-              <th style="text-align: center;border-left: 1px solid #cccccc;">Max</th>
+              <th style="text-align: center;">Indication area<br>(ATC)</th>
+              <th style="text-align: center;">Indication<br>(ATC)</th>
+              <th style="text-align: center;">Indication code<br>(ATC)</th>
+              <th style="text-align: center;">In trial</th>
               <th style="text-align: center;">Approved</th>
+              <th style="text-align: center;border-left: 1px solid #cccccc">Disease area<br>(ICD11)</th>
+              <th style="text-align: center;">Disease<br>(ICD11)</th>
+              <th style="text-align: center;">Disease code<br>(ICD11)</th>
+              <th style="text-align: center;">Max phase</th>
+              <th style="text-align: center;">Assoc. score</th>
               {% endif %}
-              
             </tr>
-            <tr>
+            <tr class="filter-row">
               {% if layout == "drugs" %}
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
               {% else %}
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
-              <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-              <td style="text-align: center;" data-dt-order="disable"></td>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
+              <th class="expand" style="text-align: center;" data-dt-order="disable"></th>
               {% endif %}
             </tr>
           </thead>
@@ -204,11 +235,9 @@ th .dt-column-title {
 <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
-<script src="{% static 'home/js/DataTables_v2.0.5.js' %}"></script>
-<script src="{% static 'home/js/dataTables.buttons_3_0_0.js' %}"></script>
-<script src="{% static 'home/js/DataTables.Colvis.js' %}"></script>
-<script src="{% static 'home/js/dataTables.responsive.js' %}"></script>
+<script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
 
 
 <script>
@@ -223,6 +252,7 @@ th .dt-column-title {
 <script type="text/javascript" charset="utf-8">
   $(document).ready(function(){
     paper.install(window);
+    $('[data-toggle="popover"]').popover(); // Initialize Bootstrap popovers
     });
 </script>
 
@@ -262,17 +292,38 @@ function getArrayFromData(gprotein) {
   } return (table);
 }
 
-function initializeDataTable(tableId, data) {
+// Define the `table` variable globally so it's accessible in the `toggleGroupVisibility` function
+let table;
+
+
+function initializeDataTable(tableId, data, hideColumns = false) {
   
   // Add common column definitions
   var drugsColumnDefs = [
-    { className: "dt-head-center dt-center dt-body-center expand", targets: "_all" },
-    { className: 'border-left', targets: [3, 8, 11] }
-  ];
+    { 
+        className: "dt-head-center dt-center dt-body-center", 
+        targets: "_all" 
+    },
+    { 
+        targets: "_all",
+        createdCell: function (cell) {
+            // Add the 'expand' class to only td elements
+            $(cell).addClass('expand');
+        }
+    },
+    { className: 'border-left', targets: [8, 13] }
+];
 
   var targetsColumnDefs = [
-    { className: "dt-head-center dt-center dt-body-center expand", targets: "_all" },
-    { className: 'border-left', targets: [5, 8, 11] }
+    { className: "dt-head-center dt-center dt-body-center", targets: "_all" },
+    { 
+        targets: "_all",
+        createdCell: function (cell) {
+            // Add the 'expand' class to only td elements
+            $(cell).addClass('expand');
+        }
+    },
+    { className: 'border-left', targets: [5, 13] }
   ];
 
   // Select columns based on layout
@@ -295,6 +346,11 @@ function initializeDataTable(tableId, data) {
       }},
       { data: "Drug type", name: "Drug type" },
       { data: "Modality", name: "Modality" },
+      { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
+      { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
+      { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
+      { data: "In trial", name: "In trial" },
+      { data: "Approved", name: "Approved" },
       { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
           if (type === 'display') {
               const originalData = data; 
@@ -305,10 +361,11 @@ function initializeDataTable(tableId, data) {
           }
           return data;
       }},
-      { data: "Protein name", name: "Protein name" },
-      { data: "Receptor family", name: "Receptor family" },
-      { data: "Ligand type", name: "Ligand type" },
-      { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
+      { data: "Protein name", name: "Protein name", width: "125px", render: function (data) { return data.replace(' receptor', ''); }},
+      {data: "Receptor family", name: "Receptor family", width: "150px", render: function (data) { return data.replace('receptors', ''); }},
+      { data: "Ligand type", name: "Ligand type", render: function (data) { return data.replace('receptors', ''); }},
+      { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0].replace(/^Class /i, '').trim(); }},
+      { data: "Master Indication", name: "Master Indication" },
       { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
           if (type === 'display') {
               if (row && row.ICD11) {
@@ -323,10 +380,9 @@ function initializeDataTable(tableId, data) {
           }
           return data;
       }},
-      { data: "ICD11", name: "ICD11" },
-      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }},
+      { data: 'ICD11', name: 'ICD11' },
       { data: "Phase", name: "Max" },
-      { data: "Approved", name: "Approved" }
+      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
   ];
 
   const targetsColumns = [
@@ -356,6 +412,12 @@ function initializeDataTable(tableId, data) {
       }},
       { data: "Drug type", name: "Drug type" },
       { data: "Modality", name: "Modality" },
+      { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
+      { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
+      { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
+      { data: "In trial", name: "In trial" },
+      { data: "Approved", name: "Approved" },
+      { data: "Master Indication", name: "Master Indication" },
       { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
           if (type === 'display') {
               if (row && row.ICD11) {
@@ -370,60 +432,275 @@ function initializeDataTable(tableId, data) {
           }
           return data;
       }},
-      { data: "ICD11", name: "ICD11" },
-      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }},
+      { data: 'ICD11', name: 'ICD11' },
       { data: "Phase", name: "Max" },
-      { data: "Approved", name: "Approved" }
+      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
   ];
 
   // Select columns based on layout
   const columns = layout === "drugs" ? drugsColumns : targetsColumns;
 
+  function getToggleButtons() {
+      const toggleCompoundsButton = {
+          text: '<span class="dt-button-check"></span> Toggle Compounds',
+          className: 'dt-button-active', // Mark as active initially
+          action: function (e, dt, node, config) {
+              const indices = layout === "drugs"
+                  ? (hideColumns ? [1, 2, 6, 7] : [1, 2, 3, 4, 5, 6, 7]) // Indices for drugs layout
+                  : (hideColumns ? [6, 7, 11, 12] : [6, 7, 8, 9, 10, 11, 12]); // Indices for targets layout
+              toggleGroupVisibility(indices, $(node));
+          }
+      };
+
+      const toggleTargetsButton = {
+          text: '<span class="dt-button-check"></span> Toggle Targets',
+          className: 'dt-button-active', // Mark as active initially
+          action: function (e, dt, node, config) {
+              const indices = layout === "drugs"
+                  ? [9, 10, 11, 12] // Indices for drugs layout
+                  : [1, 2, 3, 4]; // Indices for targets layout
+              toggleGroupVisibility(indices, $(node));
+          }
+      };
+
+      // Reorder buttons dynamically based on the layout
+      if (layout === "drugs") {
+          return [toggleCompoundsButton, toggleTargetsButton];
+      } else {
+          return [toggleTargetsButton, toggleCompoundsButton];
+      }
+  }
+
+  function createSingleButtons(layout, hideColumns) {
+    const drugsGroups = {
+        Compounds: [
+            { index: 0, name: "Name" },
+            { index: 1, name: "Type" },
+            { index: 2, name: "Modality" },
+            ...(hideColumns
+                ? [] // Exclude these columns if hideColumns is true
+                : [
+                      { index: 3, name: "Indication area (ATC)" },
+                      { index: 4, name: "Indication (ATC)" },
+                      { index: 5, name: "Indication code (ATC)" }
+                  ]),
+            { index: 6, name: "In trial" },
+            { index: 7, name: "Approved" }
+        ],
+        Targets: [
+            { index: 8, name: "Gene" },
+            { index: 9, name: "Protein" },
+            { index: 10, name: "Receptor family" },
+            { index: 11, name: "Ligand type" },
+            { index: 12, name: "Class" }
+        ],
+        Diseases: [
+            { index: 13, name: "Disease area (ICD11)" },
+            { index: 14, name: "Disease (ICD11)" },
+            { index: 15, name: "Disease code (ICD11)" },
+            { index: 16, name: "Max phase" },
+            { index: 17, name: "Assoc. score" }
+        ]
+    };
+
+    const targetsGroups = {
+        Targets: [
+            { index: 0, name: "Gene" },
+            { index: 1, name: "Protein" },
+            { index: 2, name: "Receptor family" },
+            { index: 3, name: "Ligand type" },
+            { index: 4, name: "Class" }
+        ],
+        Compounds: [
+            { index: 5, name: "Name" },
+            { index: 6, name: "Type" },
+            { index: 7, name: "Modality" },
+            ...(hideColumns
+                ? [] // Exclude these columns if hideColumns is true
+                : [
+                      { index: 8, name: "Indication area (ATC)" },
+                      { index: 9, name: "Indication (ATC)" },
+                      { index: 10, name: "Indication code (ATC)" }
+                  ]),
+            { index: 11, name: "In trial" },
+            { index: 12, name: "Approved" }
+        ],
+        Diseases: [
+            { index: 13, name: "Disease area (ICD11)" },
+            { index: 14, name: "Disease (ICD11)" },
+            { index: 15, name: "Disease code (ICD11)" },
+            { index: 16, name: "Max phase" },
+            { index: 17, name: "Assoc. score" }
+        ]
+    };
+
+    // Define placeholder counts for each group
+    const placeholderCounts = {
+        Compounds: (hideColumns ? 0 : 6),
+        Targets: (hideColumns ? 4 : 10),
+        Diseases: (hideColumns ? 0 : 6)
+    };
+
+    // Select the appropriate groups and placeholder counts based on the layout
+    const groups = layout === "drugs" ? drugsGroups : targetsGroups;
+
+    const buttons = [];
+
+    for (const [group, columns] of Object.entries(groups)) {
+
+        // Add the specified number of placeholders for the group
+        if (group !== "Diseases") {
+          const placeholdersToAdd = placeholderCounts[group] || 0; // Default to 0 if not defined
+          for (let i = 0; i < placeholdersToAdd; i++) {
+              buttons.push({
+                  text: '', // Empty button for spacing
+                  className: 'dt-placeholder',
+                  action: function () { /* No action for placeholder */ }
+              });
+          }
+        }
+        // Add a header button for the group
+        buttons.push({
+            text: `<span style="font-weight: bold; text-align: center; display: block;">${group}</span>`,
+            className: 'dt-group-header',
+            action: function () { /* No action for group headers */ }
+        });
+
+        // Add column toggle buttons for the group
+        columns.forEach(({ index, name }) => {
+            buttons.push({
+                text: name,
+                extend: 'columnToggle',
+                columns: index
+            });
+        });
+
+        // Add the specified number of placeholders for the group
+        if (group === "Diseases") {
+          const placeholdersToAdd = placeholderCounts[group] || 0; // Default to 0 if not defined
+          for (let i = 0; i < placeholdersToAdd; i++) {
+              buttons.push({
+                  text: '', // Empty button for spacing
+                  className: 'dt-placeholder',
+                  action: function () { /* No action for placeholder */ }
+              });
+          }
+        }
+
+        
+    }
+
+    return buttons;
+  }
+  function controlTableButton(layout, hideColumns) {
+      // Define the button logic for the control table
+      return {
+          extend: 'colvis',
+          text: 'Table Control',
+          collectionLayout: 'four-column',
+          collectionTitle: 'Column Visibility',
+          buttons: [
+              ...getToggleButtons(layout, hideColumns), // Dynamic group toggle buttons (Compounds, Targets)
+              {
+                  text: '<span class="dt-button-check"></span> Toggle Diseases',
+                  action: function (e, dt, node, config) {
+                      const indices = layout === "drugs" ? [13, 15, 16, 17] : [13, 15, 16, 17];
+                      toggleGroupVisibility(indices, $(node));
+                  },
+                  className: 'dt-button-active', // Mark as active initially
+              },
+              {
+                  text: 'Restore visibility',
+                  action: function () {
+                      const excludeIndices = layout === "drugs"
+                          ? (hideColumns ? [3, 4, 5] : []) // Exclude ATC columns for drugs layout if hideColumns is true
+                          : (hideColumns ? [8, 9, 10] : []); // Exclude ATC columns for targets layout if hideColumns is true
+                      
+                      // Make all columns visible except excluded ones
+                      table.columns().every(function (index) {
+                          if (!excludeIndices.includes(index)) {
+                              this.visible(true);
+                          } else {
+                              this.visible(false);
+                          }
+                      });
+                  },
+              },
+              ...createSingleButtons(layout, hideColumns), // Include single-column toggle buttons
+          ],
+      };
+  }
+
+  const buttonsArray = [
+    { text: 'Reset filters', action: function () { reset_all(); } },
+    controlTableButton(layout, hideColumns), // Use the new function to create the control table button
+  ];
+
+
   // Initialize or reinitialize DataTable
   if ($.fn.DataTable.isDataTable(tableId)) {
-      var table = $(tableId).DataTable();
-      table.clear();
-      table.rows.add(data);
-      table.draw();
-      // Update row count after redrawing
-      const totalRows = table.rows().count();
-      const rowCountText = layout === "targets" ? `Target-compound-disease rows: ${totalRows}` : `Compound-target-disease rows: ${totalRows}`;
-      $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+    const table = $(tableId).DataTable();
+
+    // Update visibility of columns if necessary
+    const atcColumnIndexes = layout === "drugs" ? [3, 4, 5] : [8, 9, 10];
+    atcColumnIndexes.forEach((index) => table.column(index).visible(!hideColumns));
+
+    // Clear existing data and add new data
+    table.clear(); // Clear all rows from the table
+    table.rows.add(data); // Add new data to the table
+    table.draw(); // Redraw the table with the new data
+
+    
+
+    // Reinitialize buttons if the container exists
+    if ($('.dt-btn').length) {
+            table.buttons().destroy(); // Destroy existing buttons
+            const newButtons = new $.fn.dataTable.Buttons(table, { buttons: buttonsArray });
+            newButtons.container().appendTo('.dt-btn'); // Append new buttons
+        }
+    
+    // Update the row count information
+    const totalRows = table.rows().count();
+    const rowCountText = layout === "targets"
+        ? `Target-compound-disease rows: ${totalRows}`
+        : `Compound-target-disease rows: ${totalRows}`;
+    $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
   } else {
-      $(tableId).DataTable({
-        dom: "<'row align-items-center justify-content-between'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
-              "<'row'<'col-sm-12'tr>>" + 
-              "<'row'<'col-sm-12'ip>>",
-          order: order,
-          pageLength: 20,
-          lengthMenu: [10, 20, { label: 'All', value: -1 }],
-          data: data,
-          columns: columns,
-          columnDefs: columnDefs,
-          autoWidth: false,  // Disable automatic column width calculation
-          processing: false,
-          deferRender: true,
-          paging: true,
-          autoWidth: false, // Prevent automatic column width adjustment
-          // scrollX: false,
-          buttons: [
-              { text: 'Reset filters', action: function () { reset_all(); } }
-          ],
-          initComplete: function() {
-              // Use `this.api()` to get the table instance inside initComplete
-              const api = this.api(); // Access the DataTable API
-              const totalRows = api.rows().count(); // Use the API to get row count
-              const rowCountText = layout === "targets" ? `Target-compound-disease rows: ${totalRows}` : `Compound-target-disease rows: ${totalRows}`;
-              $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
-          }
-      });
+    table = $(tableId).DataTable({
+      dom: "<'row align-items-center justify-content-between'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
+            "<'row'<'col-sm-12'tr>>" + 
+            "<'row'<'col-sm-12'ip>>",
+        order: order,
+        pageLength: 20,
+        lengthMenu: [10, 20, { label: 'All', value: -1 }],
+        data: data,
+        columns: columns,
+        columnDefs: columnDefs,
+        autoWidth: false,  // Disable automatic column width calculation
+        processing: false,
+        deferRender: true,
+        paging: true,
+        scrollX: true,                  // Enable horizontal scrolling
+        scrollY: "60vh",                // Enable vertical scrolling with a height of 50% of the viewport
+        scrollCollapse: true,           // Allow the table to collapse vertically if data is less than `scrollY`
+        // fixedHeader: false, // Disable FixedHeader
+        // scrollX: false,
+        buttons: buttonsArray,
+        initComplete: function() {
+            // Use `this.api()` to get the table instance inside initComplete
+            const api = this.api(); // Access the DataTable API
+            const totalRows = api.rows().count(); // Use the API to get row count
+            const rowCountText = layout === "targets" ? `Target-compound-disease rows: ${totalRows}` : `Compound-target-disease rows: ${totalRows}`;
+            $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+        }
+    });
   }
   var column_filters = [];
   const Table_selector = $(tableId).DataTable();
   // CreateColumnFilters --> CreateColumnFilters(datatable_selector,column_number, column_range, filter_type)
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,10,"Multi-select-exact"));
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,10,2,"Range-float-vertical"));
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,12,1,"Multi-select-exact"));
+      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,16,"Multi-select-exact"));
+      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,1,"Range-float-vertical"));
+      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,17,1,"Multi-select-exact"));
   
   // Create the filteres
   createDropdownFilters(Table_selector,column_filters);
@@ -432,8 +709,27 @@ function initializeDataTable(tableId, data) {
 function reset_all() {
         $('.select2').val(null).trigger('change');
     }
-// init datattable
-// datatable = $("#receptor_table").DataTable(table_options);
+
+// Define the toggleGroupVisibility function
+function toggleGroupVisibility(indices, button) {
+    const table = $('#receptor_table').DataTable(); // Access the table instance
+    let allVisible = indices.every(index => table.column(index).visible());
+
+    // Toggle the visibility of all columns in the group
+    indices.forEach(index => {
+        table.column(index).visible(!allVisible);
+    });
+
+    // Update the checkmark for the group button
+    if (button) {
+        if (allVisible) {
+            button.removeClass('dt-button-active');
+        } else {
+            button.addClass('dt-button-active');
+        }
+    }
+}
+
 
 function updateJvenn(gprotein_ID) {
   displaySwitch = false;
@@ -464,8 +760,20 @@ function updateJvenn(gprotein_ID) {
       displaySwitch: displaySwitch,
       displayStat: displayStat,
       exporting: true,
-      fnClickCallback: function() {
-        
+      fnClickCallback: function(event) {
+
+        // Get the ID of the clicked element
+        const clickedId = event.target.id; // The ID of the clicked element
+
+        // List of IDs where columns should not be hidden
+        const filter_id_list = [
+          "resultC001100", "resultC011100", "resultC111100", "resultC101100",
+          "resultC000100", "resultC010100", "resultC110100", "resultC100100"
+        ];
+
+        // Check if clickedId is in the filter_id_list
+        const shouldHideATCColumns = !filter_id_list.includes(clickedId); // If not in the list, hide the columns
+
         // Define the column to filter by and the values to match in that column
         // Set filterColumn based on the layout value
         const filterColumn = layout === "targets" ? "Gene name" : "Ligand name";
@@ -483,7 +791,7 @@ function updateJvenn(gprotein_ID) {
         reset_all();
         
         // Pass selected data to initializeDataTable function
-        initializeDataTable("#receptor_table", selectedData);
+        initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns);
       }
     });
 
@@ -636,16 +944,6 @@ function updateJvenn(gprotein_ID) {
       "font-size": "16px", // Slightly smaller font size
       "display": "block", // Display as a block element for stacking
       "margin-top": "5px", // Add spacing between the lines
-    });
-
-    // Style the clickable part (numbers in parentheses)
-    $(".clickable-part").css({
-      "text-decoration": "underline",
-      "text-underline-offset": "3px", // Adjust the offset to move the underline further down
-      "cursor": "pointer", // Make it look clickable
-      "font-size": "16px", // Slightly smaller font size
-      "display": "block", // Display as a block element for stacking
-      "margin-top": "5px", // Add spacing between the lines
       "color": "black", // Set the default color to black
     });
 
@@ -690,6 +988,10 @@ function updateJvenn(gprotein_ID) {
         const selectedData = fullData.filter((row) =>
           filterValues.includes(row[filterColumn])
         );
+
+      // Determine whether to hide the ATC columns
+      const shouldHideATCColumns = phaseText !== "Phase IV";
+
       // Show the filtered table
       $("#table-container").show();
 
@@ -697,7 +999,7 @@ function updateJvenn(gprotein_ID) {
       reset_all();
 
       // Pass the filtered data to initializeDataTable function
-      initializeDataTable("#receptor_table", selectedData);
+      initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns);
       });
 
       // Apply base styles to the labels
