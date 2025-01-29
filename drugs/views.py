@@ -2072,10 +2072,10 @@ def indication_detail(request, code):
     for record in indication_data:
         #assess the values for indication/ligand/protein
         indication_code = record.indication.title.capitalize()
-        indication_uri = record.indication.uri.index
+        indication_uri = record.indication.uri.index if record.indication.uri else ''
         ligand_name = record.ligand.name.capitalize()
         indication_0 = record.indication.get_level_0().title
-        uri = record.indication.uri.index
+        uri = record.indication.uri.index if record.indication.uri else ''
         ligand_id = record.ligand.id
         protein_name = record.target.name
         target_name = record.target.entry_name

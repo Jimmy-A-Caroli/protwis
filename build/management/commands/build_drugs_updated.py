@@ -449,8 +449,7 @@ class Command(BaseCommand):
                                                     logp=row['XLogP'] if pd.notna(row['XLogP']) else None,
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
-                                                    smiles=row['SMILES'],
-                                                    source = 'Drug Data')
+                                                    smiles=row['SMILES'])
 
             # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand
             for id_type, values in mapper.items():

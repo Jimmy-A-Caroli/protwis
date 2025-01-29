@@ -2765,7 +2765,7 @@ class LigandInformationView(TemplateView):
                 indication_name = record.indication.title.capitalize()
                 indication_code = record.indication.code
                 indication_0 = record.indication.get_level_0().title
-                uri = record.indication.uri.index
+                uri = record.indication.uri.index if record.indication.uri else ''
                 ligand_name = record.ligand.name.capitalize()
                 ligand_id = record.ligand.id
                 protein_name = record.target.name
