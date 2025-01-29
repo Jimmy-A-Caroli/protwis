@@ -63,8 +63,12 @@ th .dt-column-title {
     color: #333;
 }
 
-
-
+.popover {
+    z-index: 9999 !important; /* Ensures it appears above all elements */
+}
+.overflow-visible {
+    overflow: visible !important;
+}
 
 /* .dt-btn, .row-count-info, .text-end {
     display: inline-block;
@@ -100,7 +104,7 @@ th .dt-column-title {
   <!-- Table Row (Unaffected by Flex) -->
   <div style="font-size: 11px; white-space: nowrap; display: none;" id="table-container">
     <div class="row mt-4">
-      <div class="col-md-12">
+      <div class="col-md-12" style="margin-bottom: 50px;">
         <table width="100%" class="display compact" id="receptor_table">
           <thead>
             <tr>
@@ -123,7 +127,17 @@ th .dt-column-title {
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               {% else %}
               <th colspan="5" style="text-align:center;">Targets</th>
-              <th colspan="8" style="text-align:center;border-left: 1px solid #cccccc;">Compounds</th>
+              <th colspan="8" style="text-align:center">
+                Compounds
+                <span class="glyphicon glyphicon-info-sign"
+                      data-html="true"
+                      data-toggle="popover"
+                      data-trigger="hover"
+                      data-placement="right"
+                      data-content="The three ATC columns is only shown if Phase IV is included in the data."
+                      style="font-size: 12px; margin-left: 8px;">
+                </span>
+              </th>     
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               {% endif %}
               
@@ -136,7 +150,7 @@ th .dt-column-title {
               <th style="text-align: center;min-width: 130px;width: 130px;max-width: 130px;">Indication area<br>(ATC)</th>
               <th style="text-align: center;">Indication<br>(ATC)</th>
               <th style="text-align: center;">Indication code<br>(ATC)</th>
-              <th style="text-align: center;">In trial</th>
+              <th style="text-align: center;">In<br>trial</th>
               <th style="text-align: center;">Approved</th>
               <th style="text-align: center;border-left: 1px solid #cccccc;">Gene</th>
               <th style="text-align: center; min-width: 90px;width: 90px;max-width: 90px;">Protein</th>
@@ -146,8 +160,8 @@ th .dt-column-title {
               <th style="text-align: center;border-left: 1px solid #cccccc">Disease area<br>(ICD11)</th>
               <th style="text-align: center;">Disease<br>(ICD11)</th>
               <th style="text-align: center;">Disease code<br>(ICD11)</th>
-              <th style="text-align: center;">Max phase</th>
-              <th style="text-align: center;">Assoc. score</th>
+              <th style="text-align: center;">Max<br>phase</th>
+              <th style="text-align: center;">Assoc.<br>score</th>
               {% else %}
               <th style="text-align: center;">Gene</th>
               <th style="text-align: center;">Protein</th>
@@ -165,8 +179,8 @@ th .dt-column-title {
               <th style="text-align: center;border-left: 1px solid #cccccc">Disease area<br>(ICD11)</th>
               <th style="text-align: center;">Disease<br>(ICD11)</th>
               <th style="text-align: center;">Disease code<br>(ICD11)</th>
-              <th style="text-align: center;">Max phase</th>
-              <th style="text-align: center;">Assoc. score</th>
+              <th style="text-align: center;">Max<br>phase</th>
+              <th style="text-align: center;">Assoc.<br>score</th>
               {% endif %}
             </tr>
             <tr class="filter-row">
@@ -252,7 +266,10 @@ th .dt-column-title {
 <script type="text/javascript" charset="utf-8">
   $(document).ready(function(){
     paper.install(window);
-    $('[data-toggle="popover"]').popover(); // Initialize Bootstrap popovers
+    $('[data-toggle="popover"]').popover({
+        container: 'body', // Ensures popover is outside of DataTable structure
+        html: true
+    });
     });
 </script>
 
@@ -533,14 +550,21 @@ function initializeDataTable(tableId, data, hideColumns = false) {
             { index: 17, name: "Assoc. score" }
         ]
     };
-
+    let placeholderCounts;
     // Define placeholder counts for each group
-    const placeholderCounts = {
-        Compounds: (hideColumns ? 0 : 6),
-        Targets: (hideColumns ? 4 : 10),
-        Diseases: (hideColumns ? 0 : 6)
-    };
-
+    if (layout === "drugs") {
+      placeholderCounts = {
+          Compounds: (hideColumns ? 4 : 10),
+          Targets: (hideColumns ? 0 : 0),
+          Diseases: (hideColumns ? 0 : 6)
+      };
+    } else {
+      placeholderCounts = {
+          Compounds: (hideColumns ? 0 : 6),
+          Targets: (hideColumns ? 4 : 10),
+          Diseases: (hideColumns ? 0 : 6)
+      };
+    }
     // Select the appropriate groups and placeholder counts based on the layout
     const groups = layout === "drugs" ? drugsGroups : targetsGroups;
 
@@ -549,7 +573,7 @@ function initializeDataTable(tableId, data, hideColumns = false) {
     for (const [group, columns] of Object.entries(groups)) {
 
         // Add the specified number of placeholders for the group
-        if (group !== "Diseases") {
+        if (group !== "Diseases" || layout === 'drugs') {
           const placeholdersToAdd = placeholderCounts[group] || 0; // Default to 0 if not defined
           for (let i = 0; i < placeholdersToAdd; i++) {
               buttons.push({
@@ -667,7 +691,7 @@ function initializeDataTable(tableId, data, hideColumns = false) {
     $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
   } else {
     table = $(tableId).DataTable({
-      dom: "<'row align-items-center justify-content-between'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
+      dom: "<'row align-items-center justify-content-between overflow-visible'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
             "<'row'<'col-sm-12'tr>>" + 
             "<'row'<'col-sm-12'ip>>",
         order: order,
@@ -699,8 +723,7 @@ function initializeDataTable(tableId, data, hideColumns = false) {
   const Table_selector = $(tableId).DataTable();
   // CreateColumnFilters --> CreateColumnFilters(datatable_selector,column_number, column_range, filter_type)
       column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,16,"Multi-select-exact"));
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,1,"Range-float-vertical"));
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,17,1,"Multi-select-exact"));
+      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,2,"Range-float-vertical"));
   
   // Create the filteres
   createDropdownFilters(Table_selector,column_filters);
