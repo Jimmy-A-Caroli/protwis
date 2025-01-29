@@ -13,6 +13,7 @@ from copy import deepcopy
 from collections import OrderedDict
 import sys
 
+
 try:
     import importlib.metadata
 except ImportError:
@@ -21,6 +22,8 @@ except ImportError:
 import pandas as pd
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
+import matplotlib.colors as mcolors
+import re
 
 import openpyxl
 import os
@@ -189,7 +192,7 @@ class LandingPage(TemplateView):
             key = prot.entry_name
             # Initialize the key in result_dict if not already present
             if key not in result_dict:
-                result_dict[key] = 'empty'
+                result_dict[key] = '0'
 
         for key in data:
             if key in result_dict:
@@ -495,6 +498,9 @@ class LandingPage(TemplateView):
         IUPHAR_to_UniProt_converter = {item['name']: item['entry_name'] for item in names_dict}
         Label_converter = {'UniProt_to_IUPHAR_converter':UniProt_to_IUPHAR_converter,'IUPHAR_to_UniProt_converter':IUPHAR_to_UniProt_converter}
         return Label_converter
+    
+
+    
 
     def post(self, request, *args, **kwargs):
         ### This method handles POST requests for form submission ###
@@ -522,6 +528,12 @@ class LandingPage(TemplateView):
                     if workbook:
 
                         protein_data = list(Protein.objects.filter(species=1).values_list('entry_name', flat=True).distinct())
+
+                        all_proteins = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False, family_id__slug__startswith='0').exclude(
+                                            family_id__slug__startswith='007'
+                                        ).exclude(
+                                            family_id__slug__startswith='008'
+                                        ).values_list('entry_name', flat=True).distinct()
 
                         # Load excel file (workbook) and get sheet names #
                         sheet_names = workbook.sheetnames
@@ -933,14 +945,26 @@ class LandingPage(TemplateView):
                                     except:
                                         print("Heatmap Failed")
 
+                                ####################
                                 ### GPCRome Plot ###
+                                ####################
+
                                 elif sheet_name == 'GPCRome':
 
+                                    def is_valid_color(color):
+                                        # Check if it's a named color
+                                        if color.lower() in mcolors.CSS4_COLORS:
+                                            return True
+                                        
+                                        # Check if it's a valid hex color
+                                        hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                                        return bool(re.match(hex_pattern, color))
+
                                     # Initialize dictionaries
-                                    data_types_circle = [cell.value for cell in worksheet[2]]
+                                    data_types_GPCRome = [cell.value for cell in worksheet[2]]
                                     # Data['Datatypes'] = {}
                                     Data['Datatypes']['GPCRome'] = {}
-                                    Data['Datatypes']['GPCRome']['Col1'] = data_types_circle[1]
+                                    Data['Datatypes']['GPCRome']['Col1'] = data_types_GPCRome[1]
                                     for key in header_list:
                                         Incorrect_values[sheet_name][key] = {}
                                     try:
@@ -967,31 +991,30 @@ class LandingPage(TemplateView):
                                                 else:
                                                     if row[0] not in Data[sheet_name]:
                                                         Data[sheet_name][row[0]] = {}
-
-                                                    # Check each column for data points, boolean values, and float values #
-                                                    for col_idx, value in enumerate(row):
-                                                        if col_idx == 0:
-                                                            continue  # Skip the "Receptor (Uniprot)" column and completely empty columns #
-                                                        elif data_types_circle[col_idx] not in ['Discrete', 'Continuous']:
-                                                            Incorrect_values[sheet_name][header_list[col_idx]] = 'Incorrect datatype'
-                                                        else:
-                                                            if value is not None:
-                                                                # Handle the 2 different types of input for Cluster analysis (Boolean or Number) #
-                                                                if data_types_circle[col_idx] == 'Discrete':
-                                                                    if str(value).lower() not in ['yes', 'no', '1', '0']:
-                                                                        Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Discrete Value'
-                                                                    else:
-                                                                        Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = value
-                                                                elif data_types_circle[col_idx] == 'Continuous':
-                                                                    try:
-                                                                        float_value = float(value)
-                                                                        Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = float_value
-                                                                    except ValueError:
-                                                                        Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Number Value'
-                                                                else:
-                                                                    pass
+                                                
+                                                if Data['Datatypes']['GPCRome']['Col1'] == 'Discrete':
+                                                    if row[1] not in [None, '']:
+                                                        if row[2] not in [None, '']:
+                                                            if not is_valid_color(row[2]):
+                                                                Incorrect_values[sheet_name][header_list[2]][index] = 'Incorrect discrete color value: {}'.format(str(row[2]))
                                                             else:
-                                                                pass
+                                                                Data[sheet_name][row[0]]['Value1'] = str(row[1])
+                                                                Data[sheet_name][row[0]]['Value2'] = str(row[2])
+                                                        else:
+                                                            Incorrect_values[sheet_name][header_list[1]][index] = 'Incorrect discrete color value: None value'
+                                                    else:
+                                                        Incorrect_values[sheet_name][header_list[1]][index] = 'Incorrect Discrete Value (None value)'
+                                                elif Data['Datatypes']['GPCRome']['Col1'] == 'Continuous':
+                                                    if row[1] not in [None, '']:
+                                                        try:
+                                                            float_value = float(row[1])
+                                                            Data[sheet_name][row[0]]['Value1'] = float_value
+                                                        except ValueError:
+                                                            Incorrect_values[sheet_name][header_list[1]][index] = 'Non-numeric Value'
+                                                    else:
+                                                        pass
+                                                else:
+                                                    Incorrect_values[sheet_name][header_list[1]] = 'Incorrect datatype'
 
                                         # Check if any values are incorrect #
                                         status = 'Success'
@@ -1004,10 +1027,11 @@ class LandingPage(TemplateView):
                                                 if any(Incorrect_values[sheet_name][col_idx].values()):
                                                     # If any index is assigned, set status to 'Partially_success' and break out of the loop
                                                     status = 'Failed'
+                                                    print(Incorrect_values[sheet_name])
                                                     break
                                         else:
                                             status = 'Failed'
-
+                                            
                                         ## Update Plot_parser for GPCRome
                                         Plot_parser[0] = status
                                     except:

@@ -2588,6 +2588,23 @@ function initializeGPCRomeLabelConversionDict(conversionDict) {
 // # Initialize data styling #
 var layout_data = GPCRome_initializeData(GPCRome_categories_data);
 
+function countGPCRomesArrayElements(GPCRomes) {
+    let totalElements = 0;
+
+    for (let key in GPCRomes) {
+        if (GPCRomes.hasOwnProperty(key)) {
+            for (let subKey in GPCRomes[key]) {
+                if (Array.isArray(GPCRomes[key][subKey])) {
+                    totalElements += GPCRomes[key][subKey].length;
+                }
+            }
+        }
+    }
+
+    return totalElements;
+}
+console.log(countGPCRomesArrayElements(layout_data)); // Output: 20
+
 const GPCRome_fill_data_values = Object.values(fill_data)
     .map(receptor => receptor.Value1)
     .filter(value => value !== null && value !== undefined && value !== '' && !isNaN(value)); // Filtering out invalid values
