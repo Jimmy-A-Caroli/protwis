@@ -38,7 +38,7 @@ from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.selection import Selection, SelectionItem
 from mapper.views import LandingPage
 from ligand.models import Ligand, LigandVendorLink, BiasedPathways, AssayExperiment, BiasedData, Endogenous_GTP, LigandID, LigandPeptideStructure, LigandMol, LigandFingerprint
-from ligand.functions import OnTheFly, AddPathwayData
+from ligand.functions import OnTheFly, AddPathwayData, is_valid_smiles
 from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
 from interaction.models import StructureLigandInteraction
 from mutation.models import MutationExperiment
@@ -1007,7 +1007,7 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
 
         for lig in ligs:
             records = d[lig]
-            if lig.smiles is not None and (lig.mw is None or lig.mw < 800):
+            if is_valid_smiles(lig.smiles) and (lig.mw is None or lig.mw < 800):
                 picture = img_setup_smiles.format(urllib.parse.quote(lig.smiles))
             else:
                 # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
@@ -3144,7 +3144,7 @@ class LigandInformationView(TemplateView):
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
 
-        if ligand_data.smiles is not None and (ld['mw'] is None or ld['mw'] < 800):
+        if is_valid_smiles(ligand_data.smiles) and (ld['mw'] is None or ld['mw'] < 800):
             ld['picture'] = img_setup_smiles.format(urllib.parse.quote(ligand_data.smiles))
         elif ligand_data.sequence is not None:
             # peptide or protein ligand

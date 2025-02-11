@@ -5,6 +5,8 @@ from django.utils.text import slugify
 from django.db import IntegrityError
 from django.db.models import Q
 
+from rdkit import Chem
+
 #from chembl_webresource_client import new_client
 from common.models import WebResource, Publication
 from ligand.models import Ligand, LigandType, BiasedData, Endogenous_GTP, BalancedLigands
@@ -789,3 +791,18 @@ def AddPathwayData(master, data, rank, pathway=False):
             master[rank+' - Δlog(Emax/EC50)'] = data['Delta_log(Emax/EC50)']
         except KeyError: #Delta_log(Emax/EC50) was not calculated
             master[rank+' - Δlog(Emax/EC50)'] = None
+
+def is_valid_smiles(smiles_str):
+    try:
+        # Parse the SMILES string without sanitization.
+        mol = Chem.MolFromSmiles(smiles_str, sanitize=False)
+        if mol is None:
+            # If parsing fails, raise an exception.
+            raise ValueError("Parsing returned None for the SMILES string.")
+        # Manually sanitize the molecule. This will raise an exception if something is wrong.
+        Chem.SanitizeMol(mol)
+        return True
+    except Exception as e:
+        # Optionally, log or print the exception message.
+        # print(f"Error encountered: {e}")
+        return False
