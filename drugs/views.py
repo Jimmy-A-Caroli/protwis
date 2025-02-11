@@ -2077,6 +2077,9 @@ def indication_detail(request, code):
         indication_0 = record.indication.get_level_0().title
         uri = record.indication.uri.index if record.indication.uri else ''
         ligand_id = record.ligand.id
+        # debug:
+        # if "scopolamine" in ligand_name.lower():
+        #     print(f"** Found scopolamine-like ligand: record.id={record.id}, ligand.id={ligand_id}")
         protein_name = record.target.name
         target_name = record.target.entry_name
         #check for each value if it exists and retrieve the source node value
@@ -2112,6 +2115,9 @@ def indication_detail(request, code):
         #append connection between ligand and target
         sankey['links'].append({"source":lig_node, "target":prot_node, "value":1, "ligtrace": ligand_name, "prottrace": protein_name})
 
+        #print("** Debug record:", record.id, record.ligand.name, record.target.name, record.indication.title)
+
+
     #Fixing redundancy in sankey['links']
     unique_combinations = {}
 
@@ -2128,6 +2134,40 @@ def indication_detail(request, code):
 
     # Convert the unique_combinations back to a list of dictionaries
     sankey['links'] = list(unique_combinations.values())
+
+    # Find all nodes that are actually used in the links
+    used_nodes = set()
+    for link in sankey['links']:
+        used_nodes.add(link['source'])
+        used_nodes.add(link['target'])
+
+    # Build new nodes list and a mapping from old to new node indices
+    old_to_new = {}
+    new_nodes = []
+    new_index = 0
+    for node_dict in sankey['nodes']:
+        old_idx = node_dict["node"]
+        if old_idx in used_nodes:
+            # Only keep nodes that are actually used
+            new_node_dict = {
+                "node": new_index,
+                "name": node_dict["name"],
+                "url": node_dict["url"]
+            }
+            new_nodes.append(new_node_dict)
+            old_to_new[old_idx] = new_index
+            new_index += 1
+
+    # Update the source and target indices in the links
+    for link in sankey['links']:
+        link["source"] = old_to_new[link["source"]]
+        link["target"] = old_to_new[link["target"]]
+
+    # Replace the nodes list with the new one
+    sankey['nodes'] = new_nodes
+
+    print("=== Sankey Debug: final sankey data ===")
+    print(json.dumps(sankey, indent=2))
     total_points = len(caches['targets']) + len(caches['targets']) + 1
     if len(caches['ligands']) > len(caches['targets']):
         context['nodes_nr'] = len(caches['ligands'])
