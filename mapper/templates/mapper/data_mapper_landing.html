@@ -15,9 +15,9 @@
     width: 60% !important; /* Add explicit width */
   }
 
-    .plot-item {
-      display: flex;
-      align-items: center;
+  .plot-item {
+    display: flex;
+    align-items: center;
   }
 
   .plot-status {
@@ -26,6 +26,7 @@
   .right-content {
     margin-left: auto;
 }
+
   /* added by soren - End */
 </style>
 <style>
@@ -37,10 +38,6 @@
   .col-md-12 img:hover {
     transform: scale(1.1); /* Scales the image up on hover */
     opacity: 1; /* Full opacity on hover */
-  }
-
-  .col-md-12:hover img {
-    opacity: 0.5; /* Reduces opacity of all images when any part of the div is hovered over */
   }
 
   .col-md-12 img:last-child {
@@ -100,97 +97,258 @@
 
 
 <div class='col-md-12'>
-    <h2 style='text-align:center;margin-top: 30px;margin-bottom: 50px;'>Data Mapper</h2>
-    <div style="margin-top: 20px;font-size: 13px;">
-      <span>
-        Data mapper lets users upload data for any set of human receptors to swiftly
-        map them using several visualization options suitable for e.g., publications or presentations.
-        A downloadable data template (MS Excel) is provided through the green download button,
-        whereas the blue button allows user to upload their data, and plot details are highlighted by clicking on each
-        orange plot icon. Once the user data has been uploaded, a data overview pop up will show errors, if any, in the data formatting.
-        After this check, users will be redirected to a plotting page with a tab for each plot for which uploaded data.
-      </span>
-    </div>
+    <h2 style='text-align:center;margin-top: 20px;margin-bottom: 30px;'>Data Mapper</h2>
 </div>
+<div class='col-md-12'>
+  <table class="table text-center" style="border-collapse: collapse; width: 100%; text-align: center;">
+    <thead>
+      <tr>
+        <!-- First header cell: only right border -->
+        <th style="border-right: 1px solid #ccc; padding: 8px; text-align: center;vertical-align: middle;">
+          <h4>1) Choose a plot</h4>
+        </th>
+        <!-- Other header cells: no borders (or set whatever you want) -->
+        <th style="padding: 8px;text-align: center;">
+          <img src="{% static 'home/images/DataMapper/gpcrome_example.png' %}" 
+               width="140" height="140" alt="GPCRome" style="margin-bottom: 5px;"/>
+          <br>
+          GPCRome Wheel
+          <br>
+          <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#GPCRomeModal" style="margin-top: 5px;">
+            More info
+          </button>
+        </th>
+        <th style="padding: 8px;text-align: center;">
+          <img src="{% static 'home/images/DataMapper/phylo_example.png' %}" 
+               width="140" height="140" alt="Tree" style="margin-bottom: 5px;"/>
+          <br>
+          Tree
+          <br>
+          <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#phyloTreeModal" style="margin-top: 5px;">
+            More info
+          </button>
+        </th>
+        <th style="padding: 8px;text-align: center;">
+          <img src="{% static 'home/images/DataMapper/cluster_example.png' %}" 
+               width="140" height="140" alt="Cluster" style="margin-bottom: 5px;"/>
+          <br>
+          Cluster
+          <br>
+          <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#ClusterModal" style="margin-top: 5px;">
+            More info
+          </button>
+        </th>
+        <th style="padding: 8px;text-align: center;">
+          <img src="{% static 'home/images/DataMapper/list_example.png' %}" 
+               width="140" height="140" alt="List" style="margin-bottom: 5px;"/>
+          <br>
+          List
+          <br>
+          <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#ListModal" style="margin-top: 5px;">
+            More info
+          </button>
+        </th>
+        <th style="padding: 8px;text-align: center;">
+          <img src="{% static 'home/images/DataMapper/heatmap_example.png' %}" 
+               width="140" height="140" alt="Heatmap" style="margin-bottom: 5px;"/>
+          <br>
+          Heatmap
+          <br>
+          <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#HeatmapModal" style="margin-top: 5px;">
+            More info
+          </button>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Max no. GPCRs
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><strong>425</strong></td>
+        <td style="padding: 8px;"><strong>200</strong></td>
+        <td style="padding: 8px;"><strong>425</strong></td>
+        <td style="padding: 8px;"><strong>425</strong></td>
+        <td style="padding: 8px;"><strong>50</strong></td>
+      </tr>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Max no. dots
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><strong>1</strong></td>
+        <td style="padding: 8px;"><strong>5</strong></td>
+        <td style="padding: 8px;"><strong>1</strong></td>
+        <td style="padding: 8px;"><strong>4</strong></td>
+        <td style="padding: 8px;"><strong>5</strong></td>
+      </tr>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Dot color gradients
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+      </tr>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Dot multi-color
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+      </tr>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Dot shape
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+      </tr>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Dot size
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+      </tr>
+      <tr>
+        <!-- First cell in the body row: match the right border to keep consistency -->
+        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+          Dot position
+        </th>
+        <!-- Other cells: no border, or any style you’d like -->
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+      </tr>
 
+      
+    <!-- Separator row (no borders). Spans all 6 columns. -->
+    <tr style="border-bottom: 2px solid white;">
+      <td colspan="6" style="border: none; height: 30px;"></td>
+    </tr>
 
-<!-- ##################################### -->
-<!-- ####    Download   //   Upload    ### -->
-<!-- ##################################### -->
+    <!-- Second table -->
+    <tr>
+      <th style="border-right: 1px solid #ccc;padding: 8px; text-align: center; vertical-align: middle;">
+        <h4>2) Download template</h4>
+      </th>
+      <!-- 5 more columns to keep the total at 6 -->
+      <th style="padding: 8px;text-align: center;">GPCRome Wheel</th>
+      <th style="padding: 8px;text-align: center;">Tree</th>
+      <th style="padding: 8px;text-align: center;">Cluster</th>
+      <th style="padding: 8px;text-align: center;">List</th>
+      <th style="padding: 8px;text-align: center;">Heatmap</th>
+    </tr>
 
-<div class='col-md-12' style="margin-top: 50px;">
-  <!-- ################# -->
-  <!-- #### Download ### -->
-  <!-- ################# -->
-  <div class="col-md-3" style="text-align:center;"></div>
-  <!-- ################# -->
-  <!-- ####  Upload  ### -->
-  <!-- ################# -->
-  <div class="col-md-6 img-container" style="text-align:center;">
-    <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'landing_page' %}">
-      {% csrf_token %}
-      <!-- Hidden file input -->
-      <input id="file-input" type="file" name="file" style="display:none;" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-      <!-- Image selector -- Upload  -->
-      <img id="file-trigger" src="{% if upload_status == 'Success' %}{% static 'home/images/Mapper_Upload_Success.png' %}
-      {% elif upload_status == 'Failed' %}{% static 'home/images/Mapper_Upload_Failed.png' %}
-      {% else %}
-      {% static 'home/images/Mapper_Upload.png' %}
-      {% endif %}" alt="file" width="140" height="140" style="cursor:pointer;">
-      <br>
-      <h4 style='text-align:center;margin-top: 10px;'>Upload Data</h4>
-    </form>
-  </div>
+    <!-- Second "section" rows -->
+    <tr>
+      <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;vertical-align: middle;">
+        Number based data
+      </th>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+    </tr>
+    <tr>
+      <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;vertical-align: middle;">
+        Text based data
+      </th>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+      <td style="padding: 8px;">
+        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
+      </td>
+    </tr>
+     <!-- Separator row (no borders). Spans all 6 columns. -->
+     <tr style="border-bottom: 2px solid white;">
+      <td colspan="6" style="border: none; height: 30px;"></td>
+    </tr>
+
+    <!-- Second table -->
+    <tr>
+      <th style="border-right: 1px solid #ccc;padding: 8px; text-align: center; vertical-align: middle;">
+        <h4>3) Upload your data</h4>
+      </th>
+      <!-- 5 more columns to keep the total at 6 -->
+      <th style="padding: 8px;text-align: center;"></th>
+      <th style="padding: 8px;text-align: center;"></th>
+      <th style="padding: 8px;text-align: center;"></th>
+      <th style="padding: 8px;text-align: center;"></th>
+      <th style="padding: 8px;text-align: center;"></th>
+    </tr>
+
+    <!-- Second "section" rows -->
+    <tr>
+      <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;vertical-align: middle;">Upload your template file<br>filled with your data</th>
+      <td colspan="5">
+        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'landing_page' %}">
+          {% csrf_token %}
+          <!-- Hidden file input -->
+          <input id="file-input" type="file" name="file" style="display:none;" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          <!-- Image selector -- Upload  -->
+          <img id="file-trigger" src="{% if upload_status == 'Success' %}{% static 'home/images/DataMapper/Mapper_Upload_Success.png' %}
+          {% elif upload_status == 'Failed' %}{% static 'home/images/DataMapper/Mapper_Upload_Failed.png' %}
+          {% else %}
+          {% static 'home/images/DataMapper/Mapper_Upload.png' %}
+          {% endif %}" alt="file" width="80" height="80" style="cursor:pointer;">
+          <br>
+        </form>
+      </td>
+    </tr>
+    
+    </tr>
+  </tbody>
+</table>
+  
 
 </div>
-
-<!-- ##################################### -->
-<!-- ####          PLOT OPTIONS        ### -->
-<!-- ##################################### -->
-<div class='col-md-12' style="margin-top: 10px;">
-    <h3 style='text-align:center;'></h3>
-</div>
-
-<div class='col-md-12' style="display: flex; justify-content: center; align-items: center;">
-  <div class="img-container">
-    <img id="GPCRomeImage" src="{% static 'home/images/gpcrome_example.png' %}" width="140" height="140" style='cursor:pointer;'>
-    <br>
-    <h4 style='text-align:center;margin-top: 10px;'>GPCRome<br>wheel</h4>
-    <!-- <span class="tooltip">Heatmap</span> -->
-  </div>
-  <div class="img-container">
-    <img id="phyloTreeImage" src="{% static 'home/images/phylo_example.png' %}" width="140" height="140" style='margin-left: 40px;cursor:pointer;'>
-    <br>
-    <h4 style='text-align:center;margin-left: 40px;margin-top: 10px;'>Tree</h4>
-    <!-- <span class="tooltip">Phylogenetic Tree</span> -->
-  </div>
-  <div class="img-container">
-    <img id="ClusterImage" src="{% static 'home/images/cluster_example.png' %}" width="140" height="140" style='margin-left: 40px;cursor:pointer;'>
-    <br>
-    <h4 style='text-align:center;margin-left: 40px;margin-top: 10px;'>Cluster</h4>
-    <!-- <span class="tooltip">Cluster Analysis</span> -->
-  </div>
-  <div class="img-container">
-    <img id="ListImage" src="{% static 'home/images/list_example.png' %}" width="140" height="140" style='margin-left: 40px;cursor:pointer;'>
-    <br>
-    <h4 style='text-align:center;margin-left: 40px;margin-top: 10px;'>List</h4>
-    <!-- <span class="tooltip">List Plot</span> -->
-  </div>
-  <div class="img-container">
-    <img id="HeatmapImage" src="{% static 'home/images/heatmap_example.png' %}" width="140" height="140" style='margin-left: 40px;cursor:pointer;'>
-    <br>
-    <h4 style='text-align:center;margin-left: 40px;margin-top: 10px;'>Heatmap</h4>
-    <!-- <span class="tooltip">Heatmap</span> -->
-  </div>
-</div>
-  <div class="img-container" style="text-align:center;">
-    <a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx">
-      <img src="{% static 'home/images/Mapper_Download.png' %}" width="80" height="80">
-    </a>
-    <br>
-    <h5 style='text-align:center;margin-top: 10px'>Download<br>Template.xlsx</h4>
-  </div>
-
 
 <!-- ######################## -->
 <!-- ###### MODALS ! ######## -->
@@ -236,7 +394,7 @@
               {% for plot in plots_status %}
                 {% if plot.status == 'Success' %}
                   <h4 class="plot-item">
-                    <img src="{% static 'home/images/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <span class="plot-status">Plot available for rendering</span>
                   </h4>
@@ -275,13 +433,13 @@
               {% for plot in plots_status %}
                 {% if plot.status == 'Success' %}
                   <h4 class="plot-item">
-                    <img src="{% static 'home/images/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <span class="plot-status">Plot available for rendering</span>
                   </h4>
                 {% elif plot.status == 'Empty sheet' %}
                   <h4 class="expandable_partially_success plot-item" data-target="sortable-{{ forloop.counter }}">
-                    <img src="{% static 'home/images/Mapper_NoData_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_NoData_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
                     <div class="right-content">
@@ -293,7 +451,7 @@
                   </ul>
                 {% elif plot.status == "Failed" %}
                   <h4 class="expandable_partially_success" data-target="sortable-{{ forloop.counter }}" >
-                    <img src="{% static 'home/images/Mapper_Failed_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_Failed_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
                     <div class="right-content">
@@ -362,13 +520,13 @@
               {% for plot in plots_status %}
                 {% if plot.status == 'Success' %}
                   <h4 class="plot-item">
-                    <img src="{% static 'home/images/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <span class="plot-status">Plot available for rendering</span>
                   </h4>
                 {% elif plot.status == 'Empty sheet' %}
                   <h4 class="expandable_failed plot-item" data-target="sortable_failed-{{ forloop.counter }}">
-                    <img src="{% static 'home/images/Mapper_NoData_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_NoData_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
                     <div class="right-content">
@@ -380,7 +538,7 @@
                   </ul>
                 {% elif plot.status == "Failed" %}
                   <h4 class="expandable_failed plot-item" data-target="sortable_failed-{{ forloop.counter }}">
-                    <img src="{% static 'home/images/Mapper_Failed_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+                    <img src="{% static 'home/images/DataMapper/Mapper_Failed_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
                     {{ plot.plot_name }}
                     <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
                     <div class="right-content">
@@ -439,7 +597,7 @@
       </div>
       <div class="modal-body">
         <div class="img-container">
-          <img src="{% static 'home/images/PhylogeneticsTree_Modal_Example.png' %}" width="100%" height="400" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/PhylogeneticsTree_Modal_Example.png' %}" width="100%" height="400" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 20px;font-size: 15px;">
           <span>The Phylogenetic tree analysis requires a list of receptors placed in the first column, <b>Receptor (Uniprot)</b>, to the left (Illustrated with purple arrow).
@@ -471,7 +629,7 @@
       </div>
       <div class="modal-body" style="text-align: center;">
         <div class="img-container">
-          <img src="{% static 'home/images/cluster_modal.png' %}" width="50%" height="40%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/cluster_modal.png' %}" width="50%" height="40%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>The Cluster plot clusters user-uploaded receptors based on their <i>sequence similarity</i> across their shared
@@ -499,7 +657,7 @@
       </div>
       <div class="modal-body">
         <div class="img-container" style="text-align: center;">
-          <img src="{% static 'home/images/list_modal.png' %}" width="60%" height="30%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/list_modal.png' %}" width="60%" height="30%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>
@@ -527,7 +685,7 @@
       </div>
       <div class="modal-body">
         <div class="img-container" style="text-align: center;">
-          <img src="{% static 'home/images/heatmap_modal.png' %}" width="60%" height="30%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/heatmap_modal.png' %}" width="60%" height="30%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>
@@ -554,7 +712,7 @@
       </div>
       <div class="modal-body">
         <div class="img-container" style="text-align: center;">
-          <img src="{% static 'home/images/gpcrome_modal.png' %}" width="60%" height="40%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/gpcrome_modal.png' %}" width="60%" height="40%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>The GPCRome wheel plot spans the non-odorant human GPCRome in a single data mapping visualization.
@@ -621,21 +779,21 @@ $(document).ready(function() {
   // Add click event listener to the image to trigger file selection
   document.getElementById('file-trigger').addEventListener('click', handleFileSelect);
   // Add click event listener to the Phylogenetic Tree image
-  document.getElementById('phyloTreeImage').addEventListener('click', function() {
-      $('#phyloTreeModal').modal('show');
-    });
-  document.getElementById('ClusterImage').addEventListener('click', function() {
-      $('#ClusterModal').modal('show');
-    });
-    document.getElementById('ListImage').addEventListener('click', function() {
-      $('#ListModal').modal('show');
-    });
-    document.getElementById('HeatmapImage').addEventListener('click', function() {
-      $('#HeatmapModal').modal('show');
-    });
-    document.getElementById('GPCRomeImage').addEventListener('click', function() {
-      $('#GPCRomeModal').modal('show');
-    });
+  // document.getElementById('phyloTreeImage').addEventListener('click', function() {
+  //     $('#phyloTreeModal').modal('show');
+  //   });
+  // document.getElementById('ClusterImage').addEventListener('click', function() {
+  //     $('#ClusterModal').modal('show');
+  //   });
+  //   document.getElementById('ListImage').addEventListener('click', function() {
+  //     $('#ListModal').modal('show');
+  //   });
+  //   document.getElementById('HeatmapImage').addEventListener('click', function() {
+  //     $('#HeatmapModal').modal('show');
+  //   });
+  //   document.getElementById('GPCRomeImage').addEventListener('click', function() {
+  //     $('#GPCRomeModal').modal('show');
+  //   });
 
 
   // Check upload status after form submission

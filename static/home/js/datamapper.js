@@ -1718,9 +1718,11 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
         let color = 'black';
 
         if (column_styling.Datatype === 'Discrete') {
-            const Color_list = ['black', 'red', 'blue', 'green'];
+            const Color_list = ['black', 'red', 'blue', 'green','white'];
             if (data_value) {
-                const valueString = String(data_value); // Ensures data_value is converted to a string
+                const Discrete_values = ['yes','1']
+                data_value_modded = Discrete_values.includes(data_value.toLowerCase()) ? 'black' : 'white'
+                const valueString = String(data_value_modded); // Ensures data_value is converted to a string
                 color = Color_list.includes(valueString.toLowerCase()) ? valueString : 'black';
             } else {
                 color = 'black';
@@ -1786,25 +1788,45 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
 
                 // ### Column 1 ###
                 if (Col1_data_checker && (Col1_shape || Col1_data)) {
-                    const shape_color = (typeof Col1_data === 'number') ? getShapeColor('Col1', Col1_data) : 'black';
+                    let shape_color;
+                    if (data_styling.Col1.Datatype === 'Continuous'){
+                    shape_color = (typeof Col1_data === 'number') ? getShapeColor('Col1', Col1_data) : 'black';
+                    } else {
+                        shape_color = (typeof Col1_data === 'string') ? getShapeColor('Col1', Col1_data) : 'black';
+                    }
                     addShape(Shape_list.includes(Col1_shape) ? Col1_shape : 'circle', margin.left + xOffset + col1_XoffSet, yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 2 ###
                 if (Col2_data_checker && (Col2_shape || Col2_data)) {
-                    const shape_color = (typeof Col2_data === 'number') ? getShapeColor('Col2', Col2_data) : 'black';
+                    let shape_color;
+                    if (data_styling.Col2.Datatype === 'Continuous'){
+                    shape_color = (typeof Col2_data === 'number') ? getShapeColor('Col2', Col2_data) : 'black';
+                    } else {
+                        shape_color = (typeof Col2_data === 'string') ? getShapeColor('Col2', Col2_data) : 'black';
+                    }
                     addShape(Shape_list.includes(Col2_shape) ? Col2_shape : 'circle', margin.left + xOffset + col2_XoffSet, yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 3 ###
                 if (Col3_data_checker && (Col3_shape || Col3_data)) {
-                    const shape_color = (typeof Col3_data === 'number') ? getShapeColor('Col3', Col3_data) : 'black';
+                    let shape_color;
+                    if (data_styling.Col3.Datatype === 'Continuous'){
+                    shape_color = (typeof Col3_data === 'number') ? getShapeColor('Col3', Col3_data) : 'black';
+                    } else {
+                        shape_color = (typeof Col3_data === 'string') ? getShapeColor('Col3', Col3_data) : 'black';
+                    }
                     addShape(Shape_list.includes(Col3_shape) ? Col3_shape : 'circle', margin.left + xOffset + col3_XoffSet, yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 4 ###
                 if (Col4_data_checker && (Col4_shape || Col4_data)) {
-                    const shape_color = (typeof Col4_data === 'number') ? getShapeColor('Col4', Col4_data) : 'black';
+                    let shape_color;
+                    if (data_styling.Col4.Datatype === 'Continuous'){
+                    shape_color = (typeof Col4_data === 'number') ? getShapeColor('Col4', Col4_data) : 'black';
+                    } else {
+                        shape_color = (typeof Col4_data === 'string') ? getShapeColor('Col4', Col4_data) : 'black';
+                    }
                     addShape(Shape_list.includes(Col4_shape) ? Col4_shape : 'circle', margin.left + xOffset + col4_XoffSet, yOffset - 10, data_size, shape_color);
                 }
             }
