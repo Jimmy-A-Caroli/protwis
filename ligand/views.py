@@ -3134,8 +3134,6 @@ class LigandInformationView(TemplateView):
 
     @staticmethod
     def process_ligand(ligand_data, endogenous_ligands):
-        img_setup_smiles = '<img style=\"height: 80%; width: 80%;;\" src=\"https://cactus.nci.nih.gov/chemical/structure/{}/image\">'
-        img_not_available = '<img style=\"height: 80%; width: 80%;;\" src=\"https://upload.wikimedia.org/wikipedia/commons/a/ac/No_image_available.svg\">'
         ld = dict()
         ld['ligand_id'] = ligand_data.id
         ld['ligand_name'] = ligand_data.name
@@ -3155,13 +3153,12 @@ class LigandInformationView(TemplateView):
         ld['wl'] = list()
 
         if is_valid_smiles(ligand_data.smiles) and (ld['mw'] is None or ld['mw'] < 800):
-            ld['picture'] = img_setup_smiles.format(urllib.parse.quote(ligand_data.smiles))
+            ld['picture'] = 'Generate_from_SMILES'
         elif ligand_data.sequence is not None:
             # peptide or protein ligand
-            ld['picture'] = img_not_available
+            ld['picture'] = 'Generate_from_sequence'
         else:
-            # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
-            ld['picture'] = img_not_available
+            ld['picture'] = 'Not_available'
         #Sorting links if ligand is endogenous
         if ligand_data.id in endogenous_ligands:
             sorted_list = ['Guide To Pharmacology', 'DrugBank', 'Drug Central', 'ChEMBL_compound_ids', 'PubChem']
