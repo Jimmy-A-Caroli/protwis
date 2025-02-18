@@ -152,116 +152,120 @@
             
             <!-- Bioactivities -->
             <hr>
-			<h3>Bioactivities</h3>
-			<ul class="nav nav-tabs">
-				<li class="nav-item active">
-					<a class="nav-link active" data-toggle="tab" href="#affinity">Affinity</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" data-toggle="tab" href="#potency">Potency</a>
-				</li>
-			</ul>
-			<div class="tab-content">
-				<!-- Affinity table -->
-				<div class="tab-pane container active" id="affinity">
-					<table width="100%" class="display compact" id="AssayAffinityTable">
-						<thead>
-							<!-- Dummy Header Row for Complex Header Fix -->
-							<tr>
-								<td colspan="10" style="text-align: center" data-dt-order="disable"></td>
-							</tr>
+			{% if assay_existence == 'yes' %}
+				<h3>Bioactivities</h3>
+				<ul class="nav nav-tabs">
+					<li class="nav-item active">
+						<a class="nav-link active" data-toggle="tab" href="#affinity">Affinity</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" data-toggle="tab" href="#potency">Potency</a>
+					</li>
+				</ul>
+				<div class="tab-content">
+					<!-- Affinity table -->
+					<div class="tab-pane container active" id="affinity">
+						<table width="100%" class="display compact" id="AssayAffinityTable">
+							<thead>
+								<!-- Dummy Header Row for Complex Header Fix -->
+								<tr>
+									<td colspan="10" style="text-align: center" data-dt-order="disable"></td>
+								</tr>
 
-							<!-- Super Header Row -->
+								<!-- Super Header Row -->
 
-							<tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-								<th colspan="5" style="text-align:center">Receptor</th>
-								<th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Activity</th>
-								<th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Source</th>
-							</tr>
+								<tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
+									<th colspan="5" style="text-align:center">Receptor</th>
+									<th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Activity</th>
+									<th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Source</th>
+								</tr>
 
-							<!-- Header Row -->
-							<tr>
-								<th style="text-align: center;">Protein</th>
-								<th style="text-align: center;">Gene</th>
-								<th style="text-align: center;">Species</th>
-								<th style="text-align: center;">Family</th>
-								<th style="text-align: center;">Class</th>
-								<th style="border-left: 1px solid #cccccc; text-align: center;">Type</th>
-								<th style="text-align: center;">Min</th>
-								<th style="text-align: center;">Avg</th>
-								<th style="text-align: center;">Max</th>
-								<th style="border-left: 1px solid #cccccc; text-align: center;">Database</th>
-							</tr>
-							<!-- Filter Row for header -->
-							<tr>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-							</tr>
-						</thead>
-						<tbody>
-							<!-- Data will be populated via DataTables -->
-						</tbody>
-					</table>
+								<!-- Header Row -->
+								<tr>
+									<th style="text-align: center;">Protein</th>
+									<th style="text-align: center;">Gene</th>
+									<th style="text-align: center;">Species</th>
+									<th style="text-align: center;">Family</th>
+									<th style="text-align: center;">Class</th>
+									<th style="border-left: 1px solid #cccccc; text-align: center;">Type</th>
+									<th style="text-align: center;">Min</th>
+									<th style="text-align: center;">Avg</th>
+									<th style="text-align: center;">Max</th>
+									<th style="border-left: 1px solid #cccccc; text-align: center;">Database</th>
+								</tr>
+								<!-- Filter Row for header -->
+								<tr>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+								</tr>
+							</thead>
+							<tbody>
+								<!-- Data will be populated via DataTables -->
+							</tbody>
+						</table>
+					</div>
+					
+					<!-- Potency table -->
+					<div class="tab-pane container" id="potency">
+						<table width="100%" class="display compact" id="AssayPotencyTable">
+							<thead>
+								<!-- Dummy Header Row for Complex Header Fix -->
+								<tr>
+									<td colspan="10" style="text-align: center" data-dt-order="disable"></td>
+								</tr>
+
+								<!-- Super Header Row -->
+
+								<tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
+									<th colspan="5" style="text-align:center">Receptor</th>
+									<th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Activity</th>
+									<th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Source</th>
+								</tr>
+
+								<!-- Header Row -->
+								<tr>
+									<th style="text-align: center;">Protein</th>
+									<th style="text-align: center;">Gene</th>
+									<th style="text-align: center;">Species</th>
+									<th style="text-align: center;">Family</th>
+									<th style="text-align: center;">Class</th>
+									<th style="border-left: 1px solid #cccccc; text-align: center;">Type</th>
+									<th style="text-align: center;">Min</th>
+									<th style="text-align: center;">Avg</th>
+									<th style="text-align: center;">Max</th>
+									<th style="border-left: 1px solid #cccccc; text-align: center;">Database</th>
+								</tr>
+								<!-- Filter Row for header -->
+								<tr>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;" data-dt-order="disable"></td>
+									<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+								</tr>
+							</thead>
+							<tbody>
+								<!-- Data will be populated via DataTables -->
+							</tbody>
+						</table>
+					</div>
 				</div>
-				
-				<!-- Potency table -->
-				<div class="tab-pane container" id="potency">
-					<table width="100%" class="display compact" id="AssayPotencyTable">
-						<thead>
-							<!-- Dummy Header Row for Complex Header Fix -->
-							<tr>
-								<td colspan="10" style="text-align: center" data-dt-order="disable"></td>
-							</tr>
-
-							<!-- Super Header Row -->
-
-							<tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-								<th colspan="5" style="text-align:center">Receptor</th>
-								<th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Activity</th>
-								<th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Source</th>
-							</tr>
-
-							<!-- Header Row -->
-							<tr>
-								<th style="text-align: center;">Protein</th>
-								<th style="text-align: center;">Gene</th>
-								<th style="text-align: center;">Species</th>
-								<th style="text-align: center;">Family</th>
-								<th style="text-align: center;">Class</th>
-								<th style="border-left: 1px solid #cccccc; text-align: center;">Type</th>
-								<th style="text-align: center;">Min</th>
-								<th style="text-align: center;">Avg</th>
-								<th style="text-align: center;">Max</th>
-								<th style="border-left: 1px solid #cccccc; text-align: center;">Database</th>
-							</tr>
-							<!-- Filter Row for header -->
-							<tr>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-							</tr>
-						</thead>
-						<tbody>
-							<!-- Data will be populated via DataTables -->
-						</tbody>
-					</table>
-				</div>
-			</div>
+			{% else %}
+				<h4>No bioactivity data available.</h4>
+			{% endif %}
 		</div>
         
 
@@ -364,27 +368,27 @@
             
             <!-- Sankey plot -->
              <hr>
-            <h3>Sankey plot</h3>
             {% if plot_existence == 'yes' %}
-                <div id="sankey_plot" style="display: flex; justify-content: center;"></div>
-                <p>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
-                        aria-haspopup="true" aria-expanded="false">
-                        <span class="glyphicon glyphicon-download"></span> Download <span class="caret"></span>
-                        </button>
-                        <ul class="dropdown-menu">
-                        <li>
-                                <a href="javascript:saveSvgAsPng(document.getElementById('sankey'),'sankey.png');">PNG</a>
-                        </li>
-                        <li>
-                                <a href="javascript:saveSvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a>
-                        </li>
-                        <li>
-                                <a href="javascript:saveSvgAsTiff(document.getElementById('sankey'),'sankey.tiff');">TIFF</a>
-                        </li>
-                        </ul>
-                    </div></p>
+				<h3>Sankey plot</h3>
+					<div id="sankey_plot" style="display: flex; justify-content: center;"></div>
+					<p>
+						<div class="btn-group">
+							<button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
+							aria-haspopup="true" aria-expanded="false">
+							<span class="glyphicon glyphicon-download"></span> Download <span class="caret"></span>
+							</button>
+							<ul class="dropdown-menu">
+							<li>
+									<a href="javascript:saveSvgAsPng(document.getElementById('sankey'),'sankey.png');">PNG</a>
+							</li>
+							<li>
+									<a href="javascript:saveSvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a>
+							</li>
+							<li>
+									<a href="javascript:saveSvgAsTiff(document.getElementById('sankey'),'sankey.tiff');">TIFF</a>
+							</li>
+							</ul>
+						</div></p>
             {% else %}
                 <h4>Compound is not listed as a drug.</h4>
             {% endif %}
@@ -487,9 +491,11 @@
 	var assayAffinityData = JSON.parse('{{ assay_affinity_json|escapejs }}');
 	var assayPotencyData = JSON.parse('{{ assay_potency_json|escapejs }}');
 
-	initializeDataTableBioactivity("#AssayAffinityTable", assayAffinityData);
-	initializeDataTableBioactivity("#AssayPotencyTable", assayPotencyData);
+	{% if assay_existence == 'yes' %}
 
+		initializeDataTableBioactivity("#AssayAffinityTable", assayAffinityData);
+		initializeDataTableBioactivity("#AssayPotencyTable", assayPotencyData);
+	{% endif %}
 
 	function initializeDataTableBioactivity(tableId, data) {
 		// Define page-specific column definitions based on the type

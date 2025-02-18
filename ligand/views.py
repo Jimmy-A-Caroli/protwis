@@ -2728,16 +2728,26 @@ class LigandInformationView(TemplateView):
         context.update({'structure': structures})
         context.update({'ligand': ligand_data})
         # Convert assay data to JSON
-        if assay_data_affinity:
+        if len(assay_data_affinity) > 0:
             df_affinity = pd.DataFrame(assay_data_affinity)
-            context['assay_affinity_json'] = df_affinity.to_json(orient='records')
+            json_affinity = df_affinity.to_json(orient='records')   # Could become "[]"
+            # If it's not empty, keep it; otherwise set to "" or None
+            context['assay_affinity_json'] = json_affinity if json_affinity != "[]" else ""
         else:
-            context['assay_affinity_json'] = None
-        if assay_data_potency:
+            context['assay_affinity_json'] = ""
+
+        if len(assay_data_potency) > 0:
             df_potency = pd.DataFrame(assay_data_potency)
-            context['assay_potency_json'] = df_potency.to_json(orient='records')
+            json_potency = df_potency.to_json(orient='records')
+            context['assay_potency_json'] = json_potency if json_potency != "[]" else ""
         else:
-            context['assay_potency_json'] = None
+            context['assay_potency_json'] = ""
+
+        if context['assay_affinity_json'] == "" or context['assay_potency_json'] == "":
+            context['assay_existence'] = 'no'
+        else:
+            context['assay_existence'] = 'yes'
+        
         # context.update({'assay_affinity': assay_data_affinity})
         # context.update({'assay_potency': assay_data_potency})
         context.update({'mutations': mutations})
