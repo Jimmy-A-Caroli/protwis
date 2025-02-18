@@ -400,6 +400,7 @@
             {% else %}
                 <h4>Compound is not listed as a drug.</h4>
             {% endif %}
+
 			<!--Drug table-->
 			{% if Full_data_drug_table %}
 				<hr>
@@ -536,11 +537,11 @@
 
 	// Parse the drug table data
 	var Full_table_data = JSON.parse('{{ Full_data_drug_table|escapejs }}');
-	var assayAffinityData = JSON.parse('{{ assay_affinity_json|escapejs }}');
-	var assayPotencyData = JSON.parse('{{ assay_potency_json|escapejs }}');
+
 
 	{% if assay_existence == 'yes' %}
-
+		var assayAffinityData = JSON.parse('{{ assay_affinity_json|escapejs }}');
+		var assayPotencyData = JSON.parse('{{ assay_potency_json|escapejs }}');
 		initializeDataTableBioactivity("#AssayAffinityTable", assayAffinityData);
 		initializeDataTableBioactivity("#AssayPotencyTable", assayPotencyData);
 	{% endif %}

@@ -2734,16 +2734,16 @@ class LigandInformationView(TemplateView):
             # If it's not empty, keep it; otherwise set to "" or None
             context['assay_affinity_json'] = json_affinity if json_affinity != "[]" else ""
         else:
-            context['assay_affinity_json'] = ""
+            context['assay_affinity_json'] = "[]"
 
         if len(assay_data_potency) > 0:
             df_potency = pd.DataFrame(assay_data_potency)
             json_potency = df_potency.to_json(orient='records')
             context['assay_potency_json'] = json_potency if json_potency != "[]" else ""
         else:
-            context['assay_potency_json'] = ""
+            context['assay_potency_json'] = "[]"
 
-        if context['assay_affinity_json'] == "" or context['assay_potency_json'] == "":
+        if context['assay_affinity_json'] == "[]" or context['assay_potency_json'] == "[]":
             context['assay_existence'] = 'no'
         else:
             context['assay_existence'] = 'yes'
@@ -2960,6 +2960,8 @@ class LigandInformationView(TemplateView):
 
                 # Convert DataFrame to JSON
                 context['Full_data_drug_table'] = Modified_df_drug.to_json(orient='records')
+            else:
+                context['Full_data_drug_table'] = None
 
 
         else:
