@@ -508,9 +508,12 @@
   
 			const svgSize = 300;  // Set size for SVG
 			const options = { 
-			  autoCrop: true, 
+			  autoCrop: false,
 			  noStereoProblem: true, 
-			  autoScale: true
+			  autoScale: false,
+			  suppressChiralText: true,
+			  suppressCIPParity: true,
+			  suppressESR: true,
 			};
 			const svg = mol.toSVG(svgSize, svgSize, null, options);
   
