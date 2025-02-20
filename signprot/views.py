@@ -172,6 +172,7 @@ class PhosphorylationBrowser(TemplateView):
         context['coupling_labels'] = sorted(labels_set)
 
         context['sites'] = sites
+
         return context
 
     def _headers(self):
@@ -234,6 +235,8 @@ class PhosphorylationBrowser(TemplateView):
             "Class C (Glutamate)",
             "Class D1 (Ste2-like fungal pheromone)",
             "Class F (Frizzled)",
+            "Class O1 (fish-like odorant)",
+            "Class O2 (tetrapod specific odorant),"
             "Class T2 (Taste 2)",
             "Other GPCRs",
         ]
@@ -280,8 +283,8 @@ class PhosphorylationBrowser(TemplateView):
 
             coupling_data = {
                 'emax': {},
-                'pec50': {},
-                'logemaxec50': {}
+                'pEC50': {},
+                'log(Emax/EC50)': {}
             }
 
             for coupling in getattr(protein, 'filtered_couplings', []):
@@ -291,9 +294,9 @@ class PhosphorylationBrowser(TemplateView):
                 if coupling.emax is not None:
                     coupling_data['emax'][label] = coupling.emax
                 if coupling.pec50 is not None:
-                    coupling_data['pec50'][label] = coupling.pec50
+                    coupling_data['pEC50'][label] = coupling.pec50
                 if coupling.logemaxec50 is not None:
-                    coupling_data['logemaxec50'][label] = coupling.logemaxec50
+                    coupling_data['log(Emax/EC50)'][label] = coupling.logemaxec50
 
             base_data.update(coupling_data)
 

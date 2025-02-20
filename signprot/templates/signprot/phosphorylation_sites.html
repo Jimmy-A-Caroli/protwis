@@ -74,161 +74,163 @@
 </ul>
 
 <!-- Data Table -->
-<table class="compact display dataTable row-border" id="proteinTable">
-    <!-- Define column widths -->
-    <colgroup>
-        <!-- Checkbox column -->
-        <col style="width: 2em;">
-        <!-- Fixed headers -->
-        {% for header in fixed_headers %}
-            <col style="width: {{ header|length|add:2 }}em;">
-        {% endfor %}
-        <!-- Segment headers - ICL3 -->
-        {% for header in segment_headers %}
-            <col class="segment-col icl3-col" style="width: {{ header|remove_prefix|compute_width_min }};">
-        {% endfor %}
-        <!-- Segment headers - C-term -->
-        {% for header in segment_headers %}
-            <col class="segment-col cterm-col" style="width: {{ header|remove_prefix|compute_width_min }};">
-        {% endfor %}
-        <!-- Extra headers -->
-        {% for header in extra_headers %}
-            {% for label in coupling_labels %}
-                <col style="width: {{ label.0|cut:"_human"|upper|length|add:2 }}em;">
-            {% endfor %}
-        {% endfor %}
-    </colgroup>
-
-
-    <thead>
-        <tr>
-            <!-- Checkbox -->
-            <th colspan="1"></th> 
-
-            <!-- Receptor -->
-            <th class="col_size" colspan="4">Receptor</th>
-
-            <!-- ICL3 Main Headers -->
-            <th class="segment-col icl3-col col_size main_th" colspan="2">Segment<br>(ICL3)</th>
-            <th class="segment-col icl3-col col_size main_th" colspan="4">Sites from<br>structures</th>
-            <th class="segment-col icl3-col col_size main_th" colspan="5">P sites</th>
-            <th class="segment-col icl3-col col_size main_th" colspan="4">Longest<br>P site</th>
-            <th class="segment-col icl3-col col_size main_th" colspan="5">O sites</th>
-            <th class="segment-col icl3-col col_size main_th" colspan="4">Longest<br>O site</th>
-
-            <!-- C-term Main Headers -->
-            <th class="segment-col cterm-col col_size main_th" colspan="2">Segment<br>(Ct)</th>
-            <th class="segment-col cterm-col col_size main_th" colspan="4">Sites from<br>structures</th>
-            <th class="segment-col cterm-col col_size main_th" colspan="5">P sites</th>
-            <th class="segment-col cterm-col col_size main_th" colspan="4">Longest<br>P site</th>
-            <th class="segment-col cterm-col col_size main_th" colspan="5">O sites</th>
-            <th class="segment-col cterm-col col_size main_th" colspan="4">Longest<br>O site</th>
-
-            <!-- Extra Headers -->
-            {% for header in extra_headers %}
-                <th class="col_size main_th" colspan="3">
-                    {% if header == 'log(Emax/EC50)' %}
-                        log(E<sub>max</sub>/EC<sub>50</sub>)
-                    {% elif header == 'emax' %}
-                        E<sub>max</sub>
-                    {% elif header == 'pEC50' %}
-                        pEC<sub>50</sub>
-                    {% else %}
-                        {{ header | title }}
-                    {% endif %}
-                </th>
-            {% endfor %}
-        </tr>
-        <tr>
-            <th></th>
+<div style="width:100%; overflow-x: scroll;">
+    <table class="compact display dataTable row-border" id="proteinTable">
+        <!-- Define column widths -->
+        <colgroup>
+            <!-- Checkbox column -->
+            <col style="width: 2em;">
+            <!-- Fixed headers -->
             {% for header in fixed_headers %}
-                <th class="col_size">{{ header | title }}</th>
+                <col style="width: {{ header|length|add:2 }}em;">
             {% endfor %}
-            
-            <!-- ICL3 Subheaders -->
+            <!-- Segment headers - ICL3 -->
             {% for header in segment_headers %}
-                <th class="segment-col icl3-col col_size">{{ header|remove_prefix }}</th>
+                <col class="segment-col icl3-col" style="width: {{ header|remove_prefix|compute_width_min }};">
             {% endfor %}
-
-            <!-- C-term Subheaders -->
+            <!-- Segment headers - C-term -->
             {% for header in segment_headers %}
-                <th class="segment-col cterm-col col_size">{{ header|remove_prefix }}</th>
+                <col class="segment-col cterm-col" style="width: {{ header|remove_prefix|compute_width_min }};">
             {% endfor %}
-
-            <!-- Extra Headers Subheaders -->
+            <!-- Extra headers -->
             {% for header in extra_headers %}
                 {% for label in coupling_labels %}
-                    <th class="col_size">
-                        {{ label.0|cut:"_human"|upper }}
-                        {% if label.1 != 'Regular' %}
-                            <br><span>{{ label.1 }}</span>
+                    <col style="width: {{ label.0|cut:"_human"|upper|length|add:2 }}em;">
+                {% endfor %}
+            {% endfor %}
+        </colgroup>
+
+
+        <thead>
+            <tr>
+                <!-- Checkbox -->
+                <th colspan="1"></th> 
+
+                <!-- Receptor -->
+                <th class="col_size" colspan="4">Receptor</th>
+
+                <!-- ICL3 Main Headers -->
+                <th class="segment-col icl3-col col_size main_th" colspan="2">Segment<br>(ICL3)</th>
+                <th class="segment-col icl3-col col_size main_th" colspan="4">Sites from<br>structures</th>
+                <th class="segment-col icl3-col col_size main_th" colspan="5">P sites</th>
+                <th class="segment-col icl3-col col_size main_th" colspan="4">Longest<br>P site</th>
+                <th class="segment-col icl3-col col_size main_th" colspan="5">O sites</th>
+                <th class="segment-col icl3-col col_size main_th" colspan="4">Longest<br>O site</th>
+
+                <!-- C-term Main Headers -->
+                <th class="segment-col cterm-col col_size main_th" colspan="2">Segment<br>(Ct)</th>
+                <th class="segment-col cterm-col col_size main_th" colspan="4">Sites from<br>structures</th>
+                <th class="segment-col cterm-col col_size main_th" colspan="5">P sites</th>
+                <th class="segment-col cterm-col col_size main_th" colspan="4">Longest<br>P site</th>
+                <th class="segment-col cterm-col col_size main_th" colspan="5">O sites</th>
+                <th class="segment-col cterm-col col_size main_th" colspan="4">Longest<br>O site</th>
+
+                <!-- Extra Headers -->
+                {% for header in extra_headers %}
+                    <th class="col_size main_th" colspan="3">
+                        {% if header == 'log(Emax/EC50)' %}
+                            log(E<sub>max</sub>/EC<sub>50</sub>)
+                        {% elif header == 'emax' %}
+                            E<sub>max</sub>
+                        {% elif header == 'pEC50' %}
+                            pEC<sub>50</sub>
+                        {% else %}
+                            {{ header | title }}
                         {% endif %}
                     </th>
                 {% endfor %}
+            </tr>
+            <tr>
+                <th></th>
+                {% for header in fixed_headers %}
+                    <th class="col_size">{{ header | title }}</th>
+                {% endfor %}
+                
+                <!-- ICL3 Subheaders -->
+                {% for header in segment_headers %}
+                    <th class="segment-col icl3-col col_size">{{ header|remove_prefix }}</th>
+                {% endfor %}
+
+                <!-- C-term Subheaders -->
+                {% for header in segment_headers %}
+                    <th class="segment-col cterm-col col_size">{{ header|remove_prefix }}</th>
+                {% endfor %}
+
+                <!-- Extra Headers Subheaders -->
+                {% for header in extra_headers %}
+                    {% for label in coupling_labels %}
+                        <th class="col_size">
+                            {{ label.0|cut:"_human"|upper }}
+                            {% if label.1 != 'Regular' %}
+                                <br><span>{{ label.1 }}</span>
+                            {% endif %}
+                        </th>
+                    {% endfor %}
+                {% endfor %}
+            </tr>
+
+            <!-- yadcf filters -->
+        <tr>
+            {% for i in 5|range_filter %}
+                <th></th>
+            {% endfor %}
+            {% for i in 24|range_filter %}
+                <th class="segment-col icl3-col"></th>
+            {%  endfor %}
+            {% for i in 24|range_filter %}
+                <th class="segment-col cterm-col"></th>
+            {% endfor %}
+            {% for i in 9|range_filter %}
+                <th></th>
             {% endfor %}
         </tr>
-
-        <!-- yadcf filters -->
-    <tr>
-        {% for i in 5|range_filter %}
-            <th></th>
-        {% endfor %}
-        {% for i in 24|range_filter %}
-            <th class="segment-col icl3-col"></th>
-        {%  endfor %}
-        {% for i in 24|range_filter %}
-            <th class="segment-col cterm-col"></th>
-        {% endfor %}
-        {% for i in 9|range_filter %}
-            <th></th>
-        {% endfor %}
-    </tr>
-    </thead>
-    <tbody>
-        {% for site in sites %}
-            <tr>
-                <td class="text-center"><input class="alt" type="checkbox"></td>
-                {% for header in fixed_headers %}
-                    <td class="col_size">{{ site|dict_get:header }}</td>
-                {% endfor %}
-
-                <!-- Free list -->
-                {% for header in segment_headers %}
-                {% with key='icl3_'|add:header %}
-                    {% with value=site|dict_get:key %}
-                        <td class="segment-col icl3-col col_size">{{ value|join_if_list }}</td>
-                    {% endwith %}
-                {% endwith %}
-                {% endfor %}
-
-                {% for header in segment_headers %}
-                {% with key='c-term_'|add:header %}
-                    {% with value=site|dict_get:key %}
-                        <td class="segment-col cterm-col col_size">{{ value|join_if_list }}</td>
-                    {% endwith %}
-                {% endwith %}
-                {% endfor %}
-
-            <!-- Extra Headers Data -->
-            {% for header in extra_headers %}
-                {% with data_dict=site|dict_get:header %}
-                    {% for label in coupling_labels %}
-                        {% with value=data_dict|dict_get:label %}
-                            {% if value is not None %}
-                                <td class="col_size">{{ value|floatformat:1 }}</td>
-                            {% else %}
-                                <td class="col_size">-</td> <!-- If value is missing -->
-                            {% endif %}
-                        {% endwith %}
+        </thead>
+        <tbody>
+            {% for site in sites %}
+                <tr>
+                    <td class="text-center"><input class="alt" type="checkbox"></td>
+                    {% for header in fixed_headers %}
+                        <td class="col_size">{{ site|dict_get:header }}</td>
                     {% endfor %}
-                {% endwith %}
+
+                    <!-- Free list -->
+                    {% for header in segment_headers %}
+                    {% with key='icl3_'|add:header %}
+                        {% with value=site|dict_get:key %}
+                            <td class="segment-col icl3-col col_size">{{ value|join_if_list }}</td>
+                        {% endwith %}
+                    {% endwith %}
+                    {% endfor %}
+
+                    {% for header in segment_headers %}
+                    {% with key='c-term_'|add:header %}
+                        {% with value=site|dict_get:key %}
+                            <td class="segment-col cterm-col col_size">{{ value|join_if_list }}</td>
+                        {% endwith %}
+                    {% endwith %}
+                    {% endfor %}
+
+                <!-- Extra Headers Data -->
+                {% for header in extra_headers %}
+                    {% with data_dict=site|dict_get:header %}
+                        {% for label in coupling_labels %}
+                            {% with value=data_dict|dict_get:label %}
+                                {% if value is not None %}
+                                    <td class="col_size bla">{{ value|floatformat:1 }}</td>
+                                {% else %}
+                                    <td class="col_size">-</td> <!-- If value is missing -->
+                                {% endif %}
+                            {% endwith %}
+                        {% endfor %}
+                    {% endwith %}
+                {% endfor %}
+
+
+                </tr>
             {% endfor %}
-
-
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        </tbody>
+    </table>
+</div>
 
 {% endblock %}
 

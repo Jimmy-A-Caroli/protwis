@@ -60,9 +60,9 @@ def pub_out(objs):
 @register.filter
 def dict_get(dictionary, key):
     try:
-        return dictionary.get(key, '')
+        return dictionary.get(key, None)
     except (TypeError, AttributeError):
-        return ''
+        return None
 
 @register.filter
 def remove_prefix(value):
