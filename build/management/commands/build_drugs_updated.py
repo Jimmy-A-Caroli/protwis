@@ -449,7 +449,7 @@ class Command(BaseCommand):
                                                     logp=row['XLogP'] if pd.notna(row['XLogP']) else None,
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
-                                                    smiles=row['SMILES'])
+                                                    smiles=row['SMILES'] if pd.notna(row['SMILES']) else None)
 
             # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand
             for id_type, values in mapper.items():
@@ -556,7 +556,7 @@ class Command(BaseCommand):
     @staticmethod
     def read_csv_data(filename):
         filepath = os.sep.join([Command.data_dir, filename])
-        data = pd.read_csv(filepath, low_memory=False)
+        data = pd.read_csv(filepath, sep=None, engine='python')
         return data
 
     @staticmethod
