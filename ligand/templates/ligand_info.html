@@ -1,19 +1,262 @@
 {% extends "home/base.html" %}
 {% load static %}
 
-{% block content %}
-{% autoescape off %}
-<style>
-.link {
-  fill: none;
-  stroke: #969696;
-  stroke-opacity: .1;
-}
-.link:hover {
-  stroke-opacity: .3;
-}
+{% block addon_css %}
+<link rel="stylesheet" href="{% static 'home/css/button_spinner.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
+<link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
+<link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
+<link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
+<link rel="stylesheet" href="{% static 'home/css/bootstrap2-toggle.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
+<style type="text/css">
+	.select2-result-label {
+		font-size: x-small;
+		font-size: 10px;
+	}
 
-.dt-button.btn-primary {
+	#filters {
+		font-size: 10px;
+		padding: 7px 15px;
+	}
+
+	@media (min-width: 1800px) {
+		#content {
+			width: 1770px;
+		}
+	}
+
+	table.dataTable.compact thead th.over_header {
+		border-right: 1px solid;
+		border-left: 0px solid;
+		text-align: left;
+		padding: 4px 4px 4px 4px;
+	}
+
+	table.dataTable.compact thead tr.over_header th {
+		border-bottom: 1px solid #ccc;
+	}
+
+	table.dataTable.compact thead th.leftborder {
+		border-left: 1px solid;
+	}
+
+	table.dataTable.compact thead th.rightborder {
+		border-right: 1px solid;
+	}
+
+	table.dataTable.compact thead th.checkbox_tr {
+		text-align: left;
+		padding: 4px 4px 4px 4px;
+	}
+
+	table.dataTable.compact thead th {
+		padding: 4px 16px 4px 2px;
+	}
+
+	.highlight {
+		background-color: rgb(204, 229, 255);
+	}
+
+	.name {
+		width: 70%;
+		text-overflow: ellipsis;
+		cursor: pointer;
+		word-break: break-all;
+		overflow: hidden;
+		white-space: nowrap;
+	}
+
+	.name:hover {
+		overflow: visible;
+		white-space: normal;
+
+	}
+
+	.zoom {
+		transition: transform .2s;
+	}
+
+	.zoom:hover {
+		ms-transform: scale(2.5);
+
+		-webkit-transform: scale(2.5);
+
+		transform: scale(2.5);
+		background-color: white;
+		border: solid 1px;
+		transform: scale(2.5);
+	}
+
+	div.align-items-start table {
+		table-layout: fixed;
+	}
+
+	div.align-items-start img {
+		max-width: 100%;
+	}
+
+	/* From selection_drugs.html */
+	.link {
+	  fill: none;
+	  stroke: #969696;
+	  stroke-opacity: .1;
+	}
+	.link:hover {
+	  stroke-opacity: 0.3;
+	}
+	
+	.custom-dropdown {
+		max-height: 500px !important; /* Set the maximum height of the dropdown */
+		overflow-y: auto !important; /* Enable scrolling */
+	}
+	
+	.custom-dropdown .select2-results__options {
+		max-height: 450px !important; /* Adjust the height inside the dropdown */
+		overflow-y: auto !important; /* Ensure results can scroll */
+	}
+	
+	.border-left {
+		border-left: 1px solid #cccccc !important; /* Adjust the width and color as needed */
+	}
+	
+	/* Centered */
+	th .dt-column-order {
+		margin-right: -12px; /* Shift the sort arrow to the right */
+	}
+	th .dt-column-title {
+		/* padding-left: 24px; */
+		margin-left: 24px;
+	}
+	
+	/* Additional styles */
+	#targetsTable {
+		table-layout: auto;  /* Ensure columns can adjust width */
+		width: 100%;         /* Set table width to 100% of container */
+	}
+	
+	/* Font size consistency */
+	table.dataTable {
+		font-size: 12px; /* Adjust to match your standard font size */
+	}
+	
+	#targetsTable th {
+		width: 250px !important; /* Force width on <th> elements */
+		max-width: 250px;        /* Set a maximum width */
+		overflow: hidden;
+		white-space: nowrap;     /* Prevent line wrapping */
+		text-overflow: ellipsis; /* Add ellipsis if text overflows */
+	}
+	
+	.select2-search__field::placeholder{
+		text-align:center;
+	}
+	.select2-container--default .select2-selection--multiple{
+		overflow: hidden !important;
+	}
+	
+	.custom-col-right {
+		padding-right: 0 !important;
+	}
+	
+	.custom-col-left {
+		padding-left: 0 !important;
+	}
+	
+	.tooltip {
+		position: absolute;
+		text-align: center;
+		padding: 6px;
+		font-size: 12px;
+		background: lightgrey;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		pointer-events: none; /* Prevents the tooltip from capturing mouse events */
+		z-index: 10;
+	}
+	.text-greyed-out {
+		fill: grey;
+	}
+	
+	.text-bold {
+		font-weight: bold;
+	}
+	
+	.graydiv {
+		height: 20px;
+		width: 275px;
+		background: linear-gradient(to right, white 0%, blue 100%)
+	}
+	
+</style>
+
+<style type="text/css">
+	/* Clinical Trials Section */
+	.clinical-trials {
+		text-align: center;
+		margin: 5px;
+		padding: 5px;
+		border: 1px solid #ddd;
+		border-radius:8px;
+		background-color: #f9f9f9;
+	}
+	
+	.trial-stages {
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		gap: 15px; /* Add spacing between stages */
+	}
+	
+	.stage {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		font-size: 1rem;
+	}
+	
+	.stage span {
+		margin: 5px;
+	}
+	
+	.badge {
+		display: inline-block;
+		padding: 10px 15px;
+		font-size: 0.9rem;
+		font-weight: bold;
+		border-radius: 20px;
+	}
+	
+	.badge-i {
+		background-color: #f5bcbf;
+		color: #fff;
+	}
+	
+	.badge-ii {
+		background-color: #f17270;
+		color: #212529;
+	}
+	
+	.badge-iii {
+		background-color: #dd2628;
+		color: #fff;
+	}
+
+	.badge-approved {
+		background-color: #007bff; /* #28a745 is green */
+		color: #fff;
+	}
+
+	.badge-notyet {
+		background-color: #D3D3D3;
+		color: #fff;
+	}
+
+	.dt-button.btn-primary {
     background-color: #007bff;
     color: #fff;
 }
@@ -21,8 +264,14 @@
     background-color: #28a745;
     color: #fff;
 }
-
 </style>
+
+{% endblock %}
+
+{% block content %}
+{% autoescape off %}
+
+
 <div class="container body-content">
     {% comment %} <!-- Displaying the ligand name with empty col-md-8 -->
     <div class="row">
@@ -386,15 +635,10 @@
 							<span class="glyphicon glyphicon-download"></span> Download <span class="caret"></span>
 							</button>
 							<ul class="dropdown-menu">
-							<li>
-									<a href="javascript:saveSvgAsPng(document.getElementById('sankey'),'sankey.png');">PNG</a>
-							</li>
-							<li>
-									<a href="javascript:saveSvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a>
-							</li>
-							<li>
-									<a href="javascript:saveSvgAsTiff(document.getElementById('sankey'),'sankey.tiff');">TIFF</a>
-							</li>
+								<li><a href="javascript:saveSankeySvgAsSVG(document.getElementById('sankey'), 'sankey.svg');">SVG</a></li>
+								<li><a href="javascript:saveSankeySvgAsPng(document.getElementById('sankey'), 'sankey.png');">PNG</a></li>
+								<li><a href="javascript:saveSankeySvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a></li>
+								<!-- <li><a href="javascript:saveSankeySvgAsTiff(document.getElementById('sankey'),'sankey.tiff');">TIFF</a></li>  Removed as I dont have time to implement -->
 							</ul>
 						</div></p>
             {% else %}
@@ -476,7 +720,8 @@
 
 {% block addon_js %}
 <!-- Make sure the Select2 JS file is included -->
-<script src="{% static 'home/js/saveSvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
+<script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
+<script src="{% static 'home/js/UTIF.js' %}"></script> <!-- For Saving Sankey plot -->
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 <script src="{% static 'home/js/DataTables_v2.0.5.js' %}"></script>
 <script src="{% static 'home/js/dataTables.buttons_3_0_0.js' %}"></script>
@@ -989,263 +1234,5 @@ SankeyPlot(sankey_data, 'sankey_plot', top_nodes, totalPoints, custom_width);
         }
     });
 </script>
-
-{% endblock %}
-
-{% block addon_css %}
-<link rel="stylesheet" href="{% static 'home/css/button_spinner.css' %}" type="text/css" />
-<link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
-<link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
-<link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
-<link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
-<link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
-<link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
-<link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-<link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
-<link rel="stylesheet" href="{% static 'home/css/bootstrap2-toggle.min.css' %}" type="text/css" />
-<link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
-<style type="text/css">
-	.select2-result-label {
-		font-size: x-small;
-		font-size: 10px;
-	}
-
-	#filters {
-		font-size: 10px;
-		padding: 7px 15px;
-	}
-
-	@media (min-width: 1800px) {
-		#content {
-			width: 1770px;
-		}
-	}
-
-	table.dataTable.compact thead th.over_header {
-		border-right: 1px solid;
-		border-left: 0px solid;
-		text-align: left;
-		padding: 4px 4px 4px 4px;
-	}
-
-	table.dataTable.compact thead tr.over_header th {
-		border-bottom: 1px solid #ccc;
-	}
-
-	table.dataTable.compact thead th.leftborder {
-		border-left: 1px solid;
-	}
-
-	table.dataTable.compact thead th.rightborder {
-		border-right: 1px solid;
-	}
-
-	table.dataTable.compact thead th.checkbox_tr {
-		text-align: left;
-		padding: 4px 4px 4px 4px;
-	}
-
-	table.dataTable.compact thead th {
-		padding: 4px 16px 4px 2px;
-	}
-
-	.highlight {
-		background-color: rgb(204, 229, 255);
-	}
-
-	.name {
-		width: 70%;
-		text-overflow: ellipsis;
-		cursor: pointer;
-		word-break: break-all;
-		overflow: hidden;
-		white-space: nowrap;
-	}
-
-	.name:hover {
-		overflow: visible;
-		white-space: normal;
-
-	}
-
-	.zoom {
-		transition: transform .2s;
-	}
-
-	.zoom:hover {
-		ms-transform: scale(2.5);
-
-		-webkit-transform: scale(2.5);
-
-		transform: scale(2.5);
-		background-color: white;
-		border: solid 1px;
-		transform: scale(2.5);
-	}
-
-	div.align-items-start table {
-		table-layout: fixed;
-	}
-
-	div.align-items-start img {
-		max-width: 100%;
-	}
-
-	/* From selection_drugs.html */
-	.link {
-	  fill: none;
-	  stroke: #969696;
-	  stroke-opacity: .1;
-	}
-	.link:hover {
-	  stroke-opacity: .3;
-	}
-	
-	.custom-dropdown {
-		max-height: 500px !important; /* Set the maximum height of the dropdown */
-		overflow-y: auto !important; /* Enable scrolling */
-	}
-	
-	.custom-dropdown .select2-results__options {
-		max-height: 450px !important; /* Adjust the height inside the dropdown */
-		overflow-y: auto !important; /* Ensure results can scroll */
-	}
-	
-	.border-left {
-		border-left: 1px solid #cccccc !important; /* Adjust the width and color as needed */
-	}
-	
-	/* Centered */
-	th .dt-column-order {
-		margin-right: -12px; /* Shift the sort arrow to the right */
-	}
-	th .dt-column-title {
-		/* padding-left: 24px; */
-		margin-left: 24px;
-	}
-	
-	/* Additional styles */
-	#targetsTable {
-		table-layout: auto;  /* Ensure columns can adjust width */
-		width: 100%;         /* Set table width to 100% of container */
-	}
-	
-	/* Font size consistency */
-	table.dataTable {
-		font-size: 12px; /* Adjust to match your standard font size */
-	}
-	
-	#targetsTable th {
-		width: 250px !important; /* Force width on <th> elements */
-		max-width: 250px;        /* Set a maximum width */
-		overflow: hidden;
-		white-space: nowrap;     /* Prevent line wrapping */
-		text-overflow: ellipsis; /* Add ellipsis if text overflows */
-	}
-	
-	.select2-search__field::placeholder{
-		text-align:center;
-	}
-	.select2-container--default .select2-selection--multiple{
-		overflow: hidden !important;
-	}
-	
-	.custom-col-right {
-		padding-right: 0 !important;
-	}
-	
-	.custom-col-left {
-		padding-left: 0 !important;
-	}
-	
-	.tooltip {
-		position: absolute;
-		text-align: center;
-		padding: 6px;
-		font-size: 12px;
-		background: lightgrey;
-		border: 1px solid #ccc;
-		border-radius: 4px;
-		pointer-events: none; /* Prevents the tooltip from capturing mouse events */
-		z-index: 10;
-	}
-	.text-greyed-out {
-		fill: grey;
-	}
-	
-	.text-bold {
-		font-weight: bold;
-	}
-	
-	.graydiv {
-		height: 20px;
-		width: 275px;
-		background: linear-gradient(to right, white 0%, blue 100%)
-	}
-	
-</style>
-
-<style type="text/css">
-	/* Clinical Trials Section */
-	.clinical-trials {
-		text-align: center;
-		margin: 5px;
-		padding: 5px;
-		border: 1px solid #ddd;
-		border-radius:8px;
-		background-color: #f9f9f9;
-	}
-	
-	.trial-stages {
-		display: flex;
-		justify-content: space-around;
-		align-items: center;
-		gap: 15px; /* Add spacing between stages */
-	}
-	
-	.stage {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		font-size: 1rem;
-	}
-	
-	.stage span {
-		margin: 5px;
-	}
-	
-	.badge {
-		display: inline-block;
-		padding: 10px 15px;
-		font-size: 0.9rem;
-		font-weight: bold;
-		border-radius: 20px;
-	}
-	
-	.badge-i {
-		background-color: #f5bcbf;
-		color: #fff;
-	}
-	
-	.badge-ii {
-		background-color: #f17270;
-		color: #212529;
-	}
-	
-	.badge-iii {
-		background-color: #dd2628;
-		color: #fff;
-	}
-
-	.badge-approved {
-		background-color: #007bff; /* #28a745 is green */
-		color: #fff;
-	}
-
-	.badge-notyet {
-		background-color: #D3D3D3;
-		color: #fff;
-	}
-</style>
 
 {% endblock %}
