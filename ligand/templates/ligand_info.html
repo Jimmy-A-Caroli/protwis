@@ -604,14 +604,102 @@
 					action: function () { reset_all(); }
 				},
 				{
-					extend: 'csv',
-					text: 'Export CSV', // Button text
-					className: 'btn btn-primary' // Optional: Add Bootstrap styling
+				extend: 'csvHtml5',
+				text: 'Export CSV',
+				className: 'btn btn-primary',
+				// <-- Add the separator option here
+				fieldSeparator: ';', 
+				exportOptions: {
+					columns: ':visible',
+					rows: ':not(.filter-row)'
+				},
+				customize: function (csvStr) {
+					// 1) Convert CSV into an array of lines
+					let lines = csvStr.split('\n');
+
+					// 2) Overwrite the default header row
+					lines[0] = 'Protein;Gene;Species;Family;Class;Activity: Type;Activity: Min;Activity: Avg;Activity: Max;Database';
+
+					// 3) Re-assemble the CSV
+					return lines.join('\n');
+				}
 				},
 				{
-					extend: 'excel',
-					text: 'Export Excel',
-					className: 'btn btn-success'
+				extend: 'excelHtml5',
+				text: 'Export Excel',
+				className: 'btn btn-success',
+				exportOptions: {
+					columns: ':visible',
+					rows: ':not(.filter-row)', // skip filter-row in the table body
+				},
+				customize: function (xlsx) {
+					// The sheet data is in:
+					const sheet = xlsx.xl.worksheets['sheet1.xml'];
+
+					const $sheetData = $('sheetData', sheet);
+
+					// Remove row 1, row 2, and merges
+					$('row[r=1], row[r=2]', $sheetData).remove();
+					$('mergeCells mergeCell', sheet).each(function() {
+					const ref = $(this).attr('ref');
+					if (ref.match(/1|2/)) {
+						$(this).remove();
+					}
+					});
+
+					// Insert a brand-new row 1 with your own headers
+					const customHeaderRow = `
+					<row r="1">
+						<c t="inlineStr" r="A1"><is><t>Protein</t></is></c>
+						<c t="inlineStr" r="B1"><is><t>Gene</t></is></c>
+						<c t="inlineStr" r="C1"><is><t>Species</t></is></c>
+						<c t="inlineStr" r="D1"><is><t>Family</t></is></c>
+						<c t="inlineStr" r="E1"><is><t>Class</t></is></c>
+						<c t="inlineStr" r="F1"><is><t>Activity: Type</t></is></c>
+						<c t="inlineStr" r="G1"><is><t>Activity: Min</t></is></c>
+						<c t="inlineStr" r="H1"><is><t>Activity: Avg</t></is></c>
+						<c t="inlineStr" r="I1"><is><t>Activity: Max</t></is></c>
+						<c t="inlineStr" r="J1"><is><t>Database</t></is></c>
+					</row>
+					`;
+					$sheetData.prepend(customHeaderRow);
+
+					// 2) Shift everything from row≥3 up by 1
+					//    (Old row 3 becomes row 2, old row 4⇒row 3, etc.)
+					$('row', $sheetData).each(function () {
+						const oldRowIndex = parseInt($(this).attr('r'), 10);
+						if (oldRowIndex >= 3) {
+						const newRowIndex = oldRowIndex - 1;
+						// Update the row’s own index
+						$(this).attr('r', newRowIndex);
+
+						// Update each cell’s coordinate (e.g. A3 → A2, B3 → B2, etc.)
+						$(this).find('c').each(function() {
+							const cellRef = $(this).attr('r'); // e.g. "B3"
+							const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+							if (match) {
+							const letters = match[1];
+							const oldNumber = parseInt(match[2], 10);
+							const newNumber = oldNumber - 1;
+							$(this).attr('r', letters + newNumber);
+							}
+						});
+						}
+					});
+					// --- 4) Set column widths / best‐fit ---
+					// Now find the <col> elements within <cols> and set some decent widths.
+					// Typically each column is a <col min="N" max="N" width="..." customWidth="1" ... />
+
+					// a) If <cols> already exists, just iterate its <col> children
+					$('cols col', sheet).each(function() {
+						// For example, set them all to a width of 20
+						$(this).attr('width', 20);
+						// Tells Excel “this column might need adjusting”
+						$(this).attr('bestFit', 1);
+						// Tells Excel we’re explicitly specifying a custom width
+						$(this).attr('customWidth', 1);
+					});
+				}
 				}
 			]
 		});
@@ -700,14 +788,103 @@
 					action: function () { reset_all(); }
 				},
 				{
-					extend: 'csv',
-					text: 'Export CSV', // Button text
-					className: 'btn btn-primary' // Optional: Add Bootstrap styling
+				extend: 'csvHtml5',
+				text: 'Export CSV',
+				className: 'btn btn-primary',
+				// <-- Add the separator option here
+				fieldSeparator: ';', 
+				exportOptions: {
+					columns: ':visible',
+					rows: ':not(.filter-row)'
+				},
+				customize: function (csvStr) {
+					// 1) Convert CSV into an array of lines
+					let lines = csvStr.split('\n');
+
+					// 2) Overwrite the default header row
+					lines[0] = 'Gene;Protein;Receptor family;Ligand type;Class;Indication name;ICD11;ATC;Association score;Highest phase;Approved';
+
+					// 3) Re-assemble the CSV
+					return lines.join('\n');
+				}
 				},
 				{
-					extend: 'excel',
-					text: 'Export Excel',
-					className: 'btn btn-success'
+				extend: 'excelHtml5',
+				text: 'Export Excel',
+				className: 'btn btn-success',
+				exportOptions: {
+					columns: ':visible',
+					rows: ':not(.filter-row)', // skip filter-row in the table body
+				},
+				customize: function (xlsx) {
+					// The sheet data is in:
+					const sheet = xlsx.xl.worksheets['sheet1.xml'];
+
+					const $sheetData = $('sheetData', sheet);
+
+					// Remove row 1, row 2, and merges
+					$('row[r=1], row[r=2]', $sheetData).remove();
+					$('mergeCells mergeCell', sheet).each(function() {
+					const ref = $(this).attr('ref');
+					if (ref.match(/1|2/)) {
+						$(this).remove();
+					}
+					});
+
+					// Insert a brand-new row 1 with your own headers
+					const customHeaderRow = `
+					<row r="1">
+						<c t="inlineStr" r="A1"><is><t>Gene</t></is></c>
+						<c t="inlineStr" r="B1"><is><t>Protein</t></is></c>
+						<c t="inlineStr" r="C1"><is><t>Receptor family</t></is></c>
+						<c t="inlineStr" r="D1"><is><t>Ligand type</t></is></c>
+						<c t="inlineStr" r="E1"><is><t>Class</t></is></c>
+						<c t="inlineStr" r="F1"><is><t>Indication name</t></is></c>
+						<c t="inlineStr" r="G1"><is><t>ICD11</t></is></c>
+						<c t="inlineStr" r="H1"><is><t>ATC</t></is></c>
+						<c t="inlineStr" r="I1"><is><t>Association score</t></is></c>
+						<c t="inlineStr" r="J1"><is><t>Highest phase</t></is></c>
+						<c t="inlineStr" r="K1"><is><t>Approved</t></is></c>
+					</row>
+					`;
+					$sheetData.prepend(customHeaderRow);
+
+					// 2) Shift everything from row≥3 up by 1
+					//    (Old row 3 becomes row 2, old row 4⇒row 3, etc.)
+					$('row', $sheetData).each(function () {
+						const oldRowIndex = parseInt($(this).attr('r'), 10);
+						if (oldRowIndex >= 3) {
+						const newRowIndex = oldRowIndex - 1;
+						// Update the row’s own index
+						$(this).attr('r', newRowIndex);
+
+						// Update each cell’s coordinate (e.g. A3 → A2, B3 → B2, etc.)
+						$(this).find('c').each(function() {
+							const cellRef = $(this).attr('r'); // e.g. "B3"
+							const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+							if (match) {
+							const letters = match[1];
+							const oldNumber = parseInt(match[2], 10);
+							const newNumber = oldNumber - 1;
+							$(this).attr('r', letters + newNumber);
+							}
+						});
+						}
+					});
+					// --- 4) Set column widths / best‐fit ---
+					// Now find the <col> elements within <cols> and set some decent widths.
+					// Typically each column is a <col min="N" max="N" width="..." customWidth="1" ... />
+
+					// a) If <cols> already exists, just iterate its <col> children
+					$('cols col', sheet).each(function() {
+						// For example, set them all to a width of 20
+						$(this).attr('width', 20);
+						// Tells Excel “this column might need adjusting”
+						$(this).attr('bestFit', 1);
+						// Tells Excel we’re explicitly specifying a custom width
+						$(this).attr('customWidth', 1);
+					});
+				}
 				}
 			]
 		});

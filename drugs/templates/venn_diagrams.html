@@ -313,8 +313,9 @@ function getArrayFromData(gprotein) {
 let table;
 
 
-function initializeDataTable(tableId, data, hideColumns = false) {
+function initializeDataTable(tableId, data, hideColumns = false, vennUniqueCount = null) {
   
+  let uniqueCount = vennUniqueCount;
   // Add common column definitions
   var drugsColumnDefs = [
     { 
@@ -686,8 +687,8 @@ function initializeDataTable(tableId, data, hideColumns = false) {
     // Update the row count information
     const totalRows = table.rows().count();
     const rowCountText = layout === "targets"
-        ? `Target-compound-disease rows: ${totalRows}`
-        : `Compound-target-disease rows: ${totalRows}`;
+        ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
+        : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
     $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
   } else {
     table = $(tableId).DataTable({
@@ -714,7 +715,9 @@ function initializeDataTable(tableId, data, hideColumns = false) {
             // Use `this.api()` to get the table instance inside initComplete
             const api = this.api(); // Access the DataTable API
             const totalRows = api.rows().count(); // Use the API to get row count
-            const rowCountText = layout === "targets" ? `Target-compound-disease rows: ${totalRows}` : `Compound-target-disease rows: ${totalRows}`;
+            const rowCountText = layout === "targets"
+              ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
+              : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
             $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
         }
     });
@@ -812,9 +815,13 @@ function updateJvenn(gprotein_ID) {
 
         // reset filters
         reset_all();
+
+        // 1) Get unique count based on `this.list`
+        const uniqueFilterValues = new Set(filterValues);
+        const vennUniqueCount = uniqueFilterValues.size;
         
         // Pass selected data to initializeDataTable function
-        initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns);
+        initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns,vennUniqueCount);
       }
     });
 
@@ -1015,6 +1022,10 @@ function updateJvenn(gprotein_ID) {
       // Determine whether to hide the ATC columns
       const shouldHideATCColumns = phaseText !== "Phase IV";
 
+      // 1) Get unique count based on `this.list`
+      const uniqueFilterValues = new Set(filterValues);
+      const vennUniqueCount = uniqueFilterValues.size;
+
       // Show the filtered table
       $("#table-container").show();
 
@@ -1022,7 +1033,7 @@ function updateJvenn(gprotein_ID) {
       reset_all();
 
       // Pass the filtered data to initializeDataTable function
-      initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns);
+      initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns,vennUniqueCount);
       });
 
       // Apply base styles to the labels
