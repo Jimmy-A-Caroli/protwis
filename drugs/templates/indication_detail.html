@@ -114,6 +114,9 @@
 
     <script type="text/javascript">
     var sankey_data = JSON.parse('{{ sankey|safe }}');
+    // console.log('Debug sankey_data:', sankey_data);
+    // console.log('Nodes:', sankey_data.nodes);
+    // console.log('Links:', sankey_data.links);
     var top_nodes = '{{ nodes_nr|safe }}';
     var totalPoints = '{{ points }}';
     // set the dimensions and margins of the graph

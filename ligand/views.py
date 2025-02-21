@@ -38,7 +38,7 @@ from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.selection import Selection, SelectionItem
 from mapper.views import LandingPage
 from ligand.models import Ligand, LigandVendorLink, BiasedPathways, AssayExperiment, BiasedData, Endogenous_GTP, LigandID, LigandPeptideStructure, LigandMol, LigandFingerprint
-from ligand.functions import OnTheFly, AddPathwayData
+from ligand.functions import OnTheFly, AddPathwayData, is_valid_smiles
 from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
 from interaction.models import StructureLigandInteraction
 from mutation.models import MutationExperiment
@@ -1007,7 +1007,7 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
 
         for lig in ligs:
             records = d[lig]
-            if lig.smiles is not None and (lig.mw is None or lig.mw < 800):
+            if is_valid_smiles(lig.smiles) and (lig.mw is None or lig.mw < 800):
                 picture = img_setup_smiles.format(urllib.parse.quote(lig.smiles))
             else:
                 # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
@@ -2728,16 +2728,26 @@ class LigandInformationView(TemplateView):
         context.update({'structure': structures})
         context.update({'ligand': ligand_data})
         # Convert assay data to JSON
-        if assay_data_affinity:
+        if len(assay_data_affinity) > 0:
             df_affinity = pd.DataFrame(assay_data_affinity)
-            context['assay_affinity_json'] = df_affinity.to_json(orient='records')
+            json_affinity = df_affinity.to_json(orient='records')   # Could become "[]"
+            # If it's not empty, keep it; otherwise set to "" or None
+            context['assay_affinity_json'] = json_affinity if json_affinity != "[]" else ""
         else:
-            context['assay_affinity_json'] = None
-        if assay_data_potency:
+            context['assay_affinity_json'] = "[]"
+
+        if len(assay_data_potency) > 0:
             df_potency = pd.DataFrame(assay_data_potency)
-            context['assay_potency_json'] = df_potency.to_json(orient='records')
+            json_potency = df_potency.to_json(orient='records')
+            context['assay_potency_json'] = json_potency if json_potency != "[]" else ""
         else:
-            context['assay_potency_json'] = None
+            context['assay_potency_json'] = "[]"
+
+        if context['assay_affinity_json'] == "[]" or context['assay_potency_json'] == "[]":
+            context['assay_existence'] = 'no'
+        else:
+            context['assay_existence'] = 'yes'
+        
         # context.update({'assay_affinity': assay_data_affinity})
         # context.update({'assay_potency': assay_data_potency})
         context.update({'mutations': mutations})
@@ -2950,6 +2960,8 @@ class LigandInformationView(TemplateView):
 
                 # Convert DataFrame to JSON
                 context['Full_data_drug_table'] = Modified_df_drug.to_json(orient='records')
+            else:
+                context['Full_data_drug_table'] = None
 
 
         else:
@@ -3124,8 +3136,6 @@ class LigandInformationView(TemplateView):
 
     @staticmethod
     def process_ligand(ligand_data, endogenous_ligands):
-        img_setup_smiles = '<img style=\"height: 80%; width: 80%;;\" src=\"https://cactus.nci.nih.gov/chemical/structure/{}/image\">'
-        img_not_available = '<img style=\"height: 80%; width: 80%;;\" src=\"https://upload.wikimedia.org/wikipedia/commons/a/ac/No_image_available.svg\">'
         ld = dict()
         ld['ligand_id'] = ligand_data.id
         ld['ligand_name'] = ligand_data.name
@@ -3144,14 +3154,13 @@ class LigandInformationView(TemplateView):
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
 
-        if ligand_data.smiles is not None and (ld['mw'] is None or ld['mw'] < 800):
-            ld['picture'] = img_setup_smiles.format(urllib.parse.quote(ligand_data.smiles))
+        if is_valid_smiles(ligand_data.smiles) and (ld['mw'] is None or ld['mw'] < 800):
+            ld['picture'] = 'Generate_from_SMILES'
         elif ligand_data.sequence is not None:
             # peptide or protein ligand
-            ld['picture'] = img_not_available
+            ld['picture'] = 'Generate_from_sequence'
         else:
-            # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
-            ld['picture'] = img_not_available
+            ld['picture'] = 'Not_available'
         #Sorting links if ligand is endogenous
         if ligand_data.id in endogenous_ligands:
             sorted_list = ['Guide To Pharmacology', 'DrugBank', 'Drug Central', 'ChEMBL_compound_ids', 'PubChem']
