@@ -174,7 +174,7 @@ def get_sankey_data(entry_name):
         indication_name = record.indication.title.capitalize()
         indication_code = record.indication.code
         indication_0 = record.indication.get_level_0().title
-        uri = record.indication.uri.index
+        uri = record.indication.uri.index if record.indication.uri else ""
         ligand_name = record.ligand.name.capitalize()
         ligand_id = record.ligand.id
         protein_name = record.target.name
@@ -228,7 +228,7 @@ def get_sankey_data(entry_name):
 
     # Convert the unique_combinations back to a list of dictionaries
     sankey['links'] = list(unique_combinations.values())
-    total_points = len(caches['indication']) + len(caches['ligands']) + 1;
+    total_points = len(caches['indication']) + len(caches['ligands']) + 1
     if len(caches['ligands']) > len(caches['indication']):
         nodes_nr = len(caches['ligands'])
     else:
