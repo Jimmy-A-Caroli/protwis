@@ -33,11 +33,12 @@ function gproteinstructurebrowser(effector) {
           "scrollX":        true,
           "scrollCollapse": true,
           "scroller": true,
-          "paging":         false,
+          "paging":         true,
+          "pageLength":     100, 
           // "bSortCellsTop": true,
           "aaSorting": [],
           "autoWidth": false,
-          "order": [[27,"desc"],[10,"asc"]],
+          "order": [[29,"desc"],[1,"asc"]],
           "columnDefs": [
               { "targets": "no-sort", "orderable": false }
               ],
@@ -70,6 +71,8 @@ function gproteinstructurebrowser(effector) {
               null,
               null,
               null,
+              null,
+              null,
               null //Not displayed, storing protein id
           ],
           "bInfo" : true,
@@ -78,38 +81,35 @@ function gproteinstructurebrowser(effector) {
       // Selector column
       // Arg list: createYADCFfilters(start_column, num_cols, filter_type, select_type*, filter_default_label*, filter_reset_button_text*, filter_match_mode*, column_data_type*, width*)
       column_filters = column_filters.concat(createYADCFfilters(0, 1, "none"));
-      // Structure Section
-      column_filters = column_filters.concat(createYADCFfilters(1, 2, "multi_select", "select2", "Select", false, null, 'html'));
-      column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Method", false, null, null, "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(4, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
-      // Receptor Section
-      column_filters = column_filters.concat(createYADCFfilters(5, 1, "multi_select", "select2", "UniProt", false, "exact", "html", "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(6, 1, "multi_select", "select2", "IUPHAR", false, "exact", "html", "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(7, 1, "multi_select", "select2", "Receptor family", false, "exact", "html", "120px"));
-      column_filters = column_filters.concat(createYADCFfilters(8, 1, "multi_select", "select2", "Class", false, "exact", "html", "80px"));
-      column_filters = column_filters.concat(createYADCFfilters(9, 1, "multi_select", "select2", "Species", false, "exact", null, "55px"));
-      // G Protein section
-      column_filters = column_filters.concat(createYADCFfilters(10, 1, "multi_select", "select2", "Fam.", false, "exact", null, "50px"));
-      column_filters = column_filters.concat(createYADCFfilters(11, 1, "multi_select", "select2", "&alpha", false, "exact", "html", "40px"));
-      column_filters = column_filters.concat(createYADCFfilters(12, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
-      column_filters = column_filters.concat(createYADCFfilters(13, 1, "multi_select", "select2", "Note", false, null, null, "80px"));
-      column_filters = column_filters.concat(createYADCFfilters(14, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
-      column_filters = column_filters.concat(createYADCFfilters(15, 1, "multi_select", "select2", "&beta", false, "exact", "html", "40px"));
-      column_filters = column_filters.concat(createYADCFfilters(16, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
-      column_filters = column_filters.concat(createYADCFfilters(17, 1, "multi_select", "select2", "&gamma", false, "exact", "html", "40px"));
-      column_filters = column_filters.concat(createYADCFfilters(18, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
-
+      // Receptor section
+      column_filters = column_filters.concat(createYADCFfilters(1, 1, "multi_select", "select2", "Fam.", false, "exact", null, "50px"));
+      column_filters = column_filters.concat(createYADCFfilters(2, 1, "multi_select", "select2", "&alpha", false, "exact", "html", "40px"));
+      column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
+      column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Note", false, null, null, "80px"));
+      column_filters = column_filters.concat(createYADCFfilters(5, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
+      column_filters = column_filters.concat(createYADCFfilters(6, 1, "multi_select", "select2", "&beta", false, "exact", "html", "40px"));
+      column_filters = column_filters.concat(createYADCFfilters(7, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
+      column_filters = column_filters.concat(createYADCFfilters(8, 1, "multi_select", "select2", "&gamma", false, "exact", "html", "40px"));
+      column_filters = column_filters.concat(createYADCFfilters(9, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
+      column_filters = column_filters.concat(createYADCFfilters(10, 1, "multi_select", "select2", "Method", false, null, null, "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(11, 2, "multi_select", "select2", "", false, null, "html", "50px"));
+      column_filters = column_filters.concat(createYADCFfilters(13, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
+      column_filters = column_filters.concat(createYADCFfilters(14, 1, "multi_select", "select2", "UniProt", false, "exact", "html", "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(15, 1, "multi_select", "select2", "IUPHAR", false, "exact", "html", "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(16, 1, "multi_select", "select2", "Receptor family", false, "exact", "html", "120px"));
+      column_filters = column_filters.concat(createYADCFfilters(17, 1, "multi_select", "select2", "Class", false, "exact", "html", "80px"));
+      column_filters = column_filters.concat(createYADCFfilters(18, 1, "multi_select", "select2", "Species", false, "exact", null, "55px"));
       column_filters = column_filters.concat(createYADCFfilters(19, 1, "text", "select2", "Receptor fusion", false, null, null, "100px"));
       column_filters = column_filters.concat(createYADCFfilters(20, 1, "text", "select2", "Antibodies", false, null, null, "100px"));
       column_filters = column_filters.concat(createYADCFfilters(21, 1, "text", "select2", "Other", false, null, null, "100px"));
-      // column_filters = column_filters.concat(createYADCFfilters(22, 1, "text", "select2", "Ligand name", false, null, null, "100px"));
-      // column_filters = column_filters.concat(createYADCFfilters(23, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(22, 1, "multi_select", "select2", "Modality", false, "exact", null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(23, 1, "multi_select", "select2", "Ligand name", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(24, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(25, 1, "multi_select", "select2", "Last author", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(26, 1, "multi_select", "select2", "Reference", false, null, null, "140px"));
-      column_filters = column_filters.concat(createYADCFfilters(27, 1, "range_date", null, ["Min", "Max"], false, null, null, "30px"));
+      column_filters = column_filters.concat(createYADCFfilters(22, 1, "text", "select2", "Ligand name", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(23, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(24, 1, "multi_select", "select2", "Modality", false, "exact", null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(25, 1, "multi_select", "select2", "Ligand name", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(26, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(27, 1, "multi_select", "select2", "Last author", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(28, 1, "multi_select", "select2", "Reference", false, null, null, "140px"));
+      column_filters = column_filters.concat(createYADCFfilters(29, 1, "range_date", null, ["Min", "Max"], false, null, null, "30px"));
     } else {
       oTable2 = $("#structures_scrollable").DataTable({
           "scrollY":        "65vh",
@@ -298,19 +298,31 @@ function gproteinstructurebrowser(effector) {
     $("#align_btn_g_prot").click(function () {
         var checked_data = oTable2.rows(".alt_selected").data();
         ClearSelection("targets");
+
         for (i = 0; i < checked_data.length; i++) {
-            AddToSelection("targets", "protein", checked_data[i][30]);
+            if (effector=='gprot'){
+              console.log(checked_data[i][30])
+              AddToSelection("targets", "protein", checked_data[i][30]);
+            }
+            else {
+              AddToSelection("targets", "protein", checked_data[i][24]);
+            }
         }
-        window.location.href = "/alignment/segmentselectiongprot";
+        if (effector=='gprot'){
+          window.location.href = "/alignment/segmentselectiongprot";
+        }
+        else {
+          window.location.href = "/alignment/segmentselectionarrestin";
+        }
     });
 
     $("#superpose_btn").click(function() {
         // superposition(oTable2, [1,2,11,14,15,16,17,18,29], "g_protein_structure_browser", "gprot", 11);
-        superposition(oTable2, [10,11,1,5,6,7,8,9,27], "g_protein_structure_browser", "gprot", 1);
+        superposition(oTable2, [1,2,11,14,15,16,17,18,29], "g_protein_structure_browser", "gprot", 11);
     });
 
     $('#superpose_template_btn').click(function () {
-        direct_superposition(oTable2, "gprot", 1, "signprot");
+        direct_superposition(oTable2, "gprot", 11, "signprot");
     });
 
     $("#download_btn").click(function () {
@@ -319,7 +331,7 @@ function gproteinstructurebrowser(effector) {
         console.log("CHECKED DATA:", checked_data[0][1])
         for (i = 0; i < checked_data.length; i++) {
             var div = document.createElement("div");
-            div.innerHTML = checked_data[i][1];
+            div.innerHTML = checked_data[i][2];
 
             if (typeof div.innerText !== "undefined") {
                 AddToSelection("targets", "structure",  div.innerText.replace(/\s+/g, "") );

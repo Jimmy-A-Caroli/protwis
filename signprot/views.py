@@ -236,7 +236,7 @@ class PhosphorylationBrowser(TemplateView):
             "Class D1 (Ste2-like fungal pheromone)",
             "Class F (Frizzled)",
             "Class O1 (fish-like odorant)",
-            "Class O2 (tetrapod specific odorant),"
+            "Class O2 (tetrapod specific odorant)",
             "Class T2 (Taste 2)",
             "Other GPCRs",
         ]
@@ -1460,7 +1460,6 @@ def CouplingProfiles(request, render_part="both", signalling_data="empty"):
 def TreeHandler(request):
     domain = current_site(request)
     origin = domain['current_site']
-    print(origin)
     if origin == 'gprotein':
         return CouplingProfiles(request, "tree", "gprot")
     elif origin == 'arrestin':

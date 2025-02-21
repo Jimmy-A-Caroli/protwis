@@ -118,9 +118,10 @@
             var prev_ids = Array();
             var current_align_ids = Array();
 
-            {% if signalling_protein != 'af-signprot' %}
+            if ('{{signalling_protein}}'!='af-signprot'){
+                oTable.column(9).visible(false);
                 oTable.column(10).visible(false);
-            {% endif %}
+            }
 
             $("#constructs_div").show();
             assign_to_row();
@@ -391,10 +392,11 @@
 
                 ClearSelection('targets');
                 for (i = 0; i < checked_data.length; i++) {
-                    AddToSelection('targets', 'protein_entry',  checked_data[i][12] );
+                    console.log(checked_data[i][12])
+                    AddToSelection('targets', 'protein',  checked_data[i][12] );
 
                 }
-                window.location.href = '/structure/selection_convert_model';
+                window.location.href = '/alignment/segmentselection';
             });
 
             $('#align_btn2').click(function () {
@@ -514,8 +516,12 @@
 {% block content %}
 <div class="btn-group">
     <label class="btn btn-default btn-s" id="align_btn1" href="javascript:void(0)">Align Receptors</label>
+    {% if signalling_protein == 'af-signprot' %}
     <label class="btn btn-default btn-s" id="align_btn2" href="javascript:void(0)">Align G proteins</label>
     <label class="btn btn-default btn-s" id="superpose_template_btn" href="javascript:void(0)">Superposition</label>
+    {% else %}
+    <label class="btn btn-default btn-s" id="align_btn2" href="javascript:void(0)">Align Arrestins</label>
+    {% endif %}
     <label class="btn btn-default btn-s" id="download_btn" href="javascript:void(0)">Download</label>
     <!-- <label class="btn btn-default btn-s" id="superpose_btn" href="javascript:void(0)">Superposition</label> -->
 </div>
@@ -556,6 +562,8 @@
                     <th colspan=1 class="over_header" style="max-width:50px;">COUPLING DATA</th>
                     <th colspan=1 class="over_header">DATE</th>
                 </tr>
+
+                {% if signalling_protein == 'af-signprot' %}
                 <tr class='over_header cenetered-header'>
                     <th class='rightborder'></th>
                     <th class='rightborder'></th>
@@ -574,6 +582,7 @@
                     <th class='hidden'></th>
                     <th class='hidden'></th>
                 </tr>
+                {% endif %}
                 <tr>
                     <th class='no-sort checkbox_tr rightborder'><input class="select-all" type="checkbox" onclick="select_all(this)"></th>
                     <th class='rightborder'></th>
@@ -583,7 +592,11 @@
                     <th></th>
                     <th class='rightborder'></th>
                     <th></th>
+                    {% if signalling_protein == 'af-signprot' %}
                     <th></th>
+                    {% else %}
+                    <th class='rightborder'></th>
+                    {% endif %}
                     <th class='rightborder'></th>
                   <!--   <th></th>
                     <th></th> -->
@@ -633,7 +646,7 @@
                         <td>-</td>
                     {% endif %}
                     <td>{{ model.publication_date|date:"Y-m-d" }}</td>
-                    <td style="display:none;">{{ model.protein_conformation__protein__entry_name }}</td>
+                    <td style="display:none;">{{ model.protein_conformation__protein }}</td>
                     <td style="display:none;">{{ model.pdb_code__index }}</td>
                 </tr>
                 {% endfor %}

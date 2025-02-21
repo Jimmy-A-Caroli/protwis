@@ -3696,7 +3696,10 @@ def ConvertStructureComplexSignprotToProteins(request):
     # add simple selection to session
     request.session['selection'] = simple_selection
 
-    return HttpResponseRedirect('/alignment/segmentselectiongprot')
+    if prot.family.parent.parent.name=='Arrestin':
+        return HttpResponseRedirect('/alignment/segmentselectionarrestin')
+    else:
+        return HttpResponseRedirect('/alignment/segmentselectiongprot')
 
 
 def HommodDownload(request):
