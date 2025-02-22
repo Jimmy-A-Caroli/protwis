@@ -646,7 +646,7 @@
             {% endif %}
 
 			<!--Drug table-->
-			{% if Full_data_drug_table %}
+			{% if Full_data_drug_table_exists == 'yes' %}
 				<hr>
 				<h3>Drug Information</h3>
 				<div style="font-size: 11px; white-space: nowrap;" id="table-container">
@@ -782,9 +782,11 @@
 <script type="text/javascript">
     var page = '{{ page }}';
 
+	{% if Full_data_drug_table_exists == 'yes' %}
+		var Full_table_data = JSON.parse('{{ Full_data_drug_table|escapejs }}');
+		initializeDataTable("#Table_drugs", Full_table_data);
+	{% endif %}
 
-	// Parse the drug table data
-	var Full_table_data = JSON.parse('{{ Full_data_drug_table|escapejs }}');
 
 
 	{% if assay_existence == 'yes' %}
@@ -960,7 +962,6 @@
 
 
 
-	initializeDataTable("#Table_drugs", Full_table_data);
 	function initializeDataTable(tableId, data) {
 		// Define page-specific column definitions based on the type
 		var pageSpecificDefs = [];

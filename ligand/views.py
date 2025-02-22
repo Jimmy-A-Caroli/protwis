@@ -16,7 +16,6 @@ from random import SystemRandom
 from copy import deepcopy
 from collections import defaultdict, OrderedDict
 
-
 from django.middleware.csrf import get_token
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseServerError, JsonResponse
@@ -2960,8 +2959,13 @@ class LigandInformationView(TemplateView):
 
                 # Convert DataFrame to JSON
                 context['Full_data_drug_table'] = Modified_df_drug.to_json(orient='records')
+                if context['Full_data_drug_table'] == "[]":
+                    context['Full_data_drug_table_exists'] = 'no'
+                else:
+                    context['Full_data_drug_table_exists'] = 'yes'
             else:
                 context['Full_data_drug_table'] = None
+                context['Full_data_drug_table_exists'] = 'no'
 
 
         else:
@@ -2970,7 +2974,8 @@ class LigandInformationView(TemplateView):
                 'Phase_II_trials': 0,
                 'Phase_III_trials': 0,
                 'Approved': 'No',
-                'Full_data_drug_table': None
+                'Full_data_drug_table': None,
+                'Full_data_drug_table_exists': 'no'
                 })
 
         #####################################
