@@ -737,7 +737,7 @@ class AbsReferenceSelectionTable(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -855,7 +855,7 @@ class AbsTargetSelectionTable(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -974,7 +974,7 @@ class AbsTargetSelection(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -1170,7 +1170,7 @@ class AbsMiscSelection(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
