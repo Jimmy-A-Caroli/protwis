@@ -742,7 +742,7 @@
 	  // Check if we should render the molecule from SMILES
 	  var ligandPicture = "{{ ligand.picture }}";
 	  if (ligandPicture === "Generate_from_SMILES") {
-		const smiles = "{{ ligand.ligand_smiles|default:'' }}";  // Get SMILES from backend
+		const smiles = "{{ ligand.ligand_smiles_for_image|default:'' }}";  // Get SMILES from backend
   
 		if (typeof OCL !== "undefined" && smiles) {
 		  try {

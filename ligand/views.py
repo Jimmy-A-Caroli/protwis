@@ -37,7 +37,7 @@ from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.selection import Selection, SelectionItem
 from mapper.views import LandingPage
 from ligand.models import Ligand, LigandVendorLink, BiasedPathways, AssayExperiment, BiasedData, Endogenous_GTP, LigandID, LigandPeptideStructure, LigandMol, LigandFingerprint
-from ligand.functions import OnTheFly, AddPathwayData, is_valid_smiles
+from ligand.functions import OnTheFly, AddPathwayData, is_valid_smiles, to_canonical_smiles
 from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
 from interaction.models import StructureLigandInteraction
 from mutation.models import MutationExperiment
@@ -3144,7 +3144,18 @@ class LigandInformationView(TemplateView):
         ld = dict()
         ld['ligand_id'] = ligand_data.id
         ld['ligand_name'] = ligand_data.name
-        ld['ligand_smiles'] = ligand_data.smiles
+        # Prepare a version for image rendering (fix problematic backslashes)
+        if is_valid_smiles(ligand_data.smiles):
+
+            smiles_for_display = to_canonical_smiles(ligand_data.smiles)
+            ld['ligand_smiles'] = smiles_for_display
+            # Get an escaped version to feed into the canonicalizer
+            smiles_for_image = to_canonical_smiles(ligand_data.smiles).encode('unicode_escape').decode()
+            ld['ligand_smiles_for_image'] = smiles_for_image
+        else:
+            ld['ligand_smiles'] = ligand_data.smiles
+            ld['ligand_smiles_for_image'] = ligand_data.smiles
+
         ld['ligand_inchikey'] = ligand_data.inchikey
         try:
             ld['type'] = ligand_data.ligand_type.name.replace('-',' ').capitalize()
@@ -3159,7 +3170,7 @@ class LigandInformationView(TemplateView):
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
 
-        if is_valid_smiles(ligand_data.smiles) and (ld['mw'] is None or ld['mw'] < 800):
+        if is_valid_smiles(ld['ligand_smiles_for_image']) and (ld['mw'] is None or ld['mw'] < 800):
             ld['picture'] = 'Generate_from_SMILES'
         elif ligand_data.sequence is not None:
             # peptide or protein ligand

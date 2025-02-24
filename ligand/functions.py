@@ -806,3 +806,18 @@ def is_valid_smiles(smiles_str):
         # Optionally, log or print the exception message.
         # print(f"Error encountered: {e}")
         return False
+
+def to_canonical_smiles(smiles: str) -> str:
+    """
+    Converts a given SMILES string into its canonical form.
+    
+    Parameters:
+        smiles (str): The input SMILES string.
+    
+    Returns:
+        str: The canonical SMILES string.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        raise ValueError("Invalid SMILES string provided.")
+    return Chem.MolToSmiles(mol, canonical=True)
