@@ -227,7 +227,7 @@ class PhosphorylationBrowser(TemplateView):
             'web_links',
             queryset=WebLink.objects.filter(web_resource__id__in=[8, 5]).select_related('web_resource'),
             to_attr='links')
-        
+
         class_names = [
             "Class A (Rhodopsin)",
             "Class B1 (Secretin)",
