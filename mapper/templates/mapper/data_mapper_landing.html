@@ -83,6 +83,47 @@
 .dropdown-icon.expanded {
     transform: rotate(90deg);
 }
+
+.my-icon-check {
+  text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
+  font-size: 1.1em;
+  vertical-align: middle; 
+  position: relative;
+  /* top: 2px; */
+  color: black;
+}
+
+.my-icon-cross {
+  text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
+  font-size: 1.1em;
+  vertical-align: middle; 
+  position: relative;
+  /* top: 2px; */
+  color: grey;
+}
+/* 
+table {
+  border: none !important;
+  border-collapse: collapse;
+}
+table th, table td {
+  border: none !important;
+} */
+
+
+.separator-row td {
+  border: none !important;
+  background: transparent !important;
+}
+
+.second-table-header th {
+  border: none !important; 
+}
+
+.second-table-header th:first-child {
+  border-right: 1px solid #ccc !important;  
+}
+
   /* added by soren - end */
 </style>
 <style>
@@ -96,40 +137,41 @@
 {% block content %}
 
 
-<div class='col-md-12'>
+<!-- <div class='col-md-12'>
     <h2 style='text-align:center;margin-top: 20px;margin-bottom: 30px;'>Data Mapper</h2>
-</div>
+</div> -->
 <div class='col-md-12'>
   <table class="table text-center" style="border-collapse: collapse; width: 100%; text-align: center;">
     <thead>
       <tr>
         <!-- First header cell: only right border -->
-        <th style="border-right: 1px solid #ccc; padding: 8px; text-align: center;vertical-align: middle;">
+        <th style="border-right: 1px solid #ccc;  text-align: center;vertical-align: middle;">
           <h4>1) Choose a plot</h4>
         </th>
         <!-- Other header cells: no borders (or set whatever you want) -->
-        <th style="padding: 8px;text-align: center;">
+        <th style="text-align: center;">
+          <span style="font-size: 16px;">GPCRome Wheel</span>
+          <br>
           <img src="{% static 'home/images/DataMapper/gpcrome_example.png' %}" 
                width="140" height="140" alt="GPCRome" style="margin-bottom: 5px;"/>
           <br>
-          GPCRome Wheel
-          <br>
+          
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#GPCRomeModal" style="margin-top: 5px;">
             More info
           </button>
         </th>
-        <th style="padding: 8px;text-align: center;">
+        <th style="text-align: center;">
+          Tree
+          <br>
           <img src="{% static 'home/images/DataMapper/phylo_example.png' %}" 
                width="140" height="140" alt="Tree" style="margin-bottom: 5px;"/>
-          <br>
-          Tree
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#phyloTreeModal" style="margin-top: 5px;">
             More info
           </button>
         </th>
-        <th style="padding: 8px;text-align: center;">
-          <img src="{% static 'home/images/DataMapper/cluster_example.png' %}" 
+        <th style="text-align: center;">
+          <img src="{% static 'home/images/DataMapper/cluster_icon_new.png' %}" 
                width="140" height="140" alt="Cluster" style="margin-bottom: 5px;"/>
           <br>
           Cluster
@@ -138,7 +180,7 @@
             More info
           </button>
         </th>
-        <th style="padding: 8px;text-align: center;">
+        <th style="text-align: center;">
           <img src="{% static 'home/images/DataMapper/list_example.png' %}" 
                width="140" height="140" alt="List" style="margin-bottom: 5px;"/>
           <br>
@@ -148,7 +190,7 @@
             More info
           </button>
         </th>
-        <th style="padding: 8px;text-align: center;">
+        <th style="text-align: center;">
           <img src="{% static 'home/images/DataMapper/heatmap_example.png' %}" 
                width="140" height="140" alt="Heatmap" style="margin-bottom: 5px;"/>
           <br>
@@ -163,146 +205,153 @@
     <tbody>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Max no. GPCRs
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><strong>425</strong></td>
-        <td style="padding: 8px;"><strong>200</strong></td>
-        <td style="padding: 8px;"><strong>425</strong></td>
-        <td style="padding: 8px;"><strong>425</strong></td>
-        <td style="padding: 8px;"><strong>50</strong></td>
+        <td ><strong>425</strong></td>
+        <td ><strong>200</strong></td>
+        <td ><strong>425</strong></td>
+        <td ><strong>425</strong></td>
+        <td ><strong>50</strong></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Max no. dots
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><strong>1</strong></td>
-        <td style="padding: 8px;"><strong>5</strong></td>
-        <td style="padding: 8px;"><strong>1</strong></td>
-        <td style="padding: 8px;"><strong>4</strong></td>
-        <td style="padding: 8px;"><strong>5</strong></td>
+        <td ><strong>1</strong></td>
+        <td ><strong>5</strong></td>
+        <td ><strong>1</strong></td>
+        <td ><strong>4</strong></td>
+        <td ><strong>5</strong></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Dot color gradients
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Dot multi-color
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Dot shape
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Dot size
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;">
+        <th style="border-right: 1px solid #ccc; text-align: center;">
           Dot position
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-check text-success"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
-        <td style="padding: 8px;"><i class="fas fa-times text-danger"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-check my-icon-check"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-times my-icon-cross"></i></td>
       </tr>
 
       
     <!-- Separator row (no borders). Spans all 6 columns. -->
-    <tr style="border-bottom: 2px solid white;">
-      <td colspan="6" style="border: none; height: 30px;"></td>
+    <!-- Separator row (no borders). Spans all 6 columns. -->
+    <tr class="separator-row">
+      <td colspan="6" style="height: 30px;"></td>
     </tr>
 
     <!-- Second table -->
-    <tr>
-      <th style="border-right: 1px solid #ccc;padding: 8px; text-align: center; vertical-align: middle;">
+    <tr class="second-table-header">
+      <th style="text-align: center; vertical-align: middle;">
         <h4>2) Download template</h4>
       </th>
+
       <!-- 5 more columns to keep the total at 6 -->
-      <th style="padding: 8px;text-align: center;">GPCRome Wheel</th>
-      <th style="padding: 8px;text-align: center;">Tree</th>
-      <th style="padding: 8px;text-align: center;">Cluster</th>
-      <th style="padding: 8px;text-align: center;">List</th>
-      <th style="padding: 8px;text-align: center;">Heatmap</th>
+      <th style="text-align: center;">GPCRome Wheel</th>
+      <th style="text-align: center;">Tree</th>
+      <th style="text-align: center;">Cluster</th>
+      <th style="text-align: center;">List</th>
+      <th style="text-align: center;">Heatmap</th>
+      <!-- <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th> -->
     </tr>
 
     <!-- Second "section" rows -->
     <tr>
-      <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;vertical-align: middle;">
-        Number based data
+      <th style="border-right: 1px solid #ccc; text-align: center;vertical-align: middle;">
+        For numeric data
       </th>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
     </tr>
     <tr>
-      <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;vertical-align: middle;">
-        Text based data
+      <th style="border-right: 1px solid #ccc; text-align: center;vertical-align: middle;">
+        For text data
       </th>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
-      <td style="padding: 8px;">
+      <td >
         <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
       </td>
     </tr>
@@ -313,20 +362,20 @@
 
     <!-- Second table -->
     <tr>
-      <th style="border-right: 1px solid #ccc;padding: 8px; text-align: center; vertical-align: middle;">
+      <th style="border-right: 1px solid #ccc; text-align: center; vertical-align: middle;">
         <h4>3) Upload your data</h4>
       </th>
       <!-- 5 more columns to keep the total at 6 -->
-      <th style="padding: 8px;text-align: center;"></th>
-      <th style="padding: 8px;text-align: center;"></th>
-      <th style="padding: 8px;text-align: center;"></th>
-      <th style="padding: 8px;text-align: center;"></th>
-      <th style="padding: 8px;text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
+      <th style="text-align: center;"></th>
     </tr>
 
     <!-- Second "section" rows -->
     <tr>
-      <th style="border-right: 1px solid #ccc; padding: 8px;text-align: center;vertical-align: middle;">Upload your template file<br>filled with your data</th>
+      <th style="border-right: 1px solid #ccc; text-align: center;vertical-align: middle;">Your data in a template file</th>
       <td colspan="5">
         <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'landing_page' %}">
           {% csrf_token %}
