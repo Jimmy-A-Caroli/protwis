@@ -280,6 +280,7 @@
 {% endblock %}
 
 {% block addon_js %}
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script>
 <script src="{% static 'home/js/jquery.dataTables.min.js' %}"> </script>
 <script src="{% static 'home/js/dataTables.tableTools.min.js' %}"> </script>
 <script src="{% static 'home/js/jquery.dataTables.columnFilter.js' %}"> </script>
@@ -302,32 +303,79 @@
     var key_0_potency = '0_'+target_details_iDisplayLength_potency; 
     target_details_potency_pages[key_0_potency] = true;
 
+    const NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+
     this.compoundPreview = function (selection="a.struct") {
-
-        //Define position of the tooltip in relation to the cursor
-        xOffset = 30;
-        yOffset = -10;
-
-        $(selection).hover(function (e) {
-            this.t = this.title;
-            this.title = "";
-            var c = (this.t != "") ? "<br/>" + this.t : "";
-            $("body").append("<p id='struct'><img style='max-width: 200px; height: auto' src='" + this.rel + "'/>" + c + "</p>");
-            $("#struct")
-                .css("top", (e.pageY - yOffset) + "px")
-                .css("left", (e.pageX + xOffset) + "px")
-                .fadeIn("fast");
+      // Some offsets for the tooltip
+      const xOffset = 30;
+      const yOffset = -10;
+  
+      $(selection).hover(
+        function (e) {
+          // This element is the <a> hovered over
+          let $link = $(this);
+  
+          // The old approach used 'this.rel'
+          let fallbackUrl = $link.attr("rel");  // Could be "Generate_from_SMILES" or "Not_available"
+          let smiles = $link.data("smiles") || ""; // The actual SMILES from data-smiles
+  
+          let tooltipHtml = "";
+  
+          if (fallbackUrl === "Generate_from_SMILES" && smiles) {
+            // 1) We want to generate an inline SVG using OpenChemLib
+            try {
+              let mol = OCL.Molecule.fromSmiles(smiles);
+              mol.inventCoordinates();  // Lay out 2D coords
+              // Optional: tweak size or options as you like
+              const svgSize = 200;
+              const svgOptions = {
+                autoCrop: true,
+                noStereoProblem: true, 
+                suppressChiralText: true,
+                suppressCIPParity: true,
+                suppressESR: true,
+              };
+              // Convert to SVG
+              let svg = mol.toSVG(svgSize, svgSize, null, svgOptions);
+              tooltipHtml = svg;
+            } catch (err) {
+              console.error("Error generating SMILES with OCL:", err);
+              tooltipHtml = "<div>Invalid SMILES</div>";
+            }
+          } else if (fallbackUrl !== "Not_available") {
+            tooltipHtml = `<img style="max-width: 200px; height: auto" src="${fallbackUrl}" />`;
+          } else {
+            // If fallbackUrl === "Not_available", use your local No_image_available.svg
+            tooltipHtml = `<img style="max-width: 200px; height: auto" src="${NO_IMAGE_URL}" />`;
+          }
+  
+          // Create the tooltip container
+          $("body").append(`<p id="struct">${tooltipHtml}</p>`);
+  
+          // Position the tooltip near the cursor
+          $("#struct")
+            .css({
+              top:  (e.pageY - yOffset) + "px",
+              left: (e.pageX + xOffset) + "px"
+            })
+            .fadeIn("fast");
         },
-            function () {
-                this.title = this.t;
-                $("#struct").remove();
-            });
-        $(selection).mousemove(function (e) {
-            $("#struct")
-                .css("top", (e.pageY - yOffset) + "px")
-                .css("left", (e.pageX + xOffset) + "px");
-        });
-    };
+        function () {
+          // on mouseleave: remove the tooltip
+          $("#struct").remove();
+        }
+      );
+  
+      // Move the tooltip with the mouse
+      $(selection).mousemove(function (e) {
+        $("#struct")
+          .css({
+            top:  (e.pageY - yOffset) + "px",
+            left: (e.pageX + xOffset) + "px"
+          });
+      });
+  };
+  
     var mode = '{{ mode }}';
     var ligand_query = '{{ ligand_query }}';
     console.log(mode);
@@ -1215,7 +1263,15 @@
                        {% if ligand_similarity %}
                        <td align="right">{{record.ligand_similarity|stringformat:".2f"}}</td>
                        {% endif %}
-                       <td><a class="struct struct_potency" rel="{{record.picture}}" href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.ligand_name|safe}}</a></td>
+                       <td>
+                        <a class="struct struct_potency"
+                           rel="{{ record.picture }}"
+                           data-smiles="{{ record.smiles_for_image|default:'' }}"
+                           href="/ligand/{{ record.lig_id }}/info" 
+                           target="_blank">
+                          {{ record.ligand_name|safe }}
+                        </a>
+                      </td>                      
                        <td align="right"><a href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.lig_id}}</a></td>
                        <td>{{record.ligand_type}}</td>
                        <td>{{record.reference}}</td>
@@ -1401,7 +1457,15 @@
                     {% if ligand_similarity %}
                     <td align="right">{{record.ligand_similarity|stringformat:".2f"}}</td>
                     {% endif %}
-                    <td><a class="struct struct_affinity" rel="{{record.picture}}" href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.ligand_name|safe}}</a></td>
+                    <td>
+                      <a class="struct struct_potency"
+                         rel="{{ record.picture }}"
+                         data-smiles="{{ record.smiles_for_image|default:'' }}"
+                         href="/ligand/{{ record.lig_id }}/info" 
+                         target="_blank">
+                        {{ record.ligand_name|safe }}
+                      </a>
+                    </td>                    
                     <td align="right"><a href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.lig_id}}</a></td>
                     <td>{{record.ligand_type}}</td>
                     <td>{{record.reference}}</td>

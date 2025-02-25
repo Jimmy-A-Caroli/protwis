@@ -37,7 +37,7 @@ from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.selection import Selection, SelectionItem
 from mapper.views import LandingPage
 from ligand.models import Ligand, LigandVendorLink, BiasedPathways, AssayExperiment, BiasedData, Endogenous_GTP, LigandID, LigandPeptideStructure, LigandMol, LigandFingerprint
-from ligand.functions import OnTheFly, AddPathwayData, is_valid_smiles, to_canonical_smiles
+from ligand.functions import OnTheFly, AddPathwayData, standardize_smiles
 from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
 from interaction.models import StructureLigandInteraction
 from mutation.models import MutationExperiment
@@ -1006,11 +1006,8 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
 
         for lig in ligs:
             records = d[lig]
-            if is_valid_smiles(lig.smiles) and (lig.mw is None or lig.mw < 800):
-                picture = img_setup_smiles.format(urllib.parse.quote(lig.smiles))
-            else:
-                # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
-                picture = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png?20190827162820"
+
+            canonical_smiles, smiles_for_image, picture = standardize_smiles(lig.smiles, lig.mw)
 
             purchasability = vendors_dict[lig.id] if lig.id in vendors_dict.keys() else 0
 
@@ -1084,13 +1081,14 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
                                     'value_type': value_type,
                                     'ligand_type': lig.ligand_type.name.replace('-',' ').capitalize(),
                                     'source': source,
-                                    'smiles': lig.smiles,
+                                    'smiles': canonical_smiles,
                                     'mw': lig.mw,
                                     'rotatable_bonds': lig.rotatable_bonds,
                                     'hdon': lig.hdon,
                                     'hacc': lig.hacc,
                                     'logp': lig.logp,
                                     'reference': record.reference_ligand,
+                                    'smiles_for_image': smiles_for_image,
                                 }
                                 if ligand_search:
                                     binding_dict['name'] = Protein(name=protein.name).short()
@@ -1117,13 +1115,14 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
                                     'value_type': value_type,
                                     'ligand_type': lig.ligand_type.name.replace('-',' ').capitalize(),
                                     'source': source,
-                                    'smiles': lig.smiles,
+                                    'smiles': canonical_smiles,
                                     'mw': lig.mw,
                                     'rotatable_bonds': lig.rotatable_bonds,
                                     'hdon': lig.hdon,
                                     'hacc': lig.hacc,
                                     'logp': lig.logp,
                                     'reference': record.reference_ligand,
+                                    'smiles_for_image': smiles_for_image,
                                 }
                                 if ligand_search:
                                     functional_dict['name'] = Protein(name=protein.name).short()
@@ -3144,18 +3143,6 @@ class LigandInformationView(TemplateView):
         ld = dict()
         ld['ligand_id'] = ligand_data.id
         ld['ligand_name'] = ligand_data.name
-        # Prepare a version for image rendering (fix problematic backslashes)
-        if is_valid_smiles(ligand_data.smiles):
-
-            smiles_for_display = to_canonical_smiles(ligand_data.smiles)
-            ld['ligand_smiles'] = smiles_for_display
-            # Get an escaped version to feed into the canonicalizer
-            smiles_for_image = to_canonical_smiles(ligand_data.smiles).encode('unicode_escape').decode()
-            ld['ligand_smiles_for_image'] = smiles_for_image
-        else:
-            ld['ligand_smiles'] = ligand_data.smiles
-            ld['ligand_smiles_for_image'] = ligand_data.smiles
-
         ld['ligand_inchikey'] = ligand_data.inchikey
         try:
             ld['type'] = ligand_data.ligand_type.name.replace('-',' ').capitalize()
@@ -3169,14 +3156,8 @@ class LigandInformationView(TemplateView):
         ld['mw'] = ligand_data.mw
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
+        ld['ligand_smiles'], ld['ligand_smiles_for_image'], ld['picture'] = standardize_smiles(ligand_data.smiles, ld['mw'])
 
-        if is_valid_smiles(ld['ligand_smiles_for_image']) and (ld['mw'] is None or ld['mw'] < 800):
-            ld['picture'] = 'Generate_from_SMILES'
-        elif ligand_data.sequence is not None:
-            # peptide or protein ligand
-            ld['picture'] = 'Generate_from_sequence'
-        else:
-            ld['picture'] = 'Not_available'
         #Sorting links if ligand is endogenous
         if ligand_data.id in endogenous_ligands:
             sorted_list = ['Guide To Pharmacology', 'DrugBank', 'Drug Central', 'ChEMBL_compound_ids', 'PubChem']
