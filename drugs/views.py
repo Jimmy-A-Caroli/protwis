@@ -2166,8 +2166,8 @@ def indication_detail(request, code):
     # Replace the nodes list with the new one
     sankey['nodes'] = new_nodes
 
-    print("=== Sankey Debug: final sankey data ===")
-    print(json.dumps(sankey, indent=2))
+    # print("=== Sankey Debug: final sankey data ===")
+    # print(json.dumps(sankey, indent=2))
     total_points = len(caches['targets']) + len(caches['targets']) + 1
     if len(caches['ligands']) > len(caches['targets']):
         context['nodes_nr'] = len(caches['ligands'])

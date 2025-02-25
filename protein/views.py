@@ -153,9 +153,7 @@ def get_sankey_data(entry_name):
     """
     if entry_name is None:
         return (None, None, None)
-    #ADDING SECTION FOR SANKEY
 
-    #slug = '5ht1a_human'
     indication_data = Drugs.objects.filter(target__entry_name=entry_name).prefetch_related('ligand',
                                                                                          'target',
                                                                                          'indication')
@@ -170,7 +168,7 @@ def get_sankey_data(entry_name):
 
     node_counter = 0
     for record in indication_data:
-        #assess the values for indication/ligand/protein
+        # Assess the values for indication/ligand/protein
         indication_name = record.indication.title.capitalize()
         indication_code = record.indication.code
         indication_0 = record.indication.get_level_0().title
@@ -179,7 +177,8 @@ def get_sankey_data(entry_name):
         ligand_id = record.ligand.id
         protein_name = record.target.name
         target_name = record.target.entry_name
-        #check for each value if it exists and retrieve the source node value
+
+        # Add nodes if not already added, then get their assigned node index
         if indication_name not in caches['indication']:
             sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code})
             node_counter += 1
@@ -187,7 +186,7 @@ def get_sankey_data(entry_name):
         indi_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_name), None)
 
         if indication_0 not in caches['level_0']:
-            sankey['nodes'].append({"node": node_counter, "name": indication_0, "url":'https://icd.who.int/browse/2024-01/mms/en#'+uri})
+            sankey['nodes'].append({"node": node_counter, "name": indication_0, "url": 'https://icd.who.int/browse/2024-01/mms/en#'+uri})
             node_counter += 1
             caches['level_0'].append(indication_0)
         level_0_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_0), None)
@@ -205,43 +204,64 @@ def get_sankey_data(entry_name):
             caches['entries'].append(target_name)
         prot_node = next((item['node'] for item in sankey['nodes'] if item['name'] == protein_name), None)
 
-        #append connection between level 0 and ligand
-        sankey['links'].append({"source":prot_node, "target":lig_node, "value":1, "ligtrace": ligand_name, "prottrace": None})
-        #append connection between ligand and target
-        sankey['links'].append({"source":lig_node, "target":level_0_node, "value":1, "ligtrace": ligand_name, "prottrace": indication_name})
-        #append connection between indication and level 0
-        sankey['links'].append({"source":level_0_node, "target":indi_node, "value":1, "ligtrace": ligand_name, "prottrace": indication_name})
+        # Append connections (note: order of links can be adjusted as needed)
+        sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": ligand_name, "prottrace": None})
+        sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": ligand_name, "prottrace": indication_name})
+        sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": ligand_name, "prottrace": indication_name})
 
-    #Fixing redundancy in sankey['links']
+    # Fixing redundancy in sankey['links']
     unique_combinations = {}
-
     for d in sankey['links']:
-        # Create a key based on source and target for identifying unique combinations
         key = (d['source'], d['target'])
-
         if key in unique_combinations:
-            # If the combination exists, add the value to the existing entry
             unique_combinations[key]['value'] += d['value']
         else:
-            # If it's a new combination, add it to the dictionary
             unique_combinations[key] = d
-
-    # Convert the unique_combinations back to a list of dictionaries
     sankey['links'] = list(unique_combinations.values())
+
+    # --- New Cleanup: Remove unused nodes and reindex ---
+    # Identify all node indices that are actually referenced in links.
+    used_nodes = set()
+    for link in sankey['links']:
+        used_nodes.add(link['source'])
+        used_nodes.add(link['target'])
+
+    # Build a new nodes list and create a mapping from old to new node indices.
+    old_to_new = {}
+    new_nodes = []
+    new_index = 0
+    for node_dict in sankey['nodes']:
+        old_idx = node_dict["node"]
+        if old_idx in used_nodes:
+            new_node_dict = {
+                "node": new_index,
+                "name": node_dict["name"],
+                "url": node_dict["url"]
+            }
+            new_nodes.append(new_node_dict)
+            old_to_new[old_idx] = new_index
+            new_index += 1
+
+    # Update the source and target indices in the links.
+    for link in sankey['links']:
+        link["source"] = old_to_new[link["source"]]
+        link["target"] = old_to_new[link["target"]]
+
+    # Replace the nodes list with the new one.
+    sankey['nodes'] = new_nodes
+    # --- End of Cleanup ---
+
     total_points = len(caches['indication']) + len(caches['ligands']) + 1
-    if len(caches['ligands']) > len(caches['indication']):
-        nodes_nr = len(caches['ligands'])
-    else:
-        nodes_nr = len(caches['indication'])
+    nodes_nr = len(caches['ligands']) if len(caches['ligands']) > len(caches['indication']) else len(caches['indication'])
 
-    ###########
     sankey_data = {
-            'sankey': sankey,
-            'total_points': total_points,
-            'nodes_nr': nodes_nr
-        }
+        'sankey': sankey,
+        'total_points': total_points,
+        'nodes_nr': nodes_nr
+    }
 
-    return sankey_data 
+    return sankey_data
+
 
 
 def SelectionAutocomplete(request):
