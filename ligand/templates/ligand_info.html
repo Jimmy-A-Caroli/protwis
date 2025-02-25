@@ -101,13 +101,9 @@
 	}
 
 	/* From selection_drugs.html */
-	.link {
-	  fill: none;
-	  stroke: #969696;
-	  stroke-opacity: .1;
-	}
+	
 	.link:hover {
-	  stroke-opacity: 0.3;
+	  opacity: 0.3;
 	}
 	
 	.custom-dropdown {
@@ -191,7 +187,10 @@
 		width: 275px;
 		background: linear-gradient(to right, white 0%, blue 100%)
 	}
-	
+	#sankey_plot {
+		max-width: 100%;
+		min-width: 600px; /* Adjust this to your minimum desired width */
+	}
 </style>
 
 <style type="text/css">
@@ -627,7 +626,7 @@
              <hr>
             {% if plot_existence == 'yes' %}
 				<h3>Sankey plot</h3>
-					<div id="sankey_plot" style="display: flex; justify-content: center;"></div>
+					<div id="sankey_plot" style="width: 100%; display: flex; justify-content: center;"></div>
 					<p>
 						<div class="btn-group">
 							<button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -1154,14 +1153,43 @@
 </script>
 
 <script>
-var sankey_data = JSON.parse('{{ sankey|safe }}');
-var top_nodes = '{{ nodes_nr|safe }}';
-var totalPoints = '{{ points }}';
-var custom_width = 1300;
+document.addEventListener('DOMContentLoaded', function() {
+    var sankey_data = JSON.parse('{{ sankey|safe }}');
+    var top_nodes = '{{ nodes_nr|safe }}';
+    var totalPoints = '{{ points }}';
+    var Sankey_location = 'sankey_plot';
+    
+    // Function to initialize or redraw the Sankey plot
+    function initializeSankeyPlot() {
+        var containerWidth = document.getElementById(Sankey_location).offsetWidth;
+        
+        // Check if the container has a width greater than 0
+        if (containerWidth > 0) {
+            // Remove the existing plot to avoid duplication
+            d3v4.select('#' + Sankey_location).select('svg').remove();
+            
+            // Draw the Sankey plot with the current container width
+            SankeyPlot(sankey_data, Sankey_location, top_nodes, totalPoints, containerWidth);
+        }
+    }
 
-// set the dimensions and margins of the graph
-// set height iteratively based on highest number of nodes
-SankeyPlot(sankey_data, 'sankey_plot', top_nodes, totalPoints, custom_width);
+    // Event listener for window resize to make the plot responsive
+    window.addEventListener('resize', function() {
+        initializeSankeyPlot();
+    });
+
+    // Event listener for Bootstrap tab shown event
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var target = $(e.target).attr("href"); // Get the href attribute to identify the active tab
+        
+        // Only initialize if the target is the tab containing the Sankey plot
+        if (target === '#agent_drug') {  // Change this to the ID of the tab containing the plot
+            initializeSankeyPlot();
+        }
+    });
+});
+
+
 </script>
 
 <script type="text/javascript">
@@ -1225,14 +1253,15 @@ SankeyPlot(sankey_data, 'sankey_plot', top_nodes, totalPoints, custom_width);
 
 <script>
     $(document).ready(function () {
+		$('#agent_drug_tab').click();
         // Check if the navigation came from the Drug page
-        if (localStorage.getItem('fromDrugPage') === 'true') {
-            // Simulate a click on the "Agent/Drug" tab
-            $('#agent_drug_tab').click();
+        // if (localStorage.getItem('fromDrugPage') === 'true') {
+        //     // Simulate a click on the "Agent/Drug" tab
+        //     $('#agent_drug_tab').click();
 
-            // Clear the flag after use
-            localStorage.removeItem('fromDrugPage');
-        }
+        //     // Clear the flag after use
+        //     localStorage.removeItem('fromDrugPage');
+        // }
     });
 </script>
 
