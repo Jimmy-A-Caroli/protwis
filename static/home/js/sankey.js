@@ -39,9 +39,11 @@ d3v4.sankey = function() {
   sankey.layout = function(iterations) {
     computeNodeLinks();
     computeNodeValues();
+    adjustNodeHeightForLabels(); // Measure text height and store as minHeight
     computeNodeBreadths();
     computeNodeDepths(iterations);
     computeLinkDepths();
+    calculateLinkHeights();
     return sankey;
   };
 
@@ -49,32 +51,71 @@ d3v4.sankey = function() {
     computeLinkDepths();
     return sankey;
   };
+  
 
-  sankey.link = function() {
-    var curvature = .5;
+  function calculateLinkHeights() {
+    links.forEach(function(link) {
+      // Calculate start and end heights for the link
+      link.startHeight = (link.value / link.source.value) * link.source.dy;
+      link.endHeight = (link.value / link.target.value) * link.target.dy;
+    });
+  }
 
-    function link(d) {
-      var x0 = d.source.x + d.source.dx,
-          x1 = d.target.x,
-          xi = d3v4.interpolateNumber(x0, x1),
-          x2 = xi(curvature),
-          x3 = xi(1 - curvature),
-          y0 = d.source.y + d.sy + d.dy / 2,
-          y1 = d.target.y + d.ty + d.dy / 2;
-      return "M" + x0 + "," + y0
-           + "C" + x2 + "," + y0
-           + " " + x3 + "," + y1
-           + " " + x1 + "," + y1;
-    }
+  // sankey.link = function() {
+  //   var curvature = .5;
 
-    link.curvature = function(_) {
-      if (!arguments.length) return curvature;
-      curvature = +_;
-      return link;
-    };
+  //   function link(d) {
+      
+  //     var x0 = d.source.x + d.source.dx,
+  //         x1 = d.target.x,
+  //         xi = d3v4.interpolateNumber(x0, x1),
+  //         x2 = xi(curvature),
+  //         x3 = xi(1 - curvature),
+  //         y0 = d.source.y + d.sy + d.dy / 2,
+  //         y1 = d.target.y + d.ty + d.dy / 2;
+  //     console.log(d.source,x0,y0,xi)
+  //     console.log(d.source,x1,y1,xi)
+  //     return "M" + x0 + "," + y0
+  //          + "C" + x2 + "," + y0
+  //          + " " + x3 + "," + y1
+  //          + " " + x1 + "," + y1;
+  //   }
 
-    return link;
-  };
+  //   link.curvature = function(_) {
+  //     if (!arguments.length) return curvature;
+  //     curvature = +_;
+  //     return link;
+  //   };
+
+  //   return link;
+  // };
+
+  // Measure Text Height and Store as minHeight
+  function adjustNodeHeightForLabels() {
+    nodes.forEach(function(node) {
+      var requiredHeight = measureTextHeight(node) + 5;
+      node.minHeight = requiredHeight;  // Store it as minHeight
+    });
+  }
+
+  // function to map out height of text
+  function measureTextHeight(node) {
+    var tempDiv = d3v4.select("body").append("div")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("width", "140px")
+        .style("font-weight", "bold")
+        .style("font-size", "12px")
+        .style("line-height", "1.1em")
+        .style("overflow-wrap", "break-word")
+        .style("white-space", "pre-line")
+        .style("hyphens", "none")
+        .text(node.name);
+
+    var height = tempDiv.node().getBoundingClientRect().height;
+    tempDiv.remove();
+    return height;
+  }
 
   // Populate the sourceLinks and targetLinks for each node.
   // Also, if the source and target are not objects, assume they are indices.
@@ -130,13 +171,13 @@ d3v4.sankey = function() {
     scaleNodeBreadths((size[0] - nodeWidth) / (x - 1));
   }
 
-  function moveSourcesRight() {
-    nodes.forEach(function(node) {
-      if (!node.targetLinks.length) {
-        node.x = d3v4.min(node.sourceLinks, function(d) { return d.target.x; }) - 1;
-      }
-    });
-  }
+  // function moveSourcesRight() {
+  //   nodes.forEach(function(node) {
+  //     if (!node.targetLinks.length) {
+  //       node.x = d3v4.min(node.sourceLinks, function(d) { return d.target.x; }) - 1;
+  //     }
+  //   });
+  // }
 
   function moveSinksRight(x) {
     nodes.forEach(function(node) {
@@ -178,6 +219,11 @@ d3v4.sankey = function() {
         nodes.forEach(function(node, i) {
           node.y = i;
           node.dy = node.value * ky;
+
+          // Adjust node.dy if its less than minHeight
+          if (node.minHeight) {
+            node.dy = Math.max(node.dy, node.minHeight);
+          }
         });
       });
 
@@ -292,6 +338,64 @@ d3v4.sankey = function() {
 };
 
 
+function adjustSVGHeight(sankey_data) {
+  // 1) Find minY and maxY from node data
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  sankey_data.nodes.forEach(node => {
+    const top = node.y;
+    const bottom = node.y + node.dy;
+
+    minY = Math.min(minY, top);
+    maxY = Math.max(maxY, bottom);
+  });
+
+  
+
+  // 2) Calculate how tall the diagram needs to be (with some padding)
+  // e.g., 50 px padding
+  let neededHeight = maxY - minY + 50;
+
+  // 3) Grab the original svg height from your #sankey element
+  let originalHeight = +d3v4.select("#sankey").attr("height");
+
+  console.log(originalHeight,neededHeight)
+  // 4) If the neededHeight is bigger, we’ll expand
+  if (neededHeight > originalHeight) {
+    d3v4.select("#sankey")
+      .attr("height", neededHeight)
+      .style("height", neededHeight + "px");
+  }
+
+  // 5) Return the values so we can use them to shift if needed
+  return { minY, maxY, neededHeight, originalHeight };
+}
+
+function applyYOffset(sankey_data) {
+  // We call adjustSVGHeight and get the calculations
+  let { minY, neededHeight, originalHeight } = adjustSVGHeight(sankey_data);
+
+  // If minY < 20, let’s shift everything down so the topmost node is at y=20
+  const desiredTopPadding = 20; 
+  const offset = desiredTopPadding - minY; // e.g. if minY= -5, offset=25
+
+  // If offset <= 0, we don’t need to move anything down
+  if (offset <= 0) return;
+
+  // Shift the entire <g> group 
+  // (Assuming your top-level <g> is the only child of #sankey)
+  d3v4.select("#sankey g")
+    .attr("transform", function() {
+      // We also might keep the original margin. If your code had something like:
+      // .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+      // then we can preserve that like:
+      const marginLeft = 0;  // or whatever your margin was
+      const marginTop  = 0;  // or whatever your margin was
+      return `translate(${marginLeft}, ${marginTop + offset})`;
+    });
+}
+
 
 
 /**
@@ -305,8 +409,12 @@ d3v4.sankey = function() {
 
 function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
   var margin = {top: 10, right: 10, bottom: 10, left: 10},
-      width = (typeof fix_width !== 'undefined' && fix_width !== null) ? fix_width - margin.left - margin.right : 1750 - margin.left - margin.right,
-      height = (top_nodes * 50) - margin.top - margin.bottom;
+      height = (top_nodes * 60) - margin.top - margin.bottom;
+  
+  var containerWidth = document.getElementById(location).offsetWidth;
+  var width = (typeof fix_width !== 'undefined' && fix_width !== null) 
+      ? fix_width - margin.left - margin.right 
+      : containerWidth - margin.left - margin.right;
 
   // append the svg object to the specified location
   var svg = d3v4.select('#' + location).append("svg")
@@ -334,17 +442,51 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
       .layout(100);
   
   // Add in the links
+  // Add in the links using custom polygon path
   var link = svg.append("g")
-    .selectAll(".link")
-    .data(sankey_data.links)
-    .enter()
-    .append("path")
-      .attr("class", "link")
-      .attr("d", sankey.link())
-      .attr("lig", function(d) { return d.ligtrace; })
-      .attr("prot", function(d) { return d.prottrace; })
-      .style("stroke-width", function(d) { return Math.max(1, d.dy); })
-      .sort(function(a, b) { return b.dy - a.dy; });
+  .selectAll(".link")
+  .data(sankey_data.links)
+  .enter()
+  .append("path")
+  .attr("class", "link")
+  .attr("d", function(d) {
+    // Calculate points for curved polygon path
+    var x0 = d.source.x + d.source.dx,
+        x1 = d.target.x,
+        xi = d3v4.interpolateNumber(x0, x1),
+        x2 = xi(0.5),           // Control point 1 for curvature
+        x3 = xi(1 - 0.5),       // Control point 2 for curvature
+        y0 = d.source.y + d.sy + d.startHeight / 2,  // Use startHeight
+        y1 = d.target.y + d.ty + d.endHeight / 2;    // Use endHeight
+
+    // Calculate the four corner points for the path
+    var topLeft     = [x0, y0 - d.startHeight / 2];
+    var bottomLeft  = [x0, y0 + d.startHeight / 2];
+    var bottomRight = [x1, y1 + d.endHeight / 2];
+    var topRight    = [x1, y1 - d.endHeight / 2];
+
+    // Create path with smooth curves and variable width
+    var path = "M" + topLeft[0] + "," + topLeft[1] +
+               "C" + x2 + "," + (topLeft[1]) + 
+               " " + x3 + "," + (topRight[1]) + 
+               " " + topRight[0] + "," + topRight[1] +
+
+               "L" + bottomRight[0] + "," + bottomRight[1] +
+
+               "C" + x3 + "," + (bottomRight[1]) + 
+               " " + x2 + "," + (bottomLeft[1]) + 
+               " " + bottomLeft[0] + "," + bottomLeft[1] +
+
+               "Z";
+
+    return path;
+  })
+  .attr("lig", function(d) { return d.ligtrace; })
+  .attr("prot", function(d) { return d.prottrace; })
+  .style("fill", "#969696")   // Changed to #969696
+  .style("opacity", 0.1)      // Set opacity to 0.1
+  .sort(function(a, b) { return b.dy - a.dy; });
+
 
   // Add in the nodes
   var node = svg.append("g")
@@ -364,22 +506,24 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
       .style("fill", function(d, i) {
          return color(i); // Apply color based on index
        })
+      .style("stroke", "black")  // Border color
+      .style("stroke-width", 0.5)  // Border thickness
       .on("click", function(d,i) {
          var isActive = d3v4.select(this).classed("active");
          var currentFillColor = d3v4.select(this).style("fill");
          // Reset all paths to default opacity
-         paths.style("stroke-opacity", 0.1);
-         paths.style("stroke", '#969696');
+         paths.style("opacity", 0.1);
+         paths.style("fill", '#969696');
          if (!isActive) {
-             paths.style("stroke-opacity", 0);
+             paths.style("opacity", 0);
              // Highlight the paths with the same name
              paths.filter(function() {
                  var ligPathName = d3v4.select(this).attr("lig");
                  var protPathName = d3v4.select(this).attr("prot");
                  return ligPathName === d.name || protPathName === d.name;
              })
-             .style("stroke-opacity", 0.5)
-             .style("stroke", "rgb(214, 230, 244)");
+             .style("opacity", 0.5)
+             .style("fill", "rgb(214, 230, 244)");
          }
          // Toggle the 'active' class on the clicked node
          d3v4.select(this).classed("active", !isActive);
@@ -388,104 +532,36 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
     .append("title")
       .text(function(d) { return d.name + "\n" + "There is " + d.value + " stuff in this node"; });
 
-  // Add in the title for the nodes
-  node.append("text")
-      .attr("x", -6)
-      .attr("y", function(d) { return d.dy / 2; })
-      .attr("dy", ".35em")
-      .attr("text-anchor", "end")
-      .attr("transform", null)
-      .style("font-weight", "bold")
-      .on("click", function(d) {window.open(d.url, '_blank')})
-      .each(function(d) {
-          // Replace HTML entities with Unicode characters
-          var formattedName = d.name.replace(/&alpha;/g, "α").replace(/&beta;/g, "β")
-                                    .replace(/&kappa;/g, "κ").replace(/&delta;/g, "δ")
-                                    .replace(/&mu;/g, "µ").replace(/&gamma;/g, "γ");
+  
+      node.append("foreignObject")
+  .attr("x", function(d) {
+    // Position to the right of left-side nodes, and to the left of right-side nodes
+    return d.x < width / 2 ? sankey.nodeWidth() + 6 : -150;
+  })
+  .attr("y", 0)  // Top of the node
+  .attr("width", 140) // Container width, adjust as needed
+  .attr("height", function(d) { return d.dy; }) // Container height = node height
+  .style("overflow", "visible")
+  .append("xhtml:div")
+  // Use flexbox to vertically center
+  .style("display", "flex")
+  .style("align-items", "center")    // Vertically center
+  .style("justify-content", function(d) {
+    // Align text left on the left side, right on the right side
+    return d.x < width / 2 ? "flex-start" : "flex-end";
+  })
+  .style("width", "100%")
+  .style("height", "100%")
+  .style("line-height", "normal")    // Reset line-height in container
+  // Basic text styling
+  .style("font-weight", "bold")
+  .style("font-size", "12px")
+  .style("white-space", "pre-line")  // Maintain line breaks
+  .style("hyphens", "none")          // Disable hyphenation
+  .html(function(d) {
+    // Only the text is clickable
+    return `<span style="cursor: pointer;" onclick="window.open('${d.url}', '_blank')">${d.name}</span>`;
+  });
 
-          var parts = formattedName.split("<sub>"),
-              mainText = parts[0],
-              subText = parts[1] ? parts[1].split("</sub>")[0] : '';
-
-          var supParts = mainText.split("<sup>"),
-              supText = supParts[1] ? supParts[1].split("</sup>")[0] : '';
-              mainText = supParts[0]; // Update mainText to exclude supText
-
-          var italicParts = mainText.split("<i>"),
-              italicText = italicParts[1] ? italicParts[1].split("</i>")[0] : '';
-              mainText = italicParts[0]; // Update mainText to exclude italicText
-
-          var text = d3v4.select(this);
-          text.text(mainText); // Set the main text
-          var words = mainText.split(/\s+/);
-
-          if(italicText) {
-              text.append("tspan")
-                  .style("font-style", "italic")
-                  .text(italicText);
-
-              // Check for remaining text after italic tag
-              if(italicParts[1] && italicParts[1].split("</i>")[1]) {
-                  text.append("tspan")
-                      .style("font-style", "normal") // Reset style to normal for following text
-                      .text(italicParts[1].split("</i>")[1]);
-              }
-          }
-
-          if(supText) {
-              text.append("tspan") // Add the superscript part
-                  .attr("dy", "-0.5em") // Move the superscript up
-                  .attr("dx", "-0.1em") // Nudge back to align after main text
-                  .style("font-size", "smaller") // Make superscript smaller
-                  .text(supText);
-          }
-
-          if(subText) {
-              text.append("tspan") // Add the subscript part
-                  .attr("dy", "0.7em") // Move the subscript down
-                  .attr("dx", "-0.1em") // Move the subscript back to align correctly after the main text
-                  .style("font-size", "smaller") // Make subscript smaller
-                  .text(subText);
-          }
-
-          if(parts[1] && parts[1].split("</sub>")[1]) {
-              // Add remaining text after the subscript, if any
-              text.append("tspan")
-                  .attr("dy", "-0.7em") // Move back up to align with the main text baseline
-                  .attr("dx", "0.0em") // Move forward past the subscript
-                  .text(parts[1].split("</sub>")[1]);
-          }
-
-          if(words.length > 3) {
-            text.text(null);
-            var lineNumber = 0;
-            var maxWordsPerLine = 3;
-            for (var i = 0; i < words.length; i += maxWordsPerLine) {
-                var line = words.slice(i, i + maxWordsPerLine).join(" ");
-                text.append("tspan")
-                    .attr("x", -6)
-                    .attr("dy", lineNumber === 0 ? "0em" : "1.1em")
-                    .text(line);
-
-                lineNumber++;
-            }
-          }
-
-      })
-      .filter(function(d) { return d.x < width / 2; })
-          .attr("x", 6 + sankey.nodeWidth())
-          .attr("text-anchor", "start");
-
-  // The function for moving the nodes
-  function dragmove(d) {
-    d3v4.select(this)
-      .attr("transform",
-            "translate("
-               + d.x + ","
-               + (d.y = Math.max(
-                  0, Math.min(height - d.dy, d3v4.event.y))
-                 ) + ")");
-    sankey.relayout();
-    link.attr("d", sankey.link() );
-  }
+  applyYOffset(sankey_data); // This will call adjustSVGHeight internally, expand the SVG if needed, and then shift if needed.
 }
