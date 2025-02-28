@@ -49,34 +49,33 @@
 
   function inlineStyles(el) {
     let css = "";
-    const sheets = document.styleSheets;
-    for (let i = 0; i < sheets.length; i++) {
-      const sheet = sheets[i];
-      // Some styleSheets could be from other domains or inline
-      if (!sheet.cssRules || !sheet.href || isExternal(sheet.href)) {
-        continue;
-      }
-      const rules = sheet.cssRules;
-      for (let j = 0; j < rules.length; j++) {
-        const rule = rules[j];
-        if (!rule.selectorText || !rule.style) {
-          // @font-face or other at-rules
-          if (rule.cssText.match(/^@font-face/)) {
-            css += rule.cssText + "\n";
-          }
-          continue;
-        }
+    const sheets = Array.from(document.styleSheets);
+
+    sheets.forEach((sheet) => {
+        // Try-catch block to avoid SecurityErrors
         try {
-          if (el.querySelector(rule.selectorText)) {
-            css += rule.selectorText + " { " + rule.style.cssText + " }\n";
-          }
-        } catch (err) {
-          console.warn("Skipping invalid CSS selector:", rule.selectorText, err);
+            if (sheet.cssRules) {
+                const rules = Array.from(sheet.cssRules);
+
+                rules.forEach((rule) => {
+                    // Only include styles that are relevant to the SVG
+                    if (rule instanceof CSSStyleRule && el.querySelector(rule.selectorText)) {
+                        css += rule.cssText + "\n";
+                    }
+                    // Include @font-face and other at-rules
+                    else if (rule instanceof CSSFontFaceRule || rule.cssText.match(/^@font-face/)) {
+                        css += rule.cssText + "\n";
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("Skipping cross-origin stylesheet:", sheet.href, e);
         }
-      }
-    }
+    });
+
     return css;
-  }
+}
+
 
   /**
    * 1. Clone the original <svg>
@@ -93,16 +92,6 @@
       let css = inlineStyles(clone);
 
       // Example: forcibly add link styling if you want
-      css += `
-      .link {
-        fill: none;
-        stroke: #969696;
-        stroke-opacity: 0.1;
-      }
-      .link:hover {
-        stroke-opacity: 0.3;
-      }
-      `;
 
       if (css.trim()) {
         const styleElem = document.createElement('style');

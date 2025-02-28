@@ -1,4 +1,5 @@
 d3v4.sankey = function() {
+  var allLinks = [];  // Store all links for click event tracing
   var sankey = {},
       nodeWidth = 24,
       nodePadding = 8,
@@ -26,8 +27,11 @@ d3v4.sankey = function() {
 
   sankey.links = function(_) {
     if (!arguments.length) return links;
-    links = _;
-    return sankey;
+      allLinks = _;  // Store all links (primary + interconnected)
+      links = _.filter(function(link) {
+          return link.linkage_key === "primary";  // Only use primary for layout
+      });
+      return sankey;
   };
 
   sankey.size = function(_) {
@@ -60,35 +64,6 @@ d3v4.sankey = function() {
       link.endHeight = (link.value / link.target.value) * link.target.dy;
     });
   }
-
-  // sankey.link = function() {
-  //   var curvature = .5;
-
-  //   function link(d) {
-      
-  //     var x0 = d.source.x + d.source.dx,
-  //         x1 = d.target.x,
-  //         xi = d3v4.interpolateNumber(x0, x1),
-  //         x2 = xi(curvature),
-  //         x3 = xi(1 - curvature),
-  //         y0 = d.source.y + d.sy + d.dy / 2,
-  //         y1 = d.target.y + d.ty + d.dy / 2;
-  //     console.log(d.source,x0,y0,xi)
-  //     console.log(d.source,x1,y1,xi)
-  //     return "M" + x0 + "," + y0
-  //          + "C" + x2 + "," + y0
-  //          + " " + x3 + "," + y1
-  //          + " " + x1 + "," + y1;
-  //   }
-
-  //   link.curvature = function(_) {
-  //     if (!arguments.length) return curvature;
-  //     curvature = +_;
-  //     return link;
-  //   };
-
-  //   return link;
-  // };
 
   // Measure Text Height and Store as minHeight
   function adjustNodeHeightForLabels() {
@@ -360,7 +335,6 @@ function adjustSVGHeight(sankey_data) {
   // 3) Grab the original svg height from your #sankey element
   let originalHeight = +d3v4.select("#sankey").attr("height");
 
-  console.log(originalHeight,neededHeight)
   // 4) If the neededHeight is bigger, we’ll expand
   if (neededHeight > originalHeight) {
     d3v4.select("#sankey")
@@ -407,7 +381,7 @@ function applyYOffset(sankey_data) {
  * @param {integer} [fix_width]  - (Optional) Fixed width for the Sankey plot in pixels. Defaults to 1000 if not provided.
  */
 
-function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
+function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width, pathMatrix){
   var margin = {top: 10, right: 10, bottom: 10, left: 10},
       height = (top_nodes * 60) - margin.top - margin.bottom;
   
@@ -445,7 +419,9 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
   // Add in the links using custom polygon path
   var link = svg.append("g")
   .selectAll(".link")
-  .data(sankey_data.links)
+  .data(sankey_data.links.filter(function(d) {
+    return d.linkage_key === "primary";
+    }))  // Filter primary links only for drawing
   .enter()
   .append("path")
   .attr("class", "link")
@@ -481,8 +457,11 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
 
     return path;
   })
+  .attr("link-id", function(d) { return d.link_identifier; })
   .attr("lig", function(d) { return d.ligtrace; })
   .attr("prot", function(d) { return d.prottrace; })
+  .attr("Source_name", function(d) { return d.source.name; })
+  .attr("target_name", function(d) { return d.target.name; })
   .style("fill", "#969696")   // Changed to #969696
   .style("opacity", 0.1)      // Set opacity to 0.1
   .sort(function(a, b) { return b.dy - a.dy; });
@@ -506,62 +485,124 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width){
       .style("fill", function(d, i) {
          return color(i); // Apply color based on index
        })
-      .style("stroke", "black")  // Border color
-      .style("stroke-width", 0.5)  // Border thickness
-      .on("click", function(d,i) {
-         var isActive = d3v4.select(this).classed("active");
-         var currentFillColor = d3v4.select(this).style("fill");
-         // Reset all paths to default opacity
-         paths.style("opacity", 0.1);
-         paths.style("fill", '#969696');
-         if (!isActive) {
-             paths.style("opacity", 0);
-             // Highlight the paths with the same name
-             paths.filter(function() {
-                 var ligPathName = d3v4.select(this).attr("lig");
-                 var protPathName = d3v4.select(this).attr("prot");
-                 return ligPathName === d.name || protPathName === d.name;
-             })
-             .style("opacity", 0.5)
-             .style("fill", "rgb(214, 230, 244)");
-         }
-         // Toggle the 'active' class on the clicked node
-         d3v4.select(this).classed("active", !isActive);
-       })
+       .on("click", function(d) {
+        var isActive = d3v4.select(this).classed("active");
+        
+        // Reset all paths to default state
+        paths.style("opacity", 0.1).style("fill", '#969696');
+        var linkIdsToHighlight = new Set();
+    
+        // If the node is active and clicked again, reset all highlights
+        if (isActive) {
+            paths.style("opacity", 0.1).style("fill", function(d) {
+                return '#969696'; // Reset to default color
+            });
+        } else {
+            // Identify Node Type and Filter Matrix
+            if (d.column === "x1") {
+                // x1 Node
+                var filteredRows = filterMatrixByNodeName(d.name, 'x1', pathMatrix);
+                linkIdsToHighlight = collectLinkIdentifiersFromMatrix(filteredRows);
+            } else if (d.column === "x2") {
+                // x2 Node
+                var filteredRows = filterMatrixByNodeName(d.name, 'x2', pathMatrix);
+                linkIdsToHighlight = collectLinkIdentifiersFromMatrix(filteredRows);
+            } else if (d.column === "x3") {
+                // x3 Node
+                var filteredRows = filterMatrixByNodeName(d.name, 'x3', pathMatrix);
+                linkIdsToHighlight = collectLinkIdentifiersFromMatrix(filteredRows);
+            } else if (d.column === "x4") {
+                // x4 Node
+                var filteredRows = filterMatrixByNodeName(d.name, 'x4', pathMatrix);
+                linkIdsToHighlight = collectLinkIdentifiersFromMatrix(filteredRows);
+            }
+    
+            console.log("Link IDs to Highlight:", Array.from(linkIdsToHighlight));  // Debugging
+    
+            // Highlight Only the Relevant Paths
+            paths
+                .style("opacity", 0) // Make all paths invisible first
+                .filter(function(d) {
+                    return linkIdsToHighlight.has(d.link_identifier);
+                })
+                .style("opacity", 0.8)
+                .style("fill", "rgb(214, 230, 244)");
+        }
+    
+        // Toggle the active state of the node
+        d3v4.select(this).classed("active", !isActive);
+    })
     // Add hover text
     .append("title")
       .text(function(d) { return d.name + "\n" + "There is " + d.value + " stuff in this node"; });
 
+      function filterMatrixByNodeName(nodeName, column, pathMatrix) {
+        return pathMatrix.filter(function(row) {
+            return row[column + '_name'] === nodeName;
+        });
+    }
+    
+    
+    function collectLinkIdentifiersFromMatrix(pathMatrix) {
+      var linkIdsToHighlight = new Set();
   
-      node.append("foreignObject")
+      // Loop through each row in the pathMatrix
+      pathMatrix.forEach(function(row) {
+          // Go through each stage of the path
+          var stages = [
+              [row.x1_name, row.x2_name],  // x1 -> x2
+              [row.x2_name, row.x3_name],  // x2 -> x3
+              [row.x3_name, row.x4_name]   // x3 -> x4
+          ];
+  
+          // For each stage, find matching links
+          stages.forEach(function(stage) {
+              var sourceName = stage[0];
+              var targetName = stage[1];
+  
+              // Find matching links by comparing Source_name and target_name
+              d3v4.selectAll(".link")
+                  .filter(function(d) {
+                      return d.source.name === sourceName && d.target.name === targetName;
+                  })
+                  .each(function(d) {
+                      linkIdsToHighlight.add(d.link_identifier);
+                  });
+          });
+      });
+  
+      return linkIdsToHighlight;
+  }
+    
+  
+  node.append("foreignObject")
   .attr("x", function(d) {
-    // Position to the right of left-side nodes, and to the left of right-side nodes
     return d.x < width / 2 ? sankey.nodeWidth() + 6 : -150;
   })
-  .attr("y", 0)  // Top of the node
-  .attr("width", 140) // Container width, adjust as needed
-  .attr("height", function(d) { return d.dy; }) // Container height = node height
+  .attr("y", 0)
+  .attr("width", 140)
+  .attr("height", function(d) { return d.dy; })
   .style("overflow", "visible")
   .append("xhtml:div")
-  // Use flexbox to vertically center
   .style("display", "flex")
-  .style("align-items", "center")    // Vertically center
-  .style("justify-content", function(d) {
-    // Align text left on the left side, right on the right side
+  .style("flex-direction", "column")
+  .style("justify-content", "center")
+  .style("align-items", function(d) {
     return d.x < width / 2 ? "flex-start" : "flex-end";
+  })
+  .style("text-align", function(d) {
+    return d.x < width / 2 ? "left" : "right";
   })
   .style("width", "100%")
   .style("height", "100%")
-  .style("line-height", "normal")    // Reset line-height in container
-  // Basic text styling
+  .style("line-height", "normal")
   .style("font-weight", "bold")
   .style("font-size", "12px")
-  .style("white-space", "pre-line")  // Maintain line breaks
-  .style("hyphens", "none")          // Disable hyphenation
+  .style("white-space", "pre-wrap")
+  .style("hyphens", "none")
   .html(function(d) {
-    // Only the text is clickable
-    return `<span style="cursor: pointer;" onclick="window.open('${d.url}', '_blank')">${d.name}</span>`;
-  });
+    return `<span style="cursor: pointer; color: black; text-decoration: none;" onmouseover="this.style.color='#007bff'; this.style.textDecoration='underline';" onmouseout="this.style.color='black'; this.style.textDecoration='none';" onclick="window.open('${d.url}', '_blank')">${d.name}</span>`;
+  })
 
   applyYOffset(sankey_data); // This will call adjustSVGHeight internally, expand the SVG if needed, and then shift if needed.
 }

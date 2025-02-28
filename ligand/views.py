@@ -2768,6 +2768,10 @@ class LigandInformationView(TemplateView):
                       'entries': []}
 
             node_counter = 0
+            # Initialize the path source matrix
+            path_matrix = []
+            link_id = 0  # Unique identifier for each link
+            row_id = 0
             for record in indication_data:
                 #assess the values for indication/ligand/protein
                 indication_name = record.indication.title.capitalize()
@@ -2780,37 +2784,53 @@ class LigandInformationView(TemplateView):
                 target_name = record.target.entry_name
                 #check for each value if it exists and retrieve the source node value
                 if indication_name not in caches['indication']:
-                    sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code})
+                    sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code,"column":"x4"})
                     node_counter += 1
                     caches['indication'].append(indication_name)
                 indi_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_name), None)
 
                 if indication_0 not in caches['level_0']:
-                    sankey['nodes'].append({"node": node_counter, "name": indication_0, "url":'https://icd.who.int/browse/2024-01/mms/en#'+uri})
+                    sankey['nodes'].append({"node": node_counter, "name": indication_0, "url":'https://icd.who.int/browse/2024-01/mms/en#'+uri,"column":"x3"})
                     node_counter += 1
                     caches['level_0'].append(indication_0)
                 level_0_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_0), None)
 
                 if [ligand_name, ligand_id] not in caches['ligands']:
-                    sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url": '/ligand/'+str(ligand_id)+'/info'})
+                    sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url": '/ligand/'+str(ligand_id)+'/info',"column":"x2"})
                     node_counter += 1
                     caches['ligands'].append([ligand_name, ligand_id])
                 lig_node = next((item['node'] for item in sankey['nodes'] if item['name'] == ligand_name), None)
 
                 if protein_name not in caches['targets']:
-                    sankey['nodes'].append({"node": node_counter, "name": protein_name, "url": '/protein/'+str(target_name)})
+                    sankey['nodes'].append({"node": node_counter, "name": protein_name, "url": '/protein/'+str(target_name),"column":"x1"})
                     node_counter += 1
                     caches['targets'].append(protein_name)
                     caches['entries'].append(target_name)
                 prot_node = next((item['node'] for item in sankey['nodes'] if item['name'] == protein_name), None)
 
-                #append connection between indication and level 0
-                sankey['links'].append({"source":lig_node, "target":level_0_node, "value":1, "ligtrace": protein_name, "prottrace": indication_0})
-                #append connection between level 0 and ligand
-                sankey['links'].append({"source":level_0_node, "target":indi_node, "value":1, "ligtrace": protein_name, "prottrace": indication_name})
-                #append connection between ligand and target
-                sankey['links'].append({"source":prot_node, "target":lig_node, "value":1, "ligtrace": protein_name, "prottrace": indication_name})
+                # create matrix row
+                row = {
+                    'row_id': row_id,
+                    'x1': prot_node,
+                    'x2': lig_node,
+                    'x3': level_0_node,
+                    'x4': indi_node,
+                    'x1_name': protein_name,
+                    'x2_name': ligand_name,
+                    'x3_name': indication_0,
+                    'x4_name': indication_name
+                }
+                
+                sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x1 -> x2 (Protein → Ligand)
+                link_id += 1
+                sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_0, "linkage_key": "primary","link_identifier": link_id})  # x2 -> x3 (Ligand → Level 0)
+                link_id += 1
+                sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x3 -> x4 (Level 0 → Indication)
+                link_id += 1
 
+                path_matrix.append(row)
+                row_id += 1
+                
             #Fixing redundancy in sankey['links']
             unique_combinations = {}
 
@@ -2827,7 +2847,93 @@ class LigandInformationView(TemplateView):
 
             # Convert the unique_combinations back to a list of dictionaries
             sankey['links'] = list(unique_combinations.values())
-            total_points = len(caches['targets']) + len(caches['indication']) + 1;
+
+            # Find all nodes that are actually used in the links
+            used_nodes = set()
+            for link in sankey['links']:
+                used_nodes.add(link['source'])
+                used_nodes.add(link['target'])
+
+            # Build new nodes list and a mapping from old to new node indices
+            old_to_new = {}
+            new_nodes = []
+            new_index = 0
+            for node_dict in sankey['nodes']:
+                old_idx = node_dict["node"]
+                if old_idx in used_nodes:
+                    # Only keep nodes that are actually used
+                    new_node_dict = {
+                        "node": new_index,
+                        "name": node_dict["name"],
+                        "url": node_dict["url"],
+                        "column": node_dict['column']
+                    }
+                    new_nodes.append(new_node_dict)
+                    old_to_new[old_idx] = new_index
+                    new_index += 1
+
+            # Update the source and target indices in the links
+            for link in sankey['links']:
+                link["source"] = old_to_new[link["source"]]
+                link["target"] = old_to_new[link["target"]]
+
+            # Replace the nodes list with the new one
+            sankey['nodes'] = new_nodes
+
+            # def update_max_paths(sankey_nodes, path_matrix):
+
+            #     # Function to count unique paths leading **to** the node
+            #     def count_unique_paths_to(previous_col, current_col, node_name):
+            #         unique_paths = set()
+            #         # Filter rows to include only those leading to the current node
+            #         filtered_rows = [row for row in path_matrix if row[current_col + '_name'] == node_name]
+            #         for row in filtered_rows:
+            #             from_node = row[previous_col]
+            #             to_node = row[current_col]
+            #             unique_paths.add((from_node, to_node))
+            #         return len(unique_paths)
+
+            #     # Function to count unique paths leading **from** the node
+            #     def count_unique_paths_from(current_col, next_col, node_name):
+            #         unique_paths = set()
+            #         # Filter rows to include only those originating from the current node
+            #         filtered_rows = [row for row in path_matrix if row[current_col + '_name'] == node_name]
+            #         for row in filtered_rows:
+            #             from_node = row[current_col]
+            #             to_node = row[next_col]
+            #             unique_paths.add((from_node, to_node))
+            #         return len(unique_paths)
+
+            #     # Iterate over all nodes and calculate max_paths, unique_left, and unique_right
+            #     for node in sankey_nodes:
+            #         node_name = node['name']
+            #         node_column = node['column']
+
+            #         # Calculate incoming and outgoing unique paths
+            #         if node_column == 'x1':
+            #             node['unique_right'] = count_unique_paths_from('x1', 'x2', node_name)
+            #             node['unique_left'] = 0  # No incoming paths for x1 nodes
+            #             node['max_paths'] = node['unique_right']
+            #         elif node_column == 'x2':
+            #             node['unique_left'] = count_unique_paths_to('x1', 'x2', node_name)
+            #             node['unique_right'] = count_unique_paths_from('x2', 'x3', node_name)
+            #             node['max_paths'] = max(node['unique_left'], node['unique_right'])
+            #         elif node_column == 'x3':
+            #             node['unique_left'] = count_unique_paths_to('x2', 'x3', node_name)
+            #             node['unique_right'] = count_unique_paths_from('x3', 'x4', node_name)
+            #             node['max_paths'] = max(node['unique_left'], node['unique_right'])
+            #         elif node_column == 'x4':
+            #             node['unique_left'] = count_unique_paths_to('x3', 'x4', node_name)
+            #             node['unique_right'] = 0  # No outgoing paths for x4 nodes
+            #             node['max_paths'] = node['unique_left']
+
+            # # Call the function to update max_paths, unique_left, and unique_right
+            # update_max_paths(sankey['nodes'], path_matrix)
+
+
+            # Convert the unique_combinations back to a list of dictionaries
+            sankey['links'] = list(unique_combinations.values())
+            total_points = len(caches['targets']) + len(caches['indication']) + 1
             if len(caches['indication']) > len(caches['targets']):
                 nodes_nr = len(caches['indication'])
             else:
@@ -2861,6 +2967,7 @@ class LigandInformationView(TemplateView):
                 })
 
             context.update({'sankey': json.dumps(sankey)})
+            context.update({'path_matrix': json.dumps(path_matrix)})
             context.update({'points': total_points})
             context.update({'nodes_nr': nodes_nr})
             context.update({'plot_existence': 'yes'})

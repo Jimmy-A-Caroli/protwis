@@ -167,6 +167,10 @@ def get_sankey_data(entry_name):
               'entries': []}
 
     node_counter = 0
+    # Initialize the path source matrix
+    path_matrix = []
+    link_id = 0  # Unique identifier for each link
+    row_id = 0
     for record in indication_data:
         # Assess the values for indication/ligand/protein
         indication_name = record.indication.title.capitalize()
@@ -180,34 +184,56 @@ def get_sankey_data(entry_name):
 
         # Add nodes if not already added, then get their assigned node index
         if indication_name not in caches['indication']:
-            sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code})
+            sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code,"column":"x4"})
             node_counter += 1
             caches['indication'].append(indication_name)
         indi_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_name), None)
 
         if indication_0 not in caches['level_0']:
-            sankey['nodes'].append({"node": node_counter, "name": indication_0, "url": 'https://icd.who.int/browse/2024-01/mms/en#'+uri})
+            sankey['nodes'].append({"node": node_counter, "name": indication_0, "url": 'https://icd.who.int/browse/2024-01/mms/en#'+uri,"column":"x3"})
             node_counter += 1
             caches['level_0'].append(indication_0)
         level_0_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_0), None)
 
         if [ligand_name, ligand_id] not in caches['ligands']:
-            sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url": '/ligand/'+str(ligand_id)+'/info'})
+            sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url": '/ligand/'+str(ligand_id)+'/info',"column":"x2"})
             node_counter += 1
             caches['ligands'].append([ligand_name, ligand_id])
         lig_node = next((item['node'] for item in sankey['nodes'] if item['name'] == ligand_name), None)
 
         if protein_name not in caches['targets']:
-            sankey['nodes'].append({"node": node_counter, "name": protein_name, "url": '/protein/'+str(target_name)})
+            sankey['nodes'].append({"node": node_counter, "name": protein_name, "url": '/protein/'+str(target_name),"column":"x1"})
             node_counter += 1
             caches['targets'].append(protein_name)
             caches['entries'].append(target_name)
         prot_node = next((item['node'] for item in sankey['nodes'] if item['name'] == protein_name), None)
 
         # Append connections (note: order of links can be adjusted as needed)
-        sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": ligand_name, "prottrace": None})
-        sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": ligand_name, "prottrace": indication_name})
-        sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": ligand_name, "prottrace": indication_name})
+        # sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": ligand_name, "prottrace": None})
+        # sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": ligand_name, "prottrace": indication_name})
+        # sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": ligand_name, "prottrace": indication_name})
+         # create matrix row
+        row = {
+            'row_id': row_id,
+            'x1': prot_node,
+            'x2': lig_node,
+            'x3': level_0_node,
+            'x4': indi_node,
+            'x1_name': protein_name,
+            'x2_name': ligand_name,
+            'x3_name': indication_0,
+            'x4_name': indication_name
+        }
+
+        sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x1 -> x2 (Protein → Ligand)
+        link_id += 1
+        sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_0, "linkage_key": "primary","link_identifier": link_id})  # x2 -> x3 (Ligand → Level 0)
+        link_id += 1
+        sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x3 -> x4 (Level 0 → Indication)
+        link_id += 1
+        #print("** Debug record:", record.id, record.ligand.name, record.target.name, record.indication.title)
+        path_matrix.append(row)
+        row_id += 1
 
     # Fixing redundancy in sankey['links']
     unique_combinations = {}
@@ -236,7 +262,8 @@ def get_sankey_data(entry_name):
             new_node_dict = {
                 "node": new_index,
                 "name": node_dict["name"],
-                "url": node_dict["url"]
+                "url": node_dict["url"],
+                "column": node_dict['column']
             }
             new_nodes.append(new_node_dict)
             old_to_new[old_idx] = new_index
@@ -251,13 +278,66 @@ def get_sankey_data(entry_name):
     sankey['nodes'] = new_nodes
     # --- End of Cleanup ---
 
+    # def update_max_paths(sankey_nodes, path_matrix):
+
+    #     # Function to count unique paths leading **to** the node
+    #     def count_unique_paths_to(previous_col, current_col, node_name):
+    #         unique_paths = set()
+    #         # Filter rows to include only those leading to the current node
+    #         filtered_rows = [row for row in path_matrix if row[current_col + '_name'] == node_name]
+    #         for row in filtered_rows:
+    #             from_node = row[previous_col]
+    #             to_node = row[current_col]
+    #             unique_paths.add((from_node, to_node))
+    #         return len(unique_paths)
+
+    #     # Function to count unique paths leading **from** the node
+    #     def count_unique_paths_from(current_col, next_col, node_name):
+    #         unique_paths = set()
+    #         # Filter rows to include only those originating from the current node
+    #         filtered_rows = [row for row in path_matrix if row[current_col + '_name'] == node_name]
+    #         for row in filtered_rows:
+    #             from_node = row[current_col]
+    #             to_node = row[next_col]
+    #             unique_paths.add((from_node, to_node))
+    #         return len(unique_paths)
+
+    #     # Iterate over all nodes and calculate max_paths
+    #     for node in sankey_nodes:
+    #         node_name = node['name']
+    #         node_column = node['column']
+
+    #         # Determine which transition to calculate based on column
+    #         if node_column == 'x1':
+    #             # Only count outgoing paths
+    #             node['max_paths'] = count_unique_paths_from('x1', 'x2', node_name)
+    #         elif node_column == 'x2':
+    #             # Count both incoming and outgoing paths
+    #             node['max_paths'] = max(
+    #                 count_unique_paths_to('x1', 'x2', node_name),  # x1 -> x2
+    #                 count_unique_paths_from('x2', 'x3', node_name) # x2 -> x3
+    #             )
+    #         elif node_column == 'x3':
+    #             # Count both incoming and outgoing paths
+    #             node['max_paths'] = max(
+    #                 count_unique_paths_to('x2', 'x3', node_name),  # x2 -> x3
+    #                 count_unique_paths_from('x3', 'x4', node_name) # x3 -> x4
+    #             )
+    #         elif node_column == 'x4':
+    #             # Only count incoming paths
+    #             node['max_paths'] = count_unique_paths_to('x3', 'x4', node_name)
+
+    # # Call the function to update max_paths
+    # update_max_paths(sankey['nodes'], path_matrix)
+
     total_points = len(caches['indication']) + len(caches['ligands']) + 1
     nodes_nr = len(caches['ligands']) if len(caches['ligands']) > len(caches['indication']) else len(caches['indication'])
 
     sankey_data = {
         'sankey': sankey,
         'total_points': total_points,
-        'nodes_nr': nodes_nr
+        'nodes_nr': nodes_nr,
+        'path_matrix': path_matrix
     }
 
     return sankey_data

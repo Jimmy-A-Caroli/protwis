@@ -37,7 +37,7 @@
     </div>
     <div class="col-md-10">
       <!-- Create a div where the graph will take place -->
-      <div id="sankey_plot"></div>
+      <div id="sankey_plot" style="width: 100%; display: flex; justify-content: center;"></div>
       <p>
         <div class="btn-group">
           <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -45,17 +45,10 @@
           <span class="glyphicon glyphicon-download"></span> Download <span class="caret"></span>
           </button>
           <ul class="dropdown-menu">
-          <li>
-              <a href="javascript:saveSvgAsPng(document.getElementById('sankey'), 'sankey_{{indication}}.png');">PNG</a>
-          </li>
-          <li>
-              <a href="javascript:saveSvgAsJpg(document.getElementById('sankey'), 'sankey_{{indication}}.jpg');">JPG</a>
-          </li>
-          <li>
-              <a href="javascript:saveSvgAsTiff(document.getElementById('sankey'), 'sankey_{{indication}}.tiff');">TIFF</a>
-              </a>
-          </li>
-          </ul>
+            <li><a href="javascript:saveSankeySvgAsSVG(document.getElementById('sankey'), 'sankey.svg');">SVG</a></li>
+            <li><a href="javascript:saveSankeySvgAsPng(document.getElementById('sankey'), 'sankey.png');">PNG</a></li>
+            <li><a href="javascript:saveSankeySvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a></li>
+        </ul>
       </div>
     </p>
   </div>
@@ -111,17 +104,35 @@
     <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
     <script src="{% static 'home/js/sankey.js' %}"></script>
     <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
+    <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
 
     <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
     var sankey_data = JSON.parse('{{ sankey|safe }}');
-    // console.log('Debug sankey_data:', sankey_data);
-    // console.log('Nodes:', sankey_data.nodes);
-    // console.log('Links:', sankey_data.links);
+    var pathMatrix = JSON.parse('{{ path_matrix|safe }}');
     var top_nodes = '{{ nodes_nr|safe }}';
     var totalPoints = '{{ points }}';
-    // set the dimensions and margins of the graph
-    // set height iteratively based on highest number of nodes
-    // console.log(sankey_data);
-    SankeyPlot(sankey_data, 'sankey_plot', top_nodes, totalPoints,1300);
+    var Sankey_location = 'sankey_plot';
+
+    // Function to initialize or redraw the Sankey plot
+    function initializeSankeyPlot() {
+        var containerWidth = document.getElementById(Sankey_location).offsetWidth;
+        
+        // Check if the container has a width greater than 0
+        if (containerWidth > 0) {
+            // Remove the existing plot to avoid duplication
+            d3v4.select('#' + Sankey_location).select('svg').remove();
+            
+            // Draw the Sankey plot with the current container width
+            SankeyPlot(sankey_data, Sankey_location, top_nodes, totalPoints, containerWidth, pathMatrix);
+        }
+    }
+
+    // Event listener for window resize to make the plot responsive
+    window.addEventListener('resize', function() {
+        initializeSankeyPlot();
+    });
+    initializeSankeyPlot();
+    });
     </script>
 {% endblock %}

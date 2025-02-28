@@ -307,15 +307,9 @@
                                     <span class="glyphicon glyphicon-download"></span> Download <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="javascript:saveSvgAsPng(document.getElementById('sankey_plot'), 'sankey.png');">PNG</a>
-                                    </li>
-                                    <li>
-                                        <a href="javascript:saveSvgAsJpg(document.getElementById('sankey_plot'), 'sankey.jpg');">JPG</a>
-                                    </li>
-                                    <li>
-                                        <a href="javascript:saveSvgAsTiff(document.getElementById('sankey_plot'), 'sankey.tiff');">TIFF</a>
-                                    </li>
+                                    <li><a href="javascript:saveSankeySvgAsSVG(document.getElementById('sankey'), 'sankey.svg');">SVG</a></li>
+                                    <li><a href="javascript:saveSankeySvgAsPng(document.getElementById('sankey'), 'sankey.png');">PNG</a></li>
+                                    <li><a href="javascript:saveSankeySvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a></li>
                                 </ul>
                             </div>
                         </p>
@@ -643,6 +637,7 @@
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
 <script src="{% static 'home/js/sankey.js' %}"></script>
+<script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
 
 
 <script type="text/javascript">
@@ -854,9 +849,6 @@
 
                 // Show the tab content only after the search is clicked
                 $('#targets-container').show();
-                
-                // Show the table only after the search is clicked
-    //            $('#table-container').show();
 
 
                 if (Selected_table_data.length > 0) {
@@ -919,17 +911,35 @@
                 // Handle cases where there's no Sankey data
                 d3v4.select("#sankey_plot")
                     .append("p")
-                    .text("No Sankey diagram available for the selected target.");
+                    .text("Loading Sankey data...");
                 return;
             }
 
             var sankeyDataParsed = sankeyData.sankey;
-            var nodes_nr = sankeyData.nodes_nr;
+            var top_nodes = sankeyData.nodes_nr;
             var totalPoints = sankeyData.total_points;
+            var pathMatrix = sankeyData.path_matrix;
+            var Sankey_location = 'sankey_plot';
 
-            var custom_width = 1300;
-            // Call your existing SankeyPlot function
-            SankeyPlot(sankeyDataParsed, 'sankey_plot', nodes_nr, totalPoints, custom_width);
+            // Function to initialize or redraw the Sankey plot
+            function initializeSankeyPlot() {
+                var containerWidth = document.getElementById(Sankey_location).offsetWidth;
+                
+                // Check if the container has a width greater than 0
+                if (containerWidth > 0) {
+                    // Remove the existing plot to avoid duplication
+                    d3v4.select('#' + Sankey_location).select('svg').remove();
+                    
+                    // Draw the Sankey plot with the current container width
+                    SankeyPlot(sankeyDataParsed, Sankey_location, top_nodes, totalPoints, containerWidth, pathMatrix);
+                }
+            }
+
+            // Event listener for window resize to make the plot responsive
+            window.addEventListener('resize', function() {
+                initializeSankeyPlot();
+            });
+            initializeSankeyPlot();
         }
 
         function initializeDataTable(tableId, data, type) {

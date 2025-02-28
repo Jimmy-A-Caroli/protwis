@@ -637,7 +637,6 @@
 								<li><a href="javascript:saveSankeySvgAsSVG(document.getElementById('sankey'), 'sankey.svg');">SVG</a></li>
 								<li><a href="javascript:saveSankeySvgAsPng(document.getElementById('sankey'), 'sankey.png');">PNG</a></li>
 								<li><a href="javascript:saveSankeySvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a></li>
-								<!-- <li><a href="javascript:saveSankeySvgAsTiff(document.getElementById('sankey'),'sankey.tiff');">TIFF</a></li>  Removed as I dont have time to implement -->
 							</ul>
 						</div></p>
             {% else %}
@@ -1155,10 +1154,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var sankey_data = JSON.parse('{{ sankey|safe }}');
+	var pathMatrix = JSON.parse('{{ path_matrix|safe }}');
     var top_nodes = '{{ nodes_nr|safe }}';
     var totalPoints = '{{ points }}';
     var Sankey_location = 'sankey_plot';
-    
+
     // Function to initialize or redraw the Sankey plot
     function initializeSankeyPlot() {
         var containerWidth = document.getElementById(Sankey_location).offsetWidth;
@@ -1169,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', function() {
             d3v4.select('#' + Sankey_location).select('svg').remove();
             
             // Draw the Sankey plot with the current container width
-            SankeyPlot(sankey_data, Sankey_location, top_nodes, totalPoints, containerWidth);
+            SankeyPlot(sankey_data, Sankey_location, top_nodes, totalPoints, containerWidth, pathMatrix);
         }
     }
 
