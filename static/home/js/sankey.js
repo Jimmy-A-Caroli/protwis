@@ -532,9 +532,6 @@ function SankeyPlot(sankey_data, location, top_nodes, totalPoints, fix_width, pa
         // Toggle the active state of the node
         d3v4.select(this).classed("active", !isActive);
     })
-    // Add hover text
-    .append("title")
-      .text(function(d) { return d.name + "\n" + "There is " + d.value + " stuff in this node"; });
 
       function filterMatrixByNodeName(nodeName, column, pathMatrix) {
         return pathMatrix.filter(function(row) {
