@@ -1253,15 +1253,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
     $(document).ready(function () {
-		$('#agent_drug_tab').click();
+		// $('#agent_drug_tab').click();
         // Check if the navigation came from the Drug page
-        // if (localStorage.getItem('fromDrugPage') === 'true') {
-        //     // Simulate a click on the "Agent/Drug" tab
-        //     $('#agent_drug_tab').click();
+        if (localStorage.getItem('fromDrugPage') === 'true') {
+            // Simulate a click on the "Agent/Drug" tab
+            $('#agent_drug_tab').click();
 
-        //     // Clear the flag after use
-        //     localStorage.removeItem('fromDrugPage');
-        // }
+            // Clear the flag after use
+            localStorage.removeItem('fromDrugPage');
+        }
     });
 </script>
 
