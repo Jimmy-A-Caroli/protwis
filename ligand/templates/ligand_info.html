@@ -848,27 +848,27 @@
 					className: 'btn btn-primary',
 					action: function () { reset_all(); }
 				},
-				{
-				extend: 'csvHtml5',
-				text: 'Export CSV',
-				className: 'btn btn-primary',
-				// <-- Add the separator option here
-				fieldSeparator: ';', 
-				exportOptions: {
-					columns: ':visible',
-					rows: ':not(.filter-row)'
-				},
-				customize: function (csvStr) {
-					// 1) Convert CSV into an array of lines
-					let lines = csvStr.split('\n');
+				// {
+				// extend: 'csvHtml5',
+				// text: 'Export CSV',
+				// className: 'btn btn-primary',
+				// // <-- Add the separator option here
+				// fieldSeparator: ';', 
+				// exportOptions: {
+				// 	columns: ':visible',
+				// 	rows: ':not(.filter-row)'
+				// },
+				// customize: function (csvStr) {
+				// 	// 1) Convert CSV into an array of lines
+				// 	let lines = csvStr.split('\n');
 
-					// 2) Overwrite the default header row
-					lines[0] = 'Protein;Gene;Species;Family;Class;Activity: Type;Activity: Min;Activity: Avg;Activity: Max;Database';
+				// 	// 2) Overwrite the default header row
+				// 	lines[0] = 'Protein;Gene;Species;Family;Class;Activity: Type;Activity: Min;Activity: Avg;Activity: Max;Database';
 
-					// 3) Re-assemble the CSV
-					return lines.join('\n');
-				}
-				},
+				// 	// 3) Re-assemble the CSV
+				// 	return lines.join('\n');
+				// }
+				// },
 				{
 				extend: 'excelHtml5',
 				text: 'Export Excel',
@@ -1031,27 +1031,27 @@
 					className: 'btn btn-primary',
 					action: function () { reset_all(); }
 				},
-				{
-				extend: 'csvHtml5',
-				text: 'Export CSV',
-				className: 'btn btn-primary',
-				// <-- Add the separator option here
-				fieldSeparator: ';', 
-				exportOptions: {
-					columns: ':visible',
-					rows: ':not(.filter-row)'
-				},
-				customize: function (csvStr) {
-					// 1) Convert CSV into an array of lines
-					let lines = csvStr.split('\n');
+				// {
+				// extend: 'csvHtml5',
+				// text: 'Export CSV',
+				// className: 'btn btn-primary',
+				// // <-- Add the separator option here
+				// fieldSeparator: ';', 
+				// exportOptions: {
+				// 	columns: ':visible',
+				// 	rows: ':not(.filter-row)'
+				// },
+				// customize: function (csvStr) {
+				// 	// 1) Convert CSV into an array of lines
+				// 	let lines = csvStr.split('\n');
 
-					// 2) Overwrite the default header row
-					lines[0] = 'Gene;Protein;Receptor family;Ligand type;Class;Indication name;ICD11;ATC;Association score;Highest phase;Approved';
+				// 	// 2) Overwrite the default header row
+				// 	lines[0] = 'Gene;Protein;Receptor family;Ligand type;Class;Indication name;ICD11;ATC;Association score;Highest phase;Approved';
 
-					// 3) Re-assemble the CSV
-					return lines.join('\n');
-				}
-				},
+				// 	// 3) Re-assemble the CSV
+				// 	return lines.join('\n');
+				// }
+				// },
 				{
 				extend: 'excelHtml5',
 				text: 'Export Excel',

@@ -123,17 +123,33 @@
   /**
    * Helper: given an <svg>, produce a <canvas> image, then download it as PNG
    */
-  out$.saveSankeySvgAsPng = function(svgEl, fileName) {
-    out$.svgAsDataUriExact(svgEl, function(uri) {
-      const image = new Image();
-      image.crossOrigin = 'anonymous';
-      image.onload = function() {
+  out$.saveSankeySvgAsPng = function(svgEl, fileName, scaleFactor = 4) {
+    out$.svgAsDataUriExact(svgEl, function(svgUri) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        // Use naturalWidth / naturalHeight rather than a second canvas:
+        const originalWidth = img.naturalWidth;
+        const originalHeight = img.naturalHeight;
+        
+        // Scale up
         const canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
+        canvas.width = originalWidth * scaleFactor;
+        canvas.height = originalHeight * scaleFactor;
+  
+        // High-quality rendering
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
-
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+  
+        // Draw the image scaled up
+        ctx.drawImage(
+          img,
+          0, 0, originalWidth, originalHeight,   // source
+          0, 0, canvas.width, canvas.height     // destination
+        );
+  
+        // Convert canvas to PNG and download
         const link = document.createElement('a');
         link.download = fileName || 'sankey.png';
         link.href = canvas.toDataURL('image/png');
@@ -143,13 +159,13 @@
         });
         link.click();
       };
-      image.onerror = function(err) {
-        console.error("Could not load SVG data into an image. Error:", err);
+      img.onerror = err => {
+        console.error('Could not load SVG into an image', err);
       };
-      image.src = uri;
+      img.src = svgUri;
     });
   };
-
+  
 
   /* ====================== ADDITIONAL EXPORT METHODS BELOW ======================== */
 

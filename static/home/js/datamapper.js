@@ -2680,36 +2680,79 @@ function GPCRome_initializeData(data) {
 }
 
 // Reformat the labels (manual curated)
+// Reformat the labels (manual curated)
 function GPCRome_formatTextWithHTML(text, Family_list) {
+    // Define a dictionary of HTML entity replacements
+    const htmlEntities = {
+        "&alpha;": "α",
+        "&beta;": "β",
+        "&gamma;": "γ",
+        "&delta;": "δ",
+        "&epsilon;": "ε",
+        "&zeta;": "ζ",
+        "&eta;": "η",
+        "&theta;": "θ",
+        "&iota;": "ι",
+        "&kappa;": "κ",
+        "&lambda;": "λ",
+        "&mu;": "μ",
+        "&nu;": "ν",
+        "&xi;": "ξ",
+        "&omicron;": "ο",
+        "&pi;": "π",
+        "&rho;": "ρ",
+        "&sigma;": "σ",
+        "&tau;": "τ",
+        "&upsilon;": "υ",
+        "&phi;": "φ",
+        "&chi;": "χ",
+        "&psi;": "ψ",
+        "&omega;": "ω",
+        "&ndash;": "-",  // En dash to hyphen
+        "&mdash;": "--", // Em dash to double hyphen
+        "&nbsp;": " ",   // Non-breaking space to regular space
+        "&lt;": "<",
+        "&gt;": ">",
+        "&amp;": "&",
+        "&quot;": '"',
+        "&apos;": "'"
+    };
+
     // Apply all the replacements step by step
     let formattedText = text
-        .replace(" receptors", '')
-        .replace(" receptor", '')
-        .replace("-adrenoceptor", '')
-        .replace(" receptor-", '-')
-        .replace("<sub>", '</tspan><tspan baseline-shift="-20%">')
-        .replace("</sub>", '</tspan><tspan>')
-        .replace("<i>", '</tspan><tspan font-style="italic">')
-        .replace("</i>", '</tspan><tspan>')
-        .replace("Long-wave-sensitive", 'LWS')
-        .replace("Medium-wave-sensitive", 'MWS')
-        .replace("Short-wave-sensitive", 'SWS')
-        .replace("Olfactory", 'OLF')
-        .replace("calcitonin-like receptor", 'CLR')
-        .replace("5-Hydroxytryptamine", '5-HT');
+        .replace(/ receptors/g, '')
+        .replace(/ receptor/g, '')
+        .replace(/-adrenoceptor/g, '')
+        .replace(/ receptor-/g, '-')
+        .replace(/<sub>/g, '</tspan><tspan baseline-shift="-20%">')
+        .replace(/<\/sub>/g, '</tspan><tspan>')
+        .replace(/<i>/g, '</tspan><tspan font-style="italic">')
+        .replace(/<\/i>/g, '</tspan><tspan>')
+        .replace(/Long-wave-sensitive/g, 'LWS')
+        .replace(/Medium-wave-sensitive/g, 'MWS')
+        .replace(/Short-wave-sensitive/g, 'SWS')
+        .replace(/Olfactory/g, 'OLF')
+        .replace(/calcitonin-like receptor/g, 'CLR')
+        .replace(/5-Hydroxytryptamine/g, '5-HT');
 
-    // Capitalize the first letter after applying all replacements
+    // Replace HTML entities
+    formattedText = formattedText.replace(/&[a-z]+;/g, match => htmlEntities[match] || match);
+
+    // Capitalize the first letter only if it's not a Greek letter or special entity
     function capitalizeFirstLetter(str) {
         let match = str.match(/^[^a-zA-Z]*([a-zA-Z])/);
         if (match) {
-            let index = match.index + match[0].length - 1;
-            let firstLetter = str[index].toUpperCase(); // Capitalize the first letter
-            return str.slice(0, index) + firstLetter + str.slice(index + 1);
+            let firstLetter = match[1];
+            // Check if the first letter is in the list of replaced HTML entities
+            if (!Object.values(htmlEntities).some(entity => entity.startsWith(firstLetter))) {
+                let index = match.index + match[0].length - 1;
+                return str.slice(0, index) + firstLetter.toUpperCase() + str.slice(index + 1);
+            }
         }
-        return str; // If no alphabetic characters, return unchanged
+        return str; // Return unchanged if it starts with a Greek letter
     }
 
-    // Apply capitalization after all replacements
+    // Apply capitalization only if needed
     formattedText = capitalizeFirstLetter(formattedText);
 
     // Check if the text is in the Family_list for additional formatting

@@ -8,44 +8,47 @@
       width: 275px;
       background: linear-gradient(to right, white 0%, black 100%)
   }
-  .color_header {
+/* Keep header text black */
+.color_header {
     color: black;
     font-size: 15px;
 }
 
-.color_phase1 {
-    color: #f5bcbf;
+/* Keep text black */
+.color_phase1, .color_phase2, .color_phase3, .color_phase4, .color_untapped, .color_sensory, .color_repurposed {
     font-size: 15px;
+    color: black; /* Ensure text remains black */
 }
 
-.color_phase2 {
-    color: #f17270;
-    font-size: 15px;
+/* Squares (for Color Scheme) */
+.square {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    border-radius: 2px; /* Slight rounded corners for squares */
+    border: 1px solid black; /* Thin black stroke */
 }
 
-.color_phase3 {
-    color: #dd2628;
-    font-size: 15px;
+/* Circles (for Agent/Drugs and Clinical Phases) */
+.circle {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    border-radius: 50%; /* Full circle */
+    border: 1px solid black; /* Thin black stroke */
 }
 
-.color_phase4 {
-    color: #2c87c8;
-    font-size: 15px;
-}
+/* Apply correct background colors */
+.color_phase1 .square, .color_phase1 .circle { background-color: #f5bcbf; } /* Phase I */
+.color_phase2 .square, .color_phase2 .circle { background-color: #f17270; } /* Phase II */
+.color_phase3 .square, .color_phase3 .circle { background-color: #dd2628; } /* Phase III */
+.color_phase4 .square, .color_phase4 .circle { background-color: #2c87c8; } /* Phase IV */
+.color_untapped .square { background-color: #C0C0C0; } /* Untapped */
+.color_sensory .square { background-color: #A3D9C8; } /* Sensory */
+.color_repurposed .circle { background-color: #ae5dae; } /* Repurposed */
 
-.color_repurposed {
-    color: #ae5dae;
-    font-size: 15px;
-}
-.color_untapped {
-    color: #C0C0C0;
-    font-size: 15px;
-}
-
-.color_sensory {
-    color: #A3D9C8;
-    font-size: 15px;
-}
 </style>
 {% endblock %}
 
@@ -100,16 +103,15 @@
             </div>
             <div class="col-md-3"></div>
             <div class="col-md-1">
-              <div style="margin-bottom: -150px;margin-top: 0px;" class="text-center">
-                  <span class="color_header"><b><u>Color scheme</u></b><br></span>
-                    <span class="color_phase1">&#9644; <b>Phase 1</b></span><br/>
-                    <span class="color_phase2">&#9644; <b>Phase 2</b></span><br/>
-                    <span class="color_phase3">&#9644; <b>Phase 3</b></span><br/>
-                    <span class="color_phase4">&#9644; <b>Phase 4</b></span><br/>
-                    <span class="color_untapped">&#9644; <b>Untapped targets</b></span><br/>
-                    <span class="color_sensory">&#9644; <b>Sensory</b></span>
-
-              </div>
+              <div style="margin-bottom: -150px; margin-top: 0px;" class="text-left">
+                <span class="color_header"><b><u>Color scheme</u></b><br></span>
+                <span class="color_phase1"><span class="square"></span> <b>Phase I</b></span><br/>
+                <span class="color_phase2"><span class="square"></span> <b>Phase II</b></span><br/>
+                <span class="color_phase3"><span class="square"></span> <b>Phase III</b></span><br/>
+                <span class="color_phase4"><span class="square"></span> <b>Phase IV</b></span><br/>
+                <span class="color_untapped"><span class="square"></span> <b>Untapped targets</b></span><br/>
+                <span class="color_sensory"><span class="square"></span> <b>Sensory</b></span>
+            </div>         
             </div>
           <br />
           <br />
@@ -150,13 +152,13 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-2"></div>
-            <div class="col-md-3" style="margin-bottom: -75px;">
-              <div class="text-center">
-                  <span class="color_header"><b><u>Agent/drugs</u></b></span>
-                    <span class="color_phase3"><br>&#9644; <b>New agents in trial</b></span>
-                    <span class="color_repurposed"><br>&#9644; <b>Repurposed drugs</b></span>
-                    <span class="color_phase4"><br>&#9644; <b>Approved drugs</b></span>
+            <div class="col-md-3"></div>
+            <div class="col-md-1" style="margin-bottom: -75px;">
+              <div class="text-left">
+                <span class="color_header"><b><u>Agent/drugs</u></b></span>
+                <span class="color_phase3"><br><span class="circle"></span> <b>New agents in trial</b></span>
+                <span class="color_repurposed"><br><span class="circle"></span> <b>Repurposed drugs</b></span>
+                <span class="color_phase4"><br><span class="circle"></span> <b>Approved drugs</b></span>
               </div>
             </div>
             <!-- ############# -->
@@ -198,14 +200,14 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-2"></div>
-            <div class="col-md-3" style="margin-bottom: -100px;">
-              <div class="text-center">
-                    <span class="color_header"><b><u>Clinical phases</u></b></span>
-                    <span class="color_phase1"><br>&#9644; <b>Phase I</b></span>
-                    <span class="color_phase2"><br>&#9644; <b>Phase II</b></span>
-                    <span class="color_phase3"><br>&#9644; <b>Phase III</b></span>
-                    <span class="color_phase4"><br>&#9644; <b>Phase IV</b></span>
+            <div class="col-md-3"></div>
+            <div class="col-md-1" style="margin-bottom: -100px;">
+              <div class="text-left">
+                <span class="color_header"><b><u>Clinical phases</u></b></span>
+                <span class="color_phase1"><br><span class="circle"></span> <b>Phase I</b></span>
+                <span class="color_phase2"><br><span class="circle"></span> <b>Phase II</b></span>
+                <span class="color_phase3"><br><span class="circle"></span> <b>Phase III</b></span>
+                <span class="color_phase4"><br><span class="circle"></span> <b>Phase IV</b></span>
               </div>
             </div>
             <!-- Legend bars -->
