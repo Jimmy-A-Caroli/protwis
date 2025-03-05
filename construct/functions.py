@@ -719,6 +719,8 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
 
                 if not chain_over_ride:
                     if not receptor and pos:
+                        if  pdbname in ['8YNS','8YNT'] and chain!='R':
+                            continue
                         if pos in pos_in_wt and uniprot_seq[pos-1]==pdb_aa:
                             # if uniprot receptor aa hasnt been found already and aa matches
                             if int(pos)<prev_pos:
