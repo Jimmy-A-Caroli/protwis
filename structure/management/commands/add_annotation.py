@@ -21,6 +21,7 @@ from datetime import datetime
 from urllib.request import urlopen
 import json
 from copy import deepcopy
+import shutil
 
 
 
@@ -808,6 +809,9 @@ class Command(BaseCommand):
             dssp = Bio.PDB.DSSP(structure[0], filename, dssp='/env/bin/mkdssp')
         elif os.path.exists("/usr/local/bin/mkdssp"):
             dssp = Bio.PDB.DSSP(structure[0], filename, dssp='/usr/local/bin/mkdssp')
+        else:
+            dssp_path = shutil.which('mkdssp')
+            dssp = Bio.PDB.DSSP(structure[0], filename, dssp=dssp_path)
         # if self.debug:
         #     for d in dssp:
         #         print(d)
