@@ -4,6 +4,9 @@ from django.db import connection
 from django.utils.text import slugify
 from django.db import IntegrityError
 
+# for automatic alignment fixes using space information from the pdb
+from build.management.commands.PDB_sequence_helper import *
+
 from build.management.commands.base_build import Command as BaseBuild
 from build.management.commands.build_ligand_functions import get_or_create_ligand, match_id_via_unichem
 from protein.models import (Protein, ProteinConformation, ProteinState, ProteinAnomaly, ProteinAnomalyType,
@@ -727,6 +730,32 @@ class Command(BaseBuild):
             temp_seq = temp_seq[:565]+temp_seq[566:]
         elif structure.pdb_code.index=='9IVM':
             temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
+
+        # New code block for automatic alignment fixes using space information from the pdb, starts here
+        # parent_seq is the wt_seq, 
+        # ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+
+        # pdb_code = structure.pdb_code.index
+        # wt_seq = parent_seq
+        # pdb_text = structure.pdb_data.pdb
+        # pdb_seq, distances = generate_seq_and_distances_from_pdb_text(pdb_text, preferred_chain)
+        # ref_seq, temp_seq, pdb_map = run_pairwisealigner(pdb_code, wt_seq, pdb_seq)
+        # outlier_indexes = distances_stats(distances)
+        # fixed_temp_seq = detect_alignment_mistakes_and_reposition(
+        #     pdb_code,
+        #     wt_seq, 
+        #     pdb_seq, 
+        #     ref_seq, 
+        #     temp_seq, 
+        #     pdb_map, 
+        #     distances, 
+        #     outlier_indexes, 
+        #     aanumber=3  # or however many residues you want to look back
+        # )
+
+        # ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+        # fixed_temp_seq is the corrected temp_seq from this method
+        # New code block for automatic alignment fixes using space information from the pdb, ends here
 
 
         for i, r in enumerate(ref_seq, 1): #loop over alignment to create lookups (track pos)
