@@ -93,115 +93,380 @@
         border-color: #31b0d5;
     }
 
+    .Header-custom-class {
+      font-weight: bold;
+      font-size: 24px;
+    }
+
+    .error-message {
+      font-weight: bold;
+      color: red;
+      font-size: 16px;
+    }
 </style>
 <div class='col-md-12'>
   <br />
-  <h3 style='text-align:center;'>Data Mapper Plots</h3>
-  <br \>
+  <h3 style='text-align:center;'>
+    {% if Plot and PlotType %}
+      <span class="Header-custom-class">{{ Plot }} ({{ PlotType }})</span>
+    {% else %}
+      <span class="error-message">We encountered an issue processing your request. Please upload your data and try again.</span>
+    {% endif %}
+  </h3>
+  <br />
 </div>
 
-<!-- ### Create the panel tabs ### -->
-<ul class="nav nav-tabs">
-  {% if Plot_evaluation_json.0 %}
-    <li class="{% if first_active_tab == '#tab1' %}active{% endif %}">
-      <a href="#tab1" data-toggle="tab">GPCRome wheel</a>
-    </li>
-  {% endif %}
-  {% if Plot_evaluation_json.1 %}
-    <li class="{% if first_active_tab == '#tab2' %}active{% endif %}">
-      <a href="#tab2" data-toggle="tab">Tree</a>
-    </li>
-  {% endif %}
-  {% if Plot_evaluation_json.2 %}
-    <li class="{% if first_active_tab == '#tab3' %}active{% endif %}">
-      <a href="#tab3" data-toggle="tab">Cluster</a>
-    </li>
-  {% endif %}
-  {% if Plot_evaluation_json.3 %}
-    <li class="{% if first_active_tab == '#tab4' %}active{% endif %}">
-      <a href="#tab4" data-toggle="tab">List</a>
-    </li>
-  {% endif %}
-  {% if Plot_evaluation_json.4 %}
-  <li class="{% if first_active_tab == '#tab5' %}active{% endif %}">
-    <a href="#tab5" data-toggle="tab">Heatmap</a>
-  </li>
-  {% endif %}
-</ul>
 
-<!-- ## Tab content ## -->
-<div class="tab-content">
-  <!-- ##################### -->
-  <!-- ## tab 1 - GPCRome ## -->
-  <!-- ##################### -->
-  {% if Plot_evaluation_json.0 %}
-  <div id="tab1" class="tab-pane fade {% if first_active_tab == '#tab1' %}in active{% endif %}">
-    <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
-      <div class="col-md-12" style="margin-bottom: 20px;">
-        <div class="col-md-3" style="padding-top: 5px;">
-          Receptor names:
-            <div class="btn-group" role="group" id="gtp_plus">
-                <button id="GPCRome_UniProtNames" class="btn btn-info ">Gene</button>
-                <button id="GPCRome_IUPHARNames" class="btn btn-info active">Protein</button>
+
+<!-- ##################### -->
+<!-- ##  GPCRome wheel  ## -->
+<!-- ##################### -->
+{% if Plot == 'GPCRome wheel' %}
+  
+<div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
+  <div class="col-md-12" style="margin-bottom: 20px;">
+    <div class="col-md-3" style="padding-top: 5px;">
+      Receptor names:
+        <div class="btn-group" role="group" id="gtp_plus">
+            <button id="GPCRome_UniProtNames" class="btn btn-info ">Gene</button>
+            <button id="GPCRome_IUPHARNames" class="btn btn-info active">Protein</button>
+        </div>
+    </div>
+
+    <div class="col-md-2" style="padding-top: 5px;">
+      Icon toggle:
+      <button id="ToggleIcon" class="btn btn-info active">On</button>
+    </div>
+
+
+
+    <!-- # Download button # -->
+    <div class="col-md-2">
+      <div class="dropdown" style="width: 500px !important;">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_Color_Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Color styling
+        </button>
+        <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="GPCRome_Color_Styling_Menu">
+          <!-- Color complexity Dropdown -->
+          <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
+            <div class="col-md-6" style="width:150px;margin-right: 20px;">
+              <select id="GPCRome_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateGPCRomeColorPickers()">
+                <option value="One" selected>White - Color</option>
+                <option value="Two">Color - Color</option>
+                <option value="Three">Color - White - Color</option>
+              </select>
             </div>
+
+            <!-- Color Selector Dropdown -->
+            <div class="col-md-6" style="height: 15px;width: 200px;">
+              <div class="col-md-3" id="GPCRome_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
+                <input type="text" id="GPCRome_colorPicker_min" />
+              </div>
+              <div class="col-md-3" id="GPCRome_Color_avg_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
+                <input type="text" id="GPCRome_colorPicker_avg" />
+              </div>
+              <div class="col-md-3" id="GPCRome_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
+                <input type="text" id="GPCRome_colorPicker_max"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Set Colors Buttons -->
+          <div class="text-center" style="margin-bottom: 15px;">
+            <div class="col-md-12" style="margin-bottom: 5px;">
+              <div class="col-md-6"><button id="GPCRome_GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
+              <div class="col-md-6"><button id="GPCRome_GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
+            </div>
+            <div class="col-md-12" style="margin-bottom: 15px;">
+              <div class="col-md-6"><button id="GPCRome_RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
+              <div class="col-md-6"><button id="GPCRome_TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
+            </div>
+          </div>
         </div>
-        <!-- <div style="padding-top: 5px;">
-          Circle Spacing:
-          <button id="ToggleSpacing" class="btn btn-info active">On</button>
-        </div> -->
-        <div class="col-md-2" style="padding-top: 5px;">
-          Icon toggle:
-          <button id="ToggleIcon" class="btn btn-info active">On</button>
-        </div>
-
-
-
-      <!-- # Download button # -->
-      <div class="col-md-2">
-        <div class="dropdown" style="width: 500px !important;">
-          <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_Color_Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Color styling
+      </div>
+    </div>
+    <div class="col-md-2"></div>
+    <div class="col-md-3">
+      <div class="text-center">
+        <div class="dropdown">
+          <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
           </button>
-          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="GPCRome_Color_Styling_Menu">
-            <!-- Color complexity Dropdown -->
-            <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
-              <div class="col-md-6" style="width:150px;margin-right: 20px;">
-                <select id="GPCRome_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateGPCRomeColorPickers()">
-                  <option value="One" selected>White - Color</option>
-                  <option value="Two">Color - Color</option>
-                  <option value="Three">Color - White - Color</option>
-                </select>
+          <div class="dropdown-menu dropdown-menu-right-middle">
+            <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.svg');">SVG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.png');">PNG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.jpg');">JPG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.tiff');">TIFF</a></li>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-container" data-image-url="{% static 'home/images/DataMapper_GPCRome_icon_legend.png' %}"></div>
+  <!-- GPCRome -->
+  <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
+      <div id="GPCRome_plot" class="text-center"></div>
+  </div>
+
+</div>
+
+  {% endif %}
+  <!-- ####################### -->
+  <!-- ##   Tab 2 - Tree    ## -->
+  <!-- ####################### -->
+  {% if Plot == 'Tree' %}
+
+  <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
+    <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
+      <div class="col-md-3" style="padding-top: 5px;">
+        Receptor names:
+          <div class="btn-group" role="group" id="gtp_plus">
+              <button id="TREE_UniProtNames" class="btn btn-info active">Gene</button>
+              <button id="TREE_IUPHARNames" class="btn btn-info">Protein</button>
+          </div>
+      </div>
+      <!-- ######################### -->
+      <!-- # Color Styling buttons # -->
+      <!-- ######################### -->
+      <!-- Main Color Styling Dropdown -->
+      <div class="col-md-2">
+          <div class="dropdown" style="width: 600px !important;">
+              <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Color styling
+              </button>
+              <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+              
+              <!-- Outer1 Color Pickers with Dropdown -->
+              <div class="col-md-12" style="width: 550px; margin-top: 20px;">
+                <div class="col-md-1 text-center" style="width: 50px;">
+                    <h5>Inner</h5>
+                </div>
+                <div class="col-md-3 text-center" style="width: 150px;">
+                    <select id="Inner_Style" class="form-select" style="height: 30px;">
+                        <option value="White-Color">White-Color</option>
+                        <option value="Color-Color">Color-Color</option>
+                        <option value="Color-White-Color">Color-White-Color</option>
+                    </select>
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_min_Inner" placeholder="Min Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_middle_Inner" placeholder="Middle Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_max_Inner" placeholder="Max Color" />
+                </div>
               </div>
 
-              <!-- Color Selector Dropdown -->
-              <div class="col-md-6" style="height: 15px;width: 200px;">
-                <div class="col-md-3" id="GPCRome_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
-                  <input type="text" id="GPCRome_colorPicker_min" />
+              <!-- Outer1 Color Pickers with Dropdown -->
+              <div class="col-md-12" style="width: 550px; margin-top: 20px;">
+                  <div class="col-md-1 text-center" style="width: 50px;">
+                      <h5>Outer 1</h5>
+                  </div>
+                  <div class="col-md-3 text-center" style="width: 150px;">
+                      <select id="Outer1_Style" class="form-select" style="height: 30px;">
+                          <option value="White-Color">White-Color</option>
+                          <option value="Color-Color">Color-Color</option>
+                          <option value="Color-White-Color">Color-White-Color</option>
+                      </select>
+                  </div>
+                  <div class="col-md-2 text-center" style="width: 100px;">
+                      <input type="text" id="Tree_colorPicker_min_Outer1" placeholder="Min Color" />
+                  </div>
+                  <div class="col-md-2 text-center" style="width: 100px;">
+                      <input type="text" id="Tree_colorPicker_middle_Outer1" placeholder="Middle Color" />
+                  </div>
+                  <div class="col-md-2 text-center" style="width: 100px;">
+                      <input type="text" id="Tree_colorPicker_max_Outer1" placeholder="Max Color" />
+                  </div>
+              </div>
+
+              <!-- Outer2 Color Pickers with Dropdown -->
+              <div class="col-md-12" style="width: 550px; margin-top: 20px;">
+                <div class="col-md-1 text-center" style="width: 50px;">
+                    <h5>Outer 2</h5>
                 </div>
-                <div class="col-md-3" id="GPCRome_Color_avg_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
-                  <input type="text" id="GPCRome_colorPicker_avg" />
+                <div class="col-md-3 text-center" style="width: 150px;">
+                    <select id="Outer2_Style" class="form-select" style="height: 30px;">
+                        <option value="White-Color">White-Color</option>
+                        <option value="Color-Color">Color-Color</option>
+                        <option value="Color-White-Color">Color-White-Color</option>
+                    </select>
                 </div>
-                <div class="col-md-3" id="GPCRome_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
-                  <input type="text" id="GPCRome_colorPicker_max"/>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_min_Outer2" placeholder="Min Color" />
                 </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_middle_Outer2" placeholder="Middle Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_max_Outer2" placeholder="Max Color" />
+                </div>
+              </div>
+
+              <!-- Outer3 Color Pickers with Dropdown -->
+              <div class="col-md-12" style="width: 550px; margin-top: 20px;">
+                <div class="col-md-1 text-center" style="width: 50px;">
+                    <h5>Outer 3</h5>
+                </div>
+                <div class="col-md-3 text-center" style="width: 150px;">
+                    <select id="Outer3_Style" class="form-select" style="height: 30px;">
+                        <option value="White-Color">White-Color</option>
+                        <option value="Color-Color">Color-Color</option>
+                        <option value="Color-White-Color">Color-White-Color</option>
+                    </select>
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_min_Outer3" placeholder="Min Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_middle_Outer3" placeholder="Middle Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_max_Outer3" placeholder="Max Color" />
+                </div>
+              </div>
+
+              <!-- Outer4 Color Pickers with Dropdown -->
+              <div class="col-md-12" style="width: 550px; margin-top: 20px;">
+                <div class="col-md-1 text-center" style="width: 50px;">
+                    <h5>Outer 4</h5>
+                </div>
+                <div class="col-md-3 text-center" style="width: 150px;">
+                    <select id="Outer4_Style" class="form-select" style="height: 30px;">
+                        <option value="White-Color">White-Color</option>
+                        <option value="Color-Color">Color-Color</option>
+                        <option value="Color-White-Color">Color-White-Color</option>
+                    </select>
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_min_Outer4" placeholder="Min Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_middle_Outer4" placeholder="Middle Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_max_Outer4" placeholder="Max Color" />
+                </div>
+              </div>
+
+              <!-- Outer5 Color Pickers with Dropdown -->
+              <div class="col-md-12" style="width: 550px; margin-top: 20px;">
+                <div class="col-md-1 text-center" style="width: 50px;">
+                    <h5>Outer 5</h5>
+                </div>
+                <div class="col-md-3 text-center" style="width: 150px;">
+                    <select id="Outer5_Style" class="form-select" style="height: 30px;">
+                        <option value="White-Color">White-Color</option>
+                        <option value="Color-Color">Color-Color</option>
+                        <option value="Color-White-Color">Color-White-Color</option>
+                    </select>
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_min_Outer5" placeholder="Min Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_middle_Outer5" placeholder="Middle Color" />
+                </div>
+                <div class="col-md-2 text-center" style="width: 100px;">
+                    <input type="text" id="Tree_colorPicker_max_Outer5" placeholder="Max Color" />
+                </div>
+              </div>
+
+              </div>
+          </div>
+      </div>
+        <!-- ############### -->
+      <!-- ### Label Styling ###  -->
+        <!-- ############### -->
+      <div class="col-md-2" style="margin-left: 10px;margin-right: -10px;">
+        <div class="dropdown" style="width: 400px !important;">
+            <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Label Styling
+            </button>
+            <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+
+                <!-- Class Label and Slider -->
+                <div id="class_label_group" class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                    <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                        <label for="classFontSizeSlider" class="form-label">Class Font Size</label>
+                        <input type="range" class="form-range" min="8" max="20" value="16" id="classFontSizeSlider">
+                        <span id="classFontSizeValue">16</span>px
+                    </div>
+                </div>
+
+                <!-- Ligand Type Label and Slider -->
+                <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                    <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                        <label for="ligandTypeFontSizeSlider" class="form-label">Ligand Type Font Size</label>
+                        <input type="range" class="form-range" min="8" max="20" value="16" id="ligandTypeFontSizeSlider">
+                        <span id="ligandTypeFontSizeValue">16</span>px
+                    </div>
+                </div>
+
+                <!-- Receptor Family Label and Slider -->
+                <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                    <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                        <label for="receptorFamilyFontSizeSlider" class="form-label">Receptor Family Font Size</label>
+                        <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFamilyFontSizeSlider">
+                        <span id="receptorFamilyFontSizeValue">16</span>px
+                    </div>
+                </div>
+
+                <!-- Receptor Label and Slider -->
+                <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                    <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                        <label for="receptorFontSizeSlider" class="form-label">Receptor Font Size</label>
+                        <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFontSizeSlider">
+                        <span id="receptorFontSizeValue">16</span>px
+                    </div>
+                </div>
+
+            </div>
+        </div>
+      </div>
+
+      <!-- ################ -->
+      <!-- # Data styling # -->
+      <!-- ################ -->
+
+      <div class="col-md-2" style="margin-left: 10px;margin-right: -10px;">
+        <div class="dropdown" style="width: 400px !important;">
+          <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Data Styling
+          </button>
+          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+
+            <!-- Circle Size Slider -->
+            <div class="col-md-12" style="text-align: center;">
+              <label for="Tree_circleSizeSlider" id="Tree_circleSizeSliderLabel" class="form-label">Circle Size</label>
+            </div>
+            <div class="col-md-12" style="margin-bottom: 10px;">
+              <input type="range" class="form-range" min="1" max="6" value="1" id="Tree_circleSizeSlider">
+              <div style="text-align: center;">
+                <span id="Tree_circleSizeValue">1</span>
               </div>
             </div>
 
-            <!-- Set Colors Buttons -->
-            <div class="text-center" style="margin-bottom: 15px;">
-              <div class="col-md-12" style="margin-bottom: 5px;">
-                <div class="col-md-6"><button id="GPCRome_GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
-                <div class="col-md-6"><button id="GPCRome_GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
-              </div>
-              <div class="col-md-12" style="margin-bottom: 15px;">
-                <div class="col-md-6"><button id="GPCRome_RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
-                <div class="col-md-6"><button id="GPCRome_TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
+            <!-- Space Size Slider -->
+            <div class="col-md-12" style="text-align: center;">
+              <label for="Tree_circleSpacerSlider" id="Tree_circleSpacerSliderLabel" class="form-label">Circle Spacer</label>
+            </div>
+            <div class="col-md-12" style="margin-bottom: 10px;">
+              <input type="range" class="form-range" min="0" max="2" value="0" id="Tree_circleSpacerSlider">
+              <div style="text-align: center;">
+                <span id="Tree_circleSpacerValue">0</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="col-md-2"></div>
+
+
+      <!-- # Download button # -->
+      <div class="col-md-1"></div>
       <div class="col-md-3">
         <div class="text-center">
           <div class="dropdown">
@@ -209,321 +474,36 @@
               <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
             </button>
             <div class="dropdown-menu dropdown-menu-right-middle">
-              <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.svg');">SVG</a></li>
-              <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.png');">PNG</a></li>
-              <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.jpg');">JPG</a></li>
-              <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.tiff');">TIFF</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('tree_plot_svg'), 'Tree.svg');">SVG</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('tree_plot_svg'), 'Tree.png');">PNG</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('tree_plot_svg'), 'Tree.jpg');">JPG</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('tree_plot_svg'), 'Tree.tiff');">TIFF</a></li>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-      <div id="image-container" data-image-url="{% static 'home/images/DataMapper_GPCRome_icon_legend.png' %}"></div>
-      <!-- GPCRome -->
+      </div>
+      <!-- ############# -->
+      <!-- # TREE plot # -->
+      <!-- ############# -->
+
+
+        <!-- Legend bars -->
+      <div class="col-md-12" id="legend_bars">
+        <svg width="800" height="75"></svg>
+      </div>
+      <!-- Tree -->
       <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
-          <div id="GPCRome_plot" class="text-center"></div>
+          <div id="tree_plot" class="text-center"></div>
       </div>
 
-      </div>
     </div>
-  {% endif %}
-  <!-- ####################### -->
-  <!-- ##   Tab 2 - Tree    ## -->
-  <!-- ####################### -->
-  {% if Plot_evaluation_json.1 %}
-  <div id="tab2" class="tab-pane fade {% if first_active_tab == '#tab2' %}in active{% endif %}">
-    <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
-      <div>
-        <div style="padding-top: 5px;">
-          Receptor names:
-            <div class="btn-group" role="group" id="gtp_plus">
-                <button id="TREE_UniProtNames" class="btn btn-info active">Gene</button>
-                <button id="TREE_IUPHARNames" class="btn btn-info">Protein</button>
-            </div>
-        </div>
-        <!-- ######################### -->
-        <!-- # Color Styling buttons # -->
-        <!-- ######################### -->
-        <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
-          <!-- Main Color Styling Dropdown -->
-          <div class="col-md-2">
-              <div class="dropdown" style="width: 600px !important;">
-                  <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      Color styling
-                  </button>
-                  <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
-                  
-                  <!-- Outer1 Color Pickers with Dropdown -->
-                  <div class="col-md-12" style="width: 550px; margin-top: 20px;">
-                    <div class="col-md-1 text-center" style="width: 50px;">
-                        <h5>Inner</h5>
-                    </div>
-                    <div class="col-md-3 text-center" style="width: 150px;">
-                        <select id="Inner_Style" class="form-select" style="height: 30px;">
-                            <option value="White-Color">White-Color</option>
-                            <option value="Color-Color">Color-Color</option>
-                            <option value="Color-White-Color">Color-White-Color</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_min_Inner" placeholder="Min Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_middle_Inner" placeholder="Middle Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_max_Inner" placeholder="Max Color" />
-                    </div>
-                  </div>
-
-                  <!-- Outer1 Color Pickers with Dropdown -->
-                  <div class="col-md-12" style="width: 550px; margin-top: 20px;">
-                      <div class="col-md-1 text-center" style="width: 50px;">
-                          <h5>Outer 1</h5>
-                      </div>
-                      <div class="col-md-3 text-center" style="width: 150px;">
-                          <select id="Outer1_Style" class="form-select" style="height: 30px;">
-                              <option value="White-Color">White-Color</option>
-                              <option value="Color-Color">Color-Color</option>
-                              <option value="Color-White-Color">Color-White-Color</option>
-                          </select>
-                      </div>
-                      <div class="col-md-2 text-center" style="width: 100px;">
-                          <input type="text" id="Tree_colorPicker_min_Outer1" placeholder="Min Color" />
-                      </div>
-                      <div class="col-md-2 text-center" style="width: 100px;">
-                          <input type="text" id="Tree_colorPicker_middle_Outer1" placeholder="Middle Color" />
-                      </div>
-                      <div class="col-md-2 text-center" style="width: 100px;">
-                          <input type="text" id="Tree_colorPicker_max_Outer1" placeholder="Max Color" />
-                      </div>
-                  </div>
-
-                  <!-- Outer2 Color Pickers with Dropdown -->
-                  <div class="col-md-12" style="width: 550px; margin-top: 20px;">
-                    <div class="col-md-1 text-center" style="width: 50px;">
-                        <h5>Outer 2</h5>
-                    </div>
-                    <div class="col-md-3 text-center" style="width: 150px;">
-                        <select id="Outer2_Style" class="form-select" style="height: 30px;">
-                            <option value="White-Color">White-Color</option>
-                            <option value="Color-Color">Color-Color</option>
-                            <option value="Color-White-Color">Color-White-Color</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_min_Outer2" placeholder="Min Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_middle_Outer2" placeholder="Middle Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_max_Outer2" placeholder="Max Color" />
-                    </div>
-                  </div>
-
-                  <!-- Outer3 Color Pickers with Dropdown -->
-                  <div class="col-md-12" style="width: 550px; margin-top: 20px;">
-                    <div class="col-md-1 text-center" style="width: 50px;">
-                        <h5>Outer 3</h5>
-                    </div>
-                    <div class="col-md-3 text-center" style="width: 150px;">
-                        <select id="Outer3_Style" class="form-select" style="height: 30px;">
-                            <option value="White-Color">White-Color</option>
-                            <option value="Color-Color">Color-Color</option>
-                            <option value="Color-White-Color">Color-White-Color</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_min_Outer3" placeholder="Min Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_middle_Outer3" placeholder="Middle Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_max_Outer3" placeholder="Max Color" />
-                    </div>
-                  </div>
-
-                  <!-- Outer4 Color Pickers with Dropdown -->
-                  <div class="col-md-12" style="width: 550px; margin-top: 20px;">
-                    <div class="col-md-1 text-center" style="width: 50px;">
-                        <h5>Outer 4</h5>
-                    </div>
-                    <div class="col-md-3 text-center" style="width: 150px;">
-                        <select id="Outer4_Style" class="form-select" style="height: 30px;">
-                            <option value="White-Color">White-Color</option>
-                            <option value="Color-Color">Color-Color</option>
-                            <option value="Color-White-Color">Color-White-Color</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_min_Outer4" placeholder="Min Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_middle_Outer4" placeholder="Middle Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_max_Outer4" placeholder="Max Color" />
-                    </div>
-                  </div>
-
-                  <!-- Outer5 Color Pickers with Dropdown -->
-                  <div class="col-md-12" style="width: 550px; margin-top: 20px;">
-                    <div class="col-md-1 text-center" style="width: 50px;">
-                        <h5>Outer 5</h5>
-                    </div>
-                    <div class="col-md-3 text-center" style="width: 150px;">
-                        <select id="Outer5_Style" class="form-select" style="height: 30px;">
-                            <option value="White-Color">White-Color</option>
-                            <option value="Color-Color">Color-Color</option>
-                            <option value="Color-White-Color">Color-White-Color</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_min_Outer5" placeholder="Min Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_middle_Outer5" placeholder="Middle Color" />
-                    </div>
-                    <div class="col-md-2 text-center" style="width: 100px;">
-                        <input type="text" id="Tree_colorPicker_max_Outer5" placeholder="Max Color" />
-                    </div>
-                  </div>
-
-                  </div>
-              </div>
-          </div>
-         <!-- ############### -->
-        <!-- ### Label Styling ###  -->
-         <!-- ############### -->
-         <div class="col-md-2" style="margin-left: 10px;margin-right: -10px;">
-          <div class="dropdown" style="width: 400px !important;">
-              <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  Label Styling
-              </button>
-              <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
-
-                  <!-- Class Label and Slider -->
-                  <div id="class_label_group" class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                      <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                          <label for="classFontSizeSlider" class="form-label">Class Font Size</label>
-                          <input type="range" class="form-range" min="8" max="20" value="16" id="classFontSizeSlider">
-                          <span id="classFontSizeValue">16</span>px
-                      </div>
-                  </div>
-
-                  <!-- Ligand Type Label and Slider -->
-                  <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                      <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                          <label for="ligandTypeFontSizeSlider" class="form-label">Ligand Type Font Size</label>
-                          <input type="range" class="form-range" min="8" max="20" value="16" id="ligandTypeFontSizeSlider">
-                          <span id="ligandTypeFontSizeValue">16</span>px
-                      </div>
-                  </div>
-
-                  <!-- Receptor Family Label and Slider -->
-                  <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                      <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                          <label for="receptorFamilyFontSizeSlider" class="form-label">Receptor Family Font Size</label>
-                          <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFamilyFontSizeSlider">
-                          <span id="receptorFamilyFontSizeValue">16</span>px
-                      </div>
-                  </div>
-
-                  <!-- Receptor Label and Slider -->
-                  <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                      <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                          <label for="receptorFontSizeSlider" class="form-label">Receptor Font Size</label>
-                          <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFontSizeSlider">
-                          <span id="receptorFontSizeValue">16</span>px
-                      </div>
-                  </div>
-
-              </div>
-          </div>
-        </div>
-
-        <!-- ################ -->
-        <!-- # Data styling # -->
-        <!-- ################ -->
-
-        <div class="col-md-2" style="margin-left: 10px;margin-right: -10px;">
-          <div class="dropdown" style="width: 400px !important;">
-            <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Data Styling
-            </button>
-            <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
-
-              <!-- Circle Size Slider -->
-              <div class="col-md-12" style="text-align: center;">
-                <label for="Tree_circleSizeSlider" id="Tree_circleSizeSliderLabel" class="form-label">Circle Size</label>
-              </div>
-              <div class="col-md-12" style="margin-bottom: 10px;">
-                <input type="range" class="form-range" min="1" max="6" value="1" id="Tree_circleSizeSlider">
-                <div style="text-align: center;">
-                  <span id="Tree_circleSizeValue">1</span>
-                </div>
-              </div>
-
-              <!-- Space Size Slider -->
-              <div class="col-md-12" style="text-align: center;">
-                <label for="Tree_circleSpacerSlider" id="Tree_circleSpacerSliderLabel" class="form-label">Circle Spacer</label>
-              </div>
-              <div class="col-md-12" style="margin-bottom: 10px;">
-                <input type="range" class="form-range" min="0" max="2" value="0" id="Tree_circleSpacerSlider">
-                <div style="text-align: center;">
-                  <span id="Tree_circleSpacerValue">0</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        <!-- # Download button # -->
-        <div class="col-md-3"></div>
-        <div class="col-md-3">
-          <div class="text-center">
-            <div class="dropdown">
-              <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-right-middle">
-                <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('tree_plot_svg'), 'Tree.svg');">SVG</a></li>
-                <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('tree_plot_svg'), 'Tree.png');">PNG</a></li>
-                <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('tree_plot_svg'), 'Tree.jpg');">JPG</a></li>
-                <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('tree_plot_svg'), 'Tree.tiff');">TIFF</a></li>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        </div>
-        <!-- ############# -->
-        <!-- # TREE plot # -->
-        <!-- ############# -->
-
-
-         <!-- Legend bars -->
-        <div class="col-md-12" id="legend_bars">
-          <svg width="800" height="75"></svg>
-        </div>
-        <!-- Tree -->
-        <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
-            <div id="tree_plot" class="text-center"></div>
-        </div>
-
-      </div>
-    </div>
-  </div>
   {% endif %}
   <!-- ####################### -->
   <!-- ## Tab 3 - Cluster   ## -->
   <!-- ####################### -->
-  {% if Plot_evaluation_json.2 %}
-    <div id="tab3" class="tab-pane fade {% if first_active_tab == '#tab3' %}in active{% endif %}">
+  {% if Plot == 'Cluster' %}
       <div style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
         <div class="col-md-12" style="padding-top: 20px;">
           <div class="col-md-1">Color by:</div>
@@ -639,13 +619,11 @@
       <!-- Container for the Plotly Plot -->
       <div id="plotContainer_cluster" style="width: 1600px; height: 1200px;"></div>
     </div>
-  </div>
   {% endif %}
   <!-- ####################### -->
   <!-- ##   Tab 4 - List    ## -->
   <!-- ####################### -->
-  {% if Plot_evaluation_json.3 %}
-    <div id="tab4" class="tab-pane fade {% if first_active_tab == '#tab4' %}in active{% endif %}">
+  {% if Plot == 'List' %}
       <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;"></div>
       <!-- ############ -->
       <!-- ## Layout ## -->
@@ -907,164 +885,174 @@
         </div>
       </div>
       <div id="ListPlot" class="text-left" style="margin-top: 120px;"></div>
-    </div>
 
   {% endif %}
   <!-- ##################### -->
   <!-- ## Tab 5 - Heatmap ## -->
   <!-- ##################### -->
-  {% if Plot_evaluation_json.4 %}
-    <div id="tab5" class="tab-pane fade {% if first_active_tab == '#tab5' %}in active{% endif %}">
-      <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;"></div>
-      <!-- Receptor label switch -->
-      <div class="col-md-12" style="margin-top: 20px;">
-        <div>
-          Receptor names:
-            <div class="btn-group" role="group" id="gtp_plus">
-                <button id="Heatmap_UniProtNames" class="btn btn-info active">Gene</button>
-                <button id="Heatmap_IUPHARNames" class="btn btn-info">Protein</button>
-            </div>
+  {% if Plot == 'Heatmap' %}
+  <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;"></div>
+  <!-- Receptor label switch -->
+  <div class="col-md-12" style="margin-top: 20px;">
+    <div>
+      Receptor names:
+        <div class="btn-group" role="group" id="gtp_plus">
+            <button id="Heatmap_UniProtNames" class="btn btn-info active">Gene</button>
+            <button id="Heatmap_IUPHARNames" class="btn btn-info">Protein</button>
         </div>
-      </div>
-      <div class="col-md-12" style="margin-top: 20px;margin-bottom: 30px;">
-        <div class="col-md-2">
-        <div class="dropdown" style="width: 500px !important;">
-          <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Color styling
-          </button>
-          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
-            <!-- Color complexity Dropdown -->
-            <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
-              <div class="col-md-6" style="width:150px;margin-right: 20px;">
-                <select id="Heatmap_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateColorPickers()">
-                  <option value="One" selected>White - Color</option>
-                  <option value="Two">Color - Color</option>
-                  <option value="Three">Color - White - Color</option>
-                </select>
-              </div>
+    </div>
+  </div>
+  <div class="col-md-12" style="margin-top: 20px;margin-bottom: 30px;">
+    <div class="col-md-2">
+    <div class="dropdown" style="width: 500px !important;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Color styling
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+        <!-- Color complexity Dropdown -->
+        <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
+          <div class="col-md-6" style="width:150px;margin-right: 20px;">
+            <select id="Heatmap_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateColorPickers()">
+              <option value="One" selected>White - Color</option>
+              <option value="Two">Color - Color</option>
+              <option value="Three">Color - White - Color</option>
+            </select>
+          </div>
 
-              <!-- Color Selector Dropdown -->
-              <div class="col-md-6" style="height: 15px;width: 200px;">
-                  <div class="col-md-3" id="Heatmap_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
-                    <input type="text" id="Heatmap_colorPicker_min" />
-                  </div>
-                <!-- Color Selector Dropdown -->
-                  <div class="col-md-3" id="Heatmap_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
-                    <input type="text" id="Heatmap_colorPicker_max"/>
-                  </div>
+          <!-- Color Selector Dropdown -->
+          <div class="col-md-6" style="height: 15px;width: 200px;">
+              <div class="col-md-3" id="Heatmap_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
+                <input type="text" id="Heatmap_colorPicker_min" />
               </div>
-            </div>
-            <!-- Set Colors Buttons -->
-            <div class="text-center" style="margin-bottom: 15px;">
-              <div class="col-md-12" style="margin-bottom: 5px;">
-                <div class="col-md-6"><button id="GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
-                <div class="col-md-6"><button id="GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
+            <!-- Color Selector Dropdown -->
+              <div class="col-md-3" id="Heatmap_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
+                <input type="text" id="Heatmap_colorPicker_max"/>
               </div>
-              <div class="col-md-12" style="margin-bottom: 15px;">
-                <div class="col-md-6"><button id="RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
-                <div class="col-md-6"><button id="TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
-              </div>
-            </div>
+          </div>
+        </div>
+        <!-- Set Colors Buttons -->
+        <div class="text-center" style="margin-bottom: 15px;">
+          <div class="col-md-12" style="margin-bottom: 5px;">
+            <div class="col-md-6"><button id="GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
+            <div class="col-md-6"><button id="GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 15px;">
+            <div class="col-md-6"><button id="RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
+            <div class="col-md-6"><button id="TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- ################# -->
-      <!-- # Label Styling  # -->
-      <!-- ################# -->
-      <div class="col-md-2">
-        <div class="dropdown" style="width: 400px !important;">
-          <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Label Styling
-          </button>
-          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+  <!-- ################# -->
+  <!-- # Label Styling  # -->
+  <!-- ################# -->
+  <div class="col-md-2">
+    <div class="dropdown" style="width: 400px !important;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Label Styling
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
 
-            <!-- Label Orientation Toggle Button -->
-            <div class="col-md-12" style="margin-top: 20px;margin-bottom: 10px;">
-              <div class="text-center">
-                <button id="toggleLabelOrientation" class="btn btn-primary" style="width:150px;">Vertical</button>
-              </div>
-            </div>
-
-            <!-- Label Position Toggle Button -->
-            <div class="col-md-12" style="margin-top: 10px;margin-bottom: 20px;">
-              <div class="text-center">
-                <button id="toggleLabelPosition" class="btn btn-primary" style="width:150px;">Bottom</button>
-              </div>
-            </div>
-
-            <!-- Label Font Size Slider -->
-            <div class="col-md-12" style="text-align: center;">
-              <label id="Heatmap_fontSizeSliderLabel" class="form-label">Label Font Size: 14px</label>
-            </div>
-            <div class="col-md-12" style="margin-bottom: 30px;">
-              <input type="range" class="form-range" min="10" max="16" id="Heatmap_fontSizeSlider" value="14">
-            </div>
-
-            <!-- Receptor Font Size Slider -->
-            <div class="col-md-12" style="text-align: center;">
-              <label id="Heatmap_receptor_fontSizeSliderLabel" class="form-label">Receptor Font Size: 14px</label>
-            </div>
-            <div class="col-md-12" style="margin-bottom: 30px;">
-              <input type="range" class="form-range" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14">
-            </div>
-
-          </div>
-        </div>
-      </div>
-      <!-- ################# -->
-      <!-- # Data Styling  # -->
-      <!-- ################# -->
-      <div class="col-md-2">
-        <div class="dropdown" style="width: 400px !important;">
-          <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_DataStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Data styling
-          </button>
-          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Heatmap_DataStyling_Menu">
-
-            <!-- Data Labels Toggle Button -->
-            <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;text-align:center;">
-              <button id="Heatmap_data_labels" class="btn btn-primary" style="width:150px;">Data Labels: Yes</button>
-            </div>
-
-            <!-- Data border Toggle Button -->
-            <div class="col-md-12" style="width:300px;margin-bottom: 20px;text-align:center;">
-              <button id="Heatmap_Border_Styling" class="btn btn-primary" style="width:150px;">Data Border: Yes</button>
-            </div>
-
-            <!-- Data Font Size Slider -->
-            <div class="col-md-12" style="text-align: center;">
-              <label id="Heatmap_data_fontSizeSliderLabel" class="form-label">Data Label Font Size: 12px</label>
-            </div>
-            <div class="col-md-12" style="margin-bottom: 30px;">
-              <input type="range" class="form-range" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12">
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-        <div class="col-md-4">
+        <!-- Label Orientation Toggle Button -->
+        <div class="col-md-12" style="margin-top: 20px;margin-bottom: 10px;">
           <div class="text-center">
-            <div class="dropdown">
-              <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
-              </button>
-              <div class="dropdown-menu dropdown-menu-right-middle">
-                <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.svg');">SVG</a></li>
-                <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('Heatmap_plot_svg'), 'Heatmap.png');">PNG</a></li>
-                <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.jpg');">JPG</a></li>
-                <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('Heatmap_plot_svg'), 'Heatmap.tiff');">TIFF</a></li>
-              </div>
-            </div>
+            <button id="toggleLabelOrientation" class="btn btn-primary" style="width:150px;">Vertical</button>
+          </div>
+        </div>
+
+        <!-- Label Position Toggle Button -->
+        <div class="col-md-12" style="margin-top: 10px;margin-bottom: 20px;">
+          <div class="text-center">
+            <button id="toggleLabelPosition" class="btn btn-primary" style="width:150px;">Bottom</button>
+          </div>
+        </div>
+
+        <!-- Label Font Size Slider -->
+        <div class="col-md-12" style="text-align: center;">
+          <label id="Heatmap_fontSizeSliderLabel" class="form-label">Label Font Size: 14px</label>
+        </div>
+        <div class="col-md-12" style="margin-bottom: 30px;">
+          <input type="range" class="form-range" min="10" max="16" id="Heatmap_fontSizeSlider" value="14">
+        </div>
+
+        <!-- Receptor Font Size Slider -->
+        <div class="col-md-12" style="text-align: center;">
+          <label id="Heatmap_receptor_fontSizeSliderLabel" class="form-label">Receptor Font Size: 14px</label>
+        </div>
+        <div class="col-md-12" style="margin-bottom: 30px;">
+          <input type="range" class="form-range" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14">
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <!-- ################### -->
+  <!-- # Label modifier  # -->
+  <!-- ################### -->
+  <div class="col-md-2">
+    <div class="dropdown" style="width: 400px !important;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="LabelModifier_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Label Modifier
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="LabelModifier_Menu">
+        <div id="dynamicInputs" class="p-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ################# -->
+  <!-- # Data Styling  # -->
+  <!-- ################# -->
+  <div class="col-md-2">
+    <div class="dropdown" style="width: 400px !important;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_DataStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Data styling
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Heatmap_DataStyling_Menu">
+
+        <!-- Data Labels Toggle Button -->
+        <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;text-align:center;">
+          <button id="Heatmap_data_labels" class="btn btn-primary" style="width:150px;">Data Labels: Yes</button>
+        </div>
+
+        <!-- Data border Toggle Button -->
+        <div class="col-md-12" style="width:300px;margin-bottom: 20px;text-align:center;">
+          <button id="Heatmap_Border_Styling" class="btn btn-primary" style="width:150px;">Data Border: Yes</button>
+        </div>
+
+        <!-- Data Font Size Slider -->
+        <div class="col-md-12" style="text-align: center;">
+          <label id="Heatmap_data_fontSizeSliderLabel" class="form-label">Data Label Font Size: 12px</label>
+        </div>
+        <div class="col-md-12" style="margin-bottom: 30px;">
+          <input type="range" class="form-range" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12">
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+    <div class="col-md-4">
+      <div class="text-center">
+        <div class="dropdown">
+          <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-right-middle">
+            <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.svg');">SVG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('Heatmap_plot_svg'), 'Heatmap.png');">PNG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.jpg');">JPG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('Heatmap_plot_svg'), 'Heatmap.tiff');">TIFF</a></li>
           </div>
         </div>
       </div>
-      <div id="heatmapPlot" class="text-center" style="margin-left: -150px;"></div>
-      </div>
+    </div>
+  </div>
+  <div id="heatmapPlot" class="text-center" style="margin-left: -150px;"></div>
   {% endif %}
   
-</div>
 
 {% endblock %}
 
@@ -1082,10 +1070,343 @@
 <script src="{% static 'home/js/ml.js' %}"></script>
 
 
+<!-- Universal scripts -->
+
+{% if Plot %}
+
+<script>
+
+$('.dropdown-menu').on('click', function(event){
+    event.stopPropagation();
+});
+
+</script>
+{% endif %}
+
+
+<!-- ############# -->
+<!-- ## GPCRome ## -->
+<!-- ############# -->
+{% if Plot == 'GPCRome wheel' %}
+<script>
+
+var GPCRome_categories_data = {{ GPCRome_data|safe }};
+var fill_data = {{ GPCRome_data_variables|safe }};
+// var GPCRome_data_types = {{GPCRome_datatypes|safe}};
+var GPCRome_Label_conversion_dict = {{GPCRome_Label_Conversion|safe}};
+var GPCRome_master = {{GPCRome_MasterDict|safe}}
+var GPCRome_WheelDict = {{GPCRome_WheelDict|safe}}
+
+// Initialize the conversion dictionary
+GPCRome_Label_conversion_dict = initializeGPCRomeLabelConversionDict(GPCRome_Label_conversion_dict);
+
+function initializeGPCRomeLabelConversionDict(conversionDict) {
+    const updatedDict = {};
+
+    Object.keys(conversionDict).forEach(originalLabel => {
+        let uniProtLabel = conversionDict[originalLabel];
+        uniProtLabel = uniProtLabel.replace(/_human$/, "").toUpperCase(); // Remove "_human" and convert to uppercase
+        updatedDict[originalLabel] = uniProtLabel;
+    });
+
+    return updatedDict;
+}
+
+
+// # Initialize data styling #
+var layout_data = GPCRome_initializeData(GPCRome_categories_data);
+
+const GPCRome_fill_data_values = Object.values(fill_data)
+    .map(receptor => receptor.Value1)
+    .filter(value => value !== null && value !== undefined && value !== '' && !isNaN(value)); // Filtering out invalid values
+
+const GPCRome_fill_minValue = GPCRome_fill_data_values.length > 0 ? Math.min(...GPCRome_fill_data_values) : null; 
+const GPCRome_fill_maxValue = GPCRome_fill_data_values.length > 0 ? Math.max(...GPCRome_fill_data_values) : null;
+
+// Calculate median
+// Sort the values in ascending order
+GPCRome_fill_data_values.sort((a, b) => a - b);
+
+// Calculate the median
+let GPCRome_fill_medianValue;
+const middleIndex = Math.floor(GPCRome_fill_data_values.length / 2);
+
+if (GPCRome_fill_data_values.length % 2 === 0) {
+    // Even number of elements, median is the average of the two middle values
+    GPCRome_fill_medianValue = (GPCRome_fill_data_values[middleIndex - 1] + GPCRome_fill_data_values[middleIndex]) / 2;
+} else {
+    // Odd number of elements, median is the middle value
+    GPCRome_fill_medianValue = GPCRome_fill_data_values[middleIndex];
+}
+
+GPCRome_fill_avg = (GPCRome_fill_minValue+GPCRome_fill_maxValue)/2
+
+var GPCRomes_styling = {
+  Spacing: true,
+  family: true,
+  datatype: 'Continuous',
+  minValue: GPCRome_fill_minValue,
+  median_value: GPCRome_fill_medianValue,
+  avg_value: GPCRome_fill_avg,
+  maxValue: GPCRome_fill_maxValue,
+  colorStart: "#e64b35",
+  color_median: "#FFFFFF",
+  colorEnd: "#3c5488",
+  data_color_complexity: 'One',
+  showIcon: true  // Add this property to control the icon visibility
+}
+
+
+// # initial draw
+let GPCRome_location = "GPCRome_plot";
+Draw_GPCRomes(layout_data,fill_data,GPCRome_location,GPCRomes_styling);
+
+
+// Global variables for current label type
+let currentLabelType = "IUPHAR"; // Default
+
+// Event listeners for label type buttons
+document.getElementById("GPCRome_UniProtNames").addEventListener("click", () => {
+    switchLabelType("UniProt");
+});
+
+document.getElementById("GPCRome_IUPHARNames").addEventListener("click", () => {
+    switchLabelType("IUPHAR");
+});
+
+// Function to switch label types
+function switchLabelType(labelType) {
+    currentLabelType = labelType;
+    updateGPCRome();
+}
+
+
+// Function to toggle the icon visibility and redraw the GPCRomes
+function toggleIcon() {
+    const button = d3.select("#ToggleIcon");
+
+    // Toggle the showIcon property in GPCRomes_styling
+    GPCRomes_styling.showIcon = !GPCRomes_styling.showIcon;
+
+    // Update button text and state
+    if (GPCRomes_styling.showIcon) {
+        button.text("On");
+        button.classed("active", true);
+    } else {
+        button.text("Off");
+        button.classed("active", false);
+    }
+
+    // Redraw the GPCRomes with the updated icon state
+    updateGPCRome();
+}
+
+// Attach event listener to the button
+d3.select("#ToggleIcon").on("click", toggleIcon);
+
+// Function to update and redraw GPCRomes
+function updateGPCRome() {
+    const updatedLayoutData = updateLayoutData(layout_data, GPCRome_Label_conversion_dict, currentLabelType);
+    const updatedFillData = updateFillData(fill_data, GPCRome_Label_conversion_dict, currentLabelType);
+
+    // Clear the existing SVG content
+    d3.select("#" + GPCRome_location).select("svg").remove();
+
+    // Redraw the GPCRomes with the updated data
+    Draw_GPCRomes(updatedLayoutData, updatedFillData, GPCRome_location, GPCRomes_styling);
+
+    // Update button active states
+    // updateActiveButtonState(currentLabelType);
+}
+
+// Function to update layout data
+function updateLayoutData(layout_data, conversionDict, labelType) {
+    const updatedData = {};
+
+    Object.keys(layout_data).forEach(GPCRomeKey => {
+        const GPCRome = layout_data[GPCRomeKey];
+        updatedData[GPCRomeKey] = {};
+
+        Object.keys(GPCRome).forEach(ligandType => {
+            const receptors = GPCRome[ligandType];
+            updatedData[GPCRomeKey][ligandType] = receptors.map(receptor => {
+                if (labelType === "UniProt") {
+                    return conversionDict[receptor] || receptor;
+                } else {
+                    return Object.keys(conversionDict).find(key => conversionDict[key] === receptor) || receptor;
+                }
+            });
+        });
+    });
+
+    return updatedData;
+}
+
+// Function to update fill data
+function updateFillData(fill_data, conversionDict, labelType) {
+    const updatedData = {};
+
+    Object.keys(fill_data).forEach(receptor => {
+        let updatedReceptor;
+        if (labelType === "UniProt") {
+            updatedReceptor = conversionDict[receptor] || receptor;
+        } else {
+            updatedReceptor = Object.keys(conversionDict).find(key => conversionDict[key] === receptor) || receptor;
+        }
+        updatedData[updatedReceptor] = fill_data[receptor];
+    });
+
+    return updatedData;
+}
+
+// ###################
+// ## Color styling ##
+// ###################
+
+function UpdateGPCRomeColorPickers() {
+  // Color complexity
+  const Color_styling = document.querySelector('#GPCRome_color_styling');
+
+  // Color picker containers
+  const GPCRome_Color_min_container = document.getElementById("GPCRome_Color_min_container");
+  const GPCRome_Color_avg_container = document.getElementById("GPCRome_Color_avg_container");
+  const GPCRome_Color_max_container = document.getElementById("GPCRome_Color_max_container");
+
+  // Get the selected layer value
+  const Color_styling_value = Color_styling.value;
+
+  if (Color_styling_value === 'One') {
+    GPCRome_Color_min_container.style.display = 'None';
+    GPCRome_Color_avg_container.style.display = 'None';
+    GPCRomes_styling.data_color_complexity = "One";
+  } else if (Color_styling_value === 'Two') {
+    GPCRome_Color_min_container.style.display = 'Block';
+    GPCRome_Color_avg_container.style.display = 'None';
+    GPCRomes_styling.data_color_complexity = "Two";
+  } else if (Color_styling_value === 'Three') {
+    GPCRome_Color_min_container.style.display = 'Block';
+    GPCRome_Color_avg_container.style.display = 'None';
+    GPCRomes_styling.data_color_complexity = "Three";
+  }
+
+  // Set color to current color
+  $("#GPCRome_colorPicker_min").spectrum("set", GPCRomes_styling.colorStart);
+  $("#GPCRome_colorPicker_avg").spectrum("set", GPCRomes_styling.color_avg);
+  $("#GPCRome_colorPicker_max").spectrum("set", GPCRomes_styling.colorEnd);
+
+  // Dynamically update the plot
+  GPCRomeWheel_updateVisualization();
+}
+
+// Initialize all color pickers for GPCRomeWheel
+$(document).ready(function() {
+  function initializeGPCRomeColorPicker(elementId, start_color) {
+    $("#" + elementId).spectrum({
+      color: start_color,
+      showPalette: true,
+      showInput: true,
+      preferredFormat: "hex",
+      palette: [
+        ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+        ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
+        ["#800000", "#808000", "#008000", "#800080", "#008080"],
+        ["#000080"]
+      ],
+      change: function(color) {
+        updateGPCRomeVisualization();
+      },
+      move: function(color) {
+        updateGPCRomeVisualization();
+      }
+    });
+  }
+
+  // Initialize color pickers
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.color_avg);
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
+});
+
+// Function to set color pickers to predefined colors
+function setGPCRomeColors(colorMin, colorAvg, colorMax, optionValue) {
+  $("#GPCRome_colorPicker_min").spectrum("set", colorMin);
+  $("#GPCRome_colorPicker_avg").spectrum("set", colorAvg);
+  $("#GPCRome_colorPicker_max").spectrum("set", colorMax);
+  GPCRomes_styling.data_color_complexity = optionValue;
+  $("#GPCRome_color_styling").val(optionValue).trigger("change");
+}
+
+// Event listeners for predefined color scales
+$("#GPCRome_GrayScale").click(function() {
+  GPCRomes_styling.colorStart = "#b8b8b8";
+  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#707070";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Two");
+  // Dynamically update the plot
+  GPCRomeWheel_updateVisualization();
+});
+
+$("#GPCRome_GrayBlueScale").click(function() {
+  GPCRomes_styling.colorStart = "#97a6c4";
+  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#384860";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Two");
+  // Dynamically update the plot
+  GPCRomeWheel_updateVisualization();
+});
+
+$("#GPCRome_RedBlueScale").click(function() {
+  GPCRomes_styling.colorStart = "#a00000";
+  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#1a80bb";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
+  // Dynamically update the plot
+  GPCRomeWheel_updateVisualization();
+});
+
+$("#GPCRome_TealMagentaScale").click(function() {
+  GPCRomes_styling.colorStart = "#298c8c";
+  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#800074";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
+  // Dynamically update the plot
+  GPCRomeWheel_updateVisualization();
+});
+
+function updateGPCRomeVisualization() {
+  const colorMin = $("#GPCRome_colorPicker_min").spectrum("get").toHexString();
+  const colorAvg = $("#GPCRome_colorPicker_avg").spectrum("get").toHexString();
+  const colorMax = $("#GPCRome_colorPicker_max").spectrum("get").toHexString();
+
+  GPCRomes_styling.colorStart = colorMin;
+  GPCRomes_styling.color_avg = colorAvg;
+  GPCRomes_styling.colorEnd = colorMax;
+
+  // Dynamically update the plot
+  GPCRomeWheel_updateVisualization();
+}
+// Function to remove the existing GPCRome plot
+function removeGPCRomePlot() {
+  d3.select("#" + GPCRome_location).select("svg").remove();
+}
+
+// Function to update the GPCRome plot
+function GPCRomeWheel_updateVisualization() {
+  // Remove the existing plot
+  removeGPCRomePlot();
+
+  // Redraw the GPCRomeWheel with updated settings
+  Draw_GPCRomes(layout_data, fill_data, GPCRome_location, GPCRomes_styling);
+}
+
+</script>
+
+{% endif %}
+
 <!-- ################## -->
 <!-- ###    Tree    ### -->
 <!-- ################## -->
-{% if Plot_evaluation_json.1 %}
+{% if Plot == 'Tree' %}
 
 <script type="text/javascript" charset="utf-8">
   $(document).ready(function() {
@@ -1107,14 +1428,14 @@
                 Tree_colors[key][index] = color.toHexString();
                 // Redraw circles and legends in real-time
                 DrawCircles('tree_plot', Tree_circles, maxLeafNodeLenght, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
-                createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict);
+                createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict);
             },
             change: function(color) {
                 // Final update when the user selects the color
                 Tree_colors[key][index] = color.toHexString();
                 // Redraw circles and legends after the final selection
                 DrawCircles('tree_plot', Tree_circles, maxLeafNodeLenght, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
-                createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict);
+                createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict);
             }
         });
     }
@@ -1187,7 +1508,6 @@ function Tree_handleColorPickerState(elementId, action) {
     tree_options = {{ tree_options | safe }};
     Tree_circles = {{ circles|safe }};
     Tree_label_dict = {{ whole_dict|safe }};
-    Tree_datatypes_dict = {{ Tree_datatypes|safe }};
     const maxLeafNodeLenght_scaler = 2.5
 
     tree_data = update_tree_data(tree_data,tree_options.depth);
@@ -1201,6 +1521,8 @@ function Tree_handleColorPickerState(elementId, action) {
       "Outer4":"Two",
       "Outer5":"Three",
     }
+
+    Tree_datatypes_dict = {'Inner':'Continuous','Outer1':'Continuous','Outer2':'Continuous','Outer3':'Continuous','Outer4':'Continuous','Outer5':'Continuous'}
 
     Tree_colors = {"Inner":["#FFFFFF","#000000"],
                   "Outer1":["#FFFFFF","#0000FF"],
@@ -1229,7 +1551,7 @@ function Tree_handleColorPickerState(elementId, action) {
       draw_tree(tree_data, tree_options,circle_size);
       updateLeavesLabels();
       DrawCircles('tree_plot', Tree_circles, maxLeafNodeLenght, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-      createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict.Tree);
+      createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict);
     }
 
     function ReDraw_Circles_and_Labels() {
@@ -1240,7 +1562,7 @@ function Tree_handleColorPickerState(elementId, action) {
 
     function ReDraw_cicles_and_bars() {
       DrawCircles('tree_plot', Tree_circles, maxLeafNodeLenght, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-      createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict.Tree);
+      createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict);
     }
 
     // # Change leaves buttons #
@@ -1532,13 +1854,8 @@ function initdraw() {
 <!-- ################## -->
 <!-- ###  Cluster   ### -->
 <!-- ################## -->
-{% if Plot_evaluation_json.2 %}
-
+{% if Plot == 'Cluster' %}
 <script>
-  
-$('.dropdown-menu').on('click', function(event){
-    event.stopPropagation();
-});
 
 // Global variables for cluster data
 var cluster_data_seq = {{ cluster_data_seq|safe }};
@@ -1820,7 +2137,7 @@ $('#plotContainer_cluster').on('plotly_relayout', function(eventdata) {
 <!-- ###    List    ### -->
 <!-- ################## -->
 
-{% if Plot_evaluation_json.3 %}
+{% if Plot == 'List' %}
 
 <script>
   $(document).ready(function() {
@@ -1870,10 +2187,13 @@ $('#plotContainer_cluster').on('plotly_relayout', function(eventdata) {
 
 var listdata = {{ listplot_data|safe }};
 var list_data_wow = {{ listplot_data_variables|safe }};
-var data_types_list = {{listplot_datatypes|safe}};
+// var data_types_list = {{listplot_datatypes|safe}};
 var Label_conversion_dict = {{Label_Conversion|safe}};
 
 var modded_list_data = Initialize_Data(listdata);
+
+
+data_types_list = {'Col1':'Continuous', 'Col2':'Continuous', 'Col3':'Continuous', 'Col4':'Continuous'}
 
 // #################################
 // ## Initialize global variables ##
@@ -1931,7 +2251,6 @@ var Label_names = 'Protein';
 
 // # Initialize data styling #
 var Data_styling = initializeDataStyling(list_data_wow, data_types_list);
-
 const List_Data_result = Data_resorter(modded_list_data);
 var Data_array = List_Data_result.final_array;
 var Data_Category_array = List_Data_result.category_array;
@@ -2261,7 +2580,7 @@ $("#List_IUPHARNames").click(function() {
 <!-- ############# -->
 <!-- ## Heatmap ## -->
 <!-- ############# -->
-{% if Plot_evaluation_json.4 %}
+{% if Plot == 'Heatmap' %}
 
 <script>
   $(document).ready(function() {
@@ -2300,7 +2619,9 @@ $("#List_IUPHARNames").click(function() {
 
 var heatmap = {{ heatmap_data|safe }};
 var label_converter = {{ Label_converter|safe }};
-var label_x_converter = {{Heatmap_Label_dict|safe}};
+// var label_x_converter = {{Heatmap_Label_dict|safe}};
+
+var label_x_converter = {'Value1':'bob','Value2':'Bob number2','Value3':'Bobber','Value4':'Bobbilious','Value5':'Non-Bob'}
 
 var heatmap_DataStyling = heatmap_DataStyling();
 
@@ -2548,332 +2869,6 @@ $("#Heatmap_IUPHARNames").click(function() {
       heatmap_DataStyling.LabelType = 'IUPHAR';
       Heatmap_updateVisualization();
   });
-
-</script>
-
-{% endif %}
-<!-- ############# -->
-<!-- ## GPCRome ## -->
-<!-- ############# -->
-{% if Plot_evaluation_json.0 %}
-<script>
-
-$('.dropdown-menu').on('click', function(event){
-    event.stopPropagation();
-});
-
-
-var GPCRome_categories_data = {{ GPCRome_data|safe }};
-var fill_data = {{ GPCRome_data_variables|safe }};
-var GPCRome_data_types = {{GPCRome_datatypes|safe}};
-var GPCRome_Label_conversion_dict = {{GPCRome_Label_Conversion|safe}};
-var GPCRome_master = {{GPCRome_MasterDict|safe}}
-var GPCRome_WheelDict = {{GPCRome_WheelDict|safe}}
-
-console.log(GPCRome_master)
-console.log(GPCRome_WheelDict)
-
-// Initialize the conversion dictionary
-GPCRome_Label_conversion_dict = initializeGPCRomeLabelConversionDict(GPCRome_Label_conversion_dict);
-
-function initializeGPCRomeLabelConversionDict(conversionDict) {
-    const updatedDict = {};
-
-    Object.keys(conversionDict).forEach(originalLabel => {
-        let uniProtLabel = conversionDict[originalLabel];
-        uniProtLabel = uniProtLabel.replace(/_human$/, "").toUpperCase(); // Remove "_human" and convert to uppercase
-        updatedDict[originalLabel] = uniProtLabel;
-    });
-
-    return updatedDict;
-}
-
-
-// # Initialize data styling #
-var layout_data = GPCRome_initializeData(GPCRome_categories_data);
-
-const GPCRome_fill_data_values = Object.values(fill_data)
-    .map(receptor => receptor.Value1)
-    .filter(value => value !== null && value !== undefined && value !== '' && !isNaN(value)); // Filtering out invalid values
-
-const GPCRome_fill_minValue = GPCRome_fill_data_values.length > 0 ? Math.min(...GPCRome_fill_data_values) : null; 
-const GPCRome_fill_maxValue = GPCRome_fill_data_values.length > 0 ? Math.max(...GPCRome_fill_data_values) : null;
-
-// Calculate median
-// Sort the values in ascending order
-GPCRome_fill_data_values.sort((a, b) => a - b);
-
-// Calculate the median
-let GPCRome_fill_medianValue;
-const middleIndex = Math.floor(GPCRome_fill_data_values.length / 2);
-
-if (GPCRome_fill_data_values.length % 2 === 0) {
-    // Even number of elements, median is the average of the two middle values
-    GPCRome_fill_medianValue = (GPCRome_fill_data_values[middleIndex - 1] + GPCRome_fill_data_values[middleIndex]) / 2;
-} else {
-    // Odd number of elements, median is the middle value
-    GPCRome_fill_medianValue = GPCRome_fill_data_values[middleIndex];
-}
-
-GPCRome_fill_avg = (GPCRome_fill_minValue+GPCRome_fill_maxValue)/2
-
-var GPCRomes_styling = {
-  Spacing: true,
-  family: true,
-  datatype: GPCRome_data_types.GPCRome.Col1,
-  minValue: GPCRome_fill_minValue,
-  median_value: GPCRome_fill_medianValue,
-  avg_value: GPCRome_fill_avg,
-  maxValue: GPCRome_fill_maxValue,
-  colorStart: "#e64b35",
-  color_median: "#FFFFFF",
-  colorEnd: "#3c5488",
-  data_color_complexity: 'One',
-  showIcon: true  // Add this property to control the icon visibility
-}
-
-
-// # initial draw
-let GPCRome_location = "GPCRome_plot";
-Draw_GPCRomes(layout_data,fill_data,GPCRome_location,GPCRomes_styling);
-
-
-// Global variables for current label type
-let currentLabelType = "IUPHAR"; // Default
-
-// Event listeners for label type buttons
-document.getElementById("GPCRome_UniProtNames").addEventListener("click", () => {
-    switchLabelType("UniProt");
-});
-
-document.getElementById("GPCRome_IUPHARNames").addEventListener("click", () => {
-    switchLabelType("IUPHAR");
-});
-
-// Function to switch label types
-function switchLabelType(labelType) {
-    currentLabelType = labelType;
-    updateGPCRome();
-}
-
-
-// Function to toggle the icon visibility and redraw the GPCRomes
-function toggleIcon() {
-    const button = d3.select("#ToggleIcon");
-
-    // Toggle the showIcon property in GPCRomes_styling
-    GPCRomes_styling.showIcon = !GPCRomes_styling.showIcon;
-
-    // Update button text and state
-    if (GPCRomes_styling.showIcon) {
-        button.text("On");
-        button.classed("active", true);
-    } else {
-        button.text("Off");
-        button.classed("active", false);
-    }
-
-    // Redraw the GPCRomes with the updated icon state
-    updateGPCRome();
-}
-
-// Attach event listener to the button
-d3.select("#ToggleIcon").on("click", toggleIcon);
-
-// Function to update and redraw GPCRomes
-function updateGPCRome() {
-    const updatedLayoutData = updateLayoutData(layout_data, GPCRome_Label_conversion_dict, currentLabelType);
-    const updatedFillData = updateFillData(fill_data, GPCRome_Label_conversion_dict, currentLabelType);
-
-    // Clear the existing SVG content
-    d3.select("#" + GPCRome_location).select("svg").remove();
-
-    // Redraw the GPCRomes with the updated data
-    Draw_GPCRomes(updatedLayoutData, updatedFillData, GPCRome_location, GPCRomes_styling);
-
-    // Update button active states
-    // updateActiveButtonState(currentLabelType);
-}
-
-// Function to update layout data
-function updateLayoutData(layout_data, conversionDict, labelType) {
-    const updatedData = {};
-
-    Object.keys(layout_data).forEach(GPCRomeKey => {
-        const GPCRome = layout_data[GPCRomeKey];
-        updatedData[GPCRomeKey] = {};
-
-        Object.keys(GPCRome).forEach(ligandType => {
-            const receptors = GPCRome[ligandType];
-            updatedData[GPCRomeKey][ligandType] = receptors.map(receptor => {
-                if (labelType === "UniProt") {
-                    return conversionDict[receptor] || receptor;
-                } else {
-                    return Object.keys(conversionDict).find(key => conversionDict[key] === receptor) || receptor;
-                }
-            });
-        });
-    });
-
-    return updatedData;
-}
-
-// Function to update fill data
-function updateFillData(fill_data, conversionDict, labelType) {
-    const updatedData = {};
-
-    Object.keys(fill_data).forEach(receptor => {
-        let updatedReceptor;
-        if (labelType === "UniProt") {
-            updatedReceptor = conversionDict[receptor] || receptor;
-        } else {
-            updatedReceptor = Object.keys(conversionDict).find(key => conversionDict[key] === receptor) || receptor;
-        }
-        updatedData[updatedReceptor] = fill_data[receptor];
-    });
-
-    return updatedData;
-}
-
-// ###################
-// ## Color styling ##
-// ###################
-
-function UpdateGPCRomeColorPickers() {
-  // Color complexity
-  const Color_styling = document.querySelector('#GPCRome_color_styling');
-
-  // Color picker containers
-  const GPCRome_Color_min_container = document.getElementById("GPCRome_Color_min_container");
-  const GPCRome_Color_avg_container = document.getElementById("GPCRome_Color_avg_container");
-  const GPCRome_Color_max_container = document.getElementById("GPCRome_Color_max_container");
-
-  // Get the selected layer value
-  const Color_styling_value = Color_styling.value;
-
-  if (Color_styling_value === 'One') {
-    GPCRome_Color_min_container.style.display = 'None';
-    GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.data_color_complexity = "One";
-  } else if (Color_styling_value === 'Two') {
-    GPCRome_Color_min_container.style.display = 'Block';
-    GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.data_color_complexity = "Two";
-  } else if (Color_styling_value === 'Three') {
-    GPCRome_Color_min_container.style.display = 'Block';
-    GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.data_color_complexity = "Three";
-  }
-
-  // Set color to current color
-  $("#GPCRome_colorPicker_min").spectrum("set", GPCRomes_styling.colorStart);
-  $("#GPCRome_colorPicker_avg").spectrum("set", GPCRomes_styling.color_avg);
-  $("#GPCRome_colorPicker_max").spectrum("set", GPCRomes_styling.colorEnd);
-
-  // Dynamically update the plot
-  GPCRomeWheel_updateVisualization();
-}
-
-// Initialize all color pickers for GPCRomeWheel
-$(document).ready(function() {
-  function initializeGPCRomeColorPicker(elementId, start_color) {
-    $("#" + elementId).spectrum({
-      color: start_color,
-      showPalette: true,
-      showInput: true,
-      preferredFormat: "hex",
-      palette: [
-        ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
-        ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
-        ["#800000", "#808000", "#008000", "#800080", "#008080"],
-        ["#000080"]
-      ],
-      change: function(color) {
-        updateGPCRomeVisualization();
-      },
-      move: function(color) {
-        updateGPCRomeVisualization();
-      }
-    });
-  }
-
-  // Initialize color pickers
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.color_avg);
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
-});
-
-// Function to set color pickers to predefined colors
-function setGPCRomeColors(colorMin, colorAvg, colorMax, optionValue) {
-  $("#GPCRome_colorPicker_min").spectrum("set", colorMin);
-  $("#GPCRome_colorPicker_avg").spectrum("set", colorAvg);
-  $("#GPCRome_colorPicker_max").spectrum("set", colorMax);
-  GPCRomes_styling.data_color_complexity = optionValue;
-  $("#GPCRome_color_styling").val(optionValue).trigger("change");
-}
-
-// Event listeners for predefined color scales
-$("#GPCRome_GrayScale").click(function() {
-  GPCRomes_styling.colorStart = "#b8b8b8";
-  GPCRomes_styling.color_avg = "#FFFFFF";
-  GPCRomes_styling.colorEnd = "#707070";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Two");
-  // Dynamically update the plot
-  GPCRomeWheel_updateVisualization();
-});
-
-$("#GPCRome_GrayBlueScale").click(function() {
-  GPCRomes_styling.colorStart = "#97a6c4";
-  GPCRomes_styling.color_avg = "#FFFFFF";
-  GPCRomes_styling.colorEnd = "#384860";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Two");
-  // Dynamically update the plot
-  GPCRomeWheel_updateVisualization();
-});
-
-$("#GPCRome_RedBlueScale").click(function() {
-  GPCRomes_styling.colorStart = "#a00000";
-  GPCRomes_styling.color_avg = "#FFFFFF";
-  GPCRomes_styling.colorEnd = "#1a80bb";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
-  // Dynamically update the plot
-  GPCRomeWheel_updateVisualization();
-});
-
-$("#GPCRome_TealMagentaScale").click(function() {
-  GPCRomes_styling.colorStart = "#298c8c";
-  GPCRomes_styling.color_avg = "#FFFFFF";
-  GPCRomes_styling.colorEnd = "#800074";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
-  // Dynamically update the plot
-  GPCRomeWheel_updateVisualization();
-});
-
-function updateGPCRomeVisualization() {
-  const colorMin = $("#GPCRome_colorPicker_min").spectrum("get").toHexString();
-  const colorAvg = $("#GPCRome_colorPicker_avg").spectrum("get").toHexString();
-  const colorMax = $("#GPCRome_colorPicker_max").spectrum("get").toHexString();
-
-  GPCRomes_styling.colorStart = colorMin;
-  GPCRomes_styling.color_avg = colorAvg;
-  GPCRomes_styling.colorEnd = colorMax;
-
-  // Dynamically update the plot
-  GPCRomeWheel_updateVisualization();
-}
-// Function to remove the existing GPCRome plot
-function removeGPCRomePlot() {
-  d3.select("#" + GPCRome_location).select("svg").remove();
-}
-
-// Function to update the GPCRome plot
-function GPCRomeWheel_updateVisualization() {
-  // Remove the existing plot
-  removeGPCRomePlot();
-
-  // Redraw the GPCRomeWheel with updated settings
-  Draw_GPCRomes(layout_data, fill_data, GPCRome_location, GPCRomes_styling);
-}
 
 </script>
 

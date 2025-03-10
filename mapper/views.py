@@ -433,11 +433,25 @@ class LandingPage(TemplateView):
         # Convert the nested dictionary to a DataFrame
         data = {key.replace('_human', ''): value for key, value in data.items()}
         data_df = pd.DataFrame(data).T
+
+        # Ensure Value1 is always filled with 0 if missing
         if 'Value1' in data_df.columns:
+            data_df['Value1'] = data_df['Value1'].fillna(0)
+
+        # Check if Value2 exists in the data
+        if 'Value2' in data_df.columns:
+            # If some entries have Value2 but others don’t, fill missing ones
+            if data_df['Value2'].isnull().sum() > 0:
+                # Applying fail-safe.
+                # Strategy: Fill missing Value2 with the **mean** of existing ones
+                mean_value2 = data_df['Value2'].mean()
+                data_df['Value2'] = data_df['Value2'].fillna(mean_value2)
+
+        if 'Value2' in data_df.columns:
             # Example usage
             reduced_df = LandingPage.reduce_and_cluster(data_df, method=method)
-            df_merged = pd.merge(reduced_df, data_df['Value2'], left_on='label', right_index=True, how='left')
-            df_merged.rename(columns={'Value2': 'fill'}, inplace=True)
+            df_merged = pd.merge(reduced_df, data_df['Value1'], left_on='label', right_index=True, how='left')
+            df_merged.rename(columns={'Value1': 'fill'}, inplace=True)
 
             ## add class/ligand_type/receptor_family clusters ##
 
@@ -474,8 +488,8 @@ class LandingPage(TemplateView):
                 reduced_input = full_matrix[full_matrix['label'].isin(list(data.keys()))]
                 data_df = pd.DataFrame(data).T
                 # Merge the dataframes
-                df_merged = pd.merge(reduced_input, data_df['Value2'], left_on='label', right_index=True, how='left')
-                df_merged.rename(columns={'Value2': 'fill'}, inplace=True)
+                df_merged = pd.merge(reduced_input, data_df['Value1'], left_on='label', right_index=True, how='left')
+                df_merged.rename(columns={'Value1': 'fill'}, inplace=True)
                 # Prepare the data for visualization
                 data_json = df_merged.to_json(orient='records')
             elif data_type == 'structure':
@@ -486,8 +500,8 @@ class LandingPage(TemplateView):
                 reduced_input = full_matrix_structure[full_matrix_structure['label'].isin(list(data.keys()))]
                 data_df = pd.DataFrame(data).T
                 # Merge the dataframes
-                df_merged = pd.merge(reduced_input, data_df['Value2'], left_on='label', right_index=True, how='left')
-                df_merged.rename(columns={'Value2': 'fill'}, inplace=True)
+                df_merged = pd.merge(reduced_input, data_df['Value1'], left_on='label', right_index=True, how='left')
+                df_merged.rename(columns={'Value1': 'fill'}, inplace=True)
                 # Prepare the data for visualization
                 data_json = df_merged.to_json(orient='records')
 
@@ -629,10 +643,10 @@ class LandingPage(TemplateView):
 
                     if workbook:
 
-                        protein_data = list(Protein.objects.filter(species=1).values_list('entry_name', flat=True).distinct())
-
+                        # Fetch protein data for processing 1 (Cluster, List, and Heatmap) #
                         all_proteins = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False, family_id__slug__startswith='0').values_list('entry_name', flat=True).distinct()
 
+                        # Fetch protein data for processing 2 (GPCRome wheel and Tree plot) #
                         Proteins_GPCRomeTree = Protein.objects.filter(
                                 species_id=1, 
                                 parent_id__isnull=True, 
@@ -649,561 +663,514 @@ class LandingPage(TemplateView):
 
                         # Sheets and headers #
 
-                        Sheet_Header_pass_check = [False,False,False,False,False]
+                        Sheet_pass_check = False
+                        valid_sheet_name_list = ['GPCRome wheel - Numeric','GPCRome wheel - Text','Tree - Numeric','Tree - Text','Cluster - Numeric','List - Numeric','List - Text','Heatmap - Numeric']
 
-                        # Check all sheet names, headers and subheaders (needs to be implemented) #
+                        # Figure out if the sheet names match a template file #
                         for sheet_name in sheet_names:
-                            worksheet = workbook[sheet_name]
-                            header_list = [cell.value for cell in worksheet[1]]
-                            if sheet_name == 'Tree':
-                                Sheet_Header_pass_check[0] = True
-                            elif sheet_name == 'Cluster':
-                                Sheet_Header_pass_check[1] = True
-                            elif sheet_name == 'List':
-                                Sheet_Header_pass_check[2] = True
-                            elif sheet_name == 'Heatmap':
-                                Sheet_Header_pass_check[3] = True
-                            elif sheet_name == 'GPCRome':
-                                Sheet_Header_pass_check[4] = True
+                            if sheet_name in valid_sheet_name_list:
+                                Sheet_pass_check = True
                             else:
                                 pass
 
-                        if not all(Sheet_Header_pass_check):
+                        if not Sheet_pass_check:
                             # Add addition for the different sheets.
                             return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "The excel file is not structured as the template file. There are incorrect sheet names and data setup."})
                         else:
-
-                            # Init incorrect values #
-                            plot_names = ['GPCRome','Tree', 'Cluster', 'List', 'Heatmap']
+                            
+                            ### Initialize Global values ###
+                            # Data passed #
                             Data = {}
-                            Data['Datatypes'] = {}
+                            # Incorrect values for the report #
                             Incorrect_values = {}
-                            Heatmap_Label_dict = {}
+                            # plot evaluation value #
+                            Plot_parser = 'Failed'
+                            # Plot name & Datatype
+                            plot_name_global = ""
+                            plot_type_global = ""
 
-                            for key in plot_names:
-                                Data[key] = {}
-                                Incorrect_values[key] = {}
-
-                            Plot_parser = ['Failed','Failed','Failed','Failed','Failed']
+                            # def is_valid_color(color):
+                            #     # Check if it's a named color
+                            #     if color.lower() in mcolors.CSS4_COLORS:
+                            #         return True
+                                
+                            #     # Check if it's a valid hex color
+                            #     hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                            #     return bool(re.match(hex_pattern, color))
 
                             # For each sheet in the workbook #
                             for sheet_name in sheet_names:
 
-                                # Initialize worksheet #
-                                worksheet = workbook[sheet_name]
+                                if sheet_name in valid_sheet_name_list:
+                                    Plot_name = sheet_name.split(" - ")[0]
+                                    Plot_type = sheet_name.split(" - ")[1]
 
-                                try:
-                                    header_list = [cell.value for cell in worksheet[1]]
-                                except:
-                                    return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "Corrupted excel, sheets not inline with the template file."})
-
-                                # If first sheet is receptor with correct headers #
-                                if sheet_name == 'Tree':
-
-                                    header = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True))
-
-                                    # Initialize dictionaries
-                                    data_types = [cell.value for cell in worksheet[3]]
-
-                                    Data['Datatypes']['Tree'] = {}
-                                    Data['Datatypes']['Tree']['Inner'] = data_types[1]
-                                    Data['Datatypes']['Tree']['Outer1'] = data_types[2]
-                                    Data['Datatypes']['Tree']['Outer2'] = data_types[3]
-                                    Data['Datatypes']['Tree']['Outer3'] = data_types[4]
-                                    Data['Datatypes']['Tree']['Outer4'] = data_types[5]
-                                    Data['Datatypes']['Tree']['Outer5'] = data_types[6]
-
-                                    for key in header_list:
-                                        Incorrect_values[sheet_name][key] = {}
-
+                                    # Set global plot name and datatype
+                                    plot_name_global = Plot_name
+                                    plot_type_global = Plot_type
+                                    # Initialize worksheet #
+                                    worksheet = workbook[sheet_name]
+                                    
                                     ##########################
-                                    # Run through tree sheet #
+                                    ### GPCRome wheel Plot ###
                                     ##########################
-                                    try:
+                                    if Plot_name == "GPCRome wheel":
 
-                                        empty_sheet = True  # Initialize the flag
-                                        non_empty_count = 0  # Initialize the count for non-empty cells in the first column
-
-                                        # Iterate over rows starting from the second row (min_row=4, excluding the first 3 header rows)
-                                        for row in worksheet.iter_rows(min_row=4, values_only=True):
-                                            # If the first column is None or empty, ignore the row
-                                            if row[0] is None or row[0] == "":
-                                                continue
-
-                                            # Increment the count if the first column has a value
-                                            non_empty_count += 1
-
-                                            # Check only the columns that have headers, skipping the first column
-                                            if any(row[i] is not None for i, header in enumerate(header_list[1:], start=1) if header):
-                                                empty_sheet = False  # If any other column has a value, set empty_sheet to False
-
-                                        if empty_sheet:
-                                            pass
-                                        else:
-                                            if non_empty_count > 200:
-                                                Incorrect_values[sheet_name]['Error'] = "More than 200 Receptors, please provide less than 200 receptors"
-                                            else:
-                                                # Iterate through rows starting from the third row
-                                                for index, row in enumerate(worksheet.iter_rows(min_row=4, values_only=True), start=3):
-                                                    # Check the "Receptor (Uniprot)" column for correct values
-                                                    if row[0] not in protein_data:
-                                                        if row[0] is None or row[0] == "":
-                                                            pass
-                                                        else:
-                                                            Incorrect_values[sheet_name][header_list[0]][index] = '"{}" is a invalid entry'.format(row[0])
-                                                    else:
-                                                        if row[0] not in Data[sheet_name]:
-                                                            Data[sheet_name][row[0]] = {}
-
-                                                        # Check each column for data points, boolean values, and float values
-                                                        for col_idx, value in enumerate(row):
-                                                            if col_idx == 0:
-                                                                continue  # Skip the "Receptor (Uniprot)" column and completely empty columns
-                                                            elif data_types[col_idx] not in ['Discrete','Continuous']:
-                                                                Incorrect_values[sheet_name][header_list[col_idx]] = 'Incorrect datatype'
-                                                            else:
-                                                                if value is not None:
-                                                                    if data_types[col_idx] == 'Discrete':
-                                                                        if str(value).lower() not in ['yes', 'no', '1', '0', 'x']:
-                                                                            Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Boolean Value'
-                                                                        else:
-                                                                            if col_idx == 1:
-                                                                                Data[sheet_name][row[0]]['Inner'] = 1 if value in ['yes', 'Yes', '1', 'X'] else 0
-                                                                            else:
-                                                                                Data[sheet_name][row[0]]['Outer{}'.format(col_idx-1)] = 1 if value in ['yes', 'Yes', '1', 'X'] else 0
-                                                                    elif data_types[col_idx] == 'Continuous':
-                                                                        try:
-                                                                            float_value = float(value)
-                                                                            if col_idx == 1:
-                                                                                Data[sheet_name][row[0]]['Inner'] = float_value
-                                                                            else:
-                                                                                Data[sheet_name][row[0]]['Outer{}'.format(col_idx-1)] = float_value
-                                                                        except ValueError:
-                                                                            Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Continuous Value'
-                                                                    else:
-                                                                        pass
-                                                                else:
-                                                                    if data_types[col_idx] == 'Discrete' and col_idx == 1:
-                                                                        Data[sheet_name][row[0]]['Inner'] = 0
-
-
-                                        # Check if any values are incorrect #
-                                        status = 'Success'
-
-                                        if empty_sheet:
-                                            status = 'Empty sheet'
-                                        elif Data[sheet_name]:
-                                            for col_idx in Incorrect_values[sheet_name]:
-                                                # Check if there are any assigned index values for this col_idx
-                                                if any(Incorrect_values[sheet_name][col_idx].values()):
-                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
-                                                    status = 'Failed'
-                                                    break
-                                        else:
-                                            status = 'Failed'
-
-                                        ## Update Plot parser ##
-                                        Plot_parser[1] = status
-                                    except:
-                                        print("Tree failed")
-
-                                ###############
-                                ### Cluster ###
-                                ###############
-                                elif sheet_name == 'Cluster':
-
-                                    # Initialize dictionaries
-                                    data_types = [cell.value for cell in worksheet[2]]
-                                    for key in header_list[1:3]:
-                                        Incorrect_values[sheet_name][key] = {}
-                                    try:
-
+                                        Incorrect_values['GPCRs'] = {}
+                                        Incorrect_values['GPCR Value (Column B)'] = {}
                                         empty_sheet = True  # Initialize the flag
 
-                                        # Iterate over rows starting from the second row (excluding the header row)
-                                        for row in worksheet.iter_rows(min_row=3, values_only=True):
-                                            # Check only the columns that have headers, skipping the first column
-                                            if any(row[i] is not None for i in (1, 2)):
+                                        # Check if the sheet is empty
+                                        for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                            # Check if column B (index 1) has any non-empty value
+                                            if row[1] not in (None, ""):
                                                 empty_sheet = False
                                                 break
-
+                                        # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
                                         else:
-
-                                            # Iterate through rows starting from the second row
-                                            for index, row in enumerate(worksheet.iter_rows(min_row=3, values_only=True), start=4):
+                                            # If sheet is not empty then start handling the data
+                                            # Iterate through the rows and validate the data
+                                            for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
                                                 # Check the "Receptor (Uniprot)" column for correct values
-                                                if index > 808:
-                                                    # Make sure that the no more than the table is being processed.
-                                                    break
+                                                if row[0] not in Proteins_GPCRomeTree:
+                                                    if row[0] in (None, ""):
+                                                        pass
+                                                    else:
+                                                        Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the GPCRome wheel plot.'.format(row[0])
                                                 else:
-                                                    if row[0] is not None:
-                                                        if row[0] not in protein_data:
-                                                            if row[0] is None or row[0] == "":
-                                                                pass
-                                                            else:
-                                                                Incorrect_values[sheet_name][header_list[0]][index] = '"{}" is a invalid entry'.format(row[0])
-                                                        else:
-                                                            if row[0] not in Data[sheet_name]:
-                                                                Data[sheet_name][row[0]] = {}
-
-                                                            # Check each column for data points, boolean values, and float values #
-                                                            for col_idx, value in enumerate(row[0:3]):
-                                                                if col_idx == 0:
-                                                                    continue  # Skip the "Receptor (Uniprot)" column and completely empty columns #
-                                                                elif data_types[col_idx] not in ['Continuous']:
-                                                                    Incorrect_values[sheet_name][header_list[col_idx]] = 'Incorrect datatype'
-                                                                else:
-                                                                    if value is not None:
-                                                                        # Handle the 3 different types of input for Cluster analysis (Boolean, Number, and Text) #
-                                                                        if data_types[col_idx] in ['Continuous']:
-                                                                            try:
-                                                                                float_value = float(value)
-                                                                                Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = float_value
-                                                                            except ValueError:
-                                                                                Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Continuous Value'
-                                                                    else:
-                                                                        pass
+                                                    # Check if data row is in data and/or initialize it
+                                                    if row[0] not in Data:
+                                                        Data[row[0]] = {}
+                                                    # Check datatype -> Numeric
+                                                    if Plot_type == 'Numeric':
+                                                        if row[1] not in (None, ""):
+                                                            try:
+                                                                float_value = float(row[1])
+                                                                Data[row[0]]['Value1'] = float_value
+                                                            except ValueError:
+                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value'
+                                                    # Check datatype -> Text
+                                                    elif Plot_type == 'Text':
+                                                        if row[1] not in (None, ""):
+                                                            try:
+                                                                Text_value = str(row[1])
+                                                                Data[row[0]]['Value1'] = Text_value
+                                                            except ValueError:
+                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Corrupted Value, not a string'
+                                                    else:
+                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
 
                                         # Check if any values are incorrect #
                                         status = 'Success'
 
                                         if empty_sheet:
                                             status = 'Empty sheet'
-                                        elif Data[sheet_name]:
-                                            for col_idx in Incorrect_values[sheet_name]:
+                                        elif Data:
+                                            for Error_entries in Incorrect_values:
                                                 # Check if there are any assigned index values for this col_idx
-                                                if any(Incorrect_values[sheet_name][col_idx].values()):
+                                                if any(Incorrect_values[Error_entries].values()):
                                                     # If any index is assigned, set status to 'Partially_success' and break out of the loop
                                                     status = 'Failed'
-                                                    break
-                                        else:
-                                            status = 'Failed'
-
-                                        ## Update Plot_parser for Cluster
-                                        Plot_parser[2] = status
-                                    except:
-                                        print("Cluster failed")
-
-                                ### List ###
-                                elif sheet_name == 'List':
-
-                                    # Initialize dictionaries
-                                    data_types = [cell.value for cell in worksheet[2]]
-
-                                    Data['Datatypes']['Listplot'] = {}
-                                    Data['Datatypes']['Listplot']['Col1'] = data_types[2]
-                                    Data['Datatypes']['Listplot']['Col2'] = data_types[4]
-                                    Data['Datatypes']['Listplot']['Col3'] = data_types[6]
-                                    Data['Datatypes']['Listplot']['Col4'] = data_types[8]
-                                    for key in header_list:
-                                        Incorrect_values[sheet_name][key] = {}
-                                    try:
-                                        empty_sheet = True  # Initialize the flag
-
-                                        # Iterate over rows starting from the second row (excluding the header row)
-                                        for row in worksheet.iter_rows(min_row=3, values_only=True):
-                                            # Check only the columns that have headers, skipping the first column
-                                            if any(row[i] is not None for i, header in enumerate(header_list[1:9], start=1) if header):
-                                                empty_sheet = False
-                                                break
-
-                                        if empty_sheet:
-                                            pass
-                                        else:
-                                            # Iterate through rows starting from the second row
-                                            for index, row in enumerate(worksheet.iter_rows(min_row=3, values_only=True), start=3):
-                                                # Check the "Receptor (Uniprot)" column for correct values
-                                                if row[0] not in protein_data:
-                                                    if row[0] is None or row[0] == "":
-                                                        pass
-                                                    else:
-                                                        Incorrect_values[sheet_name][header_list[0]][index] = '"{}" is a invalid entry'.format(row[0])
-                                                else:
-                                                    if row[0] not in Data[sheet_name]:
-                                                        Data[sheet_name][row[0]] = {}
-
-                                                    # Check each column for data points, boolean values, and float values #
-                                                    for col_idx, value in enumerate(row[0:9]):
-                                                        if col_idx == 0:
-                                                            continue  # Skip the "Receptor (Uniprot)" column and completely empty columns #
-                                                        elif data_types[col_idx] not in ['Boolean','Number','Discrete','Continuous','Text']:
-                                                            Incorrect_values[sheet_name][header_list[col_idx]] = 'Incorrect datatype'
-                                                        else:
-                                                            if value is not None:
-                                                                # Handle the 2 different types of input for Cluster analysis (Boolean or Number) #
-                                                                if data_types[col_idx] == 'Discrete':
-                                                                    if str(value).lower() not in ['yes', 'no', '1', '0']:
-                                                                        Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Not a correct discrete value (Yes, No, 1, or 0).'
-                                                                    else:
-                                                                        Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = value
-                                                                elif data_types[col_idx] == 'Number' or data_types[col_idx] == 'Continuous':
-                                                                    try:
-                                                                        float_value = float(value)
-                                                                        Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = float_value
-                                                                    except ValueError:
-                                                                        Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Number Value'
-                                                                elif data_types[col_idx] == 'Shape value':
-                                                                    if str(value) not in ["1","2","3","4","5"]:
-                                                                        Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Not a correct shape value.'
-                                                                    else:
-                                                                        Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = str(value)
-                                                                else:
-                                                                    pass
-                                                            else:
-                                                                pass
-
-                                        # Check if any values are incorrect #
-                                        status = 'Success'
-
-                                        if empty_sheet:
-                                            status = 'Empty sheet'
-                                        elif Data[sheet_name]:
-                                            for col_idx in Incorrect_values[sheet_name]:
-                                                # Check if there are any assigned index values for this col_idx
-                                                if any(Incorrect_values[sheet_name][col_idx].values()):
-                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
-                                                    status = 'Failed'
-                                                    break
-                                        else:
-                                            status = 'Failed'
-
-                                        ## Update Plot_parser for Cluster
-                                        Plot_parser[3] = status
-                                    except:
-                                        print("List failed")
-
-                                ###############
-                                ### Heatmap ###
-                                ###############
-                                elif sheet_name == 'Heatmap':
-
-                                    # Initialize dictionaries
-                                    data_types = [cell.value for cell in worksheet[2]]
-                                    for key in header_list:
-                                        Incorrect_values[sheet_name][key] = {}
-                                    try:
-
-                                        empty_sheet = True  # Initialize the flag
-                                        non_empty_count = 0  # Initialize the count for non-empty cells in the first column
-
-                                        # Iterate over rows starting from the second row (min_row=4, excluding the first 3 header rows)
-                                        for row in worksheet.iter_rows(min_row=3, values_only=True):
-                                            # If the first column is None or empty, ignore the row
-                                            if row[0] is None or row[0] == "":
-                                                continue
-
-                                            # Increment the count if the first column has a value
-                                            non_empty_count += 1
-
-                                            # Check only the columns that have headers, skipping the first column
-                                            if any(row[i] is not None for i, header in enumerate(header_list[1:], start=1) if header):
-                                                empty_sheet = False  # If any other column has a value, set empty_sheet to False
-
-                                        if empty_sheet:
-                                            pass
-                                        else:
-                                            if non_empty_count > 50:
-                                                Incorrect_values[sheet_name]['Error'] = "More than 50 Receptors, current count: {}, please provide less than 51 receptors".format(non_empty_count)
-                                            else:
-                                                # create label variables
-                                                i = 0
-                                                for key in header_list[1:]:
-                                                    i += 1
-                                                    Heatmap_Label_dict['Value{}'.format(i)] = key
-                                                # Iterate through rows starting from the second row
-                                                for index, row in enumerate(worksheet.iter_rows(min_row=3, values_only=True), start=3):
-                                                    # Check the "Receptor (Uniprot)" column for correct values
-                                                    if row[0] not in protein_data:
-                                                        if row[0] is None or row[0] == "":
-                                                            pass
-                                                        else:
-                                                            Incorrect_values[sheet_name][header_list[0]][index] = '"{}" is a invalid entry'.format(row[0])
-                                                    else:
-                                                        if row[0] not in Data[sheet_name]:
-                                                            Data[sheet_name][row[0]] = {}
-
-                                                        # Check each column for data points, boolean values, and float values #
-                                                        for col_idx, value in enumerate(row):
-                                                            if col_idx == 0:
-                                                                continue  # Skip the "Receptor (Uniprot)" column and completely empty columns #
-                                                            elif data_types[col_idx] not in ['Continuous']:
-                                                                Incorrect_values[sheet_name][header_list[col_idx]] = 'Incorrect datatype'
-                                                            else:
-                                                                if value is not None:
-                                                                    # Handle the 1 different types of input for Heatmap (Number) #
-                                                                    if data_types[col_idx] == 'Continuous':
-                                                                        try:
-                                                                            float_value = float(value)
-                                                                            Data[sheet_name][row[0]]['Value{}'.format(col_idx)] = float_value
-                                                                        except ValueError:
-                                                                            Incorrect_values[sheet_name][header_list[col_idx]][index] = 'Non-Continuous Value'
-                                                                    else:
-                                                                        pass
-                                                                else:
-                                                                    del Data[sheet_name][row[0]]
-
-                                        # Check if any values are incorrect #
-                                        status = 'Success'
-
-                                        if empty_sheet:
-                                            status = 'Empty sheet'
-                                        elif Data[sheet_name]:
-                                            for col_idx in Incorrect_values[sheet_name]:
-                                                # Check if there are any assigned index values for this col_idx
-                                                if any(Incorrect_values[sheet_name][col_idx].values()):
-                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
-                                                    status = 'Failed'
-                                                    break
-                                        else:
-                                            status = 'Failed'
-
-                                        ## Update Plot_parser for Heatmap
-                                        Plot_parser[4] = status
-                                    except:
-                                        print("Heatmap Failed")
-
-                                ####################
-                                ### GPCRome Plot ###
-                                ####################
-
-                                elif sheet_name == 'GPCRome':
-
-                                    def is_valid_color(color):
-                                        # Check if it's a named color
-                                        if color.lower() in mcolors.CSS4_COLORS:
-                                            return True
-                                        
-                                        # Check if it's a valid hex color
-                                        hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
-                                        return bool(re.match(hex_pattern, color))
-
-                                    # Initialize dictionaries
-                                    data_types_GPCRome = [cell.value for cell in worksheet[2]]
-                                    # Data['Datatypes'] = {}
-                                    Data['Datatypes']['GPCRome'] = {}
-                                    Data['Datatypes']['GPCRome']['Col1'] = data_types_GPCRome[1]
-                                    for key in header_list:
-                                        Incorrect_values[sheet_name][key] = {}
-                                    try:
-                                        empty_sheet = True  # Initialize the flag
-
-                                        # Iterate over rows starting from the second row (excluding the header row)
-                                        for row in worksheet.iter_rows(min_row=3, values_only=True):
-                                            # Check only the columns that have headers, skipping the first column
-                                            if any(row[i] is not None for i, header in enumerate(header_list[1:], start=1) if header):
-                                                empty_sheet = False
-                                                break
-
-                                        if empty_sheet:
-                                            pass
-                                        else:
-                                            # Iterate through rows starting from the second row
-                                            for index, row in enumerate(worksheet.iter_rows(min_row=3, values_only=True), start=3):
-                                                # Check the "Receptor (Uniprot)" column for correct values
-                                                if row[0] not in protein_data:
-                                                    if row[0] is None or row[0] == "":
-                                                        pass
-                                                    else:
-                                                        Incorrect_values[sheet_name][header_list[0]][index] = '"{}" is a invalid entry'.format(row[0])
-                                                else:
-                                                    if row[0] not in Data[sheet_name]:
-                                                        Data[sheet_name][row[0]] = {}
-                                                
-                                                if Data['Datatypes']['GPCRome']['Col1'] == 'Discrete':
-                                                    if row[1] not in [None, '']:
-                                                        if row[2] not in [None, '']:
-                                                            if not is_valid_color(row[2]):
-                                                                Incorrect_values[sheet_name][header_list[2]][index] = 'Incorrect discrete color value: {}'.format(str(row[2]))
-                                                            else:
-                                                                Data[sheet_name][row[0]]['Value1'] = str(row[1])
-                                                                Data[sheet_name][row[0]]['Value2'] = str(row[2])
-                                                        else:
-                                                            Incorrect_values[sheet_name][header_list[2]][index] = 'Incorrect discrete color value (None value)'
-                                                    else:
-                                                        pass
-                                                elif Data['Datatypes']['GPCRome']['Col1'] == 'Continuous':
-                                                    if row[1] not in [None, '']:
-                                                        try:
-                                                            float_value = float(row[1])
-                                                            Data[sheet_name][row[0]]['Value1'] = float_value
-                                                        except ValueError:
-                                                            Incorrect_values[sheet_name][header_list[1]][index] = 'Non-numeric Value'
-                                                    else:
-                                                        pass
-                                                else:
-                                                    Incorrect_values[sheet_name][header_list[1]] = 'Incorrect datatype'
-
-                                        # Check if any values are incorrect #
-                                        status = 'Success'
-
-                                        if empty_sheet:
-                                            status = 'Empty sheet'
-                                        elif Data[sheet_name]:
-                                            for col_idx in Incorrect_values[sheet_name]:
-                                                # Check if there are any assigned index values for this col_idx
-                                                if any(Incorrect_values[sheet_name][col_idx].values()):
-                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
-                                                    status = 'Failed'
-                                                    print(Incorrect_values[sheet_name])
                                                     break
                                         else:
                                             status = 'Failed'
                                             
-                                        ## Update Plot_parser for GPCRome
-                                        Plot_parser[0] = status
-                                    except:
-                                        print("GPCRome failed")
-                            ## Return all values for plotparser and correctly (or partially) succesful plots ##
+                                        ## Update Plot_parser for GPCRome Wheel
+                                        Plot_parser = status
+                            
+                                    #################
+                                    ### Tree plot ###
+                                    #################
 
-                            plot_names = ['GPCRome','Tree', 'Cluster', 'List', 'Heatmap']
-                            plot_data = {}
-                            plot_incorrect_data = {}
+                                    elif Plot_name == 'Tree':
+                                        
+                                        Incorrect_values['GPCRs'] = {}
+                                        IndexToColumn = ['A','B','C','D','E','F','G']
+                                        # Initialize the inccorect column values
+                                        for key in IndexToColumn[1:]:
+                                            Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
+                                        empty_sheet = True  # Initialize the flag
+                                        TreeNonEmptyEntryCounter = 0
+                                        
+                                        # Check if sheet is empty
+                                        for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                            # Check if any value in columns B (1) to G (6) is not None or empty
+                                            if any(cell not in (None, "") for cell in row[1:7]):  # Slice [1:7] to include columns B-G
+                                                empty_sheet = False
+                                                break
+                                        
+                                        # If sheet is empty continue and report
+                                        if empty_sheet:
+                                            pass
+                                        else:
+                                            # Iterate over rows starting from row 2 (min_row=2)
+                                            for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                                # Check if column A has a value AND at least one column in B-G has a value
+                                                if row[0] not in (None, "") and any(cell not in (None, "") for cell in row[1:7]):
+                                                    TreeNonEmptyEntryCounter += 1
+                                                
+                                                # Stop if we exceed 200 valid entries
+                                                if TreeNonEmptyEntryCounter > 200:
+                                                    break
+                                            
+                                            if TreeNonEmptyEntryCounter > 200:
+                                                Incorrect_values['Error'] = "Detected more than 200 entries. The Tree can not handle that many GPCRs to be able to visualize them in one plot."
+                                            else:
+                                                # If sheet is not empty then start handling the data
+                                                # Iterate through the rows and validate the data
+                                                for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
+                                                    # Check the "Receptor (Uniprot)" column for correct values
+                                                    if row[0] not in Proteins_GPCRomeTree:
+                                                        if row[0] in (None, ""):
+                                                            pass
+                                                        else:
+                                                            Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Tree plot.'.format(row[0])
+                                                    else:
+                                                        # Check if data row is in data and/or initialize it
+                                                        if row[0] not in Data:
+                                                            Data[row[0]] = {}
+                                                        # Check datatype -> Numeric or Text:
+                                                        if Plot_type in ('Numeric','Text'):
+                                                            for i in range(1,7):
+                                                                # Check datatype -> Numeric
+                                                                if Plot_type == 'Numeric':
+                                                                    if row[i] not in (None, ""):
+                                                                        try:
+                                                                            float_value = float(row[i])
+                                                                            if i == 1:
+                                                                                Data[row[0]]['Inner'] = float_value
+                                                                            else:
+                                                                                Data[row[0]]['Outer{}'.format(i-1)] = float_value
+                                                                        except ValueError:
+                                                                            Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
+                                                                # Check datatype -> Text
+                                                                elif Plot_type == 'Text':
+                                                                    if row[i] not in (None, ""):
+                                                                        try:
+                                                                            Text_value = str(row[i])
+                                                                            Data[row[0]]['Value{}'.format(i)] = Text_value
+                                                                        except ValueError:
+                                                                            Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Corrupted Value, not a string'
+                                                        else:
+                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                                # Check if any values are incorrect #
+                                                status = 'Success'
 
-                            for plot_name, plot_status in zip(plot_names, Plot_parser):
-                                if plot_status == 'Success':
-                                    plot_data[plot_name] = Data[plot_name]
-                                elif plot_status == 'Failed':
-                                    plot_incorrect_data[plot_name] = Incorrect_values[plot_name]
+                                                if empty_sheet:
+                                                    status = 'Empty sheet'
+                                                elif Data:
+                                                    for Error_entries in Incorrect_values:
+                                                        # Check if there are any assigned index values for this col_idx
+                                                        if any(Incorrect_values[Error_entries].values()):
+                                                            # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                                            status = 'Failed'
+                                                            break
+                                                else:
+                                                    status = 'Failed'
+                                                    
+                                                ## Update Plot_parser for GPCRome Wheel
+                                                Plot_parser = status
+                                    
+                                    ####################
+                                    ### Cluster plot ###
+                                    ####################
 
-                            plot_data['Datatypes'] = Data['Datatypes']
-                            if 'Heatmap_Label_dict' not in plot_data and Heatmap_Label_dict:
-                                plot_data['Heatmap_Label_dict'] = Heatmap_Label_dict
+                                    elif Plot_name == 'Cluster':
 
-                            plot_data_json = json.dumps(plot_data, indent=4, sort_keys=True) if plot_data else None
+                                        Incorrect_values['GPCRs'] = {}
+                                        Incorrect_values['GPCR Value (Column B)'] = {}
+                                        Incorrect_values['GPCR Spacial position (Column C)'] = {}
+                                        Incorrect_values['GPCR Value (Column B & C)'] = {}
+                                        ClusterSpacialPositionCheck = False
+                                        empty_sheet = True  # Initialize the flag
+                                        
+                                        # Check if the sheet is empty
+                                        for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                            # Check if any value in columns B (1) and C (2) is not None or empty
+                                            if any(cell not in (None, "") for cell in (row[1], row[2])):  # Only check B and C
+                                                empty_sheet = False
+                                                break
 
-                            Plot_parser_json = json.dumps([status == 'Success' for status in Plot_parser])
+                                        # If sheet is empty continue and report
+                                        if empty_sheet:
+                                            pass
+                                        else:
+                                            
+                                            # Iterate over rows starting from row 2
+                                            for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                                # Check if both column A (0) and column C (2) have values
+                                                if row[0] not in (None, "") and row[2] not in (None, ""):
+                                                    ClusterSpacialPositionCheck = True
+                                                    break  # Stop checking as soon as we find a valid entry
 
-                            plots_status = [{'status': status, 'plot_name': plot_name} for status, plot_name in zip(Plot_parser, plot_names)]
-                            # Rearrange plots in the report #
-                            plots_status.sort(key=lambda plot: {'Success': 0, 'Empty sheet': 1, 'Failed': 2}[plot['status']])
+                                            # If sheet is not empty then start handling the data
+                                            # Iterate through the rows and validate the data
+                                            for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
+                                                # Check the "Receptor (Uniprot)" column for correct values
+                                                if row[0] not in all_proteins:
+                                                    if row[0] in (None, ""):
+                                                        pass
+                                                    else:
+                                                        Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Cluster plot.'.format(row[0])
+                                                else:
+                                                    # Check if data row is in data and/or initialize it
+                                                    if row[0] not in Data:
+                                                        Data[row[0]] = {}
+                                                    if ClusterSpacialPositionCheck:
+                                                        # Check datatype -> Numeric
+                                                        if Plot_type == 'Numeric':
+                                                            if row[1] not in (None, ""):
+                                                                try:
+                                                                    float_value = float(row[1])
+                                                                    Data[row[0]]['Value1'] = float_value
+                                                                except ValueError:
+                                                                    Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
+                                                                try:
+                                                                    float_value = float(row[2])
+                                                                    Data[row[0]]['Value2'] = float_value
+                                                                except ValueError:
+                                                                    Incorrect_values['GPCR Spacial position (Column C)'][index] = 'Non-numeric Value.'
+                                                            else:
+                                                                if row[2] not in (None, ""):
+                                                                    Incorrect_values['GPCR Value (Column B & C)'][index] = 'You have Spacial position (Column C) without a value assign (Column B), Please assign a value to this row in Column B.'
+                                                                else:
+                                                                    pass
+                                                        else:
+                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
+                                                    else:
+                                                        # Check datatype -> Numeric
+                                                        if Plot_type == 'Numeric':
+                                                            if row[1] not in (None, ""):
+                                                                try:
+                                                                    float_value = float(row[1])
+                                                                    Data[row[0]]['Value1'] = float_value
+                                                                except ValueError:
+                                                                    Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
+                                                        else:
+                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
 
-                            context = {'upload_status': 'Success',
-                                       'report_status': 'Failed',
-                                       'Plot_parser':Plot_parser,
-                                       'Plot_parser_json':Plot_parser_json,
-                                       'plot_names':plot_names,
-                                       'plots_status':plots_status}
+                                        # Check if any values are incorrect #
+                                        status = 'Success'
 
-                            if plot_data:
-                                if all(status == 'Success' for status in Plot_parser):
-                                    context['report_status'] = 'Success'
-                                    context['Data'] = plot_data_json
-                                elif 'Success' in Plot_parser and all(status in ['Success', 'Empty sheet'] for status in Plot_parser):
-                                    context['report_status'] = 'Partially_success'
-                                    context['Data'] = plot_data_json
+                                        if empty_sheet:
+                                            status = 'Empty sheet'
+                                        elif Data:
+                                            for Error_entries in Incorrect_values:
+                                                # Check if there are any assigned index values for this col_idx
+                                                if any(Incorrect_values[Error_entries].values()):
+                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                                    status = 'Failed'
+                                                    break
+                                        else:
+                                            status = 'Failed'
+                                            
+                                        ## Update Plot_parser for GPCRome Wheel
+                                        Plot_parser = status
+
+
+                                    #################
+                                    ### List plot ###
+                                    #################
+
+                                    elif Plot_name == 'List':
+
+                                        Incorrect_values['GPCRs'] = {}
+                                        IndexToColumn = ['A','B','C','D','E','F','G',"H","I"]
+                                        # Initialize the inccorect column values
+                                        for key in IndexToColumn[1:]:
+                                            Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
+                                        empty_sheet = True  # Initialize the flag
+                                        
+                                        # Check if sheet is empty
+                                        for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                            # Check if any value in columns B (1) to G (6) is not None or empty
+                                            if any(cell not in (None, "") for cell in row[1:7]):  # Slice [1:7] to include columns B-G
+                                                empty_sheet = False
+                                                break
+                                        
+                                        # If sheet is empty continue and report
+                                        if empty_sheet:
+                                            pass
+                                        else:
+                                            # If sheet is not empty then start handling the data
+                                            # Iterate through the rows and validate the data
+                                            for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
+                                                # Check the "Receptor (Uniprot)" column for correct values
+                                                if row[0] not in all_proteins:
+                                                    if row[0] in (None, ""):
+                                                        pass
+                                                    else:
+                                                        Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the List plot.'.format(row[0])
+                                                else:
+                                                    # Check if data row is in data and/or initialize it
+                                                    if row[0] not in Data:
+                                                        Data[row[0]] = {}
+                                                    # Check datatype -> Numeric or Text:
+                                                    if Plot_type in ('Numeric','Text'):
+                                                        # Handle value checks
+                                                        for i in range(1,5):
+                                                            # Check datatype -> Numeric
+                                                            if Plot_type == 'Numeric':
+                                                                if row[i] not in (None, ""):
+                                                                    try:
+                                                                        float_value = float(row[i])
+                                                                        Data[row[0]]['Value{}'.format(i)] = float_value
+                                                                    except ValueError:
+                                                                        Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
+                                                            # Check datatype -> Text
+                                                            elif Plot_type == 'Text':
+                                                                if row[i] not in (None, ""):
+                                                                    try:
+                                                                        Text_value = str(row[i])
+                                                                        Data[row[0]]['Value{}'.format(i)] = Text_value
+                                                                    except ValueError:
+                                                                        Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Corrupted Value, not a string'
+                                                        # Handle shapes
+                                                        for i in range(5,9):
+                                                            if row[i] not in (None, ""):
+                                                                if row[i] in ('Circle', 'Diamond', 'Rectangle', 'Star', 'Triangle'):
+                                                                    Text_value = str(row[i])
+                                                                    Data[row[0]]['Value{}'.format(i)] = Text_value
+                                                                else:
+                                                                    Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Value assigned is not empty, Circle, Diamond, Rectangle, Star, or Triangle.'
+                                                            else:
+                                                                if row[i-4] not in (None, ""):  # Check columns B (1) to E (4)
+                                                                    Data[row[0]]['Value{}'.format(i)] = 'Circle'
+
+                                                    else:
+                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                            # Check if any values are incorrect #
+                                            status = 'Success'
+
+                                            if empty_sheet:
+                                                status = 'Empty sheet'
+                                            elif Data:
+                                                for Error_entries in Incorrect_values:
+                                                    # Check if there are any assigned index values for this col_idx
+                                                    if any(Incorrect_values[Error_entries].values()):
+                                                        # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                                        status = 'Failed'
+                                                        break
+                                            else:
+                                                status = 'Failed'
+                                                
+                                            ## Update Plot_parser for GPCRome Wheel
+                                            Plot_parser = status
+
+                               
+                                    ###############
+                                    ### Heatmap ###
+                                    ###############
+
+                                    elif Plot_name == 'Heatmap':
+                                        
+                                        ## Initialize Local values ##
+                                        Incorrect_values['GPCRs'] = {}
+                                        IndexToColumn = ['A','B','C','D','E','F']
+                                        # Initialize the inccorect column values
+                                        for key in IndexToColumn[1:]:
+                                            Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
+                                        empty_sheet = True  # Initialize the flag
+                                        HeatmapNonEmptyEntryCounter = 0
+                                        
+                                        # Check if sheet is empty
+                                        for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                            # Check if any value in columns B (1) to G (6) is not None or empty
+                                            if any(cell not in (None, "") for cell in row[1:6]):  # Slice [1:6] to include columns B-F
+                                                empty_sheet = False
+                                                break
+                                        
+                                        # If sheet is empty continue and report
+                                        if empty_sheet:
+                                            pass
+                                        else:
+                                            # Iterate over rows starting from row 2 (min_row=2)
+                                            for row in worksheet.iter_rows(min_row=2, values_only=True):
+                                                # Check if column A has a value AND at least one column in B-G has a value
+                                                if row[0] not in (None, "") and any(cell not in (None, "") for cell in row[1:7]):
+                                                    HeatmapNonEmptyEntryCounter += 1
+                                                
+                                                # Stop if we exceed 200 valid entries
+                                                if HeatmapNonEmptyEntryCounter > 50:
+                                                    break
+                                            
+                                            if HeatmapNonEmptyEntryCounter > 50:
+                                                Incorrect_values['Error'] = "Detected more than 50 entries. The Heatmap can not handle that many GPCRs to be able to visualize them in one plot."
+                                            else:
+                                                # If sheet is not empty then start handling the data
+                                                # Iterate through the rows and validate the data
+                                                for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
+                                                    # Check the "Receptor (Uniprot)" column for correct values
+                                                    if row[0] not in all_proteins:
+                                                        if row[0] in (None, ""):
+                                                            pass
+                                                        else:
+                                                            Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Heatmap plot.'.format(row[0])
+                                                    else:
+                                                        # Check if data row is in data and/or initialize it
+                                                        if row[0] not in Data:
+                                                            Data[row[0]] = {}
+                                                        # Check datatype -> Numeric or Text:
+                                                        if Plot_type in ('Numeric','Text'):
+                                                            for i in range(1,6):
+                                                                # Check datatype -> Numeric
+                                                                if Plot_type == 'Numeric':
+                                                                    if row[i] not in (None, ""):
+                                                                        try:
+                                                                            float_value = float(row[i])
+                                                                            Data[row[0]]['Value{}'.format(i)] = float_value
+                                                                        except ValueError:
+                                                                            Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
+                                                        else:
+                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                                # Check if any values are incorrect #
+                                                status = 'Success'
+
+                                                if empty_sheet:
+                                                    status = 'Empty sheet'
+                                                elif Data:
+                                                    for Error_entries in Incorrect_values:
+                                                        # Check if there are any assigned index values for this col_idx
+                                                        if any(Incorrect_values[Error_entries].values()):
+                                                            # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                                            status = 'Failed'
+                                                            break
+                                                else:
+                                                    status = 'Failed'
+                                                    
+                                                ## Update Plot_parser for GPCRome Wheel
+                                                Plot_parser = status
+                            
+                            #######################################################
+                            ## Evaluate the uploaded data and pass on the report ##
+                            #######################################################
+
+                            plot_data_json = json.dumps(Data) if Data else "No Data"
+
+                            if Plot_parser in ('Success','Empty sheet'):
+                                context = {'upload_status': 'Success',
+                                        'Plot_parser': Plot_parser,
+                                        'plot_name': plot_name_global,
+                                        'plot_type': plot_type_global,
+                                        'Data': plot_data_json}
                             else:
-                                context['Data'] = "No Data"
-
-                            if plot_incorrect_data:
-                                context['Incorrect_data_json'] = plot_incorrect_data
-                            else:
-                                context['Incorrect_data_json'] = "No incorrect data"
+                                context = {'upload_status': 'Success',
+                                        'Plot_parser': Plot_parser,
+                                        'plot_name': plot_name_global,
+                                        'plot_type': plot_type_global,
+                                        'Data': plot_data_json}
+                                if Incorrect_values:
+                                    context['Incorrect_data_json'] = Incorrect_values
+                                else:
+                                    context['Incorrect_data_json'] = "No incorrect data"
+                            
+                            # Return the rendered results
                             return render(request, self.template_name, context)
 
                     else:
-                        return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with the template file."})
+                        return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with a template file."})
 
             else:
                 # Return a 405 Method Not Allowed response if not a POST request
@@ -1221,82 +1188,75 @@ class plotrender(TemplateView):
 
     def post(self, request, *args, **kwargs):
         # Retrieve the sample data from the POST request
-        Plot_evaluation_json = request.POST.get('Plot_evaluation')
+        Plot_name = request.POST.get('Plot')
+        Plot_type_request = request.POST.get('Datatype')
         Data_json = request.POST.get('Data')
         # If Plot_evaluation_json is not None, parse it as JSON
-        if Plot_evaluation_json and Data_json:
+        if Plot_name and Data_json:
             try:
-                Plot_evaluation = json.loads(Plot_evaluation_json)
+                Plot = Plot_name
                 Data = json.loads(Data_json)
+                Plot_type = Plot_type_request
             except json.JSONDecodeError:
                 # Handle the case when the JSON data is invalid
                 return HttpResponse("Invalid JSON data")
             # Contruct context
-            context = {'Plot_evaluation_json': Plot_evaluation}
-            context['tree'] = {}
-            context['tree_options'] = {}
-            context['circles'] = {}
-            context['whole_dict'] = {}
-            context['cluster_data'] = {}
-            context['plot_type'] = {}
-            context['heatmap_data'] = {}
-            context['listplot_data'] = {}
-            if Plot_evaluation:
+            context = {'Plot': Plot, 'PlotType': Plot_type}
+            
+            if Plot:
+                 # GPCRome #
+                if Plot == 'GPCRome wheel':
+                    print("GPCRome success")
+                    GPCRome_data = LandingPage.generate_GPCRome_data(Data)
+                    context['GPCRome_data'] = json.dumps(GPCRome_data["NameList"])
+                    context['GPCRome_data_variables'] = json.dumps(GPCRome_data['DataPoints'])
+                    context['GPCRome_Label_Conversion'] = json.dumps(GPCRome_data['LabelConversionDict'])
+                    context['GPCRome_MasterDict'] = json.dumps(GPCRome_data['Master_dict'])
+                    context['GPCRome_WheelDict'] = json.dumps(GPCRome_data['GPCRome_dict'])
                 # tree #
-                if Plot_evaluation[1]:
+                if Plot == 'Tree':
                     print("Tree success")
-                    tree, tree_options, circles, receptors = LandingPage.generate_tree_plot(Data['Tree'])
+                    tree, tree_options, circles, receptors = LandingPage.generate_tree_plot(Data)
                     context['tree'] = json.dumps(tree)
                     context['tree_options'] = tree_options
                     context['circles'] = json.dumps(circles)
                     context['whole_dict'] = json.dumps(receptors)
-                    context['Tree_datatypes'] = json.dumps(Data['Datatypes'])
 
                 # Cluster analysis #
-                if Plot_evaluation[2]:
+                if Plot == 'Cluster':
                     print("Cluster success")
-                    output_seq = LandingPage.clustering_test('tsne', Data['Cluster'],'seq')
+                    output_seq = LandingPage.clustering_test('tsne', Data,'seq')
                     # output_structure = LandingPage.clustering_test('umap', Data['Cluster'],'structure')
                     context['cluster_data_seq'] = output_seq
                     # context['cluster_data_structure'] = output_structure
                     context['plot_type'] = 'Tsne'
 
                 # List plot #
-                if Plot_evaluation[3]:
+                if Plot == 'List':
                     print("List success")
-                    listplot_data = LandingPage.generate_list_plot(Data['List'])
+                    listplot_data = LandingPage.generate_list_plot(Data)
                     context['listplot_data'] = json.dumps(listplot_data["NameList"])
                     context['listplot_data_variables'] = json.dumps(listplot_data['DataPoints'])
                     context['Label_Conversion'] = json.dumps(listplot_data['LabelConversionDict'])
-                    context['listplot_datatypes'] = json.dumps(Data['Datatypes']['Listplot'])
+                    # context['listplot_datatypes'] = json.dumps(Data['Datatypes']['Listplot'])
 
                 # Heatmap #
-                if Plot_evaluation[4]:
+                if Plot == 'Heatmap':
                     print("Heatmap success")
-                    label_converter = LandingPage.Label_conversion_info(Data['Heatmap'])
+                    label_converter = LandingPage.Label_conversion_info(Data)
                     context['Label_converter'] = json.dumps(label_converter)
-                    context['heatmap_data'] = json.dumps(Data['Heatmap'])
-                    context['Heatmap_Label_dict'] = json.dumps(Data['Heatmap_Label_dict'])
+                    context['heatmap_data'] = json.dumps(Data)
 
-                # GPCRome #
-                if Plot_evaluation[0]:
-                    print("GPCRome success")
-                    GPCRome_data = LandingPage.generate_GPCRome_data(Data['GPCRome'])
-                    context['GPCRome_data'] = json.dumps(GPCRome_data["NameList"])
-                    context['GPCRome_data_variables'] = json.dumps(GPCRome_data['DataPoints'])
-                    context['GPCRome_Label_Conversion'] = json.dumps(GPCRome_data['LabelConversionDict'])
-                    context['GPCRome_datatypes'] = json.dumps(Data['Datatypes'])
-                    context['GPCRome_MasterDict'] = json.dumps(GPCRome_data['Master_dict'])
-                    context['GPCRome_WheelDict'] = json.dumps(GPCRome_data['GPCRome_dict'])
+               
                 # Handles and determines first active tab #
-                first_active_tab = None
-                tab_names = ['#tab1', '#tab2', '#tab3', '#tab4','#tab5']
+                # first_active_tab = None
+                # tab_names = ['#tab1', '#tab2', '#tab3', '#tab4','#tab5']
 
-                for i, is_active in enumerate(Plot_evaluation):
-                    if is_active:
-                        first_active_tab = tab_names[i]
-                        break
-                context['first_active_tab'] = first_active_tab
+                # for i, is_active in enumerate(Plot_evaluation):
+                #     if is_active:
+                #         first_active_tab = tab_names[i]
+                #         break
+                # context['first_active_tab'] = first_active_tab
 
             # Return the context dictionary
             return self.render_to_response(context)

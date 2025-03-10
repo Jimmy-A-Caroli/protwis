@@ -30,42 +30,12 @@
   /* added by soren - End */
 </style>
 <style>
-  .col-md-12 img {
-    transition: transform 0.3s ease, opacity 0.3s ease; /* Smooth transformation for scaling and opacity */
-    opacity: 1; /* Full opacity by default */
-  }
 
-  .col-md-12 img:hover {
-    transform: scale(1.1); /* Scales the image up on hover */
-    opacity: 1; /* Full opacity on hover */
-  }
-
-  .col-md-12 img:last-child {
-    margin-left: 5px; /* Adds 5px margin to the left of the last image */
-  }
-
-  .col-md-12 img:hover {
-    opacity: 1 !important; /* Ensures the hovered image stays fully opaque */
-  }
-
-  .img-container .tooltip {
-    position: absolute;
-    background-color: black;
-    color: white;
-    padding: 5px 10px;
-    white-space: nowrap;
-    visibility: hidden;
-    bottom: 100%; /* Adjust if the tooltip appears too high or low */
-    left: 50%;
-    transform: translateX(-50%) translateY(-10px); /* Adjust to ensure tooltip does not overlap the image */
-    z-index: 100; /* Higher value to ensure it's on top of other elements */
-  }
-
-  .img-container:hover .tooltip {
-    visibility: visible;
-    opacity: 1; /* Ensure it's fully opaque */
-    transition: visibility 0s, opacity 0.5s linear; /* Immediate visibility change with smooth opacity transition */
-  }
+.expand-image img:hover {
+  transform: scale(1.1); /* Scales the image up on hover */
+  opacity: 1; /* Full opacity on hover */
+  transition: transform 0.3s ease, opacity 0.3s ease; /* Smooth transition */
+}
 
   /* added by soren - start */
   .expandable_partially_success, .expandable_failed {
@@ -85,7 +55,7 @@
 }
 
 .my-icon-check {
-  text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
+  /* text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000; */
   font-size: 1.1em;
   vertical-align: middle; 
   position: relative;
@@ -93,23 +63,12 @@
   color: black;
 }
 
-.my-icon-cross {
-  text-shadow: -1px 0 #000, 0 1px #000, 1px 0 #000, 0 -1px #000;
-  font-size: 1.1em;
+.my-icon-minus {
+  font-size: 0.9em;
   vertical-align: middle; 
   position: relative;
-  /* top: 2px; */
   color: grey;
 }
-/* 
-table {
-  border: none !important;
-  border-collapse: collapse;
-}
-table th, table td {
-  border: none !important;
-} */
-
 
 .separator-row td {
   border: none !important;
@@ -122,6 +81,29 @@ table th, table td {
 
 .second-table-header th:first-child {
   border-right: 1px solid #ccc !important;  
+}
+
+.section-title {
+  font-size: 1.2em; /* Adjust for larger text */
+  font-weight: bold; /* Makes it stand out */
+  display: inline-block; /* Ensures line break works */
+  text-align: center; /* Centers the text */
+  line-height: 1.4; /* Adds a little spacing */
+  padding-left: 15px;
+}
+
+.title-header {
+  font-size: 16px;
+  padding-bottom: 10px;
+  /* text-decoration: underline; */
+  display: inline-block; /* Ensures padding-bottom works properly */
+}
+
+.left-column {
+  font-size: 13px;
+  padding-left: 38px;
+  /* text-decoration: underline; */
+  display: inline-block; /* Ensures padding-bottom works properly */
 }
 
   /* added by soren - end */
@@ -145,23 +127,22 @@ table th, table td {
     <thead>
       <tr>
         <!-- First header cell: only right border -->
-        <th style="border-right: 1px solid #ccc;  text-align: center;vertical-align: middle;">
-          <h4>1) Choose a plot</h4>
+        <th style="border-right: 1px solid #ccc;  text-align: left;vertical-align: middle;">
+          <span class="section-title">1) Choose a plot</span>
         </th>
         <!-- Other header cells: no borders (or set whatever you want) -->
         <th style="text-align: center;">
-          <span style="font-size: 16px;">GPCRome Wheel</span>
+          <span class="title-header">GPCRome Wheel</span>
           <br>
           <img src="{% static 'home/images/DataMapper/gpcrome_example.png' %}" 
                width="140" height="140" alt="GPCRome" style="margin-bottom: 5px;"/>
           <br>
-          
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#GPCRomeModal" style="margin-top: 5px;">
             More info
           </button>
         </th>
         <th style="text-align: center;">
-          Tree
+          <span class="title-header">Tree</span>
           <br>
           <img src="{% static 'home/images/DataMapper/phylo_example.png' %}" 
                width="140" height="140" alt="Tree" style="margin-bottom: 5px;"/>
@@ -171,30 +152,30 @@ table th, table td {
           </button>
         </th>
         <th style="text-align: center;">
+          <span class="title-header">Cluster</span>
+          <br>
           <img src="{% static 'home/images/DataMapper/cluster_icon_new.png' %}" 
                width="140" height="140" alt="Cluster" style="margin-bottom: 5px;"/>
-          <br>
-          Cluster
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#ClusterModal" style="margin-top: 5px;">
             More info
           </button>
         </th>
         <th style="text-align: center;">
+          <span class="title-header">List</span>
+          <br>
           <img src="{% static 'home/images/DataMapper/list_example.png' %}" 
                width="140" height="140" alt="List" style="margin-bottom: 5px;"/>
-          <br>
-          List
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#ListModal" style="margin-top: 5px;">
             More info
           </button>
         </th>
         <th style="text-align: center;">
+          <span class="title-header">Heatmap</span>
+          <br>
           <img src="{% static 'home/images/DataMapper/heatmap_example.png' %}" 
                width="140" height="140" alt="Heatmap" style="margin-bottom: 5px;"/>
-          <br>
-          Heatmap
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#HeatmapModal" style="margin-top: 5px;">
             More info
@@ -205,11 +186,11 @@ table th, table td {
     <tbody>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Max no. GPCRs
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Max no. GPCRs</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td ><strong>425</strong></td>
+        <td ><strong>398</strong></td>
         <td ><strong>200</strong></td>
         <td ><strong>425</strong></td>
         <td ><strong>425</strong></td>
@@ -217,8 +198,8 @@ table th, table td {
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Max no. dots
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Max no. of datasets</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
         <td ><strong>1</strong></td>
@@ -229,8 +210,8 @@ table th, table td {
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Dot color gradients
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Color gradient</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
         <td><i class="fas fa-check my-icon-check"></i></td>
@@ -241,51 +222,51 @@ table th, table td {
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Dot multi-color
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Multi-coloring</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
         <td><i class="fas fa-check my-icon-check"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Dot shape
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Shapes</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td><i class="fas fa-times my-icon-cross"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Dot size
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Sizes</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: center;">
-          Dot position
+        <th style="border-right: 1px solid #ccc; text-align: left;">
+          <span class="left-column">Spacial position</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td><i class="fas fa-times my-icon-cross"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
-        <td><i class="fas fa-times my-icon-cross"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
+        <td><i class="fas fa-minus my-icon-minus"></i></td>
       </tr>
 
       
@@ -297,8 +278,9 @@ table th, table td {
 
     <!-- Second table -->
     <tr class="second-table-header">
-      <th style="text-align: center; vertical-align: middle;">
-        <h4>2) Download template</h4>
+      <th style="text-align: left; vertical-align: middle;">
+        <span class="section-title">2) Download template</span>
+        <!-- <h4>2) Download template</h4> -->
       </th>
 
       <!-- 5 more columns to keep the total at 6 -->
@@ -307,54 +289,30 @@ table th, table td {
       <th style="text-align: center;">Cluster</th>
       <th style="text-align: center;">List</th>
       <th style="text-align: center;">Heatmap</th>
-      <!-- <th style="text-align: center;"></th>
-      <th style="text-align: center;"></th>
-      <th style="text-align: center;"></th>
-      <th style="text-align: center;"></th>
-      <th style="text-align: center;"></th> -->
     </tr>
 
     <!-- Second "section" rows -->
     <tr>
-      <th style="border-right: 1px solid #ccc; text-align: center;vertical-align: middle;">
-        For numeric data
+      <th style="border-right: 1px solid #ccc; text-align: left; vertical-align: middle;">
+        <span class="left-column">For numeric data</span>
       </th>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - GPCRome wheel - Numeric.xlsx' %}" download="Template - GPCRome wheel - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Tree - Numeric.xlsx' %}" download="Template - Tree - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Cluster - Numeric.xlsx' %}" download="Template - Cluster - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Numeric.xlsx' %}" download="Template - List - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Heatmap - Numeric.xlsx' %}" download="Template - Heatmap - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
     </tr>
     <tr>
-      <th style="border-right: 1px solid #ccc; text-align: center;vertical-align: middle;">
-        For text data
+      <th style="border-right: 1px solid #ccc; text-align: left; vertical-align: middle;">
+        <span class="left-column">For text data</span>
       </th>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
-      <td >
-        <div class="img-container" style="text-align:center;"><a href="{% static 'Files/Upload_test.xlsx' %}" download="Upload_test.xlsx"></a><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div>
-      </td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - GPCRome wheel - Text.xlsx' %}" download="Template - GPCRome wheel - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Tree - Text.xlsx' %}" download="Template - Tree - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td></td>
+      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Text.xlsx' %}" download="Template - List - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+      <td></td>
     </tr>
+    
      <!-- Separator row (no borders). Spans all 6 columns. -->
      <tr style="border-bottom: 2px solid white;">
       <td colspan="6" style="border: none; height: 30px;"></td>
@@ -362,8 +320,9 @@ table th, table td {
 
     <!-- Second table -->
     <tr>
-      <th style="border-right: 1px solid #ccc; text-align: center; vertical-align: middle;">
-        <h4>3) Upload your data</h4>
+      <th style="border-right: 1px solid #ccc; text-align: left; vertical-align: middle;">
+        <!-- <h4>3) Upload your data</h4> -->
+        <span class="section-title">3) Upload your data</span>
       </th>
       <!-- 5 more columns to keep the total at 6 -->
       <th style="text-align: center;"></th>
@@ -375,9 +334,11 @@ table th, table td {
 
     <!-- Second "section" rows -->
     <tr>
-      <th style="border-right: 1px solid #ccc; text-align: center;vertical-align: middle;">Your data in a template file</th>
+      <th style="border-right: 1px solid #ccc; text-align: left;vertical-align: middle;">
+        <span class="left-column">Your data in<br>a template file</span>
+      </th>
       <td colspan="5">
-        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'landing_page' %}">
+        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'landing_page' %}" class="expand-image">
           {% csrf_token %}
           <!-- Hidden file input -->
           <input id="file-input" type="file" name="file" style="display:none;" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
@@ -436,26 +397,24 @@ table th, table td {
   <div class="modal-dialog" role="document">
       <div class="modal-content">
           <div class="modal-header">
-              <h3 class="modal-title" id="Report-modal-label">Report: Successful</h3>
+            <span class="modal-title" id="Report-modal-label" style="font-size: 26px; font-weight: bold;">{{plot_name}} ({{plot_type}})</span>
+            <br>
+            <span class="modal-title" id="Report-modal-label" style="font-size: 26px;">Report: Successful</span> 
+            <!-- <h3 class="modal-title" id="Report-modal-label">Report: Successful</h3> -->
           </div>
           <div class="modal-body">
-            {% if plots_status %}
-              {% for plot in plots_status %}
-                {% if plot.status == 'Success' %}
-                  <h4 class="plot-item">
-                    <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <span class="plot-status">Plot available for rendering</span>
-                  </h4>
-                {% endif %}
-              {% endfor %}
-            {% endif %}
+            <h4 class="plot-item">
+              <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+              {{ plot_name }}
+              <span class="plot-status">Click "Continue" to generate</span>
+            </h4>
           </div>
           <div class="modal-footer" style="display: flex; justify-content: space-between;">
               <button type="button" class="btn btn-primary" onclick="window.location.href=window.location.href;">Back</button>
               <form method="POST" action="{% url 'data_mapper_plotrender' %}">
                   {% csrf_token %}
-                  <input type="hidden" name="Plot_evaluation" value="{{ Plot_parser_json }}">
+                  <input type="hidden" name="Plot" value="{{ plot_name }}">
+                  <input type="hidden" name="Datatype" value="{{ plot_type }}">
                   <input type="hidden" name="Data" value="{{ Data }}">
                   <button type="submit" class="btn btn-primary">Continue</button>
               </form>
@@ -468,86 +427,26 @@ table th, table td {
 <!-- ## Partially success report ! ## -->
 <!-- ############################# -->
 
-<div class="modal fade" id="Report_modal_partially_success" tabindex="-1" role="dialog" aria-labelledby="NoReport-modal-label" aria-hidden="true">
+<div class="modal fade" id="Report_modal_empty" tabindex="-1" role="dialog" aria-labelledby="NoReport-modal-label" aria-hidden="true">
   <div class="modal-dialog" role="document">
-      <div class="modal-content">
-          <div class="modal-header">
-              <h3 class="modal-title" id="NoReport-modal-label">Report: Partially successful</h3>
-              <!-- <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-              </button> -->
-          </div>
-          <div class="modal-body">
-            {% if plots_status %}
-              {% for plot in plots_status %}
-                {% if plot.status == 'Success' %}
-                  <h4 class="plot-item">
-                    <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <span class="plot-status">Plot available for rendering</span>
-                  </h4>
-                {% elif plot.status == 'Empty sheet' %}
-                  <h4 class="expandable_partially_success plot-item" data-target="sortable-{{ forloop.counter }}">
-                    <img src="{% static 'home/images/DataMapper/Mapper_NoData_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
-                    <div class="right-content">
-                        <span class="float-right">Plot unavailable (Click for info)</span>
-                    </div>
-                  </h4>
-                  <ul id="sortable-{{ forloop.counter }}" class="hidden">
-                   <p>Data is empty, and will not be processed for plot rendering.</p>
-                  </ul>
-                {% elif plot.status == "Failed" %}
-                  <h4 class="expandable_partially_success" data-target="sortable-{{ forloop.counter }}" >
-                    <img src="{% static 'home/images/DataMapper/Mapper_Failed_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
-                    <div class="right-content">
-                      <span class="float-right">Plot unavailable (Click for info)</span>
-                    </div>
-                  </h4>
-                  </h4>
-                  {% for name, plot_data in Incorrect_data_json.items %}
-                    {% if name == plot.plot_name %}
-                      {% if plot_data %}
-                        <ul id="sortable-{{ forloop.parentloop.counter }}" class="hidden">
-                          {% for primary_key, nested_dict in plot_data.items %}
-                            {% if nested_dict %}
-                              {% if nested_dict.items %}
-                                <ul>
-                                  <li>{{ primary_key }}</li>
-                                  <ul>
-                                    {% for key, value in nested_dict.items %}
-                                      {% if value %}
-                                        <li>Row {{ key }}: {{ value }}</li>
-                                      {% endif %}
-                                    {% endfor %}
-                                  </ul>
-                                </ul>
-                              {% else %}
-                                <li>{{ primary_key }}: {{ nested_dict }}</li>
-                              {% endif %}
-                            {% endif %}
-                          {% endfor %}
-                        </ul>
-                      {% endif %}
-                    {% endif %}
-                  {% endfor %}
-                {% endif %}
-              {% endfor %}
-            {% endif %}
-          </div>
-          <div class="modal-footer" style="display: flex; justify-content: space-between;">
-            <button type="button" class="btn btn-primary" onclick="window.location.href=window.location.href;">Back</button>
-            <form method="POST" action="{% url 'data_mapper_plotrender' %}">
-                {% csrf_token %}
-                <input type="hidden" name="Plot_evaluation" value="{{ Plot_parser_json }}">
-                <input type="hidden" name="Data" value="{{ Data }}">
-                <button type="submit" class="btn btn-primary">Continue (anyway)</button>
-            </form>
-          </div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title" id="Report-modal-label" style="font-size: 26px; font-weight: bold;">{{plot_name}} ({{plot_type}})</span>
+        <br>
+        <span class="modal-title" id="Report-modal-label" style="font-size: 26px;">Report: No data</span> 
+        <!-- <h3 class="modal-title" id="Report-modal-label">Report: Successful</h3> -->
       </div>
+      <div class="modal-body">
+        <h4 class="plot-item">
+          <img src="{% static 'home/images/DataMapper/Mapper_NoData_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+          {{ plot_name }}
+          <span class="plot-status">No data detected</span>
+        </h4>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+          <button type="button" class="btn btn-primary" onclick="window.location.href=window.location.href;">Go back and fix</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -559,70 +458,34 @@ table th, table td {
   <div class="modal-dialog" role="document">
       <div class="modal-content">
           <div class="modal-header">
-              <h3 class="modal-title" id="NoReport-modal-label">Report: Failed</h3>
-              <!-- <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-              </button> -->
+            <span class="modal-title" id="Report-modal-label" style="font-size: 26px; font-weight: bold;">{{plot_name}} ({{plot_type}})</span>
+            <br>
+            <span class="modal-title" id="Report-modal-label" style="font-size: 26px;">Report: Failed</span> 
           </div>
           <div class="modal-body">
-            {% if plots_status %}
-              {% for plot in plots_status %}
-                {% if plot.status == 'Success' %}
-                  <h4 class="plot-item">
-                    <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <span class="plot-status">Plot available for rendering</span>
-                  </h4>
-                {% elif plot.status == 'Empty sheet' %}
-                  <h4 class="expandable_failed plot-item" data-target="sortable_failed-{{ forloop.counter }}">
-                    <img src="{% static 'home/images/DataMapper/Mapper_NoData_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
-                    <div class="right-content">
-                        <span class="float-right">Plot unavailable (Click for info)</span>
-                    </div>
-                  </h4>
-                  <ul id="sortable_failed-{{ forloop.counter }}" class="hidden">
-                   <p>Data is empty, and will not be processed for plot rendering.</p>
-                  </ul>
-                {% elif plot.status == "Failed" %}
-                  <h4 class="expandable_failed plot-item" data-target="sortable_failed-{{ forloop.counter }}">
-                    <img src="{% static 'home/images/DataMapper/Mapper_Failed_image.png' %}" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
-                    {{ plot.plot_name }}
-                    <i class="fas fa-chevron-right dropdown-icon" style="margin-left: 10px;"></i>
-                    <div class="right-content">
-                        <span class="float-right">Plot unavailable (Click for info)</span>
-                    </div>
-                  </h4>
-                  {% for name, plot_data in Incorrect_data_json.items %}
-                    {% if name == plot.plot_name %}
-                      {% if plot_data %}
-                        <ul id="sortable_failed-{{ forloop.parentloop.counter }}" class="hidden">
-                          {% for primary_key, nested_dict in plot_data.items %}
-                            {% if nested_dict %}
-                              {% if nested_dict.items %}
-                                <ul>
-                                  <li>{{ primary_key }}</li>
-                                  <ul>
-                                    {% for key, value in nested_dict.items %}
-                                      {% if value %}
-                                        <li>Row {{ key }}: {{ value }}</li>
-                                      {% endif %}
-                                    {% endfor %}
-                                  </ul>
-                                </ul>
-                              {% else %}
-                                <li>{{ primary_key }}: {{ nested_dict }}</li>
-                              {% endif %}
-                            {% endif %}
-                          {% endfor %}
-                        </ul>
-                      {% endif %}
-                    {% endif %}
+            <h4 class="plot-item">
+              <img src="{% static 'home/images/DataMapper/Mapper_Failed_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+              {{ plot_name }}
+              <span class="plot-status">Incorrect data</span>
+            </h4>
+            {% if Incorrect_data_json %}
+            <ul>
+              {% for category, errors in Incorrect_data_json.items %}
+              <li>
+                {{ category }}  <!-- Header item (e.g., GPCRs, GPCR Value (Column B)) -->
+                <ul>  <!-- Nested <ul> must be inside <li> -->
+                  {% for key, value in errors.items %}
+                    <li>Row {{ key }}: {{ value }}</li>  <!-- Sub-items -->
                   {% endfor %}
-                {% endif %}
-              {% endfor %}
-            {% endif %}
+                </ul>
+              </li> <!-- Closing <li> correctly -->
+            {% endfor %}
+            </ul>
+          {% else %}
+            <p>No incorrect data found.</p>
+          {% endif %}
+
+
           </div>
           <div class="modal-footer" style="display: flex; justify-content: space-between;">
               <button type="button" class="btn btn-primary" onclick="window.location.href=window.location.href;">Go back and fix</button>
@@ -631,7 +494,6 @@ table th, table td {
       </div>
   </div>
 </div>
-
 
 <!-- ######################## -->
 <!-- # Plot options section # -->
@@ -850,11 +712,11 @@ $(document).ready(function() {
       // Check if upload was successful
       if ("{{ upload_status }}" === "Success") {
         // Check if report generation was successful
-        if ("{{ report_status }}" === "Success") {
+        if ("{{ Plot_parser }}" === "Success") {
           $('#Report_modal_success').modal('show');
-        } else if ("{{ report_status }}" === "Partially_success") {
-          $('#Report_modal_partially_success').modal('show');
-        } else if ("{{ report_status }}" === "Failed") {
+        } else if ("{{ Plot_parser }}" === "Empty sheet") {
+          $('#Report_modal_empty').modal('show');
+        } else if ("{{ Plot_parser }}" === "Failed") {
           $('#Report_modal_failed').modal('show');
         }
       } else if ("{{ upload_status }}" === "Failed") {

@@ -457,6 +457,7 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
 
 // Create the bar legends
 function createLegendBars(location, data, conversion, circle_styling_dict, datatype_dict) {
+
     var svg = d3.select('#' + location + ' svg');
 
     // Clear existing content
@@ -487,7 +488,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
     });
 
     var existingCategories = Object.keys(categoryMax).filter(cat => categoryMax[cat].max > 0);
-
+    console.log(existingCategories)
     // Create a color scale function for each category
     var colorScales = {};
     existingCategories.forEach(category => {
@@ -889,10 +890,10 @@ function initializeDataStyling(list_data_wow, data_types_list) {
     }
 
     // Define the keys to check for each column
-    var col1Keys = ["Value1", "Value2"];
-    var col2Keys = ["Value3", "Value4"];
-    var col3Keys = ["Value5", "Value6"];
-    var col4Keys = ["Value7", "Value8"];
+    var col1Keys = ["Value5", "Value1"];
+    var col2Keys = ["Value6", "Value2"];
+    var col3Keys = ["Value7", "Value3"];
+    var col4Keys = ["Value8", "Value4"];
 
 
     var Data_styling = {
@@ -962,10 +963,10 @@ function initializeDataStyling(list_data_wow, data_types_list) {
     Object.keys(list_data_wow).forEach(function(key) {
         var currentObj = list_data_wow[key];
 
-        updateDataMinMax('Col1', 'Value2', currentObj);
-        updateDataMinMax('Col2', 'Value4', currentObj);
-        updateDataMinMax('Col3', 'Value6', currentObj);
-        updateDataMinMax('Col4', 'Value8', currentObj);
+        updateDataMinMax('Col1', 'Value1', currentObj);
+        updateDataMinMax('Col2', 'Value2', currentObj);
+        updateDataMinMax('Col3', 'Value3', currentObj);
+        updateDataMinMax('Col4', 'Value4', currentObj);
     });
 
     return Data_styling;
@@ -1767,16 +1768,16 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                 const Col4_data_checker = data_styling.Col4.Data == "Yes";
 
                 // Col labels and shapes
-                const Col1_shape = receptorData.hasOwnProperty('Value1') ? receptorData.Value1.toLowerCase() : false;
-                const Col2_shape = receptorData.hasOwnProperty('Value3') ? receptorData.Value3.toLowerCase() : false;
-                const Col3_shape = receptorData.hasOwnProperty('Value5') ? receptorData.Value5.toLowerCase() : false;
-                const Col4_shape = receptorData.hasOwnProperty('Value7') ? receptorData.Value7.toLowerCase() : false;
+                const Col1_shape = receptorData.hasOwnProperty('Value5') ? receptorData.Value5.toLowerCase() : false;
+                const Col2_shape = receptorData.hasOwnProperty('Value6') ? receptorData.Value6.toLowerCase() : false;
+                const Col3_shape = receptorData.hasOwnProperty('Value7') ? receptorData.Value7.toLowerCase() : false;
+                const Col4_shape = receptorData.hasOwnProperty('Value8') ? receptorData.Value8.toLowerCase() : false;
 
                 // Col data
-                const Col1_data = receptorData.hasOwnProperty('Value2') ? receptorData.Value2 : false;
-                const Col2_data = receptorData.hasOwnProperty('Value4') ? receptorData.Value4 : false;
-                const Col3_data = receptorData.hasOwnProperty('Value6') ? receptorData.Value6 : false;
-                const Col4_data = receptorData.hasOwnProperty('Value8') ? receptorData.Value8 : false;
+                const Col1_data = receptorData.hasOwnProperty('Value1') ? receptorData.Value1 : false;
+                const Col2_data = receptorData.hasOwnProperty('Value2') ? receptorData.Value2 : false;
+                const Col3_data = receptorData.hasOwnProperty('Value3') ? receptorData.Value3 : false;
+                const Col4_data = receptorData.hasOwnProperty('Value4') ? receptorData.Value4 : false;
 
                 // Shapes and data rendering for each column
                 const col1_XoffSet = 0;
