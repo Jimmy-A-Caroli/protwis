@@ -697,7 +697,7 @@ class Command(BaseBuild):
         elif structure.pdb_code.index=='8YW5':
             temp_seq = temp_seq[:20]+'L'+temp_seq[20:29]+temp_seq[30:]
         elif structure.pdb_code.index=='8ZFJ':
-            temp_seq = temp_seq[:262]+'C--'+temp_seq[265:]
+            temp_seq = temp_seq[:263]+'C--'+temp_seq[266:]
         elif structure.pdb_code.index=='8ZSJ':
             temp_seq = temp_seq[:228]+'K'+temp_seq[228:243]+temp_seq[244:]
         elif structure.pdb_code.index=='9AVL':
@@ -718,6 +718,15 @@ class Command(BaseBuild):
             temp_seq = temp_seq[:5]+temp_seq[58:81]+temp_seq[5:58]+temp_seq[81:]
         elif structure.pdb_code.index in ['9JR3']:
             temp_seq = temp_seq[:4]+temp_seq[57:81]+temp_seq[4:57]+temp_seq[81:]
+        elif structure.pdb_code.index in ['8S4D']:
+            temp_seq = temp_seq[:48]+'R------'+temp_seq[55:]
+        elif structure.pdb_code.index in ['8XWQ']:
+            temp_seq = temp_seq[:235]+'L'+temp_seq[235:245]+temp_seq[246:]
+        elif structure.pdb_code.index in ['8Y69']:
+            ref_seq = ref_seq[:567]+ref_seq[568:]
+            temp_seq = temp_seq[:565]+temp_seq[566:]
+        elif structure.pdb_code.index=='9IVM':
+            temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
 
 
         for i, r in enumerate(ref_seq, 1): #loop over alignment to create lookups (track pos)
@@ -845,7 +854,7 @@ class Command(BaseBuild):
                                     elif residue.sequence_number!=wt_r.sequence_number:
                                         # print('WT pos not same pos, mismatch',residue.sequence_number,residue.amino_acid,wt_r.sequence_number,wt_r.amino_acid)
                                         wt_pdb_lookup.append(OrderedDict([('WT_POS',wt_r.sequence_number), ('PDB_POS',residue.sequence_number), ('AA',wt_r.amino_acid)]))
-                                        if structure.pdb_code.index not in ['4GBR','6C1R','6C1Q','7XBX','7F1Q','7ZLY','8JWY','8JWZ','8JMT','8TB7','8ITM','9D3G','9D3E']:
+                                        if structure.pdb_code.index not in ['4GBR','6C1R','6C1Q','7XBX','7F1Q','7ZLY','8JWY','8JWZ','8JMT','8TB7','8ITM','9D3G','9D3E','8YNS','8YNT']:
                                             if residue.sequence_number in unmapped_ref:
                                                 # print('residue.sequence_number',residue.sequence_number,'not mapped though')
                                                 if residue.amino_acid == wt_lookup[residue.sequence_number].amino_acid:
