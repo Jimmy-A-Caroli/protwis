@@ -1274,6 +1274,8 @@ class Command(BaseBuild):
             lig_db_key = lig_key
             if lig_key!=ligand_name and len(lig_key)==3 and len(ligand_name)==5:
                 lig_db_key = ligand_name
+                if '.' in lig_db_key:
+                    lig_db_key = lig_db_key.split('.')[0]
             struct_lig_interactions = StructureLigandInteraction.objects.filter(pdb_reference=lig_db_key, structure=structure, annotated=True) #, pdb_file=None
             if struct_lig_interactions.exists():  # if the annotated exists
                 try:
