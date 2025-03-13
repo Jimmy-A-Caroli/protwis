@@ -1273,7 +1273,6 @@ class Command(BaseBuild):
             lig_keys = list(data.keys())
             if len(lig_keys)>1:
                 for l in lig_keys:
-                    print(l)
                     if l==ligand_name:
                         lig_key = l
                     elif len(ligand_name)==5 and ligand_name[:3]==l:
