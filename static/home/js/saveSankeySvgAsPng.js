@@ -23,7 +23,10 @@
                    image.getAttribute('href');
         if (href && isExternal(href)) {
           console.warn("Skipping external image:", href);
-          if (--remaining === 0) callback();
+          remaining--; // Decrement separately
+          if (remaining === 0) {
+              callback();
+          }
           return;
         }
         const canvas = document.createElement('canvas');
@@ -37,11 +40,17 @@
           ctx.drawImage(img, 0, 0);
           const png = canvas.toDataURL('image/png');
           image.setAttributeNS("http://www.w3.org/1999/xlink", "href", png);
-          if (--remaining === 0) callback();
+          remaining--; // Decrement separately
+          if (remaining === 0) {
+              callback();
+          }
         };
         img.onerror = function() {
           console.warn("Could not load image at " + href);
-          if (--remaining === 0) callback();
+          remaining--; // Decrement separately
+          if (remaining === 0) {
+              callback();
+          }
         };
       })(images[i]);
     }

@@ -7,12 +7,11 @@ try:
 except:
     cache_variation = cache
 
-from django.db.models import Count, Sum, Avg, Q
-from django.views.decorators.cache import cache_page
+from django.db.models import Q
 
 import hashlib
 
-from protein.models import Protein, ProteinConformation, ProteinFamily, Gene
+from protein.models import Protein, ProteinConformation
 from residue.models import Residue, ResiduePositionSet
 from mutational_landscape.models import NaturalMutations, PTMs
 
@@ -30,12 +29,9 @@ from common.views import AbsTargetSelectionTable
 from family.views import linear_gradient
 
 import json
-import numpy as np
-from copy import deepcopy
 
 from io import BytesIO
 import unicodedata
-import urllib
 import xlsxwriter #sudo pip3 install XlsxWriter
 import string
 

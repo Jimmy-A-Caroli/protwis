@@ -1,28 +1,21 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.conf import settings
-from django.db.models import Count, Max, Q, F, Value, CharField, Case, When, IntegerField
-from django.db.models import Count, Max
+from django.http import JsonResponse
+from django.db.models import Count, Max, Case, When, IntegerField
 from django.core.cache import cache
-from django.db import connection, reset_queries
 from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 from django.utils.safestring import mark_safe
-from common.views import AbsReferenceSelectionTable, getReferenceTable, getLigandTable, getLigandCountTable, AbsTargetSelection
 from structure.models import Structure
 from drugs.models import Drugs, Indication, ATCCodes, IndicationAssociation
 from protein.views import get_sankey_data
-from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
+from protein.models import Protein, ProteinFamily, TissueExpression
 from mapper.views import LandingPage
 from ligand.models import AssayExperiment, LigandID
 
-import re
 import json
-import numpy as np
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
 import pandas as pd
-import os
 import logging
 
 def Venn(request, origin="both"):
@@ -620,7 +613,7 @@ def fetch_sankey_data_view(request):
         else:
             logger.warning(f"No data found for entry_name: {entry_name}")
             return JsonResponse({'error': 'No data found for this entry'}, status=404)
-    except Exception as e:
+    except:
         logger.exception(f"An error occurred while fetching sankey data for entry_name: {entry_name}")
         return JsonResponse({'error': 'An internal server error occurred'}, status=500)
 

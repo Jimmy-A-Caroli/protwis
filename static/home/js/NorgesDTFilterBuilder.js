@@ -44,7 +44,7 @@ function CreateColumnFilters(datatable_selector,column_number, column_range, fil
     // # Initialize variables #
     // ########################
 
-    if (array_check[0] == true) {
+    if (array_check[0] === true) {
 
         // ####################################################################################
         // ## Number of columns in the DataTable (minus 1 to account for index starting at 0 ##
@@ -108,16 +108,16 @@ function CreateColumnFilters(datatable_selector,column_number, column_range, fil
         // #  Check if width is set and correct value   #
         // ##############################################
 
-        if (width == undefined) {
+        if (width === undefined) {
 
             array_check[4] = true;
 
         } else {
             // width
             widthsplit = width.match(/-?\d+|[a-zA-Z]+|[^a-zA-Z\d]+/g);
-            if (widthsplit.length == 2) {
-                if (/^-?\d+$/.test(widthsplit[0]) && parseInt(widthsplit[0]) > 0) {
-                    if (widthsplit[1] == "px" || widthsplit[1] == "%") {
+            if (widthsplit.length === 2) {
+                if (/^-?\d+$/.test(widthsplit[0]) && parseInt(widthsplit[0], 10) > 0) {
+                    if (widthsplit[1] === "px" || widthsplit[1] === "%") {
                         array_check[4] = true;
                     } else {
                         console.log(`${width} (1) is not correctly formatted: needs to be [integer][px/%], e.g 100px or 50%`);
@@ -133,11 +133,11 @@ function CreateColumnFilters(datatable_selector,column_number, column_range, fil
         const allConditionsMet = array_check.every(Boolean);
 
         // Construct and return the filter array
-        if (allConditionsMet == true) {
+        if (allConditionsMet === true) {
             if (column_range > 1) {
                 let Multiple_FilterArray = []
                 for (i = 0; i < column_range; i++) {
-                    if (i == 0) {
+                    if (i === 0) {
                     const FilterArray = [[column_number,1,filter_type]]
                     Multiple_FilterArray = Multiple_FilterArray.concat(FilterArray)
                     } else {
@@ -211,7 +211,7 @@ function createDropdownFilters(api,column_filters) {
     // # All parameters are passed and the filters are applied #
     // #########################################################
 
-    if (filter_pass == true && DT_pass == true) {
+    if (filter_pass === true && DT_pass === true) {
         
         // #####################
         // ## Global variable ##
@@ -258,7 +258,7 @@ function createDropdownFilters(api,column_filters) {
             // ##          Multi select filter           ##
             // ############################################
 
-            if (filter_type == 'Multi-select-exact' || filter_type == 'Multi-select-unspecific') {
+            if (filter_type === 'Multi-select-exact' || filter_type === 'Multi-select-unspecific') {
                 api.columns([column_number]).every(function() {
                 if (this.searchable()) {
                     var that = this;
@@ -275,9 +275,9 @@ function createDropdownFilters(api,column_filters) {
                         // #####################################################
 
                         var data = $.map( $(this).select2('data'), function( value, key ) {
-                            if (filter_type == 'Multi-select-exact') {
+                            if (filter_type === 'Multi-select-exact') {
                                 return value.text ? '^' + $.fn.dataTable.util.escapeRegex(value.text) + '$' : null; // exact match
-                            } else if (filter_type == 'Multi-select-unspecific') {
+                            } else if (filter_type === 'Multi-select-unspecific') {
                                 return value.text ? $.fn.dataTable.util.escapeRegex(value.text): null; // not exact match --> string in string
                             }
                         });
@@ -327,7 +327,7 @@ function createDropdownFilters(api,column_filters) {
                     // ####################################
                     // ## Setup of select2 filter scheme ##
                     // ####################################
-                    if (filter_type == 'Multi-select-unspecific') {
+                    if (filter_type === 'Multi-select-unspecific') {
                         var select2 = $('#'+Table_id+'_Filter'+col).select2({
                             multiple: true,
                             closeOnSelect: true,
@@ -335,7 +335,7 @@ function createDropdownFilters(api,column_filters) {
                             dropdownAutoWidth : true,
                             tags: true, // allows for selection of undefined values --> Needs the not exact match to function well.
                         });
-                    } else if (filter_type == 'Multi-select-exact') {
+                    } else if (filter_type === 'Multi-select-exact') {
                         var select2 = $('#'+Table_id+'_Filter'+col).select2({
                             multiple: true,
                             closeOnSelect: true,
@@ -350,7 +350,7 @@ function createDropdownFilters(api,column_filters) {
             // ## Range filter float (vertical and horizontal layout) ##
             // #########################################################
 
-            } else if (filter_type == "Range-float-vertical" ||  filter_type == "Range-float-horizontal") {
+            } else if (filter_type === "Range-float-vertical" ||  filter_type === "Range-float-horizontal") {
                 api.columns([column_number]).every(function() {
                 if (this.searchable()) {
                     var that = this;
@@ -361,9 +361,9 @@ function createDropdownFilters(api,column_filters) {
                     // ##############################################
                     // ## Different setup (vertical or horizontal) ##
                     // ##############################################
-                    if (filter_type == "Range-float-vertical") {
+                    if (filter_type === "Range-float-vertical") {
                     selected_cell.innerHTML = html_input2+'<br>'+html_input1;
-                    } else if (filter_type == "Range-float-horizontal"){
+                    } else if (filter_type === "Range-float-horizontal"){
                         selected_cell.innerHTML = html_input1+html_input2;
                     }
                     $('#'+Table_id+'_Filter'+col+'min'+','+'#'+Table_id+'_Filter'+col+'max').keyup(function() {
@@ -415,18 +415,18 @@ function createDropdownFilters(api,column_filters) {
             // ##          Range filter select           ##
             // ############################################
             
-            } else if ( filter_type == "Range-select-vertical" || filter_type == "Range-select-horizontal") {
+            } else if ( filter_type === "Range-select-vertical" || filter_type === "Range-select-horizontal") {
                 api.columns([column_number]).every(function() {
                 if (this.searchable()) {
                     var that = this;
                     var col = column_number;
                     var selected_cell = that.column(col).header();
                     
-                    if (filter_type == "Range-select-vertical") {
+                    if (filter_type === "Range-select-vertical") {
                     var html_input1 = '<select id="'+Table_id+'_Filter'+col+'min" class="select2" data-placeholder="Min" style="width: 75%"></select>'
                     var html_input2 = '<select id="'+Table_id+'_Filter'+col+'max" class="select2" data-placeholder="Max" style="width: 75%;"></select>'
                     selected_cell.innerHTML = html_input1+'<br>'+html_input2;
-                    } else if (filter_type == "Range-select-horizontal") {
+                    } else if (filter_type === "Range-select-horizontal") {
                         var html_input1 = '<select id="'+Table_id+'_Filter'+col+'min" class="pull-left select2" style="width: 45%"></select>'
                         var html_input2 = '<select id="'+Table_id+'_Filter'+col+'max" class="pull-right select2" style="width: 45%;"></select>'
                         selected_cell.innerHTML = html_input1+html_input2;

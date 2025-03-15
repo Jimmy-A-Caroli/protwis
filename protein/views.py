@@ -1,21 +1,18 @@
-from django.shortcuts import get_object_or_404, render, redirect
-from django.views import generic
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Q, F, Func, Value, Prefetch
+from django.db.models import Q, F, Func, Value
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.urls import reverse
 
-from protein.models import Protein, ProteinConformation, ProteinAlias, ProteinFamily, Gene, ProteinSegment, Tissues, TissueExpression
+from protein.models import Protein, ProteinConformation, ProteinAlias, ProteinFamily, Gene, ProteinSegment
 from residue.models import Residue
-from structure.models import Structure, StructureModel, StructureExtraProteins
-# from structure.views import StructureBrowser
-from interaction.models import ResidueFragmentInteraction,StructureLigandInteraction
+from structure.models import Structure, StructureModel
 from mutation.models import MutationExperiment
 from common.selection import Selection
 from common.views import AbsBrowseSelection
 from ligand.models import Ligand, LigandID
-from drugs.models import Drugs, Indication
+from drugs.models import Drugs
 
 import json
 from copy import deepcopy
