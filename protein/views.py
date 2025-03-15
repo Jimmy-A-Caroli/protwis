@@ -21,7 +21,6 @@ import json
 from copy import deepcopy
 from collections import OrderedDict
 
-
 class BrowseSelection(AbsBrowseSelection):
     title = 'SELECT A RECEPTOR (FAMILY)'
     description = 'Select a target or family by searching or browsing in the right column.'
@@ -29,7 +28,6 @@ class BrowseSelection(AbsBrowseSelection):
                   + ' the right.'
     docs = 'receptors.html'
     target_input=False
-
 
 @cache_page(60 * 60 * 24 * 7)
 def detail(request, slug):
@@ -59,7 +57,6 @@ def detail(request, slug):
         except:
             context = {'protein_no_found': slug}
             return render(request, 'protein/protein_detail.html', context)
-
 
     if p.family.slug.startswith('100') or p.family.slug.startswith('200'):
         # If this protein is a gprotein, redirect to that page.
@@ -278,6 +275,7 @@ def get_sankey_data(entry_name):
     sankey['nodes'] = new_nodes
     # --- End of Cleanup ---
 
+    # Will be needed for future implementation of the sankey (matrix solution)
     # def update_max_paths(sankey_nodes, path_matrix):
 
     #     # Function to count unique paths leading **to** the node
@@ -341,8 +339,6 @@ def get_sankey_data(entry_name):
     }
 
     return sankey_data
-
-
 
 def SelectionAutocomplete(request):
 

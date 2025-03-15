@@ -10,35 +10,118 @@
 
 <!-- Custom CSS to adjust Select2 dropdown height -->
 <style>
-    /* Target the select2 dropdown and ensure it applies */
+    /* Ensure all elements in the row are properly aligned */
+    .row.d-flex {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Ensures the title is properly centered */
+    h4.mb-0 {
+        text-align: center;
+        font-size: 18px;
+        white-space: nowrap;
+        position: relative;
+        top: 4px; /* Moves the title slightly down */
+    }
+
+    /* Moves the select dropdown slightly higher for targets */
+    #entity-select {
+        position: relative;
+        top: -2px; /* Slight lift to make it appear higher */
+        height: 36px; /* Standard height to match button */
+        width: 100%; /* Ensures full width */
+    }
+
+    /* Moves the select dropdown slightly higher for drugs */
+    #entity-select-drugs {
+        position: relative;
+        top: -2px; /* Align it similarly to targets */
+        height: 36px; /* Match the button height */
+        width: 80%; /* Keeps it balanced */
+    }
+
+    /* Ensures dropdown for selecting options in drugs is properly aligned */
+    #drugs-dropdown-options {
+        height: 38px; /* Same height as select */
+        width: 100%; /* Make sure it stretches properly */
+    }
+
+    /* Ensure buttons in targets section are the correct height */
+    #search-btn {
+        height: 36px; /* Matches the select */
+        width: 100%; /* Ensures full width */
+    }
+
+    /* Ensure buttons in drugs section are aligned properly */
+    .btn-custom {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48%;
+        height: 38px; /* Match dropdown and select */
+    }
+
+    /* Automatically apply spacing for buttons */
+    .d-flex:has(> button) {
+        justify-content: space-between;
+    }
+
+    /* Adjust spacing between buttons */
+    .d-flex:has(> button) {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: nowrap; /* Prevents wrapping */
+        gap: 10px; /* Adds spacing between buttons */
+    }
+
+    /* Icons inside buttons */
+    .btn-custom i {
+        margin-left: 8px;
+    }
+
+    /* Prevent extra padding from shifting alignment */
+    .custom-col-right,
+    .custom-col-left {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* Make sure the select dropdown and button have the same max width */
+    #entity-select, #entity-select-drugs, #search-btn {
+        max-width: 100%;
+    }
+
+    /* Custom CSS to adjust Select2 dropdown height */
     .custom-dropdown {
         max-height: 500px !important; /* Set the maximum height of the dropdown */
         overflow-y: auto !important; /* Enable scrolling */
     }
+
     /* Adjust the inner results container */
     .custom-dropdown .select2-results__options {
         max-height: 450px !important; /* Adjust the height inside the dropdown */
         overflow-y: auto !important; /* Ensure results can scroll */
     }
+
+    /* Border styling for sections */
     .border-left {
         border-left: 1px solid #cccccc !important; /* Adjust the width and color as needed */
     }
-    /* Centered */
-    th .dt-column-order {
-        margin-right: -12px; /* Shift the sort arrow to the right */
-    }
-    th .dt-column-title {
-        /* padding-left: 24px; */
-        margin-left: 24px;
-    }
+
+    /* Ensures table layout is responsive */
     #targetsTable {
-    table-layout: auto;  /* Ensure columns can adjust width */
-    width: 100%;         /* Set table width to 100% of container */
+        table-layout: auto;  /* Ensure columns can adjust width */
+        width: 100%;         /* Set table width to 100% of container */
     }
+
     /* Add this CSS rule to keep font size consistent in tables with scrollX */
     table.dataTable {
         font-size: 12px; /* Adjust to match your standard font size */
     }
+
+    /* Ensures table headers don't break */
     #targetsTable th {
         width: 250px; /* Force width on <th> elements */
         max-width: 250px;        /* Set a maximum width */
@@ -46,82 +129,96 @@
         white-space: nowrap;     /* Prevent line wrapping */
         text-overflow: ellipsis; /* Add ellipsis if text overflows */
     }
-    .select2-search__field::placeholder{
-        text-align:center;
+
+    /* Aligns placeholder text for Select2 */
+    .select2-search__field::placeholder {
+        text-align: center;
     }
-    .select2-container--default .select2-selection--multiple{
+
+    /* Ensures multiple select dropdowns don't overflow */
+    .select2-container--default .select2-selection--multiple {
         overflow: hidden !important;
     }
-    .custom-col-right {
-        padding-right: 0 !important;
-    }
-    .custom-col-left {
-        padding-left: 0 !important;
-    }
+
+    /* Styling for tooltip */
     .d3-tip {
-      font-family: Arial;
-      background: #eef8ff;
-      padding: 9px;
-      border: 1px;
-      border-radius: 10px;
-      color: black;
-      z-index: 5070;
-      position: absolute;
-      pointer-events: none;
+        font-family: Arial;
+        background: #eef8ff;
+        padding: 9px;
+        border: 1px;
+        border-radius: 10px;
+        color: black;
+        z-index: 5070;
+        position: absolute;
+        pointer-events: none;
     }
+
+    /* Style for greyed-out text */
     .text-greyed-out {
         fill: grey;
     }
+
+    /* Style for bold text */
     .text-bold {
         font-weight: bold;
     }
-/* Adjust header text to wrap only at spaces */
-.search-info {
-    display: inline-block;
-    margin-left: 10px;
-    font-weight: bold;
-    color: #333;
-    white-space: nowrap; /* Prevent text wrapping */
-    text-align: left; /* Align text to the right */
-    font-size: 16px; /* A specific size in pixels */
-}
-.custom-center-align {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-}
-.custom-select2-container {
-    width: 100%;
-    text-align: center;
-}
+
+    /* Prevents text in headers from breaking awkwardly */
+    .search-info {
+        display: inline-block;
+        margin-left: 10px;
+        font-weight: bold;
+        color: #333;
+        white-space: nowrap; /* Prevent text wrapping */
+        text-align: left; /* Align text to the right */
+        font-size: 16px; /* A specific size in pixels */
+    }
+
+    /* Ensures elements are properly centered */
+    .custom-center-align {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    /* Ensures Select2 dropdown container is centered */
+    .custom-select2-container {
+        width: 100%;
+        text-align: center;
+    }
 </style>
 {% endblock %}
 {% block content %}
 <!-- If target page -->
 {% if page == 'Targets' %}
-    <div class="row">
-        <div class="col-md-3"></div>
-        <!-- Search bar -->
-        <div class="col-md-5" style="margin-top: 30px">
-            <!-- Main Description -->
-            <div class="panel panel-primary">
-                <div class="panel-body">
-                    <div class="row">
-                        <div class="col-md-4 d-flex align-items-center pr-0 custom-col-right">
-                            <h4 class="mb-0">{{ title }}</h4>
+<div class="row">
+    <div class="col-md-2"></div>
+    <!-- Search bar -->
+    <div class="col-md-6" style="margin-top: 30px">
+        <!-- Main Description -->
+        <div class="panel panel-primary">
+            <div class="panel-body">
+                <div class="row d-flex align-items-center justify-content-center">
+                    <!-- Title (Vertically Centered) -->
+                    <div class="col-md-3 d-flex align-items-center justify-content-center">
+                        <h4 class="mb-0">{{ title }}</h4>
+                    </div>
+                    <!-- Select Dropdown (Slightly Higher) -->
+                    <div class="col-md-6 d-flex align-items-center justify-content-center">
+                        <div class="w-100">
+                            <select id="entity-select" class="form-control"></select>
                         </div>
-                        <div class="col-md-5 d-flex align-items-center pl-0 custom-col-left">
-                            <select id="entity-select" class="form-control" style="width: 100%;"></select>
-                        </div>
-                        <div class="col-md-3 d-flex align-items-center">
-                            <button id="search-btn" class="btn btn-primary" style="width: 100%;" disabled>Search</button>
-                        </div>
+                    </div>
+                    <!-- Search Button (Vertically Centered) -->
+                    <div class="col-md-3 d-flex align-items-center justify-content-center">
+                        <button id="search-btn" class="btn btn-primary w-100" disabled>Search</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 {% endif %}
 <!-- If drugs page -->
 {% if page == 'Drugs' %}
@@ -132,10 +229,10 @@
         <!-- Main Description -->
         <div class="panel panel-primary">
             <div class="panel-body">
-                <div class="row">
+                <div class="row d-flex align-items-center justify-content-center">
                     <!-- Dropdown for options -->
-                    <div class="col-md-3 d-flex align-items-center pr-0 custom-col-right">
-                        <select id="drugs-dropdown-options" class="form-control" style="width: 100%; margin-right: 10px;">
+                    <div class="col-md-3 d-flex align-items-center pr-0 custom-col-right" style="margin-left: 15px;">
+                        <select id="drugs-dropdown-options" class="form-control dropdown-custom">
                             <option value="Ligand Name">Compound Name</option>
                             <option value="PubChem">PubChem (ID)</option>
                             <option value="ChEMBL">ChEMBL (ID)</option>
@@ -145,18 +242,18 @@
                         </select>
                     </div>
                     <!-- Center-aligned Select2 element -->
-                    <div class="col-md-4 d-flex justify-content-center align-items-center">
-                        <div style="width: 100%; text-align: center;">
-                            <select id="entity-select-drugs" class="form-control" style="width: 80%; margin-left: 10px;"></select>
+                    <div class="col-md-3 d-flex justify-content-center align-items-center">
+                        <div class="select-container">
+                            <select id="entity-select-drugs" class="form-control select-custom"></select>
                         </div>
                     </div>
                     <!-- Buttons -->
-                    <div class="col-md-5 d-flex align-items-center justify-content-between">
-                        <button id="go-to-page-btn" class="btn btn-primary d-flex align-items-center justify-content-center" style="width: 48%; margin-right: 5px;">
-                            Go to Page <i class="fa fa-arrow-right" aria-hidden="true" style="margin-left: 8px;"></i>
+                    <div class="col-md-6 d-flex align-items-center">
+                        <button id="go-to-page-btn" class="btn btn-primary btn-custom">
+                            Go to Page <i class="fa fa-arrow-right" aria-hidden="true"></i>
                         </button>
-                        <button id="open-new-tab-btn" class="btn btn-success d-flex align-items-center justify-content-center" style="width: 48%; margin-left: 5px; background-color: #28a745; border-color: #28a745;">
-                            Open in New Tab <i class="fa fa-external-link" aria-hidden="true" style="margin-left: 8px;"></i>
+                        <button id="open-new-tab-btn" class="btn btn-success btn-custom">
+                            Open in New Tab <i class="fa fa-external-link" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>

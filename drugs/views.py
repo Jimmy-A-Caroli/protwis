@@ -25,12 +25,6 @@ import pandas as pd
 import os
 import logging
 
-def DrugsVenn(request):
-    return Venn(request, "drugs")
-
-def TargetVenn(request):
-    return Venn(request, "targets")
-
 def Venn(request, origin="both"):
     name_of_cache = 'venn_' + origin
     context = cache.get(name_of_cache)
@@ -38,7 +32,6 @@ def Venn(request, origin="both"):
     # context = None
     if context == None:
         context = OrderedDict()
-
         phases_dict = {}
         key_mapping = {
             1: "Phase I",
@@ -189,9 +182,10 @@ class DrugSectionSelection(TemplateView):
     # variable setup #
     template_name = 'common/selection_drugs.html'
 
+    # Initialize the page, title and description paramter
     page = 'Drugs'
     title = "Drug search"
-    description = 'Search by drug name'  # Default description
+    description = 'Search by drug name'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -270,15 +264,6 @@ class DrugSectionSelection(TemplateView):
                 for drug in search_data
             }
 
-            # # Create sankey_dict_serialized using a dictionary comprehension
-            # sankey_dict_serialized = {
-            #     drug.target.id: get_sankey_data(self.get_entry_name_by_target_id(drug.target.id))
-            #     for drug in search_data
-            # }
-
-            # Pass the serialized sankey_dict to the context
-            # context['sankey_dict'] = json.dumps(sankey_dict_serialized)
-
             # Fetch ATC codes for the table
             ATC_data = ATCCodes.objects.select_related(
                 'code'
@@ -298,7 +283,6 @@ class DrugSectionSelection(TemplateView):
 
             # Rename columns for the ATC DataFrame
             atc_df_grouped.rename(columns={'ligand': 'LigandID', 'code__index': 'ATC'}, inplace=True)
-
 
             # Fetch table data with all related information
             table_data = Drugs.objects.select_related(
@@ -586,76 +570,6 @@ class DrugSectionSelection(TemplateView):
             # Convert DataFrame to JSON
             json_records_drugs = agg_data_drugs.to_json(orient='records')
             context['Full_data_drugs'] = json_records_drugs
-
-        #     #### GPCRome Indication Stuff START ####
-        #     data_dir = os.sep.join([settings.DATA_DIR, 'drug_data'])
-        #     filepath = os.sep.join([data_dir, 'short_titles_ICD.csv'])
-        #     titles = pd.read_csv(filepath, sep=';', low_memory=False)
-        #     title_conversion = {key: [value] for key, value in zip(titles['title'], titles['title_short'])}
-
-        #     indication_levels_01 = Indication.objects.filter(level__in=[0,1])
-        #     indication_tree = {}
-        #     conversion = {}
-        #     wheel_data = {}
-        #     wheel_slugs = {}
-        #     crunch = {}
-
-        #     for item in indication_levels_01:
-        #         if item.title == 'Symptoms, signs or clinical findings, not elsewhere classified':
-        #             item.title = 'Symptoms, signs or clinical findings'
-        #         elif item.title == 'Certain conditions originating in the perinatal period':
-        #             item.title = 'Certain conditions originating in perinatal period'
-        #         elif item.title == 'Injury, poisoning or certain other consequences of external causes':
-        #             item.title = 'Injury, poisoning or other external causes'
-        #         elif item.title == 'Pregnancy, childbirth or the puerperium':
-        #             item.title = 'Pregnancy, childbirth or puerperium'
-        #         elif item.title == 'Diseases of the blood or blood-forming organs':
-        #             item.title = 'Diseases of the blood or related organs'
-
-                # if (item.level == 0) and (item.title.split(' ')[0] not in ['Supplementary', 'Extension', 'External', 'Factors']):
-                #     indication_tree[item.slug] = []
-                #     conversion[item.slug] = item.title
-                # if (item.level == 1) and (item.parent.title.split(' ')[0] not in ['Supplementary', 'Extension', 'External', 'Factors']):
-                #     root = item.slug[:4]
-                #     if root not in indication_tree.keys():
-                #         indication_tree[root] = []
-                #     indication_tree[root].append(item.title)
-                #     conversion[item.slug] = item.title
-                #     wheel_data[item.title] = {'Value1': 0}
-                #     wheel_slugs[item.slug] = {'Value1': 0}
-                #     crunch[item.title] = {1: 0, 2: 0, 3: 0, 4: 0, 'unique': []}
-
-        #     indication_tree2 = LandingPage.convert_keys(indication_tree, conversion)
-
-        #     #Now get the drug data
-        #     indication_drug_data = Drugs.objects.all().prefetch_related('indication')
-
-        #     for item in indication_drug_data:
-        #         try:
-        #             title = item.indication.get_level_1().title
-        #             slug = item.indication.get_level_1().slug
-        #             phase = item.indication_max_phase
-        #             wheel_data[title]['Value1'] +=1
-        #             wheel_slugs[slug]['Value1'] +=1
-        #             crunch[title][phase] += 1
-        #             crunch[title]['unique'].append(item.ligand_id)
-        #         except:
-        #             continue
-
-        #     for key in title_conversion.keys():
-        #         title_conversion[key].append(wheel_data[key]['Value1'])
-        #         title_conversion[key].append(crunch[key][1])
-        #         title_conversion[key].append(crunch[key][2])
-        #         title_conversion[key].append(crunch[key][3])
-        #         title_conversion[key].append(crunch[key][4])
-        #         uniq = len(set(crunch[key]['unique']))
-        #         title_conversion[key].append(uniq)
-
-        #     indication_full = {"NameList": indication_tree2, "DataPoints": wheel_data}
-        #     context['GPCRome_data'] = json.dumps(indication_full["NameList"])
-        #     context['GPCRome_data_variables'] = json.dumps(indication_full['DataPoints'])
-        #     context['Title_conversion'] = json.dumps(title_conversion)
-        #     #### GPCRome Indication Stuff END   ####
 
         # Convert to JSON string and pass to context
         if page == 'Drugs':
@@ -1687,7 +1601,7 @@ class TargetSelectionTool(TemplateView):
         ########################################
         # Disease indications and associations #
         ########################################
-        
+
         # Fetch the second data table with indication and master level
         table_data_2 = Drugs.objects.select_related(
             'target__family__parent__parent__parent',
@@ -2018,35 +1932,6 @@ def drugmapping(request):
 
     return render(request, 'drugmapping.html', {'drugdata':context})
 
-@cache_page(60 * 60 * 24 * 28)
-def nhs_drug(request, slug):
-
-    nhs_data = NHSPrescribings.objects.filter(drugname__name=slug.lower()).order_by('date')
-
-    data_dic = {}
-    sections = []
-    query_translate = {}
-    for i in nhs_data:
-        prescription_name = i.op_name +' (' + i.drugCode + ')'
-        queryname = i.drugname.name
-
-        if not prescription_name in data_dic:
-            data_dic[prescription_name] = []
-            sections.append(i.bnf_section)
-        dic = {}
-        dic['x'] = str(i.date)
-        dic['y'] = int(i.actual_cost)
-        data_dic[prescription_name].append(dic)
-
-        if not prescription_name in query_translate:
-            query_translate[prescription_name] = queryname
-
-    data = []
-    for nhs_name in data_dic.keys():
-        data.append({'values': data_dic[nhs_name], 'query_key':str(query_translate[nhs_name]), 'key':nhs_name})
-
-    return render(request, 'nhs.html', {'data':data, 'drug':slug, 'section':list(set(sections))})
-
 # @cache_page(60 * 60 * 24 * 28)
 def indication_detail(request, code):
 
@@ -2111,13 +1996,6 @@ def indication_detail(request, code):
             caches['targets'].append(protein_name)
             caches['entries'].append(target_name)
         prot_node = next((item['node'] for item in sankey['nodes'] if item['name'] == protein_name), None)
-
-        # #append connection between indication and level 0
-        # sankey['links'].append({"source":indi_node, "target":level_0_node, "value":1, "ligtrace": ligand_name, "prottrace": None})
-        # #append connection between level 0 and ligand
-        # sankey['links'].append({"source":level_0_node, "target":lig_node, "value":1, "ligtrace": ligand_name, "prottrace": None})
-        # #append connection between ligand and target
-        # sankey['links'].append({"source":lig_node, "target":prot_node, "value":1, "ligtrace": ligand_name, "prottrace": protein_name})
 
         # create matrix row
         row = {
@@ -2191,6 +2069,7 @@ def indication_detail(request, code):
     # Replace the nodes list with the new one
     sankey['nodes'] = new_nodes
 
+    # Needed code for sankey in future updates (matrix solution):
     # def update_max_paths(sankey_nodes, path_matrix):
 
     #     # Function to count unique paths leading **to** the node

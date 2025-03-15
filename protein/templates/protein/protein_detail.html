@@ -1,8 +1,6 @@
 {% extends "home/base.html" %}
 {% load static %}
 {% load structure_extras %}
-
-
 {% block content %}
 
 {% if protein_no_found %}
@@ -180,11 +178,8 @@
     </div>
     {% endif %}
 </div>
-
 {% endif %}
 {% endblock %}
-
-
 {% block addon_css %}
     <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
     <link href="{% static 'home/css/color_picker.css' %}" rel="stylesheet">
@@ -197,7 +192,6 @@
     <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
 {% endblock %}
-
 {% block addon_js %}
     <script src="{% static 'home/js/sequenceviewer.js' %}"></script>
     <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>

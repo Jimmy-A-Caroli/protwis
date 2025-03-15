@@ -2745,9 +2745,7 @@ class LigandInformationView(TemplateView):
             context['assay_existence'] = 'no'
         else:
             context['assay_existence'] = 'yes'
-        
-        # context.update({'assay_affinity': assay_data_affinity})
-        # context.update({'assay_potency': assay_data_potency})
+
         context.update({'mutations': mutations})
 
         ##### ADDING SECTION FOR SANKEY #####
@@ -2879,7 +2877,7 @@ class LigandInformationView(TemplateView):
 
             # Replace the nodes list with the new one
             sankey['nodes'] = new_nodes
-
+            # Needed in future updates of the sankey (matrix implementation)
             # def update_max_paths(sankey_nodes, path_matrix):
 
             #     # Function to count unique paths leading **to** the node
@@ -2971,7 +2969,6 @@ class LigandInformationView(TemplateView):
             context.update({'points': total_points})
             context.update({'nodes_nr': nodes_nr})
             context.update({'plot_existence': 'yes'})
-        
 
             ##### ADDING SECTION FOR DRUG TABLE #####
             # The code was derived from drugs/views.py class DrugSectionSelection
@@ -3072,8 +3069,6 @@ class LigandInformationView(TemplateView):
             else:
                 context['Full_data_drug_table'] = None
                 context['Full_data_drug_table_exists'] = 'no'
-
-
         else:
             context.update({
                 'Phase_I_trials': 0,
@@ -3083,8 +3078,6 @@ class LigandInformationView(TemplateView):
                 'Full_data_drug_table': None,
                 'Full_data_drug_table_exists': 'no'
                 })
-
-        #####################################
 
         return context
 

@@ -1,26 +1,34 @@
 {% extends "home/base.html" %}
 {% load static %}
 {% load structure_extras %}
-
-
+{% block addon_css %}
+    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
+    <link href="{% static 'home/css/color_picker.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
+    <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
+    <link rel="stylesheet" href="{% static 'home/css/yadcf_bootstrap_version.css' %}" type="text/css" />
+    <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
+    <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
+    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
+    <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
+    <style>
+      .link {
+        fill: none;
+        stroke: #969696;
+        stroke-opacity: .1;
+      }
+      .link:hover {
+        stroke-opacity: .3;
+      }
+    </style>
+{% endblock %}
 {% block content %}
-<style>
-.link {
-  fill: none;
-  stroke: #969696;
-  stroke-opacity: .1;
-}
-.link:hover {
-  stroke-opacity: .3;
-}
-</style>
-
 <div class="row text-success">
     <div class="text-center">
         <h2>{{indication}}</h2>
     </div>
 </div>
-
 
 <div class="row">
     <div class="col-md-2 text-right text-info">
@@ -75,33 +83,17 @@
       {% endfor %}
     </div>
 </div>
-
 {% endblock %}
-
-
-{% block addon_css %}
-    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/color_picker.css' %}" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/yadcf_bootstrap_version.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
-    <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
-{% endblock %}
-
 {% block addon_js %}
-    <script src="{% static 'home/js/d3.min.js' %}"></script>
-    <script src="{% static 'home/js/nv.d3.min.js' %}"></script>
-    <script src="{% static 'home/js/saveSvg.js' %}"></script>
-    <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
-    <script src="{% static 'home/js/sankey.js' %}"></script>
-    <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
-    <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
+  <script src="{% static 'home/js/d3.min.js' %}"></script>
+  <script src="{% static 'home/js/nv.d3.min.js' %}"></script>
+  <script src="{% static 'home/js/saveSvg.js' %}"></script>
+  <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
+  <script src="{% static 'home/js/sankey.js' %}"></script>
+  <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
+  <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
 
-    <script type="text/javascript">
+  <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
     var sankey_data = JSON.parse('{{ sankey|safe }}');
     var pathMatrix = JSON.parse('{{ path_matrix|safe }}');
@@ -129,5 +121,5 @@
     });
     initializeSankeyPlot();
     });
-    </script>
+  </script>
 {% endblock %}

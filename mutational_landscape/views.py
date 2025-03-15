@@ -197,7 +197,6 @@ def render_variants(request, protein=None, family=None, download=None, receptor_
             # print(NM.functional_annotation)
             jsondata[SN] = [NM.amino_acid, NM.allele_frequency, NM.allele_count, NM.allele_number, NM.number_homozygotes, NM.type, effect, color, functional_annotation]
 
-
         natural_mutation_list = {}
         max_snp_pos = 1
         for NM in NMs:

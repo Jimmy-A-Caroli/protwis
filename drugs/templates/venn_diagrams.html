@@ -2,18 +2,10 @@
 {% load static %}
 {% load structure_extras %}
 {% block addon_css %}
-
-<!-- styles needed? -->
-<!-- <link href="{% static 'home/css/prettify.css' %}" rel="stylesheet" media="screen"> -->
-<link href="{% static 'home/css/color_picker.css' %}" rel="stylesheet" media="screen">
-<link href="{% static 'home/css/jquery.dataTables.min.css' %}" rel="stylesheet" media="screen">
-<link href="{% static 'home/css/yadcf_bootstrap_version.css' %}" rel="stylesheet" media="screen">
-<link href="{% static 'home/css/targetselect_functions.css' %}" rel="stylesheet" media="screen">
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
 <style type="text/css">
-  
   textarea {
     resize: none;
     overflow: hidden;
@@ -26,9 +18,8 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
-}
-
-#jvenn-container {
+  }
+  #jvenn-container {
     min-height: 300px;         /* Adjust height based on your Venn diagram size */
     width: 100%;
     display: flex;
@@ -36,58 +27,46 @@
     align-items: center;
     text-align: center;
     margin-left: 18%; /* Moves the container 20px to the right */
-}
-
-.border-left {
+  }
+  .border-left {
     border-left: 1px solid #cccccc !important; /* Adjust the width and color as needed */
-}
-/* Centered */
-th .dt-column-order {
+  }
+  /* Centered */
+  th .dt-column-order {
     margin-right: -12px; /* Shift the sort arrow to the right */
-}
-th .dt-column-title {
+  }
+  th .dt-column-title {
     /* padding-left: 24px; */
     display: inline-block; /* Ensure the text behaves like a block element */
     margin-left: 24px;
-}
-
-.select2-search__field::placeholder{
+  }
+  .select2-search__field::placeholder{
     text-align:center;
-}
-.select2-container--default .select2-selection--multiple{
+  }
+  .select2-container--default .select2-selection--multiple{
     overflow: hidden !important;
-}
-.row-count-info {
+  }
+  .row-count-info {
     display: inline-block;
     font-weight: bold;
     color: #333;
-}
-
-.popover {
+  }
+  .popover {
     z-index: 9999 !important; /* Ensures it appears above all elements */
-}
-.overflow-visible {
+  }
+  .overflow-visible {
     overflow: visible !important;
-}
-
-/* .dt-btn, .row-count-info, .text-end {
-    display: inline-block;
-    width: 100%;
-} */
-
+  }
 </style>
-
 {% endblock %}
-
 {% block content %}
-
 <div class="container">
   <div class="row">
     <div class="col-md-12 text-center">
       {% if layout == "drugs" %}
-      <p>Click a Venn or table area to retrieve the agents/drugs with the given clinical phase profile.</p>
+      <p>Click a Venn number to retrieve the agents/drugs with the given clinical phase profile.</p>
       {% else %}
-      <p>Click a Venn or table area to retrieve the receptors with the given clinical phase profile.</p>
+      <p>Click a Venn number to retrieve the receptors with the given clinical phase profile.</p>
       {% endif %}
     </div>
   </div>
@@ -122,7 +101,7 @@ th .dt-column-title {
                       data-content="The three ATC columns is only shown if Phase IV is included in the data."
                       style="font-size: 12px; margin-left: 8px;">
                 </span>
-              </th>            
+              </th>
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Targets</th>
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               {% else %}
@@ -137,10 +116,9 @@ th .dt-column-title {
                       data-content="The three ATC columns is only shown if Phase IV is included in the data."
                       style="font-size: 12px; margin-left: 8px;">
                 </span>
-              </th>     
+              </th>
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
               {% endif %}
-              
             </tr>
             <tr>
               {% if layout == "drugs" %}
@@ -231,28 +209,18 @@ th .dt-column-title {
     </div>
   </div>
 </div> 
-
-
 {% endblock %}
 {% block addon_js %}
 <script src="{% static 'home/js/d3.min.js' %}"></script>
-<script src="{% static 'home/js/newick.js' %}"></script>
-<script src="{% static 'home/js/targetselect_functions.js' %}"></script>
-<!-- <script src="{% static 'home/js/select2.js' %}"></script> -->
-<script src="{% static 'home/js/jquery.dataTables.yadcf.js' %}"></script>
-<script src="{% static 'home/js/jquery.dataTables.min.js' %}"></script>
 <script src="{% static 'home/js/paper-full.min.js' %}"></script>
-<script src="{% static 'home/js/bootstrap-colorpicker.min.js' %}"></script>
 <script src="{% static 'home/js/canvas2svg.js' %}"></script>
 <script src="{% static 'home/js/jvenn.js' %}"></script>
 <script src="{% static 'home/js/nv.d3.min.js' %}"></script>
-<script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
-<script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-
+<script src="{% static 'home/js/selection.js' %}"></script>
 
 <script>
   ! function($) {
@@ -262,7 +230,6 @@ th .dt-column-title {
   }(window.jQuery)
 </script>
 
-
 <script type="text/javascript" charset="utf-8">
   $(document).ready(function(){
     paper.install(window);
@@ -270,11 +237,8 @@ th .dt-column-title {
         container: 'body', // Ensures popover is outside of DataTable structure
         html: true
     });
-    });
+  });
 </script>
-
-<script src="{% static 'home/js/selection.js' %}"></script>
-
 
 <script language="Javascript">
 //   //creating a dictionary for the path translation
@@ -287,291 +251,289 @@ th .dt-column-title {
   };
 
 $(document).ready(function () {
-var colorDefault = ["#5a9bd4", "#f15a60", "#808080", "#006600"],
-    displayMode  = "classic",
-    displaySwitch = false,
-    displayStat  = false,
-    shortNumber  = true,
-    fontSize     = "16px",
-    fontFamily   = "Arial";
+  var colorDefault = ["#5a9bd4", "#f15a60", "#808080", "#006600"],
+  displayMode  = "classic",
+  displaySwitch = false,
+  displayStat  = false,
+  shortNumber  = true,
+  fontSize     = "16px",
+  fontFamily   = "Arial";
 
-var gdata = {{ phases_dict|safe }};
-var gprotein_ID = {{ phases_dict_keys|safe }};
-// var dict = {{ drug_dictionary|safe }};
-var fullData = {{ Full_data|safe }};
-const layout = "{{ layout|escapejs }}";
+  var gdata = {{ phases_dict|safe }};
+  var gprotein_ID = {{ phases_dict_keys|safe }};
+  var fullData = {{ Full_data|safe }};
+  const layout = "{{ layout|escapejs }}";
 
-function getArrayFromData(gprotein) {
-  var lines = gdata[gprotein].split("\n");
-  var table = new Array();
-  for (var lindex in lines) {
-    table.push(lines[lindex].trim());
-  } return (table);
-}
-
-// Define the `table` variable globally so it's accessible in the `toggleGroupVisibility` function
-let table;
-
-
-function initializeDataTable(tableId, data, hideColumns = false, vennUniqueCount = null) {
-  
-  let uniqueCount = vennUniqueCount;
-  // Add common column definitions
-  var drugsColumnDefs = [
-    { 
-        className: "dt-head-center dt-center dt-body-center", 
-        targets: "_all" 
-    },
-    { 
-        targets: "_all",
-        createdCell: function (cell) {
-            // Add the 'expand' class to only td elements
-            $(cell).addClass('expand');
-        }
-    },
-    { className: 'border-left', targets: [8, 13] }
-];
-
-  var targetsColumnDefs = [
-    { className: "dt-head-center dt-center dt-body-center", targets: "_all" },
-    { 
-        targets: "_all",
-        createdCell: function (cell) {
-            // Add the 'expand' class to only td elements
-            $(cell).addClass('expand');
-        }
-    },
-    { className: 'border-left', targets: [5, 13] }
-  ];
-
-  // Select columns based on layout
-  const columnDefs = layout === "drugs" ? drugsColumnDefs : targetsColumnDefs;
-  
-  // Set order based on layout value: column 3 for "Targets" and column 0 for "Drugs"
-  const order = layout === "targets" ? [0, "asc"] : [0, "asc"];
-
-  // Define column configurations for "drugs" and "targets"
-  const drugsColumns = [
-      { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) { 
-          if (type === 'display') {
-              if (row && row.LigandID) {
-                  data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
-              } else {
-                  data = data || '';
-              }
-          }
-          return data;
-      }},
-      { data: "Drug type", name: "Drug type" },
-      { data: "Modality", name: "Modality" },
-      { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
-      { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
-      { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
-      { data: "In trial", name: "In trial" },
-      { data: "Approved", name: "Approved" },
-      { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
-          if (type === 'display') {
-              const originalData = data; 
-              const transformedData = data.replace('_human', '').toUpperCase(); 
-              return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
-          } else if (type === 'filter') {
-              return data.replace('_human', '').toUpperCase();
-          }
-          return data;
-      }},
-      { data: "Protein name", name: "Protein name", width: "125px", render: function (data) { return data.replace(' receptor', ''); }},
-      {data: "Receptor family", name: "Receptor family", width: "150px", render: function (data) { return data.replace('receptors', ''); }},
-      { data: "Ligand type", name: "Ligand type", render: function (data) { return data.replace('receptors', ''); }},
-      { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0].replace(/^Class /i, '').trim(); }},
-      { data: "Master Indication", name: "Master Indication" },
-      { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
-          if (type === 'display') {
-              if (row && row.ICD11) {
-                  const transformedData = data || 'Unknown'; 
-                  const link = '/drugs/indication/' + row.ICD11 + '/';
-                  return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
-              } else {
-                  return data || '';
-              }
-          } else if (type === 'filter') {
-              return data || 'Unknown';
-          }
-          return data;
-      }},
-      { data: 'ICD11', name: 'ICD11' },
-      { data: "Phase", name: "Max" },
-      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
-  ];
-
-  const targetsColumns = [
-      { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
-          if (type === 'display') {
-              const originalData = data; 
-              const transformedData = data.replace('_human', '').toUpperCase(); 
-              return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
-          } else if (type === 'filter') {
-              return data.replace('_human', '').toUpperCase();
-          }
-          return data;
-      }},
-      { data: "Protein name", name: "Protein name" },
-      { data: "Receptor family", name: "Receptor family" },
-      { data: "Ligand type", name: "Ligand type" },
-      { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
-      { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) {
-          if (type === 'display') {
-              if (row && row.LigandID) {
-                  data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
-              } else {
-                  data = data || '';
-              }
-          }
-          return data;
-      }},
-      { data: "Drug type", name: "Drug type" },
-      { data: "Modality", name: "Modality" },
-      { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
-      { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
-      { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
-      { data: "In trial", name: "In trial" },
-      { data: "Approved", name: "Approved" },
-      { data: "Master Indication", name: "Master Indication" },
-      { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
-          if (type === 'display') {
-              if (row && row.ICD11) {
-                  const transformedData = data || 'Unknown'; 
-                  const link = '/drugs/indication/' + row.ICD11 + '/';
-                  return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
-              } else {
-                  return data || '';
-              }
-          } else if (type === 'filter') {
-              return data || 'Unknown';
-          }
-          return data;
-      }},
-      { data: 'ICD11', name: 'ICD11' },
-      { data: "Phase", name: "Max" },
-      { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
-  ];
-
-  // Select columns based on layout
-  const columns = layout === "drugs" ? drugsColumns : targetsColumns;
-
-  function getToggleButtons() {
-      const toggleCompoundsButton = {
-          text: '<span class="dt-button-check"></span> Toggle Compounds',
-          className: 'dt-button-active', // Mark as active initially
-          action: function (e, dt, node, config) {
-              const indices = layout === "drugs"
-                  ? (hideColumns ? [1, 2, 6, 7] : [1, 2, 3, 4, 5, 6, 7]) // Indices for drugs layout
-                  : (hideColumns ? [6, 7, 11, 12] : [6, 7, 8, 9, 10, 11, 12]); // Indices for targets layout
-              toggleGroupVisibility(indices, $(node));
-          }
-      };
-
-      const toggleTargetsButton = {
-          text: '<span class="dt-button-check"></span> Toggle Targets',
-          className: 'dt-button-active', // Mark as active initially
-          action: function (e, dt, node, config) {
-              const indices = layout === "drugs"
-                  ? [9, 10, 11, 12] // Indices for drugs layout
-                  : [1, 2, 3, 4]; // Indices for targets layout
-              toggleGroupVisibility(indices, $(node));
-          }
-      };
-
-      // Reorder buttons dynamically based on the layout
-      if (layout === "drugs") {
-          return [toggleCompoundsButton, toggleTargetsButton];
-      } else {
-          return [toggleTargetsButton, toggleCompoundsButton];
-      }
+  function getArrayFromData(gprotein) {
+    var lines = gdata[gprotein].split("\n");
+    var table = new Array();
+    for (var lindex in lines) {
+      table.push(lines[lindex].trim());
+    } return (table);
   }
 
-  function createSingleButtons(layout, hideColumns) {
-    const drugsGroups = {
-        Compounds: [
-            { index: 0, name: "Name" },
-            { index: 1, name: "Type" },
-            { index: 2, name: "Modality" },
-            ...(hideColumns
-                ? [] // Exclude these columns if hideColumns is true
-                : [
-                      { index: 3, name: "Indication area (ATC)" },
-                      { index: 4, name: "Indication (ATC)" },
-                      { index: 5, name: "Indication code (ATC)" }
-                  ]),
-            { index: 6, name: "In trial" },
-            { index: 7, name: "Approved" }
-        ],
-        Targets: [
-            { index: 8, name: "Gene" },
-            { index: 9, name: "Protein" },
-            { index: 10, name: "Receptor family" },
-            { index: 11, name: "Ligand type" },
-            { index: 12, name: "Class" }
-        ],
-        Diseases: [
-            { index: 13, name: "Disease area (ICD11)" },
-            { index: 14, name: "Disease (ICD11)" },
-            { index: 15, name: "Disease code (ICD11)" },
-            { index: 16, name: "Max phase" },
-            { index: 17, name: "Assoc. score" }
-        ]
-    };
+  // Define the `table` variable globally so it's accessible in the `toggleGroupVisibility` function
+  let table;
 
-    const targetsGroups = {
-        Targets: [
-            { index: 0, name: "Gene" },
-            { index: 1, name: "Protein" },
-            { index: 2, name: "Receptor family" },
-            { index: 3, name: "Ligand type" },
-            { index: 4, name: "Class" }
-        ],
-        Compounds: [
-            { index: 5, name: "Name" },
-            { index: 6, name: "Type" },
-            { index: 7, name: "Modality" },
-            ...(hideColumns
-                ? [] // Exclude these columns if hideColumns is true
-                : [
-                      { index: 8, name: "Indication area (ATC)" },
-                      { index: 9, name: "Indication (ATC)" },
-                      { index: 10, name: "Indication code (ATC)" }
-                  ]),
-            { index: 11, name: "In trial" },
-            { index: 12, name: "Approved" }
-        ],
-        Diseases: [
-            { index: 13, name: "Disease area (ICD11)" },
-            { index: 14, name: "Disease (ICD11)" },
-            { index: 15, name: "Disease code (ICD11)" },
-            { index: 16, name: "Max phase" },
-            { index: 17, name: "Assoc. score" }
-        ]
-    };
-    let placeholderCounts;
-    // Define placeholder counts for each group
-    if (layout === "drugs") {
-      placeholderCounts = {
-          Compounds: (hideColumns ? 4 : 10),
-          Targets: (hideColumns ? 0 : 0),
-          Diseases: (hideColumns ? 0 : 6)
-      };
-    } else {
-      placeholderCounts = {
-          Compounds: (hideColumns ? 0 : 6),
-          Targets: (hideColumns ? 4 : 10),
-          Diseases: (hideColumns ? 0 : 6)
-      };
+  function initializeDataTable(tableId, data, hideColumns = false, vennUniqueCount = null) {
+    
+    let uniqueCount = vennUniqueCount;
+    // Add common column definitions
+    var drugsColumnDefs = [
+      { 
+          className: "dt-head-center dt-center dt-body-center", 
+          targets: "_all" 
+      },
+      { 
+          targets: "_all",
+          createdCell: function (cell) {
+              // Add the 'expand' class to only td elements
+              $(cell).addClass('expand');
+          }
+      },
+      { className: 'border-left', targets: [8, 13] }
+    ];
+
+    var targetsColumnDefs = [
+      { className: "dt-head-center dt-center dt-body-center", targets: "_all" },
+      { 
+          targets: "_all",
+          createdCell: function (cell) {
+              // Add the 'expand' class to only td elements
+              $(cell).addClass('expand');
+          }
+      },
+      { className: 'border-left', targets: [5, 13] }
+    ];
+
+    // Select columns based on layout
+    const columnDefs = layout === "drugs" ? drugsColumnDefs : targetsColumnDefs;
+
+    // Set order based on layout value: column 3 for "Targets" and column 0 for "Drugs"
+    const order = layout === "targets" ? [0, "asc"] : [0, "asc"];
+
+    // Define column configurations for "drugs" and "targets"
+    const drugsColumns = [
+        { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) { 
+            if (type === 'display') {
+                if (row && row.LigandID) {
+                    data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                } else {
+                    data = data || '';
+                }
+            }
+            return data;
+        }},
+        { data: "Drug type", name: "Drug type" },
+        { data: "Modality", name: "Modality" },
+        { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
+        { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
+        { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
+        { data: "In trial", name: "In trial" },
+        { data: "Approved", name: "Approved" },
+        { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
+            if (type === 'display') {
+                const originalData = data; 
+                const transformedData = data.replace('_human', '').toUpperCase(); 
+                return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+            } else if (type === 'filter') {
+                return data.replace('_human', '').toUpperCase();
+            }
+            return data;
+        }},
+        { data: "Protein name", name: "Protein name", width: "125px", render: function (data) { return data.replace(' receptor', ''); }},
+        {data: "Receptor family", name: "Receptor family", width: "150px", render: function (data) { return data.replace('receptors', ''); }},
+        { data: "Ligand type", name: "Ligand type", render: function (data) { return data.replace('receptors', ''); }},
+        { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0].replace(/^Class /i, '').trim(); }},
+        { data: "Master Indication", name: "Master Indication" },
+        { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
+            if (type === 'display') {
+                if (row && row.ICD11) {
+                    const transformedData = data || 'Unknown'; 
+                    const link = '/drugs/indication/' + row.ICD11 + '/';
+                    return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
+                } else {
+                    return data || '';
+                }
+            } else if (type === 'filter') {
+                return data || 'Unknown';
+            }
+            return data;
+        }},
+        { data: 'ICD11', name: 'ICD11' },
+        { data: "Phase", name: "Max" },
+        { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
+    ];
+
+    const targetsColumns = [
+        { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
+            if (type === 'display') {
+                const originalData = data; 
+                const transformedData = data.replace('_human', '').toUpperCase(); 
+                return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+            } else if (type === 'filter') {
+                return data.replace('_human', '').toUpperCase();
+            }
+            return data;
+        }},
+        { data: "Protein name", name: "Protein name" },
+        { data: "Receptor family", name: "Receptor family" },
+        { data: "Ligand type", name: "Ligand type" },
+        { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
+        { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) {
+            if (type === 'display') {
+                if (row && row.LigandID) {
+                    data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                } else {
+                    data = data || '';
+                }
+            }
+            return data;
+        }},
+        { data: "Drug type", name: "Drug type" },
+        { data: "Modality", name: "Modality" },
+        { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
+        { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
+        { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
+        { data: "In trial", name: "In trial" },
+        { data: "Approved", name: "Approved" },
+        { data: "Master Indication", name: "Master Indication" },
+        { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
+            if (type === 'display') {
+                if (row && row.ICD11) {
+                    const transformedData = data || 'Unknown'; 
+                    const link = '/drugs/indication/' + row.ICD11 + '/';
+                    return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
+                } else {
+                    return data || '';
+                }
+            } else if (type === 'filter') {
+                return data || 'Unknown';
+            }
+            return data;
+        }},
+        { data: 'ICD11', name: 'ICD11' },
+        { data: "Phase", name: "Max" },
+        { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
+    ];
+
+    // Select columns based on layout
+    const columns = layout === "drugs" ? drugsColumns : targetsColumns;
+
+    function getToggleButtons() {
+        const toggleCompoundsButton = {
+            text: '<span class="dt-button-check"></span> Toggle Compounds',
+            className: 'dt-button-active', // Mark as active initially
+            action: function (e, dt, node, config) {
+                const indices = layout === "drugs"
+                    ? (hideColumns ? [1, 2, 6, 7] : [1, 2, 3, 4, 5, 6, 7]) // Indices for drugs layout
+                    : (hideColumns ? [6, 7, 11, 12] : [6, 7, 8, 9, 10, 11, 12]); // Indices for targets layout
+                toggleGroupVisibility(indices, $(node));
+            }
+        };
+
+        const toggleTargetsButton = {
+            text: '<span class="dt-button-check"></span> Toggle Targets',
+            className: 'dt-button-active', // Mark as active initially
+            action: function (e, dt, node, config) {
+                const indices = layout === "drugs"
+                    ? [9, 10, 11, 12] // Indices for drugs layout
+                    : [1, 2, 3, 4]; // Indices for targets layout
+                toggleGroupVisibility(indices, $(node));
+            }
+        };
+
+        // Reorder buttons dynamically based on the layout
+        if (layout === "drugs") {
+            return [toggleCompoundsButton, toggleTargetsButton];
+        } else {
+            return [toggleTargetsButton, toggleCompoundsButton];
+        }
     }
-    // Select the appropriate groups and placeholder counts based on the layout
-    const groups = layout === "drugs" ? drugsGroups : targetsGroups;
 
-    const buttons = [];
+    function createSingleButtons(layout, hideColumns) {
+      const drugsGroups = {
+          Compounds: [
+              { index: 0, name: "Name" },
+              { index: 1, name: "Type" },
+              { index: 2, name: "Modality" },
+              ...(hideColumns
+                  ? [] // Exclude these columns if hideColumns is true
+                  : [
+                        { index: 3, name: "Indication area (ATC)" },
+                        { index: 4, name: "Indication (ATC)" },
+                        { index: 5, name: "Indication code (ATC)" }
+                    ]),
+              { index: 6, name: "In trial" },
+              { index: 7, name: "Approved" }
+          ],
+          Targets: [
+              { index: 8, name: "Gene" },
+              { index: 9, name: "Protein" },
+              { index: 10, name: "Receptor family" },
+              { index: 11, name: "Ligand type" },
+              { index: 12, name: "Class" }
+          ],
+          Diseases: [
+              { index: 13, name: "Disease area (ICD11)" },
+              { index: 14, name: "Disease (ICD11)" },
+              { index: 15, name: "Disease code (ICD11)" },
+              { index: 16, name: "Max phase" },
+              { index: 17, name: "Assoc. score" }
+          ]
+      };
 
-    for (const [group, columns] of Object.entries(groups)) {
+      const targetsGroups = {
+          Targets: [
+              { index: 0, name: "Gene" },
+              { index: 1, name: "Protein" },
+              { index: 2, name: "Receptor family" },
+              { index: 3, name: "Ligand type" },
+              { index: 4, name: "Class" }
+          ],
+          Compounds: [
+              { index: 5, name: "Name" },
+              { index: 6, name: "Type" },
+              { index: 7, name: "Modality" },
+              ...(hideColumns
+                  ? [] // Exclude these columns if hideColumns is true
+                  : [
+                        { index: 8, name: "Indication area (ATC)" },
+                        { index: 9, name: "Indication (ATC)" },
+                        { index: 10, name: "Indication code (ATC)" }
+                    ]),
+              { index: 11, name: "In trial" },
+              { index: 12, name: "Approved" }
+          ],
+          Diseases: [
+              { index: 13, name: "Disease area (ICD11)" },
+              { index: 14, name: "Disease (ICD11)" },
+              { index: 15, name: "Disease code (ICD11)" },
+              { index: 16, name: "Max phase" },
+              { index: 17, name: "Assoc. score" }
+          ]
+      };
+      let placeholderCounts;
+      // Define placeholder counts for each group
+      if (layout === "drugs") {
+        placeholderCounts = {
+            Compounds: (hideColumns ? 4 : 10),
+            Targets: (hideColumns ? 0 : 0),
+            Diseases: (hideColumns ? 0 : 6)
+        };
+      } else {
+        placeholderCounts = {
+            Compounds: (hideColumns ? 0 : 6),
+            Targets: (hideColumns ? 4 : 10),
+            Diseases: (hideColumns ? 0 : 6)
+        };
+      }
+      // Select the appropriate groups and placeholder counts based on the layout
+      const groups = layout === "drugs" ? drugsGroups : targetsGroups;
+
+      const buttons = [];
+
+      for (const [group, columns] of Object.entries(groups)) {
 
         // Add the specified number of placeholders for the group
         if (group !== "Diseases" || layout === 'drugs') {
@@ -611,141 +573,130 @@ function initializeDataTable(tableId, data, hideColumns = false, vennUniqueCount
               });
           }
         }
-
-        
+      }
+      return buttons;
+    }
+    function controlTableButton(layout, hideColumns) {
+        // Define the button logic for the control table
+        return {
+            extend: 'colvis',
+            text: 'Table Control',
+            collectionLayout: 'four-column',
+            collectionTitle: 'Column Visibility',
+            buttons: [
+                ...getToggleButtons(layout, hideColumns), // Dynamic group toggle buttons (Compounds, Targets)
+                {
+                    text: '<span class="dt-button-check"></span> Toggle Diseases',
+                    action: function (e, dt, node, config) {
+                        const indices = layout === "drugs" ? [13, 15, 16, 17] : [13, 15, 16, 17];
+                        toggleGroupVisibility(indices, $(node));
+                    },
+                    className: 'dt-button-active', // Mark as active initially
+                },
+                {
+                    text: 'Restore visibility',
+                    action: function () {
+                        const excludeIndices = layout === "drugs"
+                            ? (hideColumns ? [3, 4, 5] : []) // Exclude ATC columns for drugs layout if hideColumns is true
+                            : (hideColumns ? [8, 9, 10] : []); // Exclude ATC columns for targets layout if hideColumns is true
+                        
+                        // Make all columns visible except excluded ones
+                        table.columns().every(function (index) {
+                            if (!excludeIndices.includes(index)) {
+                                this.visible(true);
+                            } else {
+                                this.visible(false);
+                            }
+                        });
+                    },
+                },
+                ...createSingleButtons(layout, hideColumns), // Include single-column toggle buttons
+            ],
+        };
     }
 
-    return buttons;
-  }
-  function controlTableButton(layout, hideColumns) {
-      // Define the button logic for the control table
-      return {
-          extend: 'colvis',
-          text: 'Table Control',
-          collectionLayout: 'four-column',
-          collectionTitle: 'Column Visibility',
-          buttons: [
-              ...getToggleButtons(layout, hideColumns), // Dynamic group toggle buttons (Compounds, Targets)
-              {
-                  text: '<span class="dt-button-check"></span> Toggle Diseases',
-                  action: function (e, dt, node, config) {
-                      const indices = layout === "drugs" ? [13, 15, 16, 17] : [13, 15, 16, 17];
-                      toggleGroupVisibility(indices, $(node));
-                  },
-                  className: 'dt-button-active', // Mark as active initially
-              },
-              {
-                  text: 'Restore visibility',
-                  action: function () {
-                      const excludeIndices = layout === "drugs"
-                          ? (hideColumns ? [3, 4, 5] : []) // Exclude ATC columns for drugs layout if hideColumns is true
-                          : (hideColumns ? [8, 9, 10] : []); // Exclude ATC columns for targets layout if hideColumns is true
-                      
-                      // Make all columns visible except excluded ones
-                      table.columns().every(function (index) {
-                          if (!excludeIndices.includes(index)) {
-                              this.visible(true);
-                          } else {
-                              this.visible(false);
-                          }
-                      });
-                  },
-              },
-              ...createSingleButtons(layout, hideColumns), // Include single-column toggle buttons
-          ],
-      };
-  }
+    const buttonsArray = [
+      { text: 'Reset filters', action: function () { reset_all(); } },
+      controlTableButton(layout, hideColumns), // Use the new function to create the control table button
+    ];
 
-  const buttonsArray = [
-    { text: 'Reset filters', action: function () { reset_all(); } },
-    controlTableButton(layout, hideColumns), // Use the new function to create the control table button
-  ];
+    // Initialize or reinitialize DataTable
+    if ($.fn.DataTable.isDataTable(tableId)) {
+      const table = $(tableId).DataTable();
 
+      // Update visibility of columns if necessary
+      const atcColumnIndexes = layout === "drugs" ? [3, 4, 5] : [8, 9, 10];
+      atcColumnIndexes.forEach((index) => table.column(index).visible(!hideColumns));
 
-  // Initialize or reinitialize DataTable
-  if ($.fn.DataTable.isDataTable(tableId)) {
-    const table = $(tableId).DataTable();
+      // Clear existing data and add new data
+      table.clear(); // Clear all rows from the table
+      table.rows.add(data); // Add new data to the table
+      table.draw(); // Redraw the table with the new data
 
-    // Update visibility of columns if necessary
-    const atcColumnIndexes = layout === "drugs" ? [3, 4, 5] : [8, 9, 10];
-    atcColumnIndexes.forEach((index) => table.column(index).visible(!hideColumns));
+      // Reinitialize buttons if the container exists
+      if ($('.dt-btn').length) {
+              table.buttons().destroy(); // Destroy existing buttons
+              const newButtons = new $.fn.dataTable.Buttons(table, { buttons: buttonsArray });
+              newButtons.container().appendTo('.dt-btn'); // Append new buttons
+          }
 
-    // Clear existing data and add new data
-    table.clear(); // Clear all rows from the table
-    table.rows.add(data); // Add new data to the table
-    table.draw(); // Redraw the table with the new data
-
-    
-
-    // Reinitialize buttons if the container exists
-    if ($('.dt-btn').length) {
-            table.buttons().destroy(); // Destroy existing buttons
-            const newButtons = new $.fn.dataTable.Buttons(table, { buttons: buttonsArray });
-            newButtons.container().appendTo('.dt-btn'); // Append new buttons
-        }
-    
-    // Update the row count information
-    const totalRows = table.rows().count();
-    const rowCountText = layout === "targets"
-        ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
-        : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
-    $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
-  } else {
-    table = $(tableId).DataTable({
-      dom: "<'row align-items-center justify-content-between overflow-visible'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
-            "<'row'<'col-sm-12'tr>>" + 
-            "<'row'<'col-sm-12'ip>>",
-        order: order,
-        pageLength: 20,
-        lengthMenu: [10, 20, { label: 'All', value: -1 }],
-        data: data,
-        columns: columns,
-        columnDefs: columnDefs,
-        autoWidth: false,  // Disable automatic column width calculation
-        processing: false,
-        deferRender: true,
-        paging: true,
-        scrollX: true,                  // Enable horizontal scrolling
-        scrollY: "60vh",                // Enable vertical scrolling with a height of 50% of the viewport
-        scrollCollapse: true,           // Allow the table to collapse vertically if data is less than `scrollY`
-        // fixedHeader: false, // Disable FixedHeader
-        // scrollX: false,
-        buttons: buttonsArray,
-        initComplete: function() {
-            // Use `this.api()` to get the table instance inside initComplete
-            const api = this.api(); // Access the DataTable API
-            const totalRows = api.rows().count(); // Use the API to get row count
-            const rowCountText = layout === "targets"
-              ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
-              : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
-            $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
-        }
-    });
-  }
-  var column_filters = [];
-  const Table_selector = $(tableId).DataTable();
-  // CreateColumnFilters --> CreateColumnFilters(datatable_selector,column_number, column_range, filter_type)
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,16,"Multi-select-exact"));
-      column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,2,"Range-float-vertical"));
-  
-  // Create the filteres
-  createDropdownFilters(Table_selector,column_filters);
-}
-
-function reset_all() {
-        $('.select2').val(null).trigger('change');
+      // Update the row count information
+      const totalRows = table.rows().count();
+      const rowCountText = layout === "targets"
+          ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
+          : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
+      $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+    } else {
+      table = $(tableId).DataTable({
+        dom: "<'row align-items-center justify-content-between overflow-visible'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
+              "<'row'<'col-sm-12'tr>>" + 
+              "<'row'<'col-sm-12'ip>>",
+          order: order,
+          pageLength: 20,
+          lengthMenu: [10, 20, { label: 'All', value: -1 }],
+          data: data,
+          columns: columns,
+          columnDefs: columnDefs,
+          autoWidth: false,     // Disable automatic column width calculation
+          processing: false,
+          deferRender: true,
+          paging: true,
+          scrollX: true,        // Enable horizontal scrolling
+          scrollY: "60vh",      // Enable vertical scrolling with a height of 50% of the viewport
+          scrollCollapse: true, // Allow the table to collapse vertically if data is less than `scrollY`
+          buttons: buttonsArray,
+          initComplete: function() {
+              // Use `this.api()` to get the table instance inside initComplete
+              const api = this.api(); // Access the DataTable API
+              const totalRows = api.rows().count(); // Use the API to get row count
+              const rowCountText = layout === "targets"
+                ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
+                : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
+              $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+          }
+      });
     }
+    var column_filters = [];
+    const Table_selector = $(tableId).DataTable();
+    // CreateColumnFilters --> CreateColumnFilters(datatable_selector,column_number, column_range, filter_type)
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,16,"Multi-select-exact"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,2,"Range-float-vertical"));
+    // Create the filteres
+    createDropdownFilters(Table_selector,column_filters);
+  }
 
-// Define the toggleGroupVisibility function
-function toggleGroupVisibility(indices, button) {
+  function reset_all() {
+    $('.select2').val(null).trigger('change');
+  }
+
+  // Define the toggleGroupVisibility function
+  function toggleGroupVisibility(indices, button) {
     const table = $('#receptor_table').DataTable(); // Access the table instance
     let allVisible = indices.every(index => table.column(index).visible());
-
     // Toggle the visibility of all columns in the group
     indices.forEach(index => {
         table.column(index).visible(!allVisible);
     });
-
     // Update the checkmark for the group button
     if (button) {
         if (allVisible) {
@@ -754,19 +705,18 @@ function toggleGroupVisibility(indices, button) {
             button.addClass('dt-button-active');
         }
     }
-}
-
-
-function updateJvenn(gprotein_ID) {
-  displaySwitch = false;
-  var seriesTable = new Array();
-  var num = 0;
-  for(var i=1; i<=gprotein_ID.length; i++) {
-    seriesTable.push({
-      name: gprotein_ID[i-1],
-      data: getArrayFromData(gprotein_ID[i-1])
-    });
   }
+
+  function updateJvenn(gprotein_ID) {
+    displaySwitch = false;
+    var seriesTable = new Array();
+    var num = 0;
+    for(var i=1; i<=gprotein_ID.length; i++) {
+      seriesTable.push({
+        name: gprotein_ID[i-1],
+        data: getArrayFromData(gprotein_ID[i-1])
+      });
+    }
 
     var vennColors = [
       "#f5bcbf",    // Bright Red for first circle
@@ -787,39 +737,29 @@ function updateJvenn(gprotein_ID) {
       displayStat: displayStat,
       exporting: true,
       fnClickCallback: function(event) {
-
         // Get the ID of the clicked element
         const clickedId = event.target.id; // The ID of the clicked element
-
         // List of IDs where columns should not be hidden
         const filter_id_list = [
           "resultC001100", "resultC011100", "resultC111100", "resultC101100",
           "resultC000100", "resultC010100", "resultC110100", "resultC100100"
         ];
-
         // Check if clickedId is in the filter_id_list
         const shouldHideATCColumns = !filter_id_list.includes(clickedId); // If not in the list, hide the columns
-
         // Define the column to filter by and the values to match in that column
         // Set filterColumn based on the layout value
         const filterColumn = layout === "targets" ? "Gene name" : "Ligand name";
-
         // set filter values
         const filterValues = this.list;
-
         // Filter the data based on the specified column and values
         const selectedData = fullData.filter(row => filterValues.includes(row[filterColumn]));
-
         // Show the table only after the search is clicked
         $('#table-container').show();
-
         // reset filters
         reset_all();
-
         // 1) Get unique count based on `this.list`
         const uniqueFilterValues = new Set(filterValues);
         const vennUniqueCount = uniqueFilterValues.size;
-        
         // Pass selected data to initializeDataTable function
         initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns,vennUniqueCount);
       }
@@ -915,18 +855,18 @@ function updateJvenn(gprotein_ID) {
     }
 
     // Update the content of labels to split into two lines
-      // Dynamically set up the labels
-      gprotein_ID.forEach((label, index) => {
-          // Split the label into the main part and the count
-          const parts = label.split(" ");
-          const mainText = parts.slice(0, -1).join(" "); // Join all except the last part
-          const count = parts[parts.length - 1]; // The last part is the count
+    // Dynamically set up the labels
+    gprotein_ID.forEach((label, index) => {
+      // Split the label into the main part and the count
+      const parts = label.split(" ");
+      const mainText = parts.slice(0, -1).join(" "); // Join all except the last part
+      const count = parts[parts.length - 1]; // The last part is the count
 
-          // Dynamically set the label's HTML
-          $(`#label${index + 1}`).html(`${mainText}<br><span class="clickable-part">${count}</span>`);
-      });
+      // Dynamically set the label's HTML
+      $(`#label${index + 1}`).html(`${mainText}<br><span class="clickable-part">${count}</span>`);
+    });
 
-     // Base styles for all labels
+    // Base styles for all labels
     const labelBaseStyles = {
       "font-weight": "bold",
       "text-decoration": "none", // Remove underline for the main text
@@ -993,59 +933,49 @@ function updateJvenn(gprotein_ID) {
         });
       });
 
-      // Attach click event to the clickable part
-      $(".clickable-part").on("click", function () {
-        // Get the phase text from the parent label, excluding the count
-        const phaseText = $(this).closest("div").clone() // Clone the element to avoid modifying the original
-            .children(".clickable-part") // Remove the count part
-            .remove()
-            .end()
-            .text()
-            .trim(); // Extract text without the count
-
-        const phaseCount = $(this).text().trim(); // e.g., "(XXX)"
-
-        // Concatenate phaseText and phaseCount to form the full phase label
-        const phaseLabel = `${phaseText} ${phaseCount}`; // e.g., "Phase I (XXXX)"
-
-        // Use gdata to get the newline-separated list for the phase
-        const filterValues = gdata[phaseLabel].split("\n").map((item) => item.trim());
-
-        // Define the column to filter by based on layout
-        const filterColumn = layout === "targets" ? "Gene name" : "Ligand name";
-
-        // Filter the fullData based on the selected phase's filter values
-        const selectedData = fullData.filter((row) =>
-          filterValues.includes(row[filterColumn])
-        );
-
+    // Attach click event to the clickable part
+    $(".clickable-part").on("click", function () {
+      // Get the phase text from the parent label, excluding the count
+      const phaseText = $(this).closest("div").clone() // Clone the element to avoid modifying the original
+          .children(".clickable-part") // Remove the count part
+          .remove()
+          .end()
+          .text()
+          .trim(); // Extract text without the count
+      const phaseCount = $(this).text().trim(); // e.g., "(XXX)"
+      // Concatenate phaseText and phaseCount to form the full phase label
+      const phaseLabel = `${phaseText} ${phaseCount}`; // e.g., "Phase I (XXXX)"
+      // Use gdata to get the newline-separated list for the phase
+      const filterValues = gdata[phaseLabel].split("\n").map((item) => item.trim());
+      // Define the column to filter by based on layout
+      const filterColumn = layout === "targets" ? "Gene name" : "Ligand name";
+      // Filter the fullData based on the selected phase's filter values
+      const selectedData = fullData.filter((row) =>
+        filterValues.includes(row[filterColumn])
+      );
       // Determine whether to hide the ATC columns
       const shouldHideATCColumns = phaseText !== "Phase IV";
-
       // 1) Get unique count based on `this.list`
       const uniqueFilterValues = new Set(filterValues);
       const vennUniqueCount = uniqueFilterValues.size;
-
       // Show the filtered table
       $("#table-container").show();
-
       // Reset filters
       reset_all();
-
       // Pass the filtered data to initializeDataTable function
       initializeDataTable("#receptor_table", selectedData, shouldHideATCColumns,vennUniqueCount);
-      });
+    });
 
-      // Apply base styles to the labels
-      $(".number-black").css({
-        "font-weight": "bold",
-        "text-decoration": "underline", 
-        "text-underline-offset": "3px",/* Underline the text */
-        "font-size": "19px",
-        "opacity": "1",
-        "cursor": "pointer", // Makes the labels look clickable
-        "transition": "color 0.3s, text-decoration 0.3s, background-color 0.3s" // Smooth transitions
-      });
+    // Apply base styles to the labels
+    $(".number-black").css({
+      "font-weight": "bold",
+      "text-decoration": "underline", 
+      "text-underline-offset": "3px",/* Underline the text */
+      "font-size": "19px",
+      "opacity": "1",
+      "cursor": "pointer", // Makes the labels look clickable
+      "transition": "color 0.3s, text-decoration 0.3s, background-color 0.3s" // Smooth transitions
+    });
 
     // Add hover effects dynamically
     $(".number-black").off("mouseenter mouseleave") // Remove previous bindings
@@ -1071,15 +1001,12 @@ function updateJvenn(gprotein_ID) {
 
     $(".number-empty").html("-");
   }
+  // Run the update function as last part of the document ready
+  updateJvenn(gprotein_ID)
+}); // end of $(document).ready()
 
-updateJvenn(gprotein_ID)
-
-});
-</script>
-
-<script>
-  // Transform parser
-  String.prototype.parseTransform = function() {
+// Transform parser
+String.prototype.parseTransform = function() {
   	var prop = ['translate', 'matrix', 'rotate', 'skewX', 'skewY', 'scale'];
   	var val = this.match(/(translate|matrix|rotate|skewX|skewY|scale)\(.*?\)/g);
   	var obj = {};
@@ -1143,34 +1070,29 @@ updateJvenn(gprotein_ID)
   		}
   		return builder.join(' ');
   	};
-
   	return obj;
   };
 
-
   function getCombinations(array) {
-      function iter(temp, index) {
-          if (index >= array.length) {
-              result.push(temp);
-              return;
-          }
-
-          iter([...temp, array[index]], index + 1);
-          iter(temp, index + 1);
+    function iter(temp, index) {
+      if (index >= array.length) {
+        result.push(temp);
+        return;
       }
 
-      var result = [];
-      iter([], 0);
-      return result;
-  }
-  function componentToHex(c)
-  {
-      var hex = c.toString(16);
-      return hex.length == 1 ? "0" + hex : hex;
-  }
-</script>
+    iter([...temp, array[index]], index + 1);
+    iter(temp, index + 1);
+    }
 
-<script language='Javascript'>
+    var result = [];
+    iter([], 0);
+    return result;
+  }
+
+  function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+  }
   function highlightBG(element, color) {
       element.style.backgroundColor = color;
   }
@@ -1178,6 +1100,5 @@ updateJvenn(gprotein_ID)
       element.style.color = color;
       // element.style.textDecoration = 'underline';
   }
-  </script>
-
+</script>
 {% endblock %}

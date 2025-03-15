@@ -495,10 +495,9 @@
             // if(!ligand_query) {...}  // Already perfect above.
             // else => we come here => ligand_query == true
             const SSHIFT = {% if ligand_similarity %}1{% else %}0{% endif %};
-          
             var smiles_column = 26 + SSHIFT;
             var name_column = 1 + SSHIFT;
-          
+
             // If 'ligand_similarity' is true, column 1 is the “Similarity” column (numeric).
             // So apply a range_number filter on that column:
             {% if ligand_similarity %}
@@ -534,7 +533,7 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 5 + SSHIFT,
@@ -548,7 +547,7 @@
                 "30px"
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 8 + SSHIFT,
@@ -566,7 +565,7 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 13 + SSHIFT,
@@ -580,7 +579,7 @@
                 "30px"
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 14 + SSHIFT,
@@ -598,7 +597,7 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 15 + SSHIFT,
@@ -612,7 +611,7 @@
                 "30px"
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 19 + SSHIFT,
@@ -630,7 +629,7 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 21 + SSHIFT,
@@ -644,7 +643,7 @@
                 "30px"
               )
             );
-          
+
             // Finally, the SMILES column at (25 + SSHIFT)
             column_filters = column_filters.concat(
               createYADCFfilters(
@@ -664,8 +663,6 @@
               )
             );
           }
-          
-
         }
 
         yadcf.init(table_potency.draw(), column_filters, {
@@ -773,7 +770,7 @@
           let affinity_columns = Array.from(new Array(affinity_length - 1), (x, i) => i);
           table_affinity.columns(affinity_columns).visible(true, false);
           table_affinity.draw();
-        } );    
+        } );
         
         $('#csv_btn_potency').click(function () {
             // TODO: redactor in a single fucntion shared by csv_btn_potency and csv_btn_potency affinity
@@ -967,8 +964,8 @@
       <div class="btn-group">
         <button id="selectall_potency" type="button" class="btn btn-primary" style="margin-top:10px;margin-top:3px">Select full table</button>
       </div>
-      <br />
-      <br />
+      <br/>
+      <br/>
       <div class="double_scroll" style="padding-top: 0px; font-size: 10px; white-space: nowrap;">
           <table style="width:100%" class="display" id="proteins_potency">
               <thead>
@@ -1271,7 +1268,7 @@
                            target="_blank">
                           {{ record.ligand_name|safe }}
                         </a>
-                      </td>                      
+                      </td>
                        <td align="right"><a href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.lig_id}}</a></td>
                        <td>{{record.ligand_type}}</td>
                        <td>{{record.reference}}</td>
@@ -1299,7 +1296,6 @@
                        <td align="right">{{record.hacc}}</td>
                        <td align="right">{{record.logp|floatformat:1}}</td>
                        <td class="dt-left">{{record.smiles}}</td>
-
                    </tr>
                    {% endfor %}
                </tbody>
@@ -1307,8 +1303,8 @@
        </div>
     </div>
     <div class="tab-pane container" id="affinity">
-      <br />
-      <br />
+      <br/>
+      <br/>
       {% if ligand_query %}
       <div class="btn-group">
         <a class="btn btn-primary" href="/ligand/ligand_by_name" style="margin-top:10px;margin-top:3px">New Search</a>
@@ -1339,8 +1335,8 @@
       <div class="btn-group">
         <button id="selectall_affinity" type="button" class="btn btn-primary" style="margin-top:10px;margin-top:3px">Select full table</button>
       </div>
-      <br />
-      <br />
+      <br/>
+      <br/>
       <div style="padding-top: 0px; font-size: 10px; white-space: nowrap;" class="scroll-container double_scroll">
 
         <table style="width:100%" class="display" id="proteins_affinity">
@@ -1383,11 +1379,8 @@
                           ">
                     <span aria-hidden="true">&times;</span>
                   </button>
-
-
-
                 </th>
-                 <th style="border-left: 1px solid black; text-align:left" colspan="9">Activity
+                <th style="border-left: 1px solid black; text-align:left" colspan="9">Activity
                   <button type="button"
                           class="close hide_columns"
                           aria-label="Close"
@@ -1402,7 +1395,6 @@
                   </button>
                 </th>
                 <th style="border-left: 1px solid black; text-align:left" colspan="6">Chemical information
-
                   <button type="button"
                           class="close hide_columns"
                           aria-label="Close"
@@ -1414,7 +1406,6 @@
                           ">
                     <span aria-hidden="true">&times;</span>
                   </button>
-                
                 </th>
              </tr>
              <tr class="table-filter-dropdown">
@@ -1449,7 +1440,7 @@
                 <th style="text-align:left">LogP<br /><br /></th>
                 <th style="text-align:left">Smiles<br /><br /></th>
              </tr>
-           </thead>
+            </thead>
             <tbody>
                 {% for record in affinity_data %}
                 <tr>
@@ -1465,7 +1456,7 @@
                          target="_blank">
                         {{ record.ligand_name|safe }}
                       </a>
-                    </td>                    
+                    </td>
                     <td align="right"><a href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.lig_id}}</a></td>
                     <td>{{record.ligand_type}}</td>
                     <td>{{record.reference}}</td>
@@ -1497,7 +1488,6 @@
                 {% endfor %}
             </tbody>
         </table>
-
       </div>
     </div>
   </div>

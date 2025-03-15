@@ -863,6 +863,3 @@ def standardize_smiles(smiles, mw):
         picture_flag = 'Not_available'
 
     return canonical_smiles, smiles_for_image, picture_flag
-    
-
-    

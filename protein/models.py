@@ -14,9 +14,6 @@ from residue.models import (Residue, ResidueDataPoint, ResidueDataType,
 # Remove in the future
 from common.definitions import _BEFORE_NAR2025_CLASSLESS_PARENT_GPCR_SLUGS_DICT, _AFTER_NAR2025_CLASSLESS_PARENT_GPCR_SLUGS
 
-
-
-
 class_prefix_re = re.compile(r'^(Class)\s+', flags=re.I)
 
 class Protein(models.Model):
@@ -33,7 +30,6 @@ class Protein(models.Model):
     name = models.CharField(max_length=200)
     cancer = models.ManyToManyField('CancerExpression')
     sequence = models.TextField()
-
 
     def entry_short(self):
         return self.entry_name.split("_")[0].upper()
@@ -227,12 +223,10 @@ class ProteinConformation(models.Model):
         ordering = ('id', )
         db_table = "protein_conformation"
 
-
 class IdentifiedSites(models.Model):
     protein_conformation = models.ForeignKey('protein.ProteinConformation', related_name='site_protein_conformation', on_delete=models.CASCADE)
     site = models.ForeignKey('Site', on_delete=models.CASCADE)
     residues = models.ManyToManyField('residue.Residue', related_name='site_residue')
-
 
 class Site(models.Model):
     slug = models.CharField(max_length=20)
@@ -249,7 +243,6 @@ class ProteinState(models.Model):
     class Meta():
         db_table = "protein_state"
 
-
 class Gene(models.Model):
     proteins = models.ManyToManyField('Protein', related_name='genes')
     species = models.ForeignKey('Species', on_delete=models.CASCADE)
@@ -264,7 +257,6 @@ class Gene(models.Model):
         unique_together = ('name', 'species','position')
         db_table = 'gene'
 
-
 class Species(models.Model):
     latin_name = models.CharField(max_length=100, unique=True)
     common_name = models.CharField(max_length=100, blank=True)
@@ -274,7 +266,6 @@ class Species(models.Model):
 
     class Meta():
         db_table = 'species'
-
 
 class ProteinAlias(models.Model):
     protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
@@ -288,7 +279,6 @@ class ProteinAlias(models.Model):
         ordering = ('position', )
         db_table = 'protein_alias'
 
-
 class ProteinSet(models.Model):
     proteins = models.ManyToManyField('Protein')
     name = models.CharField(max_length=50, unique=True)
@@ -298,7 +288,6 @@ class ProteinSet(models.Model):
 
     class Meta():
         db_table = 'protein_set'
-
 
 class ProteinSegment(models.Model):
     slug = models.SlugField(max_length=100)
@@ -317,7 +306,6 @@ class ProteinSegment(models.Model):
         db_table = 'protein_segment'
         unique_together = ('slug', 'proteinfamily')
 
-
 class ProteinSource(models.Model):
     name = models.CharField(max_length=20, unique=True)
 
@@ -326,7 +314,6 @@ class ProteinSource(models.Model):
 
     class Meta():
         db_table = 'protein_source'
-
 
 class ProteinFamily(models.Model):
     parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
@@ -367,7 +354,6 @@ class ProteinSequenceType(models.Model):
     class Meta():
         db_table = 'protein_sequence_type'
 
-
 class ProteinAnomaly(models.Model):
     anomaly_type = models.ForeignKey('ProteinAnomalyType', on_delete=models.CASCADE)
     generic_number = models.ForeignKey('residue.ResidueGenericNumber', on_delete=models.CASCADE)
@@ -380,7 +366,6 @@ class ProteinAnomaly(models.Model):
         db_table = 'protein_anomaly'
         unique_together = ('anomaly_type', 'generic_number')
 
-
 class ProteinAnomalyType(models.Model):
     slug = models.SlugField(max_length=20, unique=True)
     name = models.CharField(max_length=100)
@@ -390,7 +375,6 @@ class ProteinAnomalyType(models.Model):
 
     class Meta():
         db_table = 'protein_anomaly_type'
-
 
 class ProteinAnomalyRuleSet(models.Model):
     protein_anomaly = models.ForeignKey('ProteinAnomaly', related_name='rulesets', on_delete=models.CASCADE)
@@ -402,7 +386,6 @@ class ProteinAnomalyRuleSet(models.Model):
     class Meta():
         db_table = 'protein_anomaly_rule_set'
         ordering = ('id', )
-
 
 class ProteinAnomalyRule(models.Model):
     rule_set = models.ForeignKey('ProteinAnomalyRuleSet', related_name='rules', on_delete=models.CASCADE)
@@ -416,7 +399,6 @@ class ProteinAnomalyRule(models.Model):
     class Meta():
         db_table = 'protein_anomaly_rule'
 
-
 class ProteinConformationTemplateStructure(models.Model):
     protein_conformation = models.ForeignKey('ProteinConformation', on_delete=models.CASCADE)
     protein_segment = models.ForeignKey('ProteinSegment', on_delete=models.CASCADE)
@@ -428,7 +410,6 @@ class ProteinConformationTemplateStructure(models.Model):
 
     class Meta():
         db_table = 'protein_conformation_template_structure'
-
 
 class ProteinCouplings(models.Model):
     protein = models.ForeignKey('Protein', on_delete=models.CASCADE)
@@ -463,7 +444,6 @@ class ProteinCouplings(models.Model):
     class Meta():
         db_table = 'protein_couplings'
 
-
 class Biosensor(models.Model):
     name = models.TextField()
     downstream_steps = models.IntegerField()
@@ -474,7 +454,6 @@ class Biosensor(models.Model):
 
     class Meta():
         db_table = 'protein_couplings_biosensor'
-
 
 def dgn(gn, protein_conformation):
     """Convert generic number to display generic number."""
