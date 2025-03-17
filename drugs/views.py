@@ -160,7 +160,7 @@ def Venn(request, origin="both"):
 
         # Pass the JSON data to the template context
         context['Full_data'] = json_records
-    
+
     context["layout"] = origin
 
     return render(request, 'venn_diagrams.html', context)
@@ -271,7 +271,7 @@ class DrugSectionSelection(TemplateView):
             atc_df = pd.DataFrame(ATC_data_list)
 
             # Group ATC codes by 'Ligand ID' and concatenate them
-            atc_df_grouped = atc_df.groupby('ligand')['code__index'].apply(lambda x: ', '.join(x)).reset_index()
+            atc_df_grouped = atc_df.groupby('ligand')['code__index'].agg(', '.join).reset_index()
 
             # Rename columns for the ATC DataFrame
             atc_df_grouped.rename(columns={'ligand': 'LigandID', 'code__index': 'ATC'}, inplace=True)
@@ -612,7 +612,7 @@ def fetch_sankey_data_view(request):
         else:
             logger.warning(f"No data found for entry_name: {entry_name}")
             return JsonResponse({'error': 'No data found for this entry'}, status=404)
-    except:
+    except Exception:
         logger.exception(f"An error occurred while fetching sankey data for entry_name: {entry_name}")
         return JsonResponse({'error': 'An internal server error occurred'}, status=500)
 
@@ -883,7 +883,7 @@ class DiseaseOverview(TemplateView):
                 global_max_values['blue'] = blue_val
 
             # Recurse into child dictionaries
-            for k, v in node.items():
+            for v in node.values():
                 if isinstance(v, dict):
                     find_global_maxima(v, global_max_values)
 
@@ -961,7 +961,7 @@ class DiseaseOverview(TemplateView):
             current_blue = node.get('blue', 0)
 
             # Check children
-            for key, value in node.items():
+            for value in node.values():
                 if isinstance(value, dict):
                     # Recursively propagate max colors down the subtree
                     r_val, p_val, b_val = propagate_max_colors(value)
@@ -1472,13 +1472,13 @@ class TargetSelectionTool(TemplateView):
         ].fillna("")
 
         # Replace 0s with empty strings in relevant count columns
-        df_first[["Total_Ligands", "pEC50_Count", "pIC50_Count", 
-                "Total", "Active", "Inactive", "All_Drugs", "All_Agents", 
-                "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents", 
+        df_first[["Total_Ligands", "pEC50_Count", "pIC50_Count",
+                "Total", "Active", "Inactive", "All_Drugs", "All_Agents",
+                "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents",
                 "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents"]] = \
-            df_first[["Total_Ligands", "pEC50_Count", "pIC50_Count", 
-                    "Total", "Active", "Inactive", "All_Drugs", "All_Agents", 
-                    "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents", 
+            df_first[["Total_Ligands", "pEC50_Count", "pIC50_Count",
+                    "Total", "Active", "Inactive", "All_Drugs", "All_Agents",
+                    "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents",
                     "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents"]].replace(0, "")
         
         # Step 1: Query the TissueExpression model
