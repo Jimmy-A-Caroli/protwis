@@ -4,7 +4,6 @@ from django.db.models import Count, Max, Case, When, IntegerField
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
-from django.utils.safestring import mark_safe
 from structure.models import Structure
 from drugs.models import Drugs, Indication, ATCCodes, IndicationAssociation
 from protein.views import get_sankey_data
@@ -1199,7 +1198,7 @@ class DiseaseOverview(TemplateView):
         combined = []
         for main_key, keys in colored.items():
             main_label = max_labels.get(main_key, {"red": "#ffffff", "purple": "#ffffff", "blue": "#ffffff"})
-            rendered_html = mark_safe(render_nested_structure(keys))
+            rendered_html = render_nested_structure(keys)
             combined.append({
                 "main_key": main_key,
                 "main_label": main_label,
