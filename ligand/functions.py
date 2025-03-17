@@ -808,7 +808,7 @@ def is_valid_smiles(smiles):
         mol = Chem.MolFromSmiles(smiles, sanitize=False)
         if mol is None:
             raise ValueError("RDKit returned None when parsing the SMILES string.")
-        
+
         # Manually sanitize the molecule. Raises an exception if invalid.
         Chem.SanitizeMol(mol)
         return True
