@@ -681,16 +681,16 @@ class DruggedGPCRome(TemplateView):
 
         #TREE SECTION
         drug_data = Drugs.objects.all().values_list('target__entry_name', 'ligand__name','indication_max_phase')
-        
+
         drug_dict = {}
-        
+
         # Populate the dictionary
         for drug in drug_data:
             target, ligand, phase = drug
             if target not in drug_dict:
                 # Initialize with empty lists
                 drug_dict[target] = {'Outer1': [], 'Outer2': [], 'Outer3': [], 'Outer4': [], 'Inner': []}
-            
+
             if phase in [1, 2, 3, 4]:
                 outer_key = f"Outer{phase}"
                 drug_dict[target][outer_key].append(ligand)  # Add ligand to the corresponding Outer list
@@ -1247,7 +1247,7 @@ class TargetSelectionTool(TemplateView):
             'family__parent__parent__name': 'Ligand type',
             'family__parent__parent__parent__name': 'Class'
         }, inplace=True)
-        
+
         # Fetch all data in a single query
         table_data = Drugs.objects.select_related(
                 'target__family__parent__parent__parent',  # All target info
@@ -1267,7 +1267,6 @@ class TargetSelectionTool(TemplateView):
                 'publication_count', # publication count
                 'target_level' # IDG target level
             )
-        
 
         # Convert the table_data queryset to a list of dictionaries
         table_data_list = list(table_data)
@@ -1293,8 +1292,7 @@ class TargetSelectionTool(TemplateView):
             'indication_max_phase': 'Phase', # phase
             'publication_count': 'Literature', # Pub count
             'target_level': 'IDG'
-
-        }, inplace=True)
+            }, inplace=True)
 
         # Merge the proteins DataFrame with the drugs DataFrame on 'Target ID'
         df = proteins_df.merge(df, on='Target ID', how='left', suffixes=('', '_dup'))
@@ -1416,8 +1414,7 @@ class TargetSelectionTool(TemplateView):
             'Class', 'Literature', 'Novelty (Pharos)', 'IDG',
             'Total', 'Active', 'Inactive', 'All_Max_Phase', 'All_Drugs', 'All_Agents',
             'Stimulatory_max_phase', 'Stimulatory_Drugs', 'Stimulatory_Agents',
-            'Inhibitory_max_phase', 'Inhibitory_Drugs', 'Inhibitory_Agents',
-        ]
+            'Inhibitory_max_phase', 'Inhibitory_Drugs', 'Inhibitory_Agents']
 
         # Keep only the specified columns in df_first
         df_first = df_first[keep_col_names]
@@ -1428,8 +1425,7 @@ class TargetSelectionTool(TemplateView):
         # Fetch data from AssayExperiment with select_related for performance
         assay_data = (
             AssayExperiment.objects.select_related("protein", "ligand")
-            .values("protein", "ligand", "value_type")
-        )
+            .values("protein", "ligand", "value_type"))
 
         # Convert to DataFrame
         assay_df = pd.DataFrame(list(assay_data))
@@ -1440,8 +1436,7 @@ class TargetSelectionTool(TemplateView):
         # Step 2: Identify and exclude pairs that have both "pEC50" and "pIC50"
         pairs_with_both = pair_counts[(pair_counts.get("pEC50", 0) > 0) & (pair_counts.get("pIC50", 0) > 0)].reset_index()
         remaining_pairs = assay_df[~assay_df.set_index(["protein", "ligand"]).index.isin(
-            pairs_with_both.set_index(["protein", "ligand"]).index
-        )]
+            pairs_with_both.set_index(["protein", "ligand"]).index)]
 
         # Step 3: Count remaining unique target-ligand pairs and their "pEC50" and "pIC50"
         remaining_counts = (
@@ -1478,7 +1473,7 @@ class TargetSelectionTool(TemplateView):
                     "Total", "Active", "Inactive", "All_Drugs", "All_Agents",
                     "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents",
                     "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents"]].replace(0, "")
-        
+
         # Step 1: Query the TissueExpression model
         tissue_datatable = TissueExpression.objects.select_related('tissue').values(
             'protein',        # Target ID
@@ -1529,13 +1524,13 @@ class TargetSelectionTool(TemplateView):
 
         # Add cancer to table 1
 
-         # Add cancer data
+        # Add cancer data
         cancer_data = Protein.objects.select_related('Protein').values(
             'cancer__protein',
             'cancer__cancer__name',
             'cancer__expression__max_expression',
         )
-        
+
         cancer_df = pd.DataFrame(list(cancer_data))
         cancer_df.rename(columns={
             'cancer__protein': 'Target ID',
@@ -1912,8 +1907,6 @@ def drugmapping(request):
         c_v['children'] = children
         c_v['sort'] = n
         tree['children'].append(c_v)
-        #tree = c_v
-        #break
         i += 1
 
     jsontree = json.dumps(tree)
@@ -1956,9 +1949,6 @@ def indication_detail(request, code):
         indication_0 = record.indication.get_level_0().title
         uri = record.indication.uri.index if record.indication.uri else ''
         ligand_id = record.ligand.id
-        # debug:
-        # if "scopolamine" in ligand_name.lower():
-        #     print(f"** Found scopolamine-like ligand: record.id={record.id}, ligand.id={ligand_id}")
         protein_name = record.target.name
         target_name = record.target.entry_name
         #check for each value if it exists and retrieve the source node value
@@ -2006,7 +1996,6 @@ def indication_detail(request, code):
         link_id += 1
         sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x3 -> x4 (Level 0 → Indication)
         link_id += 1
-        #print("** Debug record:", record.id, record.ligand.name, record.target.name, record.indication.title)
         path_matrix.append(row)
         row_id += 1
 
@@ -2112,8 +2101,6 @@ def indication_detail(request, code):
     # # Call the function to update max_paths
     # update_max_paths(sankey['nodes'], path_matrix)
 
-    # print("=== Sankey Debug: final sankey data ===")
-    # print(json.dumps(sankey, indent=2))
     total_points = len(caches['targets']) + len(caches['targets']) + 1
     if len(caches['ligands']) > len(caches['targets']):
         context['nodes_nr'] = len(caches['ligands'])
