@@ -2,26 +2,16 @@
 {% load static %}
 {% load structure_extras %}
 {% block addon_css %}
-    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/color_picker.css' %}" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/yadcf_bootstrap_version.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
-    <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
-    <style>
-      .link {
-        fill: none;
-        stroke: #969696;
-        stroke-opacity: .1;
-      }
-      .link:hover {
-        stroke-opacity: .3;
-      }
-    </style>
+<style>
+  .link {
+    fill: none;
+    stroke: #969696;
+    stroke-opacity: .1;
+  }
+  .link:hover {
+    stroke-opacity: .3;
+  }
+</style>
 {% endblock %}
 {% block content %}
 <div class="row text-success">
@@ -87,10 +77,8 @@
 {% block addon_js %}
   <script src="{% static 'home/js/d3.min.js' %}"></script>
   <script src="{% static 'home/js/nv.d3.min.js' %}"></script>
-  <script src="{% static 'home/js/saveSvg.js' %}"></script>
   <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
   <script src="{% static 'home/js/sankey.js' %}"></script>
-  <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
   <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
 
   <script type="text/javascript">

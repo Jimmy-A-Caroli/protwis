@@ -5,12 +5,12 @@
 <link rel="stylesheet" href="{% static 'home/css/button_spinner.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
-<link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
-<link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
+<!-- <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" /> -->
+<!-- <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" /> -->
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
-<link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
-<link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-<link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
+<!-- <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet"> -->
+<!-- <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet"> -->
+<!-- <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" /> -->
 <link rel="stylesheet" href="{% static 'home/css/bootstrap2-toggle.min.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
 <style type="text/css">
@@ -252,11 +252,14 @@
 	.dt-button.btn-primary {
     background-color: #007bff;
     color: #fff;
-}
-.dt-button.btn-success {
-    background-color: #28a745;
-    color: #fff;
-}
+	}
+	.dt-button.btn-success {
+		background-color: #28a745;
+		color: #fff;
+	}
+	.tab-pane {
+		margin-top: 20px; /* Adjust as needed */
+	}
 </style>
 {% endblock %}
 {% block content %}
@@ -692,12 +695,8 @@
 {% block addon_js %}
 <!-- Make sure the Select2 JS file is included -->
 <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
-<script src="{% static 'home/js/UTIF.js' %}"></script> <!-- For Saving Sankey plot -->
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
-<script src="{% static 'home/js/DataTables_v2.0.5.js' %}"></script>
-<script src="{% static 'home/js/dataTables.buttons_3_0_0.js' %}"></script>
-<script src="{% static 'home/js/DataTables.Colvis.js' %}"></script>
-<script src="{% static 'home/js/dataTables.responsive.js' %}"></script>
+<script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="{% static 'home/js/dataTables.buttons.min.js' %}"></script>
 <script src="{% static 'home/js/selection.js' %}"></script>
@@ -769,7 +768,7 @@
 		];
 
 		// digit fixed value
-		const digit_fixed = 3
+		const digit_fixed = 2
 
 		// Add common column definitions
 		var columnDefs = [{ className: "dt-head-center dt-center dt-body-center expand", "targets": "_all" }].concat(pageSpecificDefs);
@@ -783,17 +782,9 @@
 			{data: "receptor_family", name: "receptor_family", width: "5%"},
 			{data: "receptor_class", name: "receptor_class", width: "5%"},
 			{data: "type", name: "type", width: "5%"},
-			{data: "min", name: "min", width: "5%"},
-			{data: "avg", name: "avg", width: "5%"},
-			{ 
-                data: "max", 
-                name: "max", 
-                width: "5%", 
-                render: function (data) { 
-                    return (data === "" || data === null) ? data : parseFloat(data).toFixed(digit_fixed); 
-                }, 
-                defaultContent: "" 
-            },
+			{data: "min", name: "min", width: "5%", render: function (data) {return (data === "" || data === null) ? data : parseFloat(data).toFixed(digit_fixed);}},                 
+			{data: "avg", name: "avg", width: "5%", render: function (data) {return (data === "" || data === null) ? data : parseFloat(data).toFixed(digit_fixed);}},
+			{data: "max", name: "max", width: "5%", render: function (data) {return (data === "" || data === null) ? data : parseFloat(data).toFixed(digit_fixed);}, defaultContent: ""},
 			{data: "source", name: "source", width: "5%"}
 		];
 
@@ -805,10 +796,21 @@
 			dom: "<'row'<'col-sm-3 dt-btn'B><'col-sm-3'f><'col-sm-'4>>" +
 			"<'row'<'col-sm-12'tr>>" + 
 			"<'row'<'col-sm-12'ip>>",
-			paging: false,
+			paging: true,
+			order: [0, "asc"],
+			pageLength: 20,
+			lengthMenu: [
+				[10, 20, -1],           // values
+				[10, 20, "All"]         // labels (shown to user)
+				],
 			scrollCollapse: true,
 			autoWidth: true,
 			buttons: [
+				{
+				extend: 'pageLength',
+				className: 'btn btn-info',
+				text: 'Rows per page'
+				},
 				{
 					text: 'Reset All Filters',
 					className: 'btn btn-primary',
@@ -820,7 +822,11 @@
 				className: 'btn btn-success',
 				exportOptions: {
 					columns: ':visible',
-					rows: ':not(.filter-row)', // skip filter-row in the table body
+					modifier: {
+					page:   'all',      // Include all pages
+					search: 'applied',  // But only those not filtered out
+					order:  'applied'   // Keep the current ordering
+					}
 				},
 				customize: function (xlsx) {
 					// The sheet data is in:
@@ -964,10 +970,21 @@
 			dom: "<'row'<'col-sm-3 dt-btn'B><'col-sm-3'f><'col-sm-'3>>" +  // Buttons and search bar in the same row
 			"<'row'<'col-sm-12'tr>>" +                    // Table rows
 			"<'row'<'col-sm-12'ip>>", // Pagination and info
-			paging: false,
+			paging: true,
+			order: [0, "asc"],
+			pageLength: 20,
+			lengthMenu: [
+				[10, 20, -1],           // values
+				[10, 20, "All"]         // labels (shown to user)
+				],
 			scrollCollapse: true,
 			autoWidth: true,
 			buttons: [
+				{
+				extend: 'pageLength',
+				className: 'btn btn-info',
+				text: 'Rows per page'
+				},
 				{
 					text: 'Reset All Filters',
 					className: 'btn btn-primary',
@@ -979,7 +996,11 @@
 				className: 'btn btn-success',
 				exportOptions: {
 					columns: ':visible',
-					rows: ':not(.filter-row)', // skip filter-row in the table body
+					modifier: {
+					page:   'all',      // Include all pages
+					search: 'applied',  // But only those not filtered out
+					order:  'applied'   // Keep the current ordering
+					}
 				},
 				customize: function (xlsx) {
 					// The sheet data is in:

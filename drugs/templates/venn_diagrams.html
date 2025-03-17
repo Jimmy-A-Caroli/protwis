@@ -309,9 +309,6 @@ $(document).ready(function () {
     // Select columns based on layout
     const columnDefs = layout === "drugs" ? drugsColumnDefs : targetsColumnDefs;
 
-    // Set order based on layout value: column 3 for "Targets" and column 0 for "Drugs"
-    const order = layout === "targets" ? [0, "asc"] : [0, "asc"];
-
     // Define column configurations for "drugs" and "targets"
     const drugsColumns = [
         { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) { 
@@ -651,7 +648,7 @@ $(document).ready(function () {
         dom: "<'row align-items-center justify-content-between overflow-visible'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
               "<'row'<'col-sm-12'tr>>" + 
               "<'row'<'col-sm-12'ip>>",
-          order: order,
+          order: [0, "asc"],
           pageLength: 20,
           lengthMenu: [10, 20, { label: 'All', value: -1 }],
           data: data,
