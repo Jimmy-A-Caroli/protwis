@@ -597,7 +597,7 @@ logger = logging.getLogger(__name__)
 def fetch_sankey_data_view(request):
     logger.info("fetch_sankey_data_view called")  # Log the function call
     entry_name = request.GET.get('entry_name', None)  # Extract `entry_name` from the request
-    
+
     if not entry_name:
         logger.error("No entry_name provided in the request")
         return JsonResponse({'error': 'Missing entry_name'}, status=400)
@@ -813,7 +813,6 @@ class DiseaseOverview(TemplateView):
 
             return max_red, red_node, max_purple, purple_node, max_blue, blue_node
 
-
         def find_node_by_name(nested_dict, target_name):
             """
             Recursively search nested_dict for a node keyed by target_name.
@@ -886,7 +885,6 @@ class DiseaseOverview(TemplateView):
             for v in node.values():
                 if isinstance(v, dict):
                     find_global_maxima(v, global_max_values)
-
 
         def apply_colors(node, global_max_values, color_targets):
             """
