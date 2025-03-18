@@ -6,6 +6,7 @@ from django.db import IntegrityError
 from django.db.models import Q
 
 from rdkit import Chem
+from rdkit.Chem import Descriptors
 
 #from chembl_webresource_client import new_client
 from common.models import WebResource, Publication
@@ -834,11 +835,13 @@ def to_canonical_smiles(smiles: str) -> str:
 
 def standardize_smiles(smiles, mw):
     """
-    Takes a SMILES string and its molecular weight, returning:
-      1) `canonical_smiles`     – The canonical version (for display).
-      2) `smiles_for_image`     – A unicode-escaped version suitable for JS/OCL.
-      3) `picture_flag`         – Either "Generate_from_SMILES" or "Not_available",
-                                  depending on validity and mw < 800.
+    Standardizes a SMILES string and determines image generation based on the molecular weight.
+    
+    Returns:
+      1) canonical_smiles     – The canonical version (for display).
+      2) smiles_for_image     – A unicode-escaped version suitable for JS/OCL.
+      3) picture_flag         – "Generate_from_SMILES" if valid and molecular weight < 800,
+                                "Not_available" otherwise.
 
     Args:
         smiles (str): Raw SMILES string from the database.
@@ -847,16 +850,22 @@ def standardize_smiles(smiles, mw):
     Returns:
         tuple[str, str, str]: (canonical_smiles, smiles_for_image, picture_flag)
     """
-    # 1. Check if the SMILES is valid at all.
+    # 1. Validate the SMILES string.
     if not is_valid_smiles(smiles):
-        # Return the original string for both, but mark as "Not_available."
+        # Return original SMILES with flag indicating image generation is not available.
         return smiles, smiles, 'Not_available'
 
-    # 2. SMILES is valid → canonicalize & escape
+    # 2. Canonicalize the SMILES and prepare the escaped version.
     canonical_smiles = to_canonical_smiles(smiles)
     smiles_for_image = canonical_smiles.encode('unicode_escape').decode()
 
-    # 3. Decide whether we should "Generate_from_SMILES" or not
+    # 3. If molecular weight is missing, compute it from the canonical SMILES.
+    if mw is None:
+        mol = Chem.MolFromSmiles(canonical_smiles)
+        if mol:
+            mw = Descriptors.MolWt(mol)
+    
+    # 4. Determine the picture flag based on the (computed) molecular weight.
     if mw is not None and mw < 800:
         picture_flag = 'Generate_from_SMILES'
     else:
