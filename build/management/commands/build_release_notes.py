@@ -98,7 +98,7 @@ class Command(BaseCommand):
             ['Physiological ligand-GPCR structure models GPCRdb', Structure.objects.filter(structure_type__slug__in=['af-rfaa-sm','af-signprot-peptide']).count(), 'GPCRdb'],
             ['Drugs GPCRdb', Drugs.objects.filter(drug_status='Approved').values("ligand_id").distinct().count(), 'GPCRdb'],
             ['Compounds in trial GPCRdb', Drugs.objects.exclude(drug_status='Approved').values("ligand_id").distinct().count(), 'GPCRdb'],
-            ['Drug targets GPCRdb', Drugs.objects.values('target_id').distinct().count(), 'GPCRdb'],
+            ['Drug targets GPCRdb', Drugs.objects.filter(drug_status='Approved').values('target_id').distinct().count(), 'GPCRdb'],
             ['Disease indications GPCRdb', Drugs.objects.values('indication_id').distinct().count(), 'GPCRdb'],
             ['Ligands GPCRdb', Ligand.objects.all().count(), 'GPCRdb'],
             ['Physiological ligands GPCRdb', Endogenous_GTP.objects.values('ligand_id').distinct().count(), 'GPCRdb'],
