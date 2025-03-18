@@ -192,8 +192,8 @@
         <!-- Other cells: no border, or any style you’d like -->
         <td ><strong>398</strong></td>
         <td ><strong>200</strong></td>
-        <td ><strong>425</strong></td>
-        <td ><strong>425</strong></td>
+        <td ><strong>805</strong></td>
+        <td ><strong>805</strong></td>
         <td ><strong>50</strong></td>
       </tr>
       <tr>
@@ -219,18 +219,6 @@
         <td><i class="fas fa-check my-icon-check"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
         <td><i class="fas fa-check my-icon-check"></i></td>
-      </tr>
-      <tr>
-        <!-- First cell in the body row: match the right border to keep consistency -->
-        <th style="border-right: 1px solid #ccc; text-align: left;">
-          <span class="left-column">Multi-coloring</span>
-        </th>
-        <!-- Other cells: no border, or any style you’d like -->
-        <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-check my-icon-check"></i></td>
-        <td><i class="fas fa-minus my-icon-minus"></i></td>
       </tr>
       <tr>
         <!-- First cell in the body row: match the right border to keep consistency -->
@@ -302,16 +290,6 @@
       <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Numeric.xlsx' %}" download="Template - List - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
       <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Heatmap - Numeric.xlsx' %}" download="Template - Heatmap - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
     </tr>
-    <tr>
-      <th style="border-right: 1px solid #ccc; text-align: left; vertical-align: middle;">
-        <span class="left-column">For text data</span>
-      </th>
-      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - GPCRome wheel - Text.xlsx' %}" download="Template - GPCRome wheel - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
-      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Tree - Text.xlsx' %}" download="Template - Tree - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
-      <td></td>
-      <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Text.xlsx' %}" download="Template - List - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
-      <td></td>
-    </tr>
     
      <!-- Separator row (no borders). Spans all 6 columns. -->
      <tr style="border-bottom: 2px solid white;">
@@ -338,8 +316,10 @@
         <span class="left-column">Your data in<br>a template file</span>
       </th>
       <td colspan="5">
-        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'landing_page' %}" class="expand-image">
+        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'DataMapperHome' page='Numeric' %}" class="expand-image">
           {% csrf_token %}
+          <!-- Hidden field to persist 'page' in POST requests -->
+          <input type="hidden" name="page" value="Numeric">
           <!-- Hidden file input -->
           <input id="file-input" type="file" name="file" style="display:none;" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           <!-- Image selector -- Upload  -->

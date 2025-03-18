@@ -27,7 +27,7 @@ from common.models import ReleaseNotes
 from common.alignment import Alignment, GProteinAlignment
 from residue.models import Residue, ResidueNumberingScheme, ResiduePositionSet
 from contactnetwork.models import Interaction
-from mapper.views import LandingPage
+from mapper.views import DataMapperHome
 from ligand.models import LigandPeptideStructure
 
 import io
@@ -1753,9 +1753,9 @@ class StructureStatistics(TemplateView):
                     if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
                         datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
 
-                datatree2 = LandingPage.convert_keys(datatree, conversion)
+                datatree2 = DataMapperHome.convert_keys(datatree, conversion)
                 datatree2.pop('Parent family', None)
-                datatree3 = LandingPage.filter_dict(datatree2, names)
+                datatree3 = DataMapperHome.filter_dict(datatree2, names)
                 data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in result_dict.items()}
                 data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
                 context['GPCRome_Arrestin_data'] = json.dumps(data_full["NameList"])
@@ -1834,9 +1834,9 @@ class StructureStatistics(TemplateView):
                     if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
                         datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
 
-                datatree2 = LandingPage.convert_keys(datatree, conversion)
+                datatree2 = DataMapperHome.convert_keys(datatree, conversion)
                 datatree2.pop('Parent family', None)
-                datatree3 = LandingPage.filter_dict(datatree2, names)
+                datatree3 = DataMapperHome.filter_dict(datatree2, names)
                 data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in result_dict.items()}
                 data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
                 context['GPCRome_data'] = json.dumps(data_full["NameList"])
@@ -1871,7 +1871,7 @@ class StructureStatistics(TemplateView):
                 names_complexes = list(names_complexes_dict.values())
 
                 IUPHAR_to_uniprot_complexes = {item['name']: item['entry_name'] for item in complexes_proteins}
-                datatree4 = LandingPage.filter_dict(datatree2, names_complexes)
+                datatree4 = DataMapperHome.filter_dict(datatree2, names_complexes)
                 data_complexes = {names_complexes_dict[key]: {'Value1':value} for key, value in complexes_dict.items()}
                 complexes_full = {"NameList": datatree4, "DataPoints": data_complexes, "LabelConversionDict":IUPHAR_to_uniprot_complexes}
                 context['GPCRome_data_variables_complexes'] = json.dumps(complexes_full['DataPoints'])
@@ -1917,9 +1917,9 @@ class StructureStatistics(TemplateView):
                 odorant_struct_dict.pop(None)
 
                 odorant_conversion_dict = {item['entry_name']: item['name'] for item in odorant_names}
-                odoranttree2 = LandingPage.convert_keys(odoranttree, conversion)
+                odoranttree2 = DataMapperHome.convert_keys(odoranttree, conversion)
                 names_odorant = list(odorant_conversion_dict.values())
-                odoranttree3 = LandingPage.filter_dict(odoranttree2, names_odorant)
+                odoranttree3 = DataMapperHome.filter_dict(odoranttree2, names_odorant)
 
                 # Splitting the families into three dictionaries
                 odorant_receptors = odoranttree3['Class O2 (tetrapod specific odorant)']['Odorant receptors']

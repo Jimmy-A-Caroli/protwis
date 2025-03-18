@@ -1,10 +1,8 @@
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
-from django.db.models import Q, F, Func, Value, Prefetch
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.conf import settings
 from django.views.generic import TemplateView
 from django import forms
-from django import template
 from protein.models import Protein, ProteinFamily
 from common.phylogenetic_tree import PhylogeneticTreeGenerator
 
@@ -29,11 +27,28 @@ import openpyxl
 import os
 
 
-class LandingPage(TemplateView):
-    template_name = 'mapper/data_mapper_landing.html'
+class DataMapperHome(TemplateView):
+
+    def dispatch(self, request, *args, **kwargs):
+        """Ensure 'page' is always set for both GET and POST requests"""
+        if 'page' in kwargs:  # URL parameter (GET request)
+            self.page = kwargs['page']
+        elif request.method == 'POST':  # Handle POST request
+            self.page = request.POST.get('page')
+        
+        if not self.page:
+            return HttpResponseBadRequest("Missing 'page' parameter")
+        
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_template_names(self):
+        """Ensure the correct template is used"""
+        return [f'mapper/DataMapperHome{self.page}.html']
 
     def get_context_data(self, **kwargs):
+        """Pass the page variable into the context"""
         context = super().get_context_data(**kwargs)
+        context['page'] = self.page  # Pass 'page' to the template
         return context
 
     @staticmethod
@@ -41,7 +56,7 @@ class LandingPage(TemplateView):
         data_copy = deepcopy(data)
         if isinstance(data_copy, list):
             # Process each item in the list
-            kept_items = [LandingPage.keep_by_names(item, names_to_keep) for item in data_copy]
+            kept_items = [DataMapperHome.keep_by_names(item, names_to_keep) for item in data_copy]
             # Return only non-None items
             return [item for item in kept_items if item is not None]
         elif isinstance(data_copy, OrderedDict):
@@ -49,7 +64,7 @@ class LandingPage(TemplateView):
             if name not in names_to_keep.keys():
                 if 'children' in data_copy:
                     # Recursively process children
-                    data_copy['children'] = LandingPage.keep_by_names(data_copy['children'], names_to_keep)
+                    data_copy['children'] = DataMapperHome.keep_by_names(data_copy['children'], names_to_keep)
                     # Remove the 'children' key if it's empty after processing
                     if not data_copy['children']:
                         return None
@@ -60,7 +75,7 @@ class LandingPage(TemplateView):
                 data_copy['value'] = names_to_keep[name]['Inner']
                 # Process children if present
                 if 'children' in data_copy:
-                    data_copy['children'] = LandingPage.keep_by_names(data_copy['children'], names_to_keep)
+                    data_copy['children'] = DataMapperHome.keep_by_names(data_copy['children'], names_to_keep)
                     if not data_copy['children']:
                         del data_copy['children']
             return data_copy
@@ -74,7 +89,7 @@ class LandingPage(TemplateView):
             new_key = conversion.get(key, key)  # Fallback to the original key if no conversion is found
             if isinstance(value, dict):
                 # Recursively convert keys of nested dictionaries
-                new_tree[new_key] = LandingPage.convert_keys(value, conversion)
+                new_tree[new_key] = DataMapperHome.convert_keys(value, conversion)
             else:
                 # If the value is a list (end of the branch), just assign it
                 new_tree[new_key] = value
@@ -135,7 +150,7 @@ class LandingPage(TemplateView):
         filtered_dict = {}
         for key, value in d.items():
             if isinstance(value, dict):
-                filtered_sub_dict = LandingPage.filter_dict(value, elements)
+                filtered_sub_dict = DataMapperHome.filter_dict(value, elements)
                 if filtered_sub_dict:
                     filtered_dict[key] = filtered_sub_dict
             elif isinstance(value, list):
@@ -171,9 +186,9 @@ class LandingPage(TemplateView):
             if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
                 datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
 
-        datatree2 = LandingPage.convert_keys(datatree, conversion)
+        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
         datatree2.pop('Parent family', None)
-        datatree3 = LandingPage.filter_dict(datatree2, names)
+        datatree3 = DataMapperHome.filter_dict(datatree2, names)
         data_converted = {names_conversion_dict[key]: value for key, value in listplot.items()}
         Data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
         return Data_full
@@ -225,9 +240,9 @@ class LandingPage(TemplateView):
             if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
                 datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
 
-        datatree2 = LandingPage.convert_keys(datatree, conversion)
+        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
         datatree2.pop('Parent family', None)
-        datatree3 = LandingPage.filter_dict(datatree2, names)
+        datatree3 = DataMapperHome.filter_dict(datatree2, names)
         data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in result_dict.items()}
         data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
 
@@ -405,7 +420,7 @@ class LandingPage(TemplateView):
 
         updated_data = {key.replace('_human', ''): value for key, value in input_data.items()}
         circles = {key.replace('_human', '').upper(): {k: v for k, v in value.items()} for key, value in input_data.items()}
-        master_dict = LandingPage.keep_by_names(master_dict, updated_data)
+        master_dict = DataMapperHome.keep_by_names(master_dict, updated_data)
 
         if len(master_dict['children']) == 1:
             master_dict = master_dict['children'][0]
@@ -449,7 +464,7 @@ class LandingPage(TemplateView):
 
         if 'Value2' in data_df.columns:
             # Example usage
-            reduced_df = LandingPage.reduce_and_cluster(data_df, method=method)
+            reduced_df = DataMapperHome.reduce_and_cluster(data_df, method=method)
             df_merged = pd.merge(reduced_df, data_df['Value1'], left_on='label', right_index=True, how='left')
             df_merged.rename(columns={'Value1': 'fill'}, inplace=True)
 
@@ -481,8 +496,8 @@ class LandingPage(TemplateView):
         else:
             if data_type == 'seq':
                 # Get the info of the plot
-                full_matrix = LandingPage.generate_full_matrix(method)
-                # full_matrix_structure = LandingPage.generate_full_matrix_structure(method)
+                full_matrix = DataMapperHome.generate_full_matrix(method)
+                # full_matrix_structure = DataMapperHome.generate_full_matrix_structure(method)
 
                 # Filter the original fill matrix based on what we use provided
                 reduced_input = full_matrix[full_matrix['label'].isin(list(data.keys()))]
@@ -494,7 +509,7 @@ class LandingPage(TemplateView):
                 data_json = df_merged.to_json(orient='records')
             elif data_type == 'structure':
                 # Get the info of the plot
-                full_matrix_structure = LandingPage.generate_full_matrix_structure(method)
+                full_matrix_structure = DataMapperHome.generate_full_matrix_structure(method)
 
                 # Filter the original fill matrix based on what we use provided
                 reduced_input = full_matrix_structure[full_matrix_structure['label'].isin(list(data.keys()))]
@@ -534,7 +549,7 @@ class LandingPage(TemplateView):
             distance_matrix_df = 1.0 - normalized_matrix
 
             # Perform reduction and clustering
-            reduced_df = LandingPage.reduce_and_cluster(distance_matrix_df, method='tsne')
+            reduced_df = DataMapperHome.reduce_and_cluster(distance_matrix_df, method='tsne')
 
             reduced_df['label'] = reduced_df['label'].apply(lambda x: x.split('[Human] ')[1] if '[Human] ' in x else x)
             reduced_df['label'] = reduced_df['label'].apply(lambda x: x.split('_human')[0] if '_human' in x else x)
@@ -728,6 +743,7 @@ class LandingPage(TemplateView):
                                                 break
                                         # If sheet is empty continue and report
                                         if empty_sheet:
+                                            print("passed")
                                             pass
                                         else:
                                             # If sheet is not empty then start handling the data
@@ -1155,6 +1171,8 @@ class LandingPage(TemplateView):
                                         'plot_name': plot_name_global,
                                         'plot_type': plot_type_global,
                                         'Data': plot_data_json}
+                                # if plot_type_global == 'Text' and plot_name_global == 'GPCRome Wheel':
+                                #     print("bob")
                             else:
                                 context = {'upload_status': 'Success',
                                         'Plot_parser': Plot_parser,
@@ -1207,7 +1225,7 @@ class plotrender(TemplateView):
                  # GPCRome #
                 if Plot == 'GPCRome wheel':
                     print("GPCRome success")
-                    GPCRome_data = LandingPage.generate_GPCRome_data(Data)
+                    GPCRome_data = DataMapperHome.generate_GPCRome_data(Data)
                     context['GPCRome_data'] = json.dumps(GPCRome_data["NameList"])
                     context['GPCRome_data_variables'] = json.dumps(GPCRome_data['DataPoints'])
                     context['GPCRome_Label_Conversion'] = json.dumps(GPCRome_data['LabelConversionDict'])
@@ -1216,7 +1234,7 @@ class plotrender(TemplateView):
                 # tree #
                 if Plot == 'Tree':
                     print("Tree success")
-                    tree, tree_options, circles, receptors = LandingPage.generate_tree_plot(Data)
+                    tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(Data)
                     context['tree'] = json.dumps(tree)
                     context['tree_options'] = tree_options
                     context['circles'] = json.dumps(circles)
@@ -1225,8 +1243,8 @@ class plotrender(TemplateView):
                 # Cluster analysis #
                 if Plot == 'Cluster':
                     print("Cluster success")
-                    output_seq = LandingPage.clustering_test('tsne', Data,'seq')
-                    # output_structure = LandingPage.clustering_test('umap', Data['Cluster'],'structure')
+                    output_seq = DataMapperHome.clustering_test('tsne', Data,'seq')
+                    # output_structure = DataMapperHome.clustering_test('umap', Data['Cluster'],'structure')
                     context['cluster_data_seq'] = output_seq
                     # context['cluster_data_structure'] = output_structure
                     context['plot_type'] = 'Tsne'
@@ -1234,7 +1252,7 @@ class plotrender(TemplateView):
                 # List plot #
                 if Plot == 'List':
                     print("List success")
-                    listplot_data = LandingPage.generate_list_plot(Data)
+                    listplot_data = DataMapperHome.generate_list_plot(Data)
                     context['listplot_data'] = json.dumps(listplot_data["NameList"])
                     context['listplot_data_variables'] = json.dumps(listplot_data['DataPoints'])
                     context['Label_Conversion'] = json.dumps(listplot_data['LabelConversionDict'])
@@ -1243,7 +1261,7 @@ class plotrender(TemplateView):
                 # Heatmap #
                 if Plot == 'Heatmap':
                     print("Heatmap success")
-                    label_converter = LandingPage.Label_conversion_info(Data)
+                    label_converter = DataMapperHome.Label_conversion_info(Data)
                     context['Label_converter'] = json.dumps(label_converter)
                     context['heatmap_data'] = json.dumps(Data)
 

@@ -29,7 +29,7 @@ from residue.models import Residue,ResidueNumberingScheme, ResidueGenericNumberE
 from residue.views import ResidueTablesDisplay
 from protein.models import Protein, ProteinSegment, ProteinFamily, ProteinConformation, ProteinCouplings
 from structure.models import Structure
-from mapper.views import LandingPage
+from mapper.views import DataMapperHome
 from seqsign.sequence_signature import SequenceSignature
 
 from datetime import datetime
@@ -794,9 +794,9 @@ class MutationStatistics(TemplateView):
             if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
                 datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
 
-        datatree2 = LandingPage.convert_keys(datatree, conversion)
+        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
         datatree2.pop('Parent family', None)
-        datatree3 = LandingPage.filter_dict(datatree2, names)
+        datatree3 = DataMapperHome.filter_dict(datatree2, names)
         data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in human_mut.items()}
         Data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
         context['GPCRome_data'] = json.dumps(Data_full["NameList"])
