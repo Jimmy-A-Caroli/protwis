@@ -80,7 +80,7 @@ class Command(BaseCommand):
             os.sep.join([settings.STATICFILES_DIRS[0], 'blast', 'protwis_human_bundle_blastdb'])),
             universal_newlines=True, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         (blast_out, blast_err) = blast.communicate(input=str(fasta_results))
-        print(blast_err)
+
         pdb_list = []
         if len(blast_err) != 0 and not blast_err.startswith('Warning'):
             print("BLAST search returned an error - exiting")
