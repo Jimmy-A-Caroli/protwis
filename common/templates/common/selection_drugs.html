@@ -1175,17 +1175,23 @@
                 ];
             } else if (type === 'Agents/Drugs') {
                 columns = [
-                    {data: "Drug name", name: "Drug name",width: "10%", render: function (data, type, row, meta) {
-                    if (type === 'display') {
-                        // Ensure row.Variable exists
+                {
+                    data: "Drug name",
+                    name: "Drug name",
+                    width: "10%",
+                    render: function(data, type, row, meta) {
+                      if (type === 'display') {
                         if (row && row.LigandID) {
-                            data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                          const smilesVal = row.smiles_for_image || "";
+                          const picVal = row.picture || "Not_available";
+                          return '<a class="struct" href="/ligand/' + row.LigandID + '/info" target="_blank" data-smiles="' + smilesVal + '" rel="' + picVal + '">' + data + '</a>';
                         } else {
-                            data = data || ''; // Fallback to plain text if Variable is missing
+                          return data || ''; // Fallback to plain text if missing
                         }
+                      }
+                      return data; // For non-display types, just return the data
                     }
-                    return data; // Ensure raw data is returned for filtering
-                }},
+                  },
                     {data: "Highest_phase", name: "Max",width: "6%"},
                     {data: "Approved", name: "Approved",width: "9%"},
                     {data: "Molecule_type", name: "Type",width: "7%"},
@@ -1219,7 +1225,7 @@
                 if (searchedText) {
                     $('.search-info').html(searchedText); // Update the placeholder dynamically
                 }
-                if (type === "Targets") {
+                if (page === "Targets" || page === "Indications") {
                     compoundPreview("a.struct");
                 }
             } else {
@@ -1246,7 +1252,7 @@
                         if (searchedText) {
                             $('.search-info').html(searchedText);
                         }
-                        if (type === "Targets") {
+                        if (page === "Targets" || page === "Indications") {
                             compoundPreview("a.struct");
                         }
                     }

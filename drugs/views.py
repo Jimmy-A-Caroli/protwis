@@ -390,6 +390,8 @@ class DrugSectionSelection(TemplateView):
                 'indication__code',  # Disease ICD11 code
                 'ligand__id',  # Ligand ID
                 'ligand__name',  # Ligand name
+                'ligand__smiles', # SMILES
+                'ligand__mw',
                 'indication_max_phase',  # Max phase
                 'drug_status',  # Approval
                 'ligand__ligand_type__name',  # Molecule type
@@ -437,6 +439,8 @@ class DrugSectionSelection(TemplateView):
                 'indication__code': 'ICD11',
                 'ligand__id': 'LigandID',
                 'ligand__name': 'Drug name',
+                'ligand__smiles': 'raw_smiles',
+                'ligand__mw': 'mw',
                 'indication_max_phase': 'Phase',
                 'drug_status': 'Status',
                 'ligand__ligand_type__name': 'Molecule_type',
@@ -470,6 +474,12 @@ class DrugSectionSelection(TemplateView):
                 "disease_association__expression_atlas": "Expression Atlas",
                 "disease_association__impc": "IMPC"
             }, inplace=True)
+
+            # 1) Apply standardization
+            extra_df = df.apply(DrugSectionSelection.process_smiles, axis=1)
+
+            # 2) Merge them back
+            df = pd.concat([df, extra_df], axis=1)
 
             # Define MOA categories
             stim_moa = ['Partial agonist', 'Agonist', 'PAM']
@@ -574,7 +584,9 @@ class DrugSectionSelection(TemplateView):
                 Phase_I_trials=('Is_Phase_I', 'sum'),
                 Phase_II_trials=('Is_Phase_II', 'sum'),
                 Phase_III_trials=('Is_Phase_III', 'sum'),
-                Approved=('Is_Approved', 'max')
+                Approved=('Is_Approved', 'max'),
+                smiles_for_image=('smiles_for_image', 'first'),
+                picture=('picture', 'first')
             ).reset_index()
 
             # Convert 'Approved' from integer to 'Yes'/'No'
