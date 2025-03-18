@@ -31,11 +31,16 @@ class DataMapperHome(TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         """Ensure 'page' is always set for both GET and POST requests"""
-        if 'page' in kwargs:  # URL parameter (GET request)
+
+        # Extract from URL (GET)
+        if 'page' in kwargs:
             self.page = kwargs['page']
-        elif request.method == 'POST':  # Handle POST request
-            self.page = request.POST.get('page')
         
+        # Extract from POST (ensure it is there)
+        elif request.method == 'POST':
+            self.page = request.POST.get('page')
+
+        # If 'page' is still None, return an error
         if not self.page:
             return HttpResponseBadRequest("Missing 'page' parameter")
         
@@ -464,7 +469,7 @@ class DataMapperHome(TemplateView):
 
         if 'Value2' in data_df.columns:
             # Example usage
-            reduced_df = DataMapperHome.reduce_and_cluster(data_df, method=method)
+            reduced_df = DataMapperHome.reduce_and_cluster(data_df['Value2'], method=method)
             df_merged = pd.merge(reduced_df, data_df['Value1'], left_on='label', right_index=True, how='left')
             df_merged.rename(columns={'Value1': 'fill'}, inplace=True)
 
@@ -649,12 +654,12 @@ class DataMapperHome(TemplateView):
 
                 # Check if file is .xlsx #
                 if not file.name.endswith('.xlsx'):
-                    return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "The uploaded file is not an .xlsx file."})
+                    return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "The uploaded file is not an .xlsx file."})
                 else:
                     try:
                         workbook = openpyxl.load_workbook(filename=file,read_only=False)
                     except:
-                        return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with the template file."})
+                        return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with the template file."})
 
                     if workbook:
 
@@ -690,7 +695,7 @@ class DataMapperHome(TemplateView):
 
                         if not Sheet_pass_check:
                             # Add addition for the different sheets.
-                            return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "The excel file is not structured as the template file. There are incorrect sheet names and data setup."})
+                            return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "The excel file is not structured as the template file. There are incorrect sheet names and data setup."})
                         else:
                             
                             ### Initialize Global values ###
@@ -1171,8 +1176,8 @@ class DataMapperHome(TemplateView):
                                         'plot_name': plot_name_global,
                                         'plot_type': plot_type_global,
                                         'Data': plot_data_json}
-                                # if plot_type_global == 'Text' and plot_name_global == 'GPCRome Wheel':
-                                #     print("bob")
+                                if plot_type_global == 'Text' and plot_name_global == 'GPCRome wheel':
+                                    print("bob")
                             else:
                                 context = {'upload_status': 'Success',
                                         'Plot_parser': Plot_parser,
@@ -1185,14 +1190,14 @@ class DataMapperHome(TemplateView):
                                     context['Incorrect_data_json'] = "No incorrect data"
                             
                             # Return the rendered results
-                            return render(request, self.template_name, context)
+                            return render(request, f'mapper/DataMapperHome{self.page}.html', context)
 
                     else:
-                        return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with a template file."})
+                        return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with a template file."})
 
             else:
                 # Return a 405 Method Not Allowed response if not a POST request
-                return render(request, self.template_name, {'upload_status': 'Failed','Error_message': "Not a valid excel file. Please try and use the template excel file."})
+                return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "Not a valid excel file. Please try and use the template excel file."})
 
 #######################
 ## Excel upload form ##
@@ -1264,17 +1269,6 @@ class plotrender(TemplateView):
                     label_converter = DataMapperHome.Label_conversion_info(Data)
                     context['Label_converter'] = json.dumps(label_converter)
                     context['heatmap_data'] = json.dumps(Data)
-
-               
-                # Handles and determines first active tab #
-                # first_active_tab = None
-                # tab_names = ['#tab1', '#tab2', '#tab3', '#tab4','#tab5']
-
-                # for i, is_active in enumerate(Plot_evaluation):
-                #     if is_active:
-                #         first_active_tab = tab_names[i]
-                #         break
-                # context['first_active_tab'] = first_active_tab
 
             # Return the context dictionary
             return self.render_to_response(context)

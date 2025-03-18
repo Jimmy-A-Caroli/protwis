@@ -297,8 +297,10 @@
         <span class="left-column">Your data in<br>a template file</span>
       </th>
       <td colspan="5">
-        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'DataMapperHomeText' %}" class="expand-image">
+        <form id="upload-file" name="upload-file" enctype="multipart/form-data" method="POST" action="{% url 'DataMapperHome' page='Text' %}" class="expand-image">
           {% csrf_token %}
+          <!-- Hidden field to persist 'page' in POST requests -->
+          <input type="hidden" name="page" value="Text">
           <!-- Hidden file input -->
           <input id="file-input" type="file" name="file" style="display:none;" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
           <!-- Image selector -- Upload  -->
@@ -310,8 +312,6 @@
           <br>
         </form>
       </td>
-    </tr>
-    
     </tr>
   </tbody>
 </table>
@@ -637,34 +637,26 @@ $(document).ready(function() {
 
   // Function to handle file selection
   function handleFileSelect(event) {
-          var fileInput = document.getElementById('file-input');
-          // Attach change event listener to handle selected file
-          fileInput.addEventListener('change', function(event) {
-              // Submit the form with selection of a file
-              document.getElementById('upload-file').submit();
-          });
-          // Trigger the file input
-          fileInput.click();
-      }
+    var fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', function(event) {
+        var form = document.getElementById('upload-file');
+
+        // Ensure page parameter is included before submitting
+        let hiddenPageInput = document.createElement("input");
+        hiddenPageInput.type = "hidden";
+        hiddenPageInput.name = "page";
+        hiddenPageInput.value = "Numeric";  // Or dynamically set this value
+        form.appendChild(hiddenPageInput);
+
+        // Now submit the form
+        form.submit();
+    });
+
+    // Open file dialog
+    fileInput.click();
+}
   // Add click event listener to the image to trigger file selection
   document.getElementById('file-trigger').addEventListener('click', handleFileSelect);
-  // Add click event listener to the Phylogenetic Tree image
-  // document.getElementById('phyloTreeImage').addEventListener('click', function() {
-  //     $('#phyloTreeModal').modal('show');
-  //   });
-  // document.getElementById('ClusterImage').addEventListener('click', function() {
-  //     $('#ClusterModal').modal('show');
-  //   });
-  //   document.getElementById('ListImage').addEventListener('click', function() {
-  //     $('#ListModal').modal('show');
-  //   });
-  //   document.getElementById('HeatmapImage').addEventListener('click', function() {
-  //     $('#HeatmapModal').modal('show');
-  //   });
-  //   document.getElementById('GPCRomeImage').addEventListener('click', function() {
-  //     $('#GPCRomeModal').modal('show');
-  //   });
-
 
   // Check upload status after form submission
   document.addEventListener('DOMContentLoaded', function() {

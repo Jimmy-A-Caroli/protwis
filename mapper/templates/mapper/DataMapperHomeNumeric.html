@@ -332,8 +332,6 @@
         </form>
       </td>
     </tr>
-    
-    </tr>
   </tbody>
 </table>
   
@@ -658,34 +656,27 @@ $(document).ready(function() {
 
   // Function to handle file selection
   function handleFileSelect(event) {
-          var fileInput = document.getElementById('file-input');
-          // Attach change event listener to handle selected file
-          fileInput.addEventListener('change', function(event) {
-              // Submit the form with selection of a file
-              document.getElementById('upload-file').submit();
-          });
-          // Trigger the file input
-          fileInput.click();
-      }
+    var fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', function(event) {
+        var form = document.getElementById('upload-file');
+
+        // Ensure page parameter is included before submitting
+        let hiddenPageInput = document.createElement("input");
+        hiddenPageInput.type = "hidden";
+        hiddenPageInput.name = "page";
+        hiddenPageInput.value = "Numeric";  // Or dynamically set this value
+        form.appendChild(hiddenPageInput);
+
+        // Now submit the form
+        form.submit();
+    });
+
+    // Open file dialog
+    fileInput.click();
+}
+
   // Add click event listener to the image to trigger file selection
   document.getElementById('file-trigger').addEventListener('click', handleFileSelect);
-  // Add click event listener to the Phylogenetic Tree image
-  // document.getElementById('phyloTreeImage').addEventListener('click', function() {
-  //     $('#phyloTreeModal').modal('show');
-  //   });
-  // document.getElementById('ClusterImage').addEventListener('click', function() {
-  //     $('#ClusterModal').modal('show');
-  //   });
-  //   document.getElementById('ListImage').addEventListener('click', function() {
-  //     $('#ListModal').modal('show');
-  //   });
-  //   document.getElementById('HeatmapImage').addEventListener('click', function() {
-  //     $('#HeatmapModal').modal('show');
-  //   });
-  //   document.getElementById('GPCRomeImage').addEventListener('click', function() {
-  //     $('#GPCRomeModal').modal('show');
-  //   });
-
 
   // Check upload status after form submission
   document.addEventListener('DOMContentLoaded', function() {
