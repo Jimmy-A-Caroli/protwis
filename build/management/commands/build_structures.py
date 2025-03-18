@@ -1270,7 +1270,15 @@ class Command(BaseBuild):
                 structure.save()
 
             protein = structure.protein_conformation
-            lig_key = list(data.keys())[0]
+            lig_keys = list(data.keys())
+            if len(lig_keys)>1:
+                for l in lig_keys:
+                    if l==ligand_name:
+                        lig_key = l
+                    elif len(ligand_name)==5 and ligand_name[:3]==l:
+                        lig_key = l
+            else:
+                lig_key = list(data.keys())[0]
 
             f = module_dir + "/results/" + pdb_id + "/interaction" + "/" + pdb_id + "_" + lig_key + ".pdb"
             if os.path.isfile(f):
@@ -1283,6 +1291,8 @@ class Command(BaseBuild):
             lig_db_key = lig_key
             if lig_key!=ligand_name and len(lig_key)==3 and len(ligand_name)==5:
                 lig_db_key = ligand_name
+                if '.' in lig_db_key:
+                    lig_db_key = lig_db_key.split('.')[0]
             struct_lig_interactions = StructureLigandInteraction.objects.filter(pdb_reference=lig_db_key, structure=structure, annotated=True) #, pdb_file=None
             if struct_lig_interactions.exists():  # if the annotated exists
                 try:
