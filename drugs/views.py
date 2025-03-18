@@ -10,6 +10,7 @@ from protein.views import get_sankey_data
 from protein.models import Protein, ProteinFamily, TissueExpression
 from mapper.views import LandingPage
 from ligand.models import AssayExperiment, LigandID
+from ligand.functions import standardize_smiles
 
 import json
 from collections import OrderedDict, defaultdict
@@ -179,6 +180,14 @@ class DrugSectionSelection(TemplateView):
     title = "Drug search"
     description = 'Search by drug name'
 
+    def process_smiles(row):
+        raw, mw = row['raw_smiles'], row['mw']
+        canonical, smiles_for_image, picture_flag = standardize_smiles(raw, mw)
+        return pd.Series({
+            'smiles_for_image': smiles_for_image,
+            'picture': picture_flag
+        })
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -289,6 +298,8 @@ class DrugSectionSelection(TemplateView):
                 'target__name',  # Target name
                 'ligand__name',  # Agent/Drug
                 'ligand__ligand_type__name',  # Modality
+                'ligand__smiles', # SMILES
+                'ligand__mw', 
                 'moa__name',  # Mode of action
                 'indication__title',  # Disease name
                 'indication__code',  # Disease ICD11 code
@@ -311,6 +322,8 @@ class DrugSectionSelection(TemplateView):
                 'target__name': 'Target name',
                 'ligand__name': 'Ligand name',
                 'ligand__ligand_type__name': 'Modality',
+                'ligand__smiles': 'raw_smiles',
+                'ligand__mw': 'mw',
                 'moa__name': 'Mode of action',
                 'indication__title': 'Indication name',
                 'indication__code': 'ICD11',
@@ -319,6 +332,12 @@ class DrugSectionSelection(TemplateView):
                 'disease_association__association_score' : 'Association score',
                 'drug_status': 'Status'
             }, inplace=True)
+
+            # Preprocess SMILES data
+            extra_df = df.apply(DrugSectionSelection.process_smiles, axis=1)
+
+            # Merge the extra DataFrame with the main DataFrame
+            df = pd.concat([df, extra_df], axis=1)
 
             # Merge the ATC data into the main DataFrame (df) on 'Ligand ID'
             df = df.merge(atc_df_grouped, on='LigandID', how='left')
@@ -336,7 +355,9 @@ class DrugSectionSelection(TemplateView):
             # Perform aggregation
             Modified_df = grouped.agg(
                 Highest_phase=('Phase', 'max'),  # Get the highest phase for each group
-                Approved=('Is_Approved', 'max')  # Check if any row has 'Approved' status (max of binary flag)
+                Approved=('Is_Approved', 'max'),  # Check if any row has 'Approved' status (max of binary flag)
+                smiles_for_image=('smiles_for_image', 'first'),
+                picture=('picture', 'first')
             ).reset_index()
 
             # Convert 'Approved' from integer to 'Yes'/'No'

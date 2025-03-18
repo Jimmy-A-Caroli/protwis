@@ -187,6 +187,18 @@
         width: 100%;
         text-align: center;
     }
+
+    /* Ensure the struct shows up properly */
+    #struct {
+        display: none;
+        position: absolute;
+        z-index: 100;
+        border: 1px;
+        background-color: white;
+        border-style: solid;
+        border-width: 1px;
+        padding: 3px;
+    }
 </style>
 {% endblock %}
 {% block content %}
@@ -684,6 +696,7 @@
 {% endblock %}
 {% block addon_js %}
 <!-- Make sure the Select2 JS file is included -->
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
@@ -1063,13 +1076,28 @@
                     if (type === 'display') {
                         // Ensure row.Variable exists
                         if (row && row.LigandID) {
-                            data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                            // console.log("Row in render:", row);
+                            const smilesVal = row.smiles_for_image || "";
+                            const picVal    = row.picture || "Not_available";
+                            const ligID     = row.LigandID;
+                            // Wrap the text in <a class="struct" ...>
+                            return `
+                                <a class="struct"
+                                    href="/ligand/${ligID}/info"
+                                    target="_blank"
+                                    data-smiles="${smilesVal}"
+                                    rel="${picVal}"
+                                >
+                                ${data}
+                                </a>
+                            `;
                         } else {
-                            data = data || ''; // Fallback to plain text if Variable is missing
+                            return data || '';
                         }
                     }
-                    return data; // Ensure raw data is returned for filtering
-                }},
+                    return data; 
+                }
+            },
                     {data: "Modality", name: "Type",width: "7%"}, 
                     {data: "Mode of action", name: "Modality",width: "10%"},
                     {data: "Indication name", name: "Indication",render: function (data, type, row, meta) {
@@ -1093,6 +1121,7 @@
                     {data: "Highest_phase", name: "Highest",width: "5%"},
                     {data: "Approved", name: "Approved",width: "8%"}
                 ];
+
             } else if (type === 'Targets for Indications') {
                 columns = [
                     {data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
@@ -1190,6 +1219,9 @@
                 if (searchedText) {
                     $('.search-info').html(searchedText); // Update the placeholder dynamically
                 }
+                if (type === "Targets") {
+                    compoundPreview("a.struct");
+                }
             } else {
                 var table = $(tableId).DataTable({
                     dom: "<'row'<'col-sm-1 dt-btn'B><'col-sm-3'f><'col-sm-7 text-end search-info'>>" +  // Buttons and search bar in the same row
@@ -1213,6 +1245,9 @@
                         // Add the searchedText dynamically after initialization
                         if (searchedText) {
                             $('.search-info').html(searchedText);
+                        }
+                        if (type === "Targets") {
+                            compoundPreview("a.struct");
                         }
                     }
                 });
@@ -1322,4 +1357,68 @@
     }
 }
 </script>
+<script>
+function compoundPreview(selector="a.struct") {
+    const xOffset = 30, yOffset = -10;
+    const NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+    
+    $(selector).hover(
+        function(e) {
+        //console.log("Hover callback triggered for link:", this);
+        let $link = $(this);
+        let fallbackUrl = $link.attr("rel");  // "Generate_from_SMILES" or "Not_available"
+        let smiles = $link.data("smiles") || "";
+
+        //console.log("fallbackUrl =", fallbackUrl, " | smiles =", smiles);
+    
+        let tooltipHtml = "";
+        if (fallbackUrl === "Generate_from_SMILES" && smiles) {
+            try {
+            //console.log("Attempting OCL parse...");
+            const mol = OCL.Molecule.fromSmiles(smiles);
+            mol.inventCoordinates();
+            const svgSize = 200;
+            const svgOptions = {
+                autoCrop: true,
+                noStereoProblem: true, 
+                suppressChiralText: true,
+                suppressCIPParity: true,
+                suppressESR: true,
+              };
+            tooltipHtml = mol.toSVG(svgSize, svgSize, null, svgOptions);
+            //console.log("SVG created successfully.");
+            } catch (err) {
+            console.error("OCL error:", err);
+            tooltipHtml = "<div>Invalid SMILES</div>";
+            }
+        }
+        else if (fallbackUrl && fallbackUrl !== "Not_available") {
+            //console.log("We have a fallbackUrl that is not Not_available. Using <img>...");
+            // Or if fallbackUrl is an actual image URL from ChEMBL, e.g. 
+            tooltipHtml = `<img style="max-width: 200px;" src="${fallbackUrl}" />`;
+        } else {
+            //console.log("No valid fallbackUrl. Using NO_IMAGE_URL...");
+            // fallback: local "No image"
+            tooltipHtml = `<img style="max-width: 200px;" src="${NO_IMAGE_URL}" />`;
+        }
+    
+        //console.log("Appending tooltipHtml:", tooltipHtml);
+        $("body").append(`<p id="struct">${tooltipHtml}</p>`);
+        $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
+        },
+        function() {
+        //console.log("Hover LEAVE. Removing #struct...");
+        $("#struct").remove();
+        }
+    );
+    
+    //console.log("compoundPreview called on selector:", selector);
+    //console.log("Found", $(selector).length, "links matching", selector);
+
+    $(selector).mousemove(function(e){
+        $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
+    });
+    }
+</script>
+
 {% endblock %}
