@@ -287,12 +287,8 @@ def getTargetTable():
             else:
                 allpdbs[pdb[1]].append(pdb[0])
 
-        drugtargets_approved = list(Protein.objects.filter(drugs__status="approved").values_list("entry_name", flat=True))
-        drugtargets_trials = list(Protein.objects.filter(drugs__status__in=["in trial"],
-                                                         drugs__clinicalstatus__in=["completed", "not open yet",
-                                                                                    "ongoing", "recruiting",
-                                                                                    "suspended"]).values_list(
-            "entry_name", flat=True))
+        drugtargets_approved = list(Protein.objects.filter(drugs__drug_status="Approved").values_list("entry_name", flat=True).distinct())
+        drugtargets_trials = list(Protein.objects.filter(drugs__drug_status="Active").values_list("entry_name", flat=True).distinct())
 
         ligand_set = list(AssayExperiment.objects.values("protein__family__slug")\
             .annotate(num_ligands=Count("ligand", distinct=True)))
