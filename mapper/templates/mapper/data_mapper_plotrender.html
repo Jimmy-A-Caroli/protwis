@@ -207,6 +207,10 @@
       <div id="GPCRome_plot" class="text-center"></div>
   </div>
 
+  <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
+    <div id="GPCRome_plot_2" class="text-center"></div>
+</div>
+
 </div>
 
   {% endif %}
@@ -1142,6 +1146,62 @@ if (GPCRome_fill_data_values.length % 2 === 0) {
 
 GPCRome_fill_avg = (GPCRome_fill_minValue+GPCRome_fill_maxValue)/2
 
+
+// Function to recursively extract all "Value1" values
+function extractValues(obj) {
+    let values = [];
+
+    // Recursive function to search through the object
+    function findValues(node) {
+        if (typeof node === "object" && node !== null) {
+            for (const key in node) {
+                if (key === "Value1") {
+                    values.push(Number(node[key])); // Convert to number if necessary
+                } else {
+                    findValues(node[key]); // Recursively search deeper
+                }
+            }
+        }
+    }
+
+    findValues(obj);
+    return values;
+}
+
+// Extract "Value1" values from fill_data
+const GPCRomeWheelValues = extractValues(GPCRome_WheelDict)
+    .filter(value => !isNaN(value) && value !== null && value !== ''); // Filtering out invalid values
+
+// Find min and max values
+const GPCRomeMin = GPCRomeWheelValues.length > 0 
+    ? Math.min(...GPCRome_fill_data_values) 
+    : null;
+
+const GPCRomeMax = GPCRomeWheelValues.length > 0 
+    ? Math.max(...GPCRome_fill_data_values) 
+    : null;
+
+// Calculate average (ensuring values exist)
+const GPCRomeAvg = GPCRomeWheelValues.length > 0 
+    ? (GPCRomeMin + GPCRomeMax) / 2 
+    : null;
+
+console.log("Min:", GPCRomeMin);
+console.log("Max:", GPCRomeMax);
+console.log("Avg:", GPCRomeAvg);
+
+
+var GPCRomes_styling_2 = {
+  FontStyle: "Arial",
+  FontsizeGlobal: "11px",
+  FontsizeClass: "20px",
+  colorStart: "#e64b35",
+  colorAvg: "#FFFFFF",
+  colorEnd: "#3c5488",
+  ColorSetup: 'One',
+  showIcon: true
+}
+
 var GPCRomes_styling = {
   Spacing: true,
   family: true,
@@ -1157,10 +1217,12 @@ var GPCRomes_styling = {
   showIcon: true  // Add this property to control the icon visibility
 }
 
-
 // # initial draw
 let GPCRome_location = "GPCRome_plot";
 Draw_GPCRomes(layout_data,fill_data,GPCRome_location,GPCRomes_styling);
+
+let GPCRome_location_2 = "GPCRome_plot_2";
+DrawGPCRomeWheel(GPCRome_WheelDict,GPCRome_location_2,GPCRomes_styling_2);
 
 
 // Global variables for current label type
@@ -1279,20 +1341,20 @@ function UpdateGPCRomeColorPickers() {
   if (Color_styling_value === 'One') {
     GPCRome_Color_min_container.style.display = 'None';
     GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.data_color_complexity = "One";
+    GPCRomes_styling.ColorSetup = "One";
   } else if (Color_styling_value === 'Two') {
     GPCRome_Color_min_container.style.display = 'Block';
     GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.data_color_complexity = "Two";
+    GPCRomes_styling.ColorSetup = "Two";
   } else if (Color_styling_value === 'Three') {
     GPCRome_Color_min_container.style.display = 'Block';
     GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.data_color_complexity = "Three";
+    GPCRomes_styling.ColorSetup = "Three";
   }
 
   // Set color to current color
   $("#GPCRome_colorPicker_min").spectrum("set", GPCRomes_styling.colorStart);
-  $("#GPCRome_colorPicker_avg").spectrum("set", GPCRomes_styling.color_avg);
+  $("#GPCRome_colorPicker_avg").spectrum("set", GPCRomes_styling.colorAvg);
   $("#GPCRome_colorPicker_max").spectrum("set", GPCRomes_styling.colorEnd);
 
   // Dynamically update the plot
@@ -1324,7 +1386,7 @@ $(document).ready(function() {
 
   // Initialize color pickers
   initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.color_avg);
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.colorAvg);
   initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
 });
 
@@ -1333,41 +1395,41 @@ function setGPCRomeColors(colorMin, colorAvg, colorMax, optionValue) {
   $("#GPCRome_colorPicker_min").spectrum("set", colorMin);
   $("#GPCRome_colorPicker_avg").spectrum("set", colorAvg);
   $("#GPCRome_colorPicker_max").spectrum("set", colorMax);
-  GPCRomes_styling.data_color_complexity = optionValue;
+  GPCRomes_styling.ColorSetup = optionValue;
   $("#GPCRome_color_styling").val(optionValue).trigger("change");
 }
 
 // Event listeners for predefined color scales
 $("#GPCRome_GrayScale").click(function() {
   GPCRomes_styling.colorStart = "#b8b8b8";
-  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
   GPCRomes_styling.colorEnd = "#707070";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Two");
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.colorAvg, GPCRomes_styling.colorEnd, "Two");
   // Dynamically update the plot
   GPCRomeWheel_updateVisualization();
 });
 
 $("#GPCRome_GrayBlueScale").click(function() {
   GPCRomes_styling.colorStart = "#97a6c4";
-  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
   GPCRomes_styling.colorEnd = "#384860";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Two");
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.colorAvg, GPCRomes_styling.colorEnd, "Two");
   // Dynamically update the plot
   GPCRomeWheel_updateVisualization();
 });
 
 $("#GPCRome_RedBlueScale").click(function() {
   GPCRomes_styling.colorStart = "#a00000";
-  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
   GPCRomes_styling.colorEnd = "#1a80bb";
-  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.colorAvg, GPCRomes_styling.colorEnd, "Three");
   // Dynamically update the plot
   GPCRomeWheel_updateVisualization();
 });
 
 $("#GPCRome_TealMagentaScale").click(function() {
   GPCRomes_styling.colorStart = "#298c8c";
-  GPCRomes_styling.color_avg = "#FFFFFF";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
   GPCRomes_styling.colorEnd = "#800074";
   setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
   // Dynamically update the plot
@@ -1380,7 +1442,7 @@ function updateGPCRomeVisualization() {
   const colorMax = $("#GPCRome_colorPicker_max").spectrum("get").toHexString();
 
   GPCRomes_styling.colorStart = colorMin;
-  GPCRomes_styling.color_avg = colorAvg;
+  GPCRomes_styling.colorAvg = colorAvg;
   GPCRomes_styling.colorEnd = colorMax;
 
   // Dynamically update the plot

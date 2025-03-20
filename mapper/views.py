@@ -276,7 +276,7 @@ class DataMapperHome(TemplateView):
                                 Master_dict[Class][Ligand_type][Receptor_Family][Receptor]['Value2'] = receptor_data['Value2']
 
         # Redistribute the entries from the master_dict into the GPCRome_dict.
-        # Initialize GPCRome_dict structure
+        # Initialize GPCRome_dict
         GPCRome_dict = {
             "Circle_1": {},
             "Circle_2": {},
@@ -295,11 +295,15 @@ class DataMapperHome(TemplateView):
                 sorted_receptor_families = []  # Collect receptor families for sorting
                 
                 for Ligand_type, receptor_families in ligand_types.items():
-                    # Exclude "Olfactory receptors" completely
-                    if Ligand_type == "Olfactory receptors":
+                    # ** Skip "Orphan receptors" ligand type completely **
+                    if Ligand_type == "Orphan receptors":
                         continue  
-                    
+
                     for Receptor_Family in receptor_families:
+                        # ** Skip "Class A Orphans" in main processing **
+                        if Receptor_Family == "Class A Orphans":
+                            continue
+                        
                         sorted_receptor_families.append((Ligand_type, Receptor_Family, receptor_families[Receptor_Family]))
 
                 # Sort receptor families alphabetically by Receptor_Family name
@@ -308,46 +312,31 @@ class DataMapperHome(TemplateView):
                 # Process sorted receptor families
                 for Ligand_type, Receptor_Family, receptors in sorted_receptor_families:
                     # First 42 go into Circle_1
-                    if class_A_receptor_families < 42:
-                        target_circle = "Circle_1"
-                    else:
-                        target_circle = "Circle_2"
+                    target_circle = "Circle_1" if class_A_receptor_families < 42 else "Circle_2"
 
-                    # Insert data into the target circle
-                    if Class not in GPCRome_dict[target_circle]:
-                        GPCRome_dict[target_circle][Class] = {}
-                    
-                    if Ligand_type not in GPCRome_dict[target_circle][Class]:
-                        GPCRome_dict[target_circle][Class][Ligand_type] = {}
-
-                    GPCRome_dict[target_circle][Class][Ligand_type][Receptor_Family] = receptors
+                    # Insert data into the target circle using setdefault() to remove redundancy
+                    GPCRome_dict.setdefault(target_circle, {}).setdefault(Class, {}).setdefault(Ligand_type, {})[Receptor_Family] = receptors
 
                     # Increment the count of Class A receptor families
                     class_A_receptor_families += 1
 
-                # Move "Orphan receptors" into Circle_2 **after** the main processing
-                if "Orphan receptors" in ligand_types:
-                    if Class not in GPCRome_dict["Circle_2"]:
-                        GPCRome_dict["Circle_2"][Class] = {}
-                    GPCRome_dict["Circle_2"][Class]["Orphan receptors"] = ligand_types["Orphan receptors"]
+                # Move "Class A Orphans" into Circle_2 **only if not processed already**
+                if "Orphan receptors" in ligand_types and "Class A orphans" in ligand_types["Orphan receptors"]:
+                    print("bob")
+                    GPCRome_dict["Circle_2"].setdefault(Class, {}).setdefault("Orphan receptors", {})["Class A orphans"] = ligand_types["Orphan receptors"]["Class A orphans"]
 
             # Handle Circle 3: Class B1 (Secretin) and Class B2 (Adhesion)
             elif Class in ["Class B1 (Secretin)", "Class B2 (Adhesion)"]:
-                if Class not in GPCRome_dict["Circle_3"]:
-                    GPCRome_dict["Circle_3"][Class] = {}
-                GPCRome_dict["Circle_3"][Class].update(ligand_types)
-            
+                GPCRome_dict["Circle_3"].setdefault(Class, {}).update(ligand_types)
+
             # Handle Circle 4: Class C (Glutamate)
-            elif Class == "Class C (Glutamate)":
-                if Class not in GPCRome_dict["Circle_4"]:
-                    GPCRome_dict["Circle_4"][Class] = {}
-                GPCRome_dict["Circle_4"][Class].update(ligand_types)
+            elif Class == ["Class C (Glutamate)", "Class F (Frizzled)"]: 
+                GPCRome_dict["Circle_4"].setdefault(Class, {}).update(ligand_types)
 
             # Handle Circle 5: Class F (Frizzled), Class T2 (Taste 2), Other GPCRs
-            elif Class in ["Class F (Frizzled)", "Class T2 (Taste 2)", "Other GPCRs"]:
-                if Class not in GPCRome_dict["Circle_5"]:
-                    GPCRome_dict["Circle_5"][Class] = {}
-                GPCRome_dict["Circle_5"][Class].update(ligand_types)
+            elif Class in ["Class T2 (Taste 2)", "Other GPCRs"]:
+                GPCRome_dict["Circle_5"].setdefault(Class, {}).update(ligand_types)
+
         # Define a mapping for renaming classes
         class_rename_map = {
             "Class A (Rhodopsin)": "A",
@@ -359,15 +348,13 @@ class DataMapperHome(TemplateView):
             "Other GPCRs": "Classless"
         }
 
-        # Iterate through GPCRome_dict and rename the classes in place
+        # Rename the classes in GPCRome_dict in place
         for circle in GPCRome_dict:
             for old_class_name in list(GPCRome_dict[circle].keys()):
                 if old_class_name in class_rename_map:
-                    # Rename by assigning the value to the new key and deleting the old key
                     GPCRome_dict[circle][class_rename_map[old_class_name]] = GPCRome_dict[circle].pop(old_class_name)
 
-        # Remove the ligand type from the dict
-        # Iterate through each Circle in GPCRome_dict
+        # Remove the ligand type from the dictionary
         for circle in GPCRome_dict:
             for class_name in list(GPCRome_dict[circle].keys()):
                 new_structure = {}  # Dictionary to hold receptor families directly under the class
@@ -379,6 +366,7 @@ class DataMapperHome(TemplateView):
 
                 # Replace the old structure with the new one
                 GPCRome_dict[circle][class_name] = new_structure
+
         
         data_full['Master_dict'] = Master_dict
         data_full['GPCRome_dict'] = GPCRome_dict
