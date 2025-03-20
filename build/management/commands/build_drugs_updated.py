@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from django.db import IntegrityError
 from django.utils.text import slugify
+from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, try_get_parent
 
 from common.models import WebResource, WebLink, Publication
 from protein.models import Protein, TissueExpression, CancerType, CancerExpression, Tissues, ExpressionValue
@@ -413,7 +414,7 @@ class Command(BaseCommand):
                                     continue
         else:
             try:
-                check = Ligand.objects.get(inchikey=inchi_list[0])
+                check = Ligand.objects.get(inchikey=inchi_list[0], parent__isnull=False)
                 return check
             except Ligand.DoesNotExist:
                 for key, values in mapper.items():
@@ -440,6 +441,34 @@ class Command(BaseCommand):
 
             type = Command.fetch_type(row['Drug_Type'])
             #TODO: adjust the length of float numbers
+            ids = {}
+            if pd.notna(row['SMILES']):
+                ids['smiles'] = row['SMILES']
+            if inchi_list[0] !='NOT AVAILABLE':
+                ids['inchikey'] = inchi_list[0]
+
+            # Identify the parent and or create one
+            parent = None
+
+            # Attempt using SMILES if available
+            if "smiles" in ids:
+                std_smiles = standardize_smiles(ids["smiles"])
+                if std_smiles:
+                    parent = try_get_parent({"smiles": std_smiles, "parent__isnull": True})
+
+            # Attempt using InChIKey if parent not yet found
+            if not parent and "inchikey" in ids:
+                head_inchi = ids["inchikey"].split('-')[0]
+                parent = try_get_parent({"clean_inchikey": head_inchi, "parent__isnull": True})
+
+            # Attempt using name if still not found
+            if not parent:
+                parent = try_get_parent({"name": row['Name'], "parent__isnull": True})
+
+            # Finally, generate a parent if none was found
+            if not parent:
+                parent = generate_parent(row['Name'], ids, 'small molecule')
+
             check, _ = Ligand.objects.get_or_create(name=row['ligand_name'],
                                                     ambiguous_alias=False,
                                                     hacc=row['HBondAceptorCount'] if pd.notna(row['HBondAceptorCount']) else None,
@@ -450,6 +479,7 @@ class Command(BaseCommand):
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
                                                     smiles=row['SMILES'] if pd.notna(row['SMILES']) else None,
+                                                    parent=parent,
                                                     source = 'Drug Data')
 
             # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand
@@ -557,7 +587,7 @@ class Command(BaseCommand):
     @staticmethod
     def read_csv_data(filename):
         filepath = os.sep.join([Command.data_dir, filename])
-        data = pd.read_csv(filepath, low_memory=False)
+        data = pd.read_csv(filepath, sep=None, engine='python')
         return data
 
     @staticmethod
