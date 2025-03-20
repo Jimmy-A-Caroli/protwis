@@ -15,6 +15,8 @@ import xmltodict
 
 import datamol as dm
 from rdkit import RDLogger
+from rdkit import Chem
+from chembl_structure_pipeline import standardizer
 
 # Disable the RDkit verbosity
 RDLogger.DisableLog('rdApp.*')
@@ -60,6 +62,15 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
     ligand = None
     cas_to_cid_url =  "http://www.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pccompound&retmax=100&term=$index"
     cas_cache_dir = ["CAS", 'cas_codes']
+
+    ### Implementing the Parent structure organization
+    # Order of checks:
+    ## Check if Standardized SMILES exists
+    ## Check if first section of INCHIKEY exists
+    ## Check if fsequence exists
+    ## Check if name exists
+    ## if all above fails, generate a parent
+
     # Check and filter IDs
     for type_id in list(ids.keys()):
         if ids[type_id] is None or ids[type_id] == "None" or ids[type_id] == "":
@@ -83,11 +94,38 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         elif isinstance(ids[type_id], list) and len(ids[type_id]) == 1:
             ids[type_id] = ids[type_id][0]
 
+    # Identify the parent and or create one
+    parent = None
+
+    # Attempt using SMILES if available
+    if "smiles" in ids:
+        std_smiles = standardize_smiles(ids["smiles"])
+        if std_smiles:
+            parent = try_get_parent({"smiles": std_smiles, "parent__isnull": True})
+
+    # Attempt using InChIKey if parent not yet found
+    if not parent and "inchikey" in ids:
+        head_inchi = ids["inchikey"].split('-')[0]
+        parent = try_get_parent({"clean_inchikey": head_inchi, "parent__isnull": True})
+
+    # Attempt using sequence if still not found
+    if not parent and "sequence" in ids:
+        parent = try_get_parent({"sequence": ids["sequence"], "parent__isnull": True})
+
+    # Attempt using name if still not found
+    if not parent:
+        parent = try_get_parent({"name": name, "parent__isnull": True})
+
+    # Finally, generate a parent if none was found
+    if not parent:
+        parent = generate_parent(name, ids, lig_type)
+
     # No IDs are provided, so the only way forward is a name match
     # Very short name = not unique - minimum is length of 3
     # TODO - add filter for numerical names and typical cpd X names
+    # adding the clause 'parent__isnull = False' to all queries since we need to find Ligands, not parents
     if len(ids) == 0:
-        results = Ligand.objects.filter(name=name, ambiguous_alias = True)
+        results = Ligand.objects.filter(name=name, ambiguous_alias = True, parent__isnull = False)
         if results.count() == 1:
             ligand = results.first()
         # DEBUGGING
@@ -95,11 +133,11 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
             print("Ambiguous name (", name,") as it has ", results.count(), " corresponding entries")
         else:
             # Longer names could be non-ambiguous compounds
-            results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = True)
+            results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = True, parent__isnull = False)
             if results.count() == 1:
                 ligand = results.first()
             elif len(name) >= 5:
-                results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = False)
+                results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = False, parent__isnull = False)
                 if results.count() == 1:
                     ligand = results.first()
                     # DEBUGGING
@@ -108,9 +146,11 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     print("Error for molecule with name (", name,") as it has ", results.count(), " corresponding entries")
 
             if ligand is None:
-                print("No ligand found with name",name)
+                print("No ligand found with name ",name)
                 ligand = create_ligand_from_id(name, "", "", lig_type)
                 ligand.ambiguous_alias = True
+                if parent and (ligand.pk is None or ligand.pk != parent.pk):
+                    ligand.parent = parent
                 ligand.save()
                 return ligand
     else:
@@ -123,13 +163,6 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         if ligand is None and "inchikey" in ids:
             ligand = get_ligand_by_inchikey(ids["inchikey"])
         elif ligand is None and "smiles" in ids:
-            # result = Ligand.objects.filter(smiles = ids["smiles"])
-            # if result.count() > 0:
-            #     ligand = result.first()
-            #     # DEBUGGING
-            #     if result.count() > 1:
-            #         print("Ambiguous SMILES (", ids["smiles"],") as it has ", results.count(), " corresponding entries")
-            # else:
             # calculate inchikey from given SMILES and repeat inchikey check
             input_mol = dm.to_mol(ids["smiles"], sanitize=False)
             ligand = get_ligand_by_inchikey(dm.to_inchikey(input_mol))
@@ -150,14 +183,11 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                             current_ids.append(row["id"])
                             if ligand is not None:
                                 print("MATCHING", type, ids[type], "via UniChem")
-                                # print(ids)
-                                # print(row)
-                                # print("============")
                                 break
 
         # Peptide or protein entry Sequence - filter gtoplig as those entries are standalone and should not be merged
         if ligand is None and "sequence" in ids and len(ids["sequence"]) > 3 and "gtoplig" not in ids:
-            result = Ligand.objects.filter(sequence = ids["sequence"])
+            result = Ligand.objects.filter(sequence = ids["sequence"], parent__isnull = False)
             if result.count() > 0:
                 ligand = result.first()
                 # DEBUGGING
@@ -167,7 +197,7 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         # UniProt ID if there's no sequence or other IDs
         # TODO figure out best way of matching when sequence and UniProt ID are mixed as there can be multiple variants
         elif ligand is None and "sequence" not in ids and "uniprot" in ids and len(set.intersection(set(ids.keys()), set(external_sources)))==0:
-            result = Ligand.objects.filter(uniprot__contains = ids["uniprot"].upper())
+            result = Ligand.objects.filter(uniprot__contains = ids["uniprot"].upper(), parent__isnull = False)
             if result.count() > 0:
                 ligand = result.first()
                 # DEBUGGING
@@ -198,20 +228,22 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
 
                 if len(tmp_types) == 0 and len(name) >= 4:
                     # Try to find ligand based on name
-                    results = Ligand.objects.filter(name=name, ambiguous_alias = True)
+                    results = Ligand.objects.filter(name=name, parent__isnull = False, ambiguous_alias = True)
                     if results.count() == 1:
                         ligand = results.first()
                     # DEBUGGING
                     elif results.count() > 1:
                         print("Ambiguous name (", name,") as it has ", results.count(), " corresponding entries")
                     else:
-                        results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = True)
+                        results = Ligand.objects.filter(name__iexact=name, parent__isnull = False, ambiguous_alias = True)
                         if results.count() == 1:
                             ligand = results.first()
 
                 if ligand is None:
                     print("Creating an empty ligand", name, ids)
                     ligand = create_ligand_from_id(name, "", "", lig_type)
+                    if parent and (ligand.pk is None or ligand.pk != parent.pk):
+                        ligand.parent = parent
                     ligand.ambiguous_alias = True
 
         # Add missing IDs via (web)links to the ligand object
@@ -231,6 +263,8 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 ligand.sequence = ids["sequence"]
             if "inchikey" in ids and ligand.inchikey is None:
                 ligand.inchikey = ids["inchikey"]
+            if parent and (ligand.pk is None or ligand.pk != parent.pk):
+                ligand.parent = parent
             ligand.save()
 
             # Create list of existing weblinks
@@ -263,6 +297,7 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
 
 unichem_src_types = {"1": "chembl_ligand", "2": "drugbank", "3": "pdb", "4": "gtoplig", "22": "pubchem", "34": "drug_central"}
 unichem_src_types_inv = {v: k for k, v in unichem_src_types.items()}
+
 def match_id_via_unichem(type, id):
     results = []
     cache_dir = ['unichem', 'id_match']
@@ -290,9 +325,9 @@ def match_id_via_unichem(type, id):
 
 def get_ligand_by_id(type, id, uniprot = None):
     if uniprot is None:
-        result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type)
+        result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, parent__isnull=False)
     else:
-        result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper())
+        result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper(), parent__isnull=False)
 
     if result.count() > 0:
         # For drugs we allow multiple entries because of stereochemistry if drug is racemic
@@ -432,7 +467,7 @@ def create_ligand_from_id(name, type, id, lig_type):
         return None
 
 def get_ligand_by_inchikey(inchikey):
-    result = Ligand.objects.filter(Q(inchikey = inchikey) | Q(clean_inchikey = inchikey))
+    result = Ligand.objects.filter((Q(inchikey=inchikey) & Q(parent__isnull=False)))
     if result.count() > 0:
         if result.count() > 1:
             print("Multiple entries for the same InChIkey - This should never happen - error", inchikey)
@@ -471,3 +506,92 @@ def is_float(element):
         return True
     except ValueError:
         return False
+
+def standardize_smiles(smiles):
+    """
+    Converts a SMILES string to an RDKit molecule, standardizes it using
+    the chembl_structure_pipeline, and returns the standardized molecule.
+    """
+    # Create an RDKit molecule from the SMILES:
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        print(f"Invalid SMILES: {smiles}")
+        return None
+
+    # Standardize the molecule.
+    # The function returns a tuple: (standardized_mol, standardization_status)
+    std_mol = standardizer.standardize_mol(mol)
+
+    # Optionally, you can remove stereochemistry (if that’s your goal):
+    Chem.RemoveStereochemistry(std_mol)
+
+    smiles = Chem.MolToSmiles(std_mol, isomericSmiles=False)
+
+    return smiles
+
+# Example usage:
+# smiles_example = "CC(=O)OC1=CC=CC=C1C(=O)O"  # Aspirin (for example)
+# std_mol = standardize_smiles(smiles_example)
+# if status == 'OK':
+#     print("Standardized SMILES:", Chem.MolToSmiles(std_mol))
+# else:
+#     print("Standardization status:", status)
+#
+# ### HOW TO USE IT
+#
+# # Two SMILES strings that depict the same molecule but with different stereochemistry:
+# smiles1 = "CN1[C@H]2C[C@H](OC(=O)[C@H](CO)c3ccccc3)C[C@@H]1[C@@H]1O[C@H]12"
+# smiles2 = "CN1C2CC(CC1C3C2O3)OC(=O)C(CO)C4=CC=CC=C4"
+#
+# # Standardize the molecules:
+# std_mol1 = standardize_smiles(smiles1)
+# std_mol2 = standardize_smiles(smiles2)
+#
+# # Convert standardized molecules to canonical SMILES:
+# std_smiles1 = Chem.MolToSmiles(std_mol1, isomericSmiles=False)
+# std_smiles2 = Chem.MolToSmiles(std_mol2, isomericSmiles=False)
+
+def generate_parent(name, ids, lig_type):
+    ligand = Ligand()
+    ligand.name = name
+    ligand.ambiguous_alias = False
+    ligand.ligand_type = LigandType.objects.get_or_create(slug=slugify(lig_type), defaults={'name': lig_type})[0]
+
+    if "sequence" in ids:
+        ligand.sequence = ids["sequence"]
+    if "uniprot" in ids:
+        ligand.uniprot = ids["uniprot"]
+    if "smiles" in ids:
+        ligand.smiles = standardize_smiles(ids["smiles"])
+    if "inchikey" in ids:
+        head_inchi = ids["inchikey"].split('-')[0]
+        ligand.clean_inchikey = head_inchi
+        ligand.inchikey = ids["inchikey"]
+
+    # perform RDkit calculations
+    if lig_type == "small-molecule" and ligand.smiles is not None and ligand.smiles != "":
+        input_mol = dm.to_mol(ligand.smiles, sanitize=True)
+        if input_mol:
+            # Check if InChIKey has been set
+            if ligand.inchikey is None:
+                inchi = dm.to_inchikey(input_mol)
+                ligand.clean_inchikey = inchi.split('-')[0]
+                ligand.inchikey = inchi
+
+            # Calculate RDkit properties
+            ligand.mw = dm.descriptors.mw(input_mol)
+            ligand.rotatable_bonds = dm.descriptors.n_rotatable_bonds(input_mol)
+            ligand.hacc = dm.descriptors.n_hba(input_mol)
+            ligand.hdon = dm.descriptors.n_hbd(input_mol)
+            ligand.logp = dm.descriptors.clogp(input_mol)
+
+    ligand.parent = None
+    ligand.save()
+    return ligand
+
+def try_get_parent(query_params):
+    try:
+        parent_obj = Ligand.objects.get(**query_params)
+        return parent_obj
+    except Ligand.DoesNotExist:
+        return None

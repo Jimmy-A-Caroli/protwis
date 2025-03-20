@@ -78,7 +78,7 @@ class Command(BaseCommand):
             ['build_construct_data'],
             ['update_construct_mutations'],
             ['build_protein_sets'],
-            ['build_drugs'],
+            ['build_drugs_updated'],
             ['build_mutational_landscape'],
             ['build_residue_sets'],
             ['build_dynamine_annotation', {'proc': options['proc']}],

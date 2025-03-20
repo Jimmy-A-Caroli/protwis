@@ -15,7 +15,7 @@ import django.apps
 import logging
 
 class Command(BaseCommand):
-    help = 'Build Drug and NHS Data'
+    help = 'Build Drug data'
 
     publication_cache = {}
 
@@ -397,7 +397,7 @@ class Command(BaseCommand):
         if len(inchi_list) > 1:
             for inchi in inchi_list:
                 try:
-                    check = Ligand.objects.get(inchikey=inchi)
+                    check = Ligand.objects.get(inchikey=inchi, parent__isnull=False)
                     return check
                 except Ligand.DoesNotExist:
                     for key, values in mapper.items():
@@ -433,7 +433,7 @@ class Command(BaseCommand):
             # check if there is a ligand with matching name
             if all(all(item == 'nan' for item in values) for values in mapper.values()):
                 try:
-                    check = Ligand.objects.get(name=row['Name'])
+                    check = Ligand.objects.get(name=row['Name'], parent__isnull=False)
                     return check
                 except Ligand.DoesNotExist:
                     pass
@@ -449,7 +449,7 @@ class Command(BaseCommand):
                                                     logp=row['XLogP'] if pd.notna(row['XLogP']) else None,
                                                     mw=row['MolecularWeight'] if pd.notna(row['MolecularWeight']) else None,
                                                     rotatable_bonds=row['RotableBondCount'] if pd.notna(row['RotableBondCount']) else None,
-                                                    smiles=row['SMILES'],
+                                                    smiles=row['SMILES'] if pd.notna(row['SMILES']) else None,
                                                     source = 'Drug Data')
 
             # add the mapper items to the LigandID model so we have matching info next time we encounter this ligand

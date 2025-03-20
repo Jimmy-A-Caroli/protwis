@@ -27,8 +27,8 @@ class Ligand(models.Model):
 
     # structure definition
     smiles = models.TextField(null=True)
-    inchikey = models.CharField(max_length=27, null=True, unique=True)
-    clean_inchikey = models.CharField(max_length=27, null=True)
+    inchikey = models.CharField(max_length=27, null=True)
+    clean_inchikey = models.CharField(max_length=27, null=True, unique=True)
     sequence = models.CharField(max_length=1000, null=True)
 
     # Ligand properties
@@ -37,6 +37,9 @@ class Ligand(models.Model):
     hacc = models.SmallIntegerField(null=True)
     hdon = models.SmallIntegerField(null=True)
     logp = models.DecimalField(max_digits=10, decimal_places=3, null=True)
+    source = models.TextField(max_length=20, null=True)
+    # Parent structure addition with a unique related_name
+    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE, related_name='children')
 
     def __str__(self):
         return self.name
