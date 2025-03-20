@@ -136,11 +136,7 @@ def getLigandCountTable():
         approved = {}
         for entry in drugtargets_approved:
             approved[entry['entry_name']] = entry['num_ligands']
-        drugtargets_trials = list(Protein.objects.filter(
-            drugs__drug_status="Active",
-            drugs__indication_max_phase__in=[1, 2, 3]
-        ).values(
-            "entry_name").annotate(num_ligands=Count("drugs__ligand", distinct=True)))
+        drugtargets_trials = list(Protein.objects.filter(drugs__drug_status="Active").values("entry_name").annotate(num_ligands=Count("drugs__ligand", distinct=True)))
 
         trials = {}
         for entry in drugtargets_trials:
