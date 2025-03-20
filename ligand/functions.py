@@ -5,6 +5,8 @@ from django.utils.text import slugify
 from django.db import IntegrityError
 from django.db.models import Q
 
+from rdkit import Chem
+
 #from chembl_webresource_client import new_client
 from common.models import WebResource, Publication
 from ligand.models import Ligand, LigandType, BiasedData, Endogenous_GTP, BalancedLigands
@@ -789,3 +791,75 @@ def AddPathwayData(master, data, rank, pathway=False):
             master[rank+' - Δlog(Emax/EC50)'] = data['Delta_log(Emax/EC50)']
         except KeyError: #Delta_log(Emax/EC50) was not calculated
             master[rank+' - Δlog(Emax/EC50)'] = None
+
+def is_valid_smiles(smiles):
+    """
+    Checks if a SMILES string is parseable by RDKit and can be sanitized
+    without errors.
+
+    Args:
+        smiles (str): The SMILES string to validate.
+
+    Returns:
+        bool: True if the SMILES can be parsed and sanitized, otherwise False.
+    """
+    try:
+        # Parse the SMILES string without initial sanitization
+        mol = Chem.MolFromSmiles(smiles, sanitize=False)
+        if mol is None:
+            raise ValueError("RDKit returned None when parsing the SMILES string.")
+
+        # Manually sanitize the molecule. Raises an exception if invalid.
+        Chem.SanitizeMol(mol)
+        return True
+    except Exception:
+        # Uncomment to log the error if needed:
+        # print(f"Invalid SMILES ({smiles}): {err}")
+        return False
+
+def to_canonical_smiles(smiles: str) -> str:
+    """
+    Converts a given SMILES string into its canonical form.
+    
+    Parameters:
+        smiles (str): The input SMILES string.
+    
+    Returns:
+        str: The canonical SMILES string.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        raise ValueError("Invalid SMILES string provided.")
+    return Chem.MolToSmiles(mol, canonical=True)
+
+def standardize_smiles(smiles, mw):
+    """
+    Takes a SMILES string and its molecular weight, returning:
+      1) `canonical_smiles`     – The canonical version (for display).
+      2) `smiles_for_image`     – A unicode-escaped version suitable for JS/OCL.
+      3) `picture_flag`         – Either "Generate_from_SMILES" or "Not_available",
+                                  depending on validity and mw < 800.
+
+    Args:
+        smiles (str): Raw SMILES string from the database.
+        mw (float|None): Molecular weight of the ligand (None if unknown).
+
+    Returns:
+        tuple[str, str, str]: (canonical_smiles, smiles_for_image, picture_flag)
+    """
+    # 1. Check if the SMILES is valid at all.
+    if not is_valid_smiles(smiles):
+        # Return the original string for both, but mark as "Not_available."
+        return smiles, smiles, 'Not_available'
+
+    # 2. SMILES is valid → canonicalize & escape
+    canonical_smiles = to_canonical_smiles(smiles)
+    smiles_for_image = canonical_smiles.encode('unicode_escape').decode()
+
+    # 3. Decide whether we should "Generate_from_SMILES" or not
+    if mw is not None and mw < 800:
+        picture_flag = 'Generate_from_SMILES'
+    else:
+        picture_flag = 'Not_available'
+
+    return canonical_smiles, smiles_for_image, picture_flag

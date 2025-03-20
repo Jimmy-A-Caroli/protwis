@@ -131,16 +131,16 @@ def getLigandCountTable():
         )
         # Acquired slugs
         # entry_names = [ p.entry_name for p in proteins ]
-        drugtargets_approved = list(Protein.objects.filter(drugs__status="approved").values("entry_name").annotate(num_ligands=Count("drugs__name", distinct=True)))
+        drugtargets_approved = list(Protein.objects.filter(drugs__drug_status="Approved").values("entry_name").annotate(num_ligands=Count("drugs__ligand", distinct=True)))
         # drugtargets_approved = list(Protein.objects.filter(drugs__status="approved").values_list("entry_name", flat=True))
         approved = {}
         for entry in drugtargets_approved:
             approved[entry['entry_name']] = entry['num_ligands']
-        drugtargets_trials = list(Protein.objects.filter(drugs__status__in=["in trial"],
-                                                         drugs__clinicalstatus__in=["completed", "not open yet",
-                                                                                    "ongoing", "recruiting",
-                                                                                    "suspended"]).values(
-            "entry_name").annotate(num_ligands=Count("drugs__name", distinct=True)))
+        drugtargets_trials = list(Protein.objects.filter(
+            drugs__drug_status="Active",
+            drugs__indication_max_phase__in=[1, 2, 3]
+        ).values(
+            "entry_name").annotate(num_ligands=Count("drugs__ligand", distinct=True)))
 
         trials = {}
         for entry in drugtargets_trials:
@@ -737,7 +737,7 @@ class AbsReferenceSelectionTable(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -855,7 +855,7 @@ class AbsTargetSelectionTable(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -974,7 +974,7 @@ class AbsTargetSelection(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -1170,7 +1170,7 @@ class AbsMiscSelection(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
