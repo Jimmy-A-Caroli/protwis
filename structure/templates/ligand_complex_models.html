@@ -19,6 +19,18 @@
     <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
     <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
     <style type="text/css">
+
+        #struct {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            border: 1px;
+            background-color: white;
+            border-style: solid;
+            border-width: 1px;
+            padding: 3px;
+        }
+
         .select2-result-label{
             font-size:x-small;
             font-size: 10px;
@@ -105,6 +117,7 @@
     <script src="{% static 'home/js/alignment.js' %}"> </script>
     <!-- <script src="{% static 'home/js/browser_functions.js' %}"> </script> -->
     <script src="{% static 'home/js/structure_browser.js' %}"></script>
+    <script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- for rendering ligand images -->
 
 <system.webServer>
    <httpErrors errorMode="Detailed" />
@@ -377,6 +390,75 @@
 
     </script>
 
+    <script>
+        function compoundPreview(selector="a.struct") {
+            const xOffset = 30, yOffset = -10;
+            const NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+            
+            $(selector).hover(
+                function(e) {
+                //console.log("Hover callback triggered for link:", this);
+                let $link = $(this);
+                let fallbackUrl = $link.attr("rel");  // "Generate_from_SMILES" or "Not_available"
+                let smiles = $link.data("smiles") || "";
+        
+                //console.log("fallbackUrl =", fallbackUrl, " | smiles =", smiles);
+            
+                let tooltipHtml = "";
+                if (fallbackUrl === "Generate_from_SMILES" && smiles) {
+                    try {
+                    //console.log("Attempting OCL parse...");
+                    const mol = OCL.Molecule.fromSmiles(smiles);
+                    mol.inventCoordinates();
+                    const svgSize = 200;
+                    const svgOptions = {
+                        autoCrop: true,
+                        noStereoProblem: true, 
+                        suppressChiralText: true,
+                        suppressCIPParity: true,
+                        suppressESR: true,
+                      };
+                    tooltipHtml = mol.toSVG(svgSize, svgSize, null, svgOptions);
+                    //console.log("SVG created successfully.");
+                    } catch (err) {
+                    console.error("OCL error:", err);
+                    tooltipHtml = "<div>Invalid SMILES</div>";
+                    }
+                }
+                else if (fallbackUrl && fallbackUrl !== "Not_available") {
+                    //console.log("We have a fallbackUrl that is not Not_available. Using <img>...");
+                    // Or if fallbackUrl is an actual image URL from ChEMBL, e.g. 
+                    tooltipHtml = `<img style="max-width: 200px;" src="${fallbackUrl}" />`;
+                } else {
+                    //console.log("No valid fallbackUrl. Using NO_IMAGE_URL...");
+                    // fallback: local "No image"
+                    tooltipHtml = `<img style="max-width: 200px;" src="${NO_IMAGE_URL}" />`;
+                }
+            
+                //console.log("Appending tooltipHtml:", tooltipHtml);
+                $("body").append(`<p id="struct">${tooltipHtml}</p>`);
+                $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
+                },
+                function() {
+                //console.log("Hover LEAVE. Removing #struct...");
+                $("#struct").remove();
+                }
+            );
+            
+            //console.log("compoundPreview called on selector:", selector);
+            //console.log("Found", $(selector).length, "links matching", selector);
+        
+            $(selector).mousemove(function(e){
+                $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
+            });
+            }
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            compoundPreview("a.struct");
+        });
+    </script>
 {% endblock %}
 
 {% block content %}
@@ -466,10 +548,24 @@
                     
                                         <!-- ligand name 7 -->
                     {% if model.prefetch_ligands.0.ligand.name|length >= 6 %}
-                    <td><a href="/ligand/{{ model.prefetch_ligands.0.ligand.id }}/info">{{ model.prefetch_ligands.0.ligand.name | capfirst | safe }}</a></td>
+                    <td>
+                        <a class="struct"
+                           href="/ligand/{{ model.prefetch_ligands.0.ligand.id }}/info"
+                           data-smiles="{{ model.prefetch_ligands.0.ligand.smiles_for_image }}"
+                           rel="{{ model.prefetch_ligands.0.ligand.picture }}">
+                            {{ model.prefetch_ligands.0.ligand.name | capfirst | safe }}
+                        </a>
+                    </td>
                     {% else %}
-                    <td><a href="/ligand/{{ model.prefetch_ligands.0.ligand.id }}/info">{{ model.prefetch_ligands.0.ligand.name | upper | safe }}</a></td>
-                    {% endif %}</a></td>
+                    <td>
+                        <a class="struct"
+                           href="/ligand/{{ model.prefetch_ligands.0.ligand.id }}/info"
+                           data-smiles="{{ model.prefetch_ligands.0.ligand.smiles_for_image }}"
+                           rel="{{ model.prefetch_ligands.0.ligand.picture }}">
+                            {{ model.prefetch_ligands.0.ligand.name | upper | safe }}
+                        </a>
+                    </td>
+                    {% endif %}
 
                                         <!-- ligand type 8 -->
                     {% if model.prefetch_ligands.0.ligand.ligand_type.slug == "small-molecule" %}
