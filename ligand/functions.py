@@ -868,7 +868,7 @@ def standardize_smiles(smiles, mw):
         mol = Chem.MolFromSmiles(canonical_smiles)
         if mol:
             mw = Descriptors.MolWt(mol)
-    
+
     # 4. Determine the picture flag based on the (computed) molecular weight.
     if mw is not None and mw < 800:
         picture_flag = 'Generate_from_SMILES'

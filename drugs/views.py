@@ -182,7 +182,7 @@ class DrugSectionSelection(TemplateView):
 
     def process_smiles(row):
         raw, mw = row['raw_smiles'], row['mw']
-        canonical, smiles_for_image, picture_flag = standardize_smiles(raw, mw)
+        _, smiles_for_image, picture_flag = standardize_smiles(raw, mw)
         return pd.Series({
             'smiles_for_image': smiles_for_image,
             'picture': picture_flag
