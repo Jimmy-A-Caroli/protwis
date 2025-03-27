@@ -2061,11 +2061,11 @@ class BiasedSignallingOnTheFlyCalculation(TemplateView):
                         double_path = reference_data[pub]
                         try:
                             log_first = round(math.log((jitterDict[pub][ligand]['Emax_Tau']/float(jitterDict[pub][ligand]['EC50_KA'])),10),2)
-                        except TypeError:
+                        except (TypeError, ValueError) as e:
                             log_first = '-'
                         try:
                             log_second = round(math.log((jitterDict[pub][ligand]['2nd_Pathway_emax_tau']/float(jitterDict[pub][ligand]['2nd_Pathway_EC50_KA'])),10),2)
-                        except TypeError:
+                        except (TypeError, ValueError) as e:
                             log_second = '-'
                     if self.subtype:
                         big = [sign_prot_conversion[jitterDict[pub][ligand]["signalling_prot"]], jitterDict[pub][ligand]['delta'], jitterDict[pub][ligand]['Emax_Tau'], jitterDict[pub][ligand]['EC50_KA'],
