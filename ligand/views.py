@@ -3632,7 +3632,8 @@ class PhysiologicalLigands(TemplateView):
                         'Ligand name', 'GtP link', 'GtP Classification', 'Potency Ranking', 'Type','smiles','inchikey',
                         'pEC50 - min', 'pEC50 - mid', 'pEC50 - max',
                         'pKi - min', 'pKi - mid', 'pKi - max', 'Reference', 'ID',
-                        'Entry Name', 'Accession', 'pdb_code', 'structure_type']
+                        'Entry Name', 'Accession', 'pdb_code', 'structure_type',
+                        'smiles_for_image', 'picture']
         data_subsets = []
 
         # Subqueries to get the desired fields directly
@@ -3760,6 +3761,15 @@ class PhysiologicalLigands(TemplateView):
                 data_subset['Accession'] = data[21]                                         #21
                 data_subset["pdb_code"] = data[22]                                          #22
                 data_subset['structure_type'] = data[23]
+
+                if data[10] and data[10] != "-":
+                    canonical_smiles, smiles_for_image, picture_flag = standardize_smiles(data[10], None)
+                else:
+                    smiles_for_image = ""
+                    picture_flag = "Not_available"
+                data_subset['smiles_for_image'] = smiles_for_image                          #23
+                data_subset['picture'] = picture_flag                                       #24
+
                 data_subsets.append(data_subset)
 
         table = pd.DataFrame(data_subsets, columns=browser_columns)

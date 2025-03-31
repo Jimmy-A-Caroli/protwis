@@ -24,6 +24,9 @@
  * Note: Ensure that window.NO_IMAGE_URL is defined in your HTML before loading this script.
  */
 function compoundPreview(selector = "a.struct", noImageUrl = window.NO_IMAGE_URL) {
+    if (!noImageUrl) {
+        noImageUrl = "/static/home/images/No_image_available.svg";
+    }
     const xOffset = 30, yOffset = -10;
     $(selector).hover(
         function(e) {
