@@ -805,9 +805,6 @@ def is_valid_smiles(smiles):
         bool: True if the SMILES can be parsed and sanitized, otherwise False.
     """
 
-    # # temp fix for nan values
-    # if smiles == "nan":
-    #     return False
     try:
         # Parse the SMILES string without initial sanitization
         mol = Chem.MolFromSmiles(smiles, sanitize=False)

@@ -18,18 +18,8 @@
     <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
     <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
     <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
     <style type="text/css">
-
-        #struct {
-            display: none;
-            position: absolute;
-            z-index: 100;
-            border: 1px;
-            background-color: white;
-            border-style: solid;
-            border-width: 1px;
-            padding: 3px;
-        }
 
         .select2-result-label{
             font-size:x-small;
@@ -436,12 +426,12 @@
                 }
             
                 //console.log("Appending tooltipHtml:", tooltipHtml);
-                $("body").append(`<p id="struct">${tooltipHtml}</p>`);
-                $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
+                $("body").append(`<p class="tooltip-struct">${tooltipHtml}</p>`);
+                $(".tooltip-struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
                 },
                 function() {
-                //console.log("Hover LEAVE. Removing #struct...");
-                $("#struct").remove();
+                //console.log("Hover LEAVE. Removing .tooltip-struct...");
+                $(".tooltip-struct").remove();
                 }
             );
             
@@ -449,7 +439,7 @@
             //console.log("Found", $(selector).length, "links matching", selector);
         
             $(selector).mousemove(function(e){
-                $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
+                $(".tooltip-struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
             });
             }
     </script>

@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
+
 <style>
     /*Assay description tooltip*/
     .AssayCell {
@@ -45,17 +47,6 @@
         margin: .5em 0;
         overflow: auto;
         width: 800px;
-    }
-
-    #struct {
-        display: none;
-        position: absolute;
-        z-index: 100;
-        border: 1px;
-        background-color: white;
-        border-style: solid;
-        border-width: 1px;
-        padding: 3px;
     }
     .scroll-container {
         /*max-width: 200px;*/
@@ -350,10 +341,10 @@
           }
   
           // Create the tooltip container
-          $("body").append(`<p id="struct">${tooltipHtml}</p>`);
+          $("body").append(`<p class="tooltip-struct">${tooltipHtml}</p>`);
   
           // Position the tooltip near the cursor
-          $("#struct")
+          $(".tooltip-struct")
             .css({
               top:  (e.pageY - yOffset) + "px",
               left: (e.pageX + xOffset) + "px"
@@ -362,13 +353,13 @@
         },
         function () {
           // on mouseleave: remove the tooltip
-          $("#struct").remove();
+          $(".tooltip-struct").remove();
         }
       );
   
       // Move the tooltip with the mouse
       $(selection).mousemove(function (e) {
-        $("#struct")
+        $(".tooltip-struct")
           .css({
             top:  (e.pageY - yOffset) + "px",
             left: (e.pageX + xOffset) + "px"

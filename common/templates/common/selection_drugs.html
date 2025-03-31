@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
 
 <!-- Custom CSS to adjust Select2 dropdown height -->
 <style>
@@ -188,17 +189,6 @@
         text-align: center;
     }
 
-    /* Ensure the struct shows up properly */
-    #struct {
-        display: none;
-        position: absolute;
-        z-index: 100;
-        border: 1px;
-        background-color: white;
-        border-style: solid;
-        border-width: 1px;
-        padding: 3px;
-    }
 </style>
 {% endblock %}
 {% block content %}
@@ -1409,12 +1399,12 @@ function compoundPreview(selector="a.struct") {
         }
     
         //console.log("Appending tooltipHtml:", tooltipHtml);
-        $("body").append(`<p id="struct">${tooltipHtml}</p>`);
-        $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
+        $("body").append(`<p class="tooltip-struct">${tooltipHtml}</p>`);
+        $(".tooltip-struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
         },
         function() {
-        //console.log("Hover LEAVE. Removing #struct...");
-        $("#struct").remove();
+        //console.log("Hover LEAVE. Removing .tooltip-struct...");
+        $(".tooltip-struct").remove();
         }
     );
     
@@ -1422,7 +1412,7 @@ function compoundPreview(selector="a.struct") {
     //console.log("Found", $(selector).length, "links matching", selector);
 
     $(selector).mousemove(function(e){
-        $("#struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
+        $(".tooltip-struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
     });
     }
 </script>
