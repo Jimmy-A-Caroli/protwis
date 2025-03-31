@@ -693,6 +693,11 @@
 <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
 <script src="{% static 'home/js/sankey.js' %}"></script>
 <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
+<script src="{% static 'home/js/compoundPreviewTooltip.js' %}">
+
+<script type="text/javascript">
+    window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+</script>
 
 <script type="text/javascript">
     var page = '{{ page }}';
@@ -1352,69 +1357,6 @@
         });
     }
 }
-</script>
-<script>
-function compoundPreview(selector="a.struct") {
-    const xOffset = 30, yOffset = -10;
-    const NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
-    
-    $(selector).hover(
-        function(e) {
-        //console.log("Hover callback triggered for link:", this);
-        let $link = $(this);
-        let fallbackUrl = $link.attr("rel");  // "Generate_from_SMILES" or "Not_available"
-        let smiles = $link.data("smiles") || "";
-
-        //console.log("fallbackUrl =", fallbackUrl, " | smiles =", smiles);
-    
-        let tooltipHtml = "";
-        if (fallbackUrl === "Generate_from_SMILES" && smiles) {
-            try {
-            //console.log("Attempting OCL parse...");
-            const mol = OCL.Molecule.fromSmiles(smiles);
-            mol.inventCoordinates();
-            const svgSize = 200;
-            const svgOptions = {
-                autoCrop: true,
-                noStereoProblem: true, 
-                suppressChiralText: true,
-                suppressCIPParity: true,
-                suppressESR: true,
-              };
-            tooltipHtml = mol.toSVG(svgSize, svgSize, null, svgOptions);
-            //console.log("SVG created successfully.");
-            } catch (err) {
-            console.error("OCL error:", err);
-            tooltipHtml = "<div>Invalid SMILES</div>";
-            }
-        }
-        else if (fallbackUrl && fallbackUrl !== "Not_available") {
-            //console.log("We have a fallbackUrl that is not Not_available. Using <img>...");
-            // Or if fallbackUrl is an actual image URL from ChEMBL, e.g. 
-            tooltipHtml = `<img style="max-width: 200px;" src="${fallbackUrl}" />`;
-        } else {
-            //console.log("No valid fallbackUrl. Using NO_IMAGE_URL...");
-            // fallback: local "No image"
-            tooltipHtml = `<img style="max-width: 200px;" src="${NO_IMAGE_URL}" />`;
-        }
-    
-        //console.log("Appending tooltipHtml:", tooltipHtml);
-        $("body").append(`<p class="tooltip-struct">${tooltipHtml}</p>`);
-        $(".tooltip-struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset }).fadeIn("fast");
-        },
-        function() {
-        //console.log("Hover LEAVE. Removing .tooltip-struct...");
-        $(".tooltip-struct").remove();
-        }
-    );
-    
-    //console.log("compoundPreview called on selector:", selector);
-    //console.log("Found", $(selector).length, "links matching", selector);
-
-    $(selector).mousemove(function(e){
-        $(".tooltip-struct").css({ top:e.pageY - yOffset, left:e.pageX + xOffset });
-    });
-    }
 </script>
 
 {% endblock %}
