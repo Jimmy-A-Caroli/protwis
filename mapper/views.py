@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.conf import settings
+from django.db.models import Q
 from django.views.generic import TemplateView
 from django import forms
 from protein.models import Protein, ProteinFamily
@@ -312,7 +313,7 @@ class DataMapperHome(TemplateView):
                 # Process sorted receptor families
                 for Ligand_type, Receptor_Family, receptors in sorted_receptor_families:
                     # First 42 go into Circle_1
-                    target_circle = "Circle_1" if class_A_receptor_families < 42 else "Circle_2"
+                    target_circle = "Circle_1" if class_A_receptor_families < 43 else "Circle_2"
 
                     # Insert data into the target circle using setdefault() to remove redundancy
                     GPCRome_dict.setdefault(target_circle, {}).setdefault(Class, {}).setdefault(Ligand_type, {})[Receptor_Family] = receptors
@@ -330,7 +331,7 @@ class DataMapperHome(TemplateView):
                 GPCRome_dict["Circle_3"].setdefault(Class, {}).update(ligand_types)
 
             # Handle Circle 4: Class C (Glutamate)
-            elif Class == ["Class C (Glutamate)", "Class F (Frizzled)"]: 
+            elif Class in ["Class C (Glutamate)", "Class F (Frizzled)"]:
                 GPCRome_dict["Circle_4"].setdefault(Class, {}).update(ligand_types)
 
             # Handle Circle 5: Class F (Frizzled), Class T2 (Taste 2), Other GPCRs
@@ -372,6 +373,110 @@ class DataMapperHome(TemplateView):
         data_full['GPCRome_dict'] = GPCRome_dict
 
         return data_full
+
+    @staticmethod
+    def generate_GPCRome_data_Oderant():
+
+        odorant_names = list(Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False
+                                            ).filter(Q(family_id__slug__startswith='007') | Q(family_id__slug__startswith='008')).values(
+                                            'entry_name', 'name').order_by('entry_name'))
+        odorant_families = ProteinFamily.objects.filter(Q(slug__startswith='007') | Q(slug__startswith='008'))
+
+        odoranttree = {}
+        conversion = {}
+
+        for item in odorant_families:
+            if len(item.slug) == 3 and item.slug not in odoranttree.keys():
+                odoranttree[item.slug] = {}
+                conversion[item.slug] = item.name
+            if len(item.slug) == 7 and item.slug not in odoranttree[item.slug[:3]].keys():
+                odoranttree[item.slug[:3]][item.slug[:7]] = {}
+                conversion[item.slug] = item.name
+            if len(item.slug) == 11 and item.slug not in odoranttree[item.slug[:3]][item.slug[:7]].keys():
+                odoranttree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
+                conversion[item.slug] = item.name
+            if len(item.slug) == 15 and item.slug not in odoranttree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
+                odoranttree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
+
+
+        odorant_conversion_dict = {item['entry_name']: item['name'] for item in odorant_names}
+        odoranttree2 = DataMapperHome.convert_keys(odoranttree, conversion)
+        names_odorant = list(odorant_conversion_dict.values())
+        odoranttree3 = DataMapperHome.filter_dict(odoranttree2, names_odorant)
+
+        # Splitting the families into three dictionaries
+        odorant_receptors = odoranttree3['Class O2 (tetrapod specific odorant)']['Odorant receptors']
+        # Families 1 to 4
+        families_1_to_4 = {key: odorant_receptors[key] for key in odorant_receptors if key[-2:] in [' 1', ' 2', ' 3', ' 4',]}
+        # Families 5 to 10
+        families_5_to_9 = {key: odorant_receptors[key] for key in odorant_receptors if key[-2:] in [' 5', ' 6', ' 7', ' 8', ' 9']}
+        # Families 11 to 14
+        families_10_to_14 = {key: odorant_receptors[key] for key in odorant_receptors if key.endswith(('10', '11', '12', '13', '14'))}
+
+        odoranttree4 = {}
+        odoranttree4['Class O1 (fish-like odorant)'] = odoranttree3['Class O1 (fish-like odorant)']
+        odoranttree4['Class O2 (tetrapod specific odorant) EXT'] = {'Odorant receptors' : families_1_to_4}
+        odoranttree4['Class O2 (tetrapod specific odorant) MID'] = {'Odorant receptors' : families_5_to_9}
+        odoranttree4['Class O2 (tetrapod specific odorant) INT'] = {'Odorant receptors' : families_10_to_14}
+
+        odorant_full = {"NameList": odoranttree4, "DataPoints": odorant_data, "LabelConversionDict":odorant_conversion_dict}
+
+        return odorant_full
+    
+    
+    
+    @staticmethod
+    def GenerateGPCRomeDataStructure(type: str = "Classic"):
+        
+        # Determine which proteins and families to use based on type
+        if type == "Classic":
+            all_proteins = Protein.objects.filter(
+                species_id=1,
+                parent_id__isnull=True,
+                accession__isnull=False,
+                family_id__slug__startswith='0'
+            ).exclude(
+                Q(family_id__slug__startswith='007') |
+                Q(family_id__slug__startswith='008')
+            )
+
+            families = ProteinFamily.objects.all()
+
+        elif type == "Odorant":
+            all_proteins = Protein.objects.filter(
+                species_id=1,
+                parent_id__isnull=True,
+                accession__isnull=False,
+                family_id__slug__startswith='007'
+            )
+
+            families = ProteinFamily.objects.filter(slug__startswith='007')
+
+        else:
+            raise ValueError(f"Unsupported data structure type: {type}")
+        
+        def build_family_tree(families):
+            datatree = {}
+            conversion = {}
+
+            for item in families:
+                slug_parts = item.slug.split('_')
+                conversion[item.slug] = item.name
+                current_level = datatree
+
+                for i, part in enumerate(slug_parts):
+                    full_slug = '_'.join(slug_parts[:i + 1])
+
+                    if i == len(slug_parts) - 1:
+                        if len(slug_parts) == 4:
+                            current_level.setdefault(full_slug, []).append(item.name)
+                        else:
+                            current_level.setdefault(full_slug, {})
+                    else:
+                        current_level = current_level.setdefault(full_slug, {})
+
+            return datatree, conversion
+
 
     @staticmethod
     def generate_tree_plot(input_data): #ADD AN INPUT FILTER DICTIONARY

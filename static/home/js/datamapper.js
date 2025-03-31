@@ -488,7 +488,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
     });
 
     var existingCategories = Object.keys(categoryMax).filter(cat => categoryMax[cat].max > 0);
-    console.log(existingCategories)
+
     // Create a color scale function for each category
     var colorScales = {};
     existingCategories.forEach(category => {
@@ -3584,8 +3584,6 @@ function Draw_GPCRomes(layout_data, fill_data, location, GPCRome_styling, odoran
 }
 
 
-
-
 // Draw / generate the GPCRome plot
 function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
 
@@ -3608,33 +3606,33 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
     .attr("xmlns:xlink", "http://www.w3.org/1999/xlink");  // Add the xlink namespace for images
 
 //    // Get the image URL from the data-attribute
-//     const imageUrl = document.getElementById("image-container").getAttribute("data-image-url");
+    const imageUrl = document.getElementById("image-container").getAttribute("data-image-url");
 
-//     if (showIcon) {
-//         var img = new Image();
-//         img.crossOrigin = "Anonymous";  // Ensure cross-origin handling
-//         img.src = imageUrl;
+    if (showIcon) {
+        var img = new Image();
+        img.crossOrigin = "Anonymous";  // Ensure cross-origin handling
+        img.src = imageUrl;
 
-//         img.onload = function() {
-//             var canvas = document.createElement('canvas');
-//             canvas.width = img.width;
-//             canvas.height = img.height;
-//             var context = canvas.getContext('2d');
-//             context.drawImage(img, 0, 0);
+        img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            var context = canvas.getContext('2d');
+            context.drawImage(img, 0, 0);
 
-//             // Convert the image to a base64-encoded string
-//             var dataUrl = canvas.toDataURL('image/png');
+            // Convert the image to a base64-encoded string
+            var dataUrl = canvas.toDataURL('image/png');
 
-//             // Append the image to the SVG using 'xlink:href' (D3 v4 compatible)
-//             svg.append("image")
-//                 .attr("xlink:href", dataUrl)  // Use 'xlink:href' for D3 v4 compatibility
-//                 .attr("x", 0)  // Top-left corner
-//                 .attr("y", -45)  // Top-left corner
-//                 .attr("width", 230)  // Set width for the image
-//                 .attr("height", 230)  // Set height for the image
-//                 .attr("class", "toggle-image");  // Add a class to control visibility
-//         };
-//     }
+            // Append the image to the SVG using 'xlink:href' (D3 v4 compatible)
+            svg.append("image")
+                .attr("xlink:href", dataUrl)  // Use 'xlink:href' for D3 v4 compatibility
+                .attr("x", 0)  // Top-left corner
+                .attr("y", -45)  // Top-left corner
+                .attr("width", 230)  // Set width for the image
+                .attr("height", 230)  // Set height for the image
+                .attr("class", "toggle-image");  // Add a class to control visibility
+        };
+    }
 
     // If there is 5 circles ()
     if (Object.keys(Data).length === 5) {
@@ -3642,6 +3640,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
         Draw_a_GPCRome(Data.Circle_2, 1, dimensions)
         Draw_a_GPCRome(Data.Circle_3, 2, dimensions)
         Draw_a_GPCRome(Data.Circle_4, 3, dimensions)
+        Draw_a_GPCRome(Data.Circle_5, 4, dimensions)
     } else if (Object.keys(Data).length === 4) {
 
     }
@@ -3667,7 +3666,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                 let receptorFamilies = Object.keys(circleData[classKey]);
         
                 // Only add receptor families if there are more than one
-                if (receptorFamilies.length > 1) {
+                if (!["T2", "Classless"].some(f => CircleHeaders.includes(f))) {
                     CircleSubHeaders.push(...receptorFamilies);
                 }
             });
@@ -3680,20 +3679,41 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
 
         function createCircleArray(circleData, CircleHeaders, CircleSubHeaders) {
             let Circle_array = [];
+            let DataFill = {};
             const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
         
             // Loop through the main classes (CircleHeaders)
             for (const classKey of CircleHeaders) {
-                Circle_array.push(""); // Empty string before first class
-                Circle_array.push(classKey);
-                Circle_array.push(""); // Empty string after first class
+
+                if (classKey === "A" && level === 0) {
+                    Circle_array.push(""); // Empty string before first class
+                    Circle_array.push(classKey);
+                    Circle_array.push(""); // Empty string before first class
+                    Circle_array.push(""); // Empty string before first class
+                    // Circle_array.push(""); // Empty string before first class
+                } else if (classKey === "C" && level === 3) {
+                    Circle_array.push(""); // Empty string before first class
+                    Circle_array.push(classKey);
+                    // Circle_array.push(""); // Empty string before first class
+                } else {
+                    Circle_array.push(""); // Empty string before first class
+                    Circle_array.push(classKey);
+                    Circle_array.push(""); // Empty string after first class
+                }
+
                 FirstFamily = true;
         
                 // Sort receptor families naturally before iterating
                 let receptorFamilies = Object.keys(circleData[classKey]).sort(collator.compare);
 
-                // move "Class A orphans" to the end of   receptorFamilies  
-        
+                // Move "Class A orphans" to the end if it exists
+                const orphanIndex = receptorFamilies.indexOf("Class A orphans");
+
+                if (orphanIndex !== -1) {
+                    receptorFamilies.splice(orphanIndex, 1);         // remove it
+                    receptorFamilies.push("Class A orphans");        // add to end
+                }
+                        
                 // Loop through receptor families
                 for (const receptorFamily of receptorFamilies) {
                     if (CircleSubHeaders.includes(receptorFamily)) {
@@ -3709,25 +3729,32 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                     // Loop through receptors inside each receptor family
                     for (const receptor of Object.keys(circleData[classKey][receptorFamily])) {
                         Circle_array.push(receptor); // Push receptor directly
+                        const receptorObj = circleData[classKey][receptorFamily][receptor];
+                        DataFill[receptor] = receptorObj.Value1 || 0;
                     }
                 }
+                if (classKey == "T2") {
+                    Circle_array.push("")
+                }
             }
-        
-            return Circle_array;
+            // Circle_array.push("");
+            return { Circle_array, DataFill };
         }        
 
         let { CircleHeaders, CircleSubHeaders } = extractHeaders(Data);
-        let Circle_array = createCircleArray(Data, CircleHeaders, CircleSubHeaders);
-
-        function calculatePositionAndAngle(index, total, values, Header_list, Family_list, isSplit) {
+        let { Circle_array, DataFill } = createCircleArray(Data, CircleHeaders, CircleSubHeaders);
+        
+        function calculatePositionAndAngle(index, total, values, CircleHeaders, CircleSubHeaders, isSplit) {
             // Get the text value at the current index
             const text_value = values[index];
 
             // Check if the text value is in the Header_list
-            const isInHeaderList = Header_list.includes(text_value)  && text_value !== "Classless";
+            const isInHeaderList = CircleHeaders.includes(text_value)  && text_value !== "Classless";
+            const FirstHeader = CircleHeaders[0];
+            // console.log(FirstHeader)
 
             // Check if the text value is in the Family_list
-            const isInFamilyList = Family_list.includes(text_value);
+            const isInFamilyList = CircleSubHeaders.includes(text_value);
 
             // Offset the angle calculation by -90 degrees (or -π/2 radians) to start at 12 o'clock
             const angle = -((index / total) * 2 * Math.PI) + (Math.PI / 2);
@@ -3736,8 +3763,15 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
             const adjustedRadius = isSplit ? (GPCRome_radius - 8) : text_value === "Classless" ? (GPCRome_radius - 10) : (isInFamilyList ? (GPCRome_radius - 20) : (isInHeaderList ? (GPCRome_radius + 18) : (GPCRome_radius + label_offset)));
 
             // Position on the GPCRome's border with or without label offset
-            const x = width / 2 + Math.cos(angle) * adjustedRadius;
-            const y = height / 2 - Math.sin(angle) * adjustedRadius;
+            let x,y;
+
+            if (FirstHeader === text_value) {
+                x = width / 2 + 13
+                y = height / 2 - Math.sin(angle) * adjustedRadius;
+            } else {
+                x = width / 2 + Math.cos(angle) * adjustedRadius;
+                y = height / 2 - Math.sin(angle) * adjustedRadius;
+            }
 
             // If it's a header, set the rotation to 0, otherwise calculate the outward-facing rotation
             let rotation;
@@ -3760,10 +3794,99 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
             }
         }
 
-        function getInitialDisplayText(labelText) {
-            return GPCRome_formatTextWithHTML(labelText, CircleSubHeaders, level);
+        function GPCRome_formatTextWithHTML(text, Family_list) {
+            // Define a dictionary of HTML entity replacements
+            const htmlEntities = {
+                "&alpha;": "α",
+                "&beta;": "β",
+                "&gamma;": "γ",
+                "&delta;": "δ",
+                "&epsilon;": "ε",
+                "&zeta;": "ζ",
+                "&eta;": "η",
+                "&theta;": "θ",
+                "&iota;": "ι",
+                "&kappa;": "κ",
+                "&lambda;": "λ",
+                "&mu;": "μ",
+                "&nu;": "ν",
+                "&xi;": "ξ",
+                "&omicron;": "ο",
+                "&pi;": "π",
+                "&rho;": "ρ",
+                "&sigma;": "σ",
+                "&tau;": "τ",
+                "&upsilon;": "υ",
+                "&phi;": "φ",
+                "&chi;": "χ",
+                "&psi;": "ψ",
+                "&omega;": "ω",
+                "&ndash;": "-",  // En dash to hyphen
+                "&mdash;": "--", // Em dash to double hyphen
+                "&nbsp;": " ",   // Non-breaking space to regular space
+                "&lt;": "<",
+                "&gt;": ">",
+                "&amp;": "&",
+                "&quot;": '"',
+                "&apos;": "'"
+            };
+        
+            // Apply all the replacements step by step
+            let formattedText = text
+                .replace(/ receptors/g, '')
+                .replace(/ receptor/g, '')
+                .replace(/-adrenoceptor/g, '')
+                .replace(/ receptor-/g, '-')
+                .replace(/<sub>/g, '</tspan><tspan baseline-shift="-20%">')
+                .replace(/<\/sub>/g, '</tspan><tspan>')
+                .replace(/<i>/g, '</tspan><tspan font-style="italic">')
+                .replace(/<\/i>/g, '</tspan><tspan>')
+                .replace(/Long-wave-sensitive/g, 'LWS')
+                .replace(/Medium-wave-sensitive/g, 'MWS')
+                .replace(/Short-wave-sensitive/g, 'SWS')
+                .replace(/Olfactory/g, 'OLF')
+                .replace(/calcitonin-like receptor/g, 'CLR')
+                .replace(/5-Hydroxytryptamine/g, '5-HT');
+        
+            // Replace HTML entities
+            formattedText = formattedText.replace(/&[a-z]+;/g, match => htmlEntities[match] || match);
+        
+            // Capitalize the first letter only if it's not a Greek letter or special entity
+            function capitalizeFirstLetter(str) {
+                let match = str.match(/^[^a-zA-Z]*([a-zA-Z])/);
+                if (match) {
+                    let firstLetter = match[1];
+                    // Check if the first letter is in the list of replaced HTML entities
+                    if (!Object.values(htmlEntities).some(entity => entity.startsWith(firstLetter))) {
+                        let index = match.index + match[0].length - 1;
+                        return str.slice(0, index) + firstLetter.toUpperCase() + str.slice(index + 1);
+                    }
+                }
+                return str; // Return unchanged if it starts with a Greek letter
+            }
+        
+            // Apply capitalization only if needed
+            formattedText = capitalizeFirstLetter(formattedText);
+        
+            // Check if the text is in the Family_list for additional formatting
+            const isInFamilyList = Family_list.includes(text);
+        
+            // Apply additional formatting if the text is in the Family_list
+            if (isInFamilyList) {
+                formattedText = formattedText
+                    .replace(/( receptors|neuropeptide )/g, '') // Remove specific substrings
+                    .replace(/(-releasing)/g, '-rel.') // Abbreviate specific substrings
+                    .replace(/(-concentrating)/g, '-conc.') // Abbreviate specific substrings
+                    .replace(/( and )/g, ' & ') // Replace "and" with "&"
+                    .replace(/(GPR18, GPR55 & GPR119)/g, 'GPR18, 55 & 119') // Special case formatting
+                    .replace(/(Class C Orphans)/g, 'Orphans') // Replace "Class C Orphans"
+                    .split("</tspan>")[0] // Keep only part before the first closing tspan tag
+                    .split(" (")[0]; // Keep only the part before the first " (" parenthesis
+            }
+        
+            return formattedText;
         }
-
+    
        // Bind data and append text elements for the specific GPCRome
        svg.selectAll(`.GPCRome-text-${level}`)
            .data(Circle_array)
@@ -3791,7 +3914,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
            })
            .attr("text-anchor", (d, i) => {
                // Center the text for headers, and handle normal text alignment for others
-               if (CircleHeaders.includes(d) && d !== "Classless" && d !== "A cont.") {
+               if (CircleHeaders.includes(d) && d !== "Classless") {
                    return "middle";  // Horizontally center the headers
                }
                const angle = (i / Circle_array.length) * 360 - 90;
@@ -3800,8 +3923,8 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
            .attr("dominant-baseline", "middle")
            .attr("dy", (d) => CircleHeaders.includes(d) ? "0.1em" : "0.05em")  // Adjust 'dy' as needed
            .attr("transform", (d, i) => {
-               const pos = calculatePositionAndAngle(i, Circle_array.length, Circle_array, CircleHeaders, CircleSubHeaders, false);
-
+               let pos = calculatePositionAndAngle(i, Circle_array.length, Circle_array, CircleHeaders, CircleSubHeaders, false);
+            
                // Calculate the angle and determine the text's side (right or left)
                const angle = (i / Circle_array.length) * 360 - 90;
 
@@ -3814,19 +3937,17 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                    // For non-headers, flip the text on the left-hand side by 180 degrees
                    rotation = angle >= -90 && angle < 90 ? 0 : 180;
                }
-
                // Apply the rotation and positioning
                return `rotate(${pos.rotation + rotation}, ${pos.x}, ${pos.y})`;
            })
            .html(d => {
                const labelText = getLabelText(d);
-               return getInitialDisplayText(labelText);
+               return GPCRome_formatTextWithHTML(labelText,CircleSubHeaders);
            })
            .style("font-size", d => CircleHeaders.includes(d) ? FontsizeClass : FontsizeGlobal)
            .style("font-family", FontStyle)
            .style("font-weight", d => CircleHeaders.includes(d) || CircleSubHeaders.includes(d) ? "950" : "normal")
            .style("fill", d => CircleHeaders.includes(d) ? "Black" : "black")
-
 
         // After drawing all the elements, adjust the y-position for all family labels
         // Adjust the y-position for all family labels based on the midpoint between current and previous positions
@@ -3936,168 +4057,112 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                           }
 
                       } else {
-                          // If the formatted text is shorter than 10 characters, handle it normally
+                        // If the formatted text is shorter than 10 characters, handle it normally
+                        
+                        // Get the current and previous positions without splitting (isSplit = false)
+                        if (Circle_array[index - 1] === '') { 
+                            const currentPos = calculatePositionAndAngle(index, totalItems, Circle_array, CircleHeaders, CircleSubHeaders, false);
+                            const prevPos = calculatePositionAndAngle(index - 1, totalItems, Circle_array, CircleHeaders, CircleSubHeaders, false);
 
-                          // Get the current and previous positions without splitting (isSplit = false)
-                          const currentPos = calculatePositionAndAngle(index, totalItems, Circle_array, CircleHeaders, CircleSubHeaders, false);
-                          const prevPos = calculatePositionAndAngle(index - 1, totalItems, Circle_array, CircleHeaders, CircleSubHeaders, false);
+                            const midX = (currentPos.x + prevPos.x) / 2;
+                            const midY = (currentPos.y + prevPos.y) / 2;
+                            const midRotation = (currentPos.rotation + prevPos.rotation) / 2;
 
-                          const midX = (currentPos.x + prevPos.x) / 2;
-                          const midY = (currentPos.y + prevPos.y) / 2;
-                          const midRotation = (currentPos.rotation + prevPos.rotation) / 2;
-
-                          // Append the formatted text in the middle position
-                          svg.append("text")
-                              .attr("x", midX)
-                              .attr("y", midY)
-                              .attr("dominant-baseline", "middle")
-                              .attr("text-anchor", (angle >= -90 && angle < 90) ? "start" : "end")
-                              .attr("transform", `rotate(${midRotation + additionalRotation}, ${midX}, ${midY})`)
-                              .attr("class", "GPCRome-family-label")
-                              .text(formatText(formattedText))
-                              // .style("font-weight", "bold")
-                              .style("font-family", FontStyle)
-                              .style("font-size",family_fontsize);
+                            // Append the formatted text in the middle position
+                            svg.append("text")
+                                .attr("x", midX)
+                                .attr("y", midY)
+                                .attr("dominant-baseline", "middle")
+                                .attr("text-anchor", (angle >= -90 && angle < 90) ? "start" : "end")
+                                .attr("transform", `rotate(${midRotation + additionalRotation}, ${midX}, ${midY})`)
+                                .attr("class", "GPCRome-family-label")
+                                .text(formattedText)
+                                // .style("font-weight", "bold")
+                                .style("font-family", FontStyle)
+                                .style("font-size",family_fontsize);
+                        } else {
+                            const currentPos = calculatePositionAndAngle(index, totalItems, Circle_array, CircleHeaders, CircleSubHeaders, true);
+                            svg.append("text")
+                                .attr("x", currentPos.x)
+                                .attr("y", currentPos.y)
+                                .attr("text-anchor", (angle >= -90 && angle < 90) ? "start" : "end")
+                                .attr("dominant-baseline", "middle")
+                                .attr("transform", `rotate(${currentPos.rotation + additionalRotation}, ${currentPos.x}, ${currentPos.y})`)
+                                .attr("class", "GPCRome-family-label")
+                                .text(formattedText)
+                                // .style("font-weight", "bold")
+                                .style("font-family", FontStyle)
+                                .style("font-size",family_fontsize);
+                        }
                       }
                 }
             });
+        
+        // ################
+        // ### Coloring ###
+        // ################
+        // Define color scale for continuous data
+        let colorScale;
 
-            // Function to process the formattedText
-            function formatText(text) {
-                if (text.includes("Odorant")) {
-                    // Split the text by the word "Odorant" and trim any leading/trailing spaces
-                    let result = text.split("Odorant").pop().trim();
+        if (GPCRome_styling.ColorSetup === 'One') {
+        // White to Max (One color)
+        colorScale = d3v4.scaleLinear()
+            .domain([GPCRome_styling.GPCRomeMin, GPCRome_styling.GPCRomeMax])  // Only two points in the domain
+            .range(['#FFFFFF', GPCRome_styling.colorEnd]);  // White to Max color
 
-                    // Capitalize the first letter and ensure the rest is lowercase
-                    return result.charAt(0).toUpperCase() + result.slice(1).toLowerCase();
+        } else if (GPCRome_styling.ColorSetup === 'Two') {
+        // Min to Max (Two colors)
+        colorScale = d3v4.scaleLinear()
+            .domain([GPCRome_styling.GPCRomeMin, GPCRome_styling.GPCRomeMax])  // Min to Max in the domain
+            .range([GPCRome_styling.colorStart, GPCRome_styling.colorEnd]);  // Min to Max color in range
+
+        } else if (GPCRome_styling.ColorSetup === 'Three') {
+        // Min to White to Max (Three colors)
+        colorScale = d3v4.scaleLinear()
+            .domain([GPCRome_styling.GPCRomeMin, GPCRome_styling.GPCRomeAvg, GPCRome_styling.GPCRomeMax])  // Min, Avg, Max in the domain
+            .range([GPCRome_styling.colorStart, '#FFFFFF', GPCRome_styling.colorEnd]);  // Min to White to Max in range
+}
+
+        // Add large hollow pie chart for the entire level
+        const arcGenerator = d3v4.arc()
+            .innerRadius(GPCRome_radius - 7)  // Adjust to control the hollow center size
+            .outerRadius(GPCRome_radius)  // Adjust to control the thickness of the pie
+            // .padAngle(level === 4 ? 0.3 : 0); // Apply padding only if level is 4
+
+        const pieGenerator = d3v4.pie()
+            .sort(null)
+            .value(1)  // Create equal slices for each value
+            .startAngle(-Math.PI / Circle_array.length)  // Offset to move the slices left by half their size
+            .endAngle(2 * Math.PI - Math.PI / Circle_array.length);  // Correct end angle for full circle
+
+        const pieData = pieGenerator(Circle_array);
+
+        svg.selectAll(`.large-hollow-pie-${level}`)
+            .data(pieData)
+            .enter()
+            .append("path")
+            .attr("class", `large-hollow-pie-${level}`)
+            .attr("d", arcGenerator)
+            .attr("transform", `translate(${width / 2}, ${height / 2})`)
+            .style("fill", (d) => {
+                const value = DataFill[d.data];
+                // Use color scale for continuous data
+                const numericValue = parseFloat(value);
+
+                if (numericValue === 0) {
+                    return "white";  // Return "white" if the value is 0
                 }
-                return text;  // Return the text unchanged if it doesn't contain "Odorant"
-            }
-//         // Define color scale for continuous data
-//         let colorScale;
 
-//         if (GPCRomes_styling.data_color_complexity === 'One') {
-//         // White to Max (One color)
-//         colorScale = d3v4.scaleLinear()
-//             .domain([GPCRomes_styling.minValue, GPCRomes_styling.maxValue])  // Only two points in the domain
-//             .range(['#FFFFFF', GPCRomes_styling.colorEnd]);  // White to Max color
-
-//         } else if (GPCRomes_styling.data_color_complexity === 'Two') {
-//         // Min to Max (Two colors)
-//         colorScale = d3v4.scaleLinear()
-//             .domain([GPCRomes_styling.minValue, GPCRomes_styling.maxValue])  // Min to Max in the domain
-//             .range([GPCRomes_styling.colorStart, GPCRomes_styling.colorEnd]);  // Min to Max color in range
-
-//         } else if (GPCRomes_styling.data_color_complexity === 'Three') {
-//         // Min to White to Max (Three colors)
-//         colorScale = d3v4.scaleLinear()
-//             .domain([GPCRomes_styling.minValue, GPCRomes_styling.avg_value, GPCRomes_styling.maxValue])  // Min, Avg, Max in the domain
-//             .range([GPCRomes_styling.colorStart, '#FFFFFF', GPCRomes_styling.colorEnd]);  // Min to White to Max in range
-// }
-
-//         // Add large hollow pie chart for the entire level
-//         const arcGenerator = d3v4.arc()
-//             .innerRadius(GPCRome_radius - 7)  // Adjust to control the hollow center size
-//             .outerRadius(GPCRome_radius)  // Adjust to control the thickness of the pie
-//             // .padAngle(level === 4 ? 0.3 : 0); // Apply padding only if level is 4
-
-//         const pieGenerator = d3v4.pie()
-//             .sort(null)
-//             .value(1)  // Create equal slices for each value
-//             .startAngle(-Math.PI / values.length)  // Offset to move the slices left by half their size
-//             .endAngle(2 * Math.PI - Math.PI / values.length);  // Correct end angle for full circle
-
-//         const pieData = pieGenerator(values);
-
-//         svg.selectAll(`.large-hollow-pie-${level}`)
-//             .data(pieData)
-//             .enter()
-//             .append("path")
-//             .attr("class", `large-hollow-pie-${level}`)
-//             .attr("d", arcGenerator)
-//             .attr("transform", `translate(${width / 2}, ${height / 2})`)
-//             .style("fill", (d) => {
-//                 const value = fill_data[d.data]?.Value1;
-//                 if (datatype === "Continuous") {
-//                     // Use color scale for continuous data
-//                     const numericValue = parseFloat(value);
-
-//                     if (numericValue === 0) {
-//                         return "white";  // Return "white" if the value is 0
-//                     }
-
-//                     return !isNaN(numericValue) ? colorScale(numericValue) : "none";
-//                 } else if (datatype === "Discrete") {
-//                     // Handle discrete data or default case
-//                     let discrete_color_min;
-//                     let discrete_color_max;
-//                     if (GPCRomes_styling.data_color_complexity === 'One') {
-//                         discrete_color_min = '#FFFFFF';
-//                         discrete_color_max = GPCRomes_styling.colorEnd;
-//                     } else {
-//                         discrete_color_min = GPCRomes_styling.colorStart;
-//                         discrete_color_max = GPCRomes_styling.colorEnd;
-//                     }
-//                     if (value === "Yes") return discrete_color_max;
-//                     if (value === "No") return discrete_color_min;
-//                     return "none";  // Make the slice invisible if the value is ""
-//                 // Expand this section for handling specific coverage pages with colors
-//                 } else if (datatype === "Structure") {
-//                     // Handle discrete data or default case
-//                     if (value === "Active") return "green";
-//                     if (value === "Inactive") return "red";
-//                     if (value === "Both") return "blue";
-//                     if (value === "empty") return "white";
-//                     return "none";  // Make the slice invisible if the value is ""
-//                 } else if (datatype === "Arrestin") {
-//                     // Handle discrete data or default case
-//                     if (value === "ARRB1") return "orange";
-//                     if (value === "ARRB2") return "purple";
-//                     if (value === "ARRC") return "aquamarine";
-//                     if (value === "ARRS") return "cornflowerblue";
-//                     if (value === "empty") return "white";
-//                     return "none";  // Make the slice invisible if the value is ""
-//                 } else if (datatype === "NRDD") {
-//                     // Handle discrete data or default case
-//                     if (value === 1) return "#F5BCBF";
-//                     if (value === 2) return "#F17270";
-//                     if (value === 3) return "#DD2628";
-//                     if (value === 4) return "#2C87C8";
-//                     if (value === 5) return "#D3D3D3";
-//                     if (value === 6) return "#A3D9C8";
-//                     if (value === 7) return "White";
-//                     return "none";  // Make the slice invisible if the value is ""
-//                 } else if (datatype === "Druggome") {
-//                     // Handle discrete data or default case
-//                     if (value === 1) return "#F5BCBF";
-//                     if (value === 2) return "#F17270";
-//                     if (value === 3) return "#DD2628";
-//                     if (value === 4) return "#2C87C8";
-//                     if (value === 5) return "#D3D3D3";
-//                     if (value === 6) return "#A3D9C8";
-//                     return "none";  // Make the slice invisible if the value is ""
-//                 } else if (datatype === 'Indication'){
-//                   // Use color scale for continuous data
-//                   const numericValue = parseFloat(value);
-
-//                   if (numericValue === 0) {
-//                       return "white";  // Return "white" if the value is 0
-//                   }
-
-//                   return !isNaN(numericValue) ? colorScale(numericValue) : "none";
-//                 }
-//             })
-//             .style("stroke", (d) => {
-//                 const value = fill_data[d.data]?.Value1;
-//                 if (value === "Yes" || value === "No" || !isNaN(value)) return "black";
-//                 if (value === "Active" || value === "Inactive" || value === "Both" || value === "empty") return "black";
-//                 if (value === "ARRB1" || value === "ARRB2" || value === "ARRC" || value === "ARRS" || value === "empty") return "black";
-//                 return "none";  // Remove the stroke if the value is ""
-//             })
-//             .style("stroke-width", (d) => {
-//                 const value = fill_data[d.data]?.Value1;
-//                 return value === "" ? 0 : 0.5;  // Set stroke-width to 0 if the value is an empty string
-//             });
+                return !isNaN(numericValue) ? colorScale(numericValue) : "none";
+            })
+            .style("stroke", (d) => {
+                const value = DataFill[d.data];
+                return value != null ? "black" : "none";
+            })
+            .style("stroke-width", (d) => {
+                const value = DataFill[d.data];
+                return value === "" ? 0.5 : 0.5;  // Set stroke-width to 0 if the value is an empty string
+            });
     }
     // Add padding and scale
     const padding = 10;  // Adjust padding value as needed (50px for this example)
