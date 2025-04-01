@@ -3850,24 +3850,32 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
         
             // Replace HTML entities
             formattedText = formattedText.replace(/&[a-z]+;/g, match => htmlEntities[match] || match);
-        
-            // Capitalize the first letter only if it's not a Greek letter or special entity
+
+            // Capitalize the first letter only if it's not a Greek letter, special entity, or already has uppercase letters
             function capitalizeFirstLetter(str) {
+                // If there's any uppercase letter, skip capitalization
+                if (/[A-Z]/.test(str)) return str;
+
+                // If the string contains any known HTML entity, skip capitalization
+                for (let key in htmlEntities) {
+                    if (str.includes(htmlEntities[key])) return str;
+                }
+
+                // Match the first actual letter (skip non-letters at the beginning)
                 let match = str.match(/^[^a-zA-Z]*([a-zA-Z])/);
                 if (match) {
                     let firstLetter = match[1];
-                    // Check if the first letter is in the list of replaced HTML entities
-                    if (!Object.values(htmlEntities).some(entity => entity.startsWith(firstLetter))) {
-                        let index = match.index + match[0].length - 1;
-                        return str.slice(0, index) + firstLetter.toUpperCase() + str.slice(index + 1);
-                    }
+                    let index = match.index + match[0].length - 1;
+                    console.log(str);
+                    return str.slice(0, index) + firstLetter.toUpperCase() + str.slice(index + 1);
                 }
-                return str; // Return unchanged if it starts with a Greek letter
+
+                return str;
             }
-        
+                    
             // Apply capitalization only if needed
             formattedText = capitalizeFirstLetter(formattedText);
-        
+            
             // Check if the text is in the Family_list for additional formatting
             const isInFamilyList = Family_list.includes(text);
         
