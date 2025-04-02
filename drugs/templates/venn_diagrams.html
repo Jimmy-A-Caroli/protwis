@@ -92,14 +92,14 @@
             <tr>
               {% if layout == "drugs" %}
               <th colspan="8" style="text-align:center">
-                Compounds
+                Agents/drugs
                 <span class="glyphicon glyphicon-info-sign"
                       data-html="true"
                       data-toggle="popover"
                       data-trigger="hover"
                       data-placement="right"
-                      data-content="The three ATC columns is only shown if Phase IV is included in the data."
-                      style="font-size: 12px; margin-left: 8px;">
+                      data-content="The three ATC columns are shown if relevant data is available."
+                      style="font-size: 14px; margin-left: 8px;">
                 </span>
               </th>
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Targets</th>
@@ -107,14 +107,14 @@
               {% else %}
               <th colspan="5" style="text-align:center;">Targets</th>
               <th colspan="8" style="text-align:center">
-                Compounds
+                Agents/drugs
                 <span class="glyphicon glyphicon-info-sign"
                       data-html="true"
                       data-toggle="popover"
                       data-trigger="hover"
                       data-placement="right"
-                      data-content="The three ATC columns is only shown if Phase IV is included in the data."
-                      style="font-size: 12px; margin-left: 8px;">
+                      data-content="The three ATC columns are shown if relevant data is available."
+                      style="font-size: 14px; margin-left: 8px;">
                 </span>
               </th>
               <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
@@ -128,8 +128,32 @@
               <th style="text-align: center;min-width: 130px;width: 130px;max-width: 130px;">Indication area<br>(ATC)</th>
               <th style="text-align: center;">Indication<br>(ATC)</th>
               <th style="text-align: center;">Indication code<br>(ATC)</th>
-              <th style="text-align: center;">In<br>trial</th>
-              <th style="text-align: center;">Approved</th>
+              <th style="text-align: center;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span>In<br>trial</span>
+                  <span class="glyphicon glyphicon-info-sign"
+                    data-html="true"
+                    data-toggle="popover"
+                    data-trigger="hover"
+                    data-placement="right"
+                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is likely being repurposed."
+                    style="font-size: 14px;">
+                  </span>
+                </div>
+              </th>
+              <th style="text-align: center;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span>Approved</span>
+                  <span class="glyphicon glyphicon-info-sign"
+                    data-html="true"
+                    data-toggle="popover"
+                    data-trigger="hover"
+                    data-placement="right"
+                    data-content="A drug is approved if authorized by a major regulatory agency (e.g., FDA, EMA, PMDA)."
+                    style="font-size: 14px;">
+                  </span>
+                </div>
+              </th>
               <th style="text-align: center;border-left: 1px solid #cccccc;">Gene</th>
               <th style="text-align: center; min-width: 90px;width: 90px;max-width: 90px;">Protein</th>
               <th style="text-align: center;">Receptor<br>family</th>
@@ -234,8 +258,10 @@
   $(document).ready(function(){
     paper.install(window);
     $('[data-toggle="popover"]').popover({
-        container: 'body', // Ensures popover is outside of DataTable structure
-        html: true
+      trigger: 'hover',
+      html: true,
+      container: 'body',
+      delay: { show: 100, hide: 300 } // Makes it less twitchy
     });
   });
 </script>
