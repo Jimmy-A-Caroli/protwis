@@ -546,7 +546,7 @@
                         </tr>
                     </table>
 					<!-- Clinical Trials Section -->
-					<h3>Clinical Trials</h3>
+					<h3>Distribution across phases (no. indications)</h3>
 					<div class="clinical-trials">
 						<div class="trial-stages">
 							<div class="stage">
@@ -562,12 +562,8 @@
 								<span class="badge badge-iii">{{ Phase_III_trials }}</span>
 							</div>
 							<div class="stage">
-								<span>Approved</span>
-								{% if Approved == 'Yes' %}
-									<span class="badge badge-approved">Yes</span>
-								{% else %}
-									<span class="badge badge-notyet">No</span>
-								{% endif %}
+								<span>Phase IV</span>
+								<span class="badge badge-approved">{{ Phase_IV_trials }}</span>
 							</div>
 						</div>
 					</div>
@@ -640,13 +636,13 @@
 						<thead>
 							<!-- Dummy Header Row for Complex Header Fix -->
 							<tr>
-								<td colspan="11" style="text-align: center" data-dt-order="disable"></td>
+								<td colspan="10" style="text-align: center" data-dt-order="disable"></td>
 							</tr>
 							<!-- Super Header Row -->
 							<tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
 								<th colspan="5" style="text-align:center">Target</th>
-								<th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Disease</th>
-								<th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th>
+								<th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Disease</th>
+								<!-- <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th> -->
 							</tr>
 							<!-- Header Row -->
 							<tr>
@@ -655,12 +651,11 @@
 								<th style="text-align: center;">Receptor family</th>
 								<th style="text-align: center;">Ligand type</th>
 								<th style="text-align: center;">Class</th>
-								<th style="text-align: center;border-left: 1px solid #cccccc">Indication name</th>
+								<th style="text-align: center;border-left: 1px solid #cccccc">Name</th>
+								<th style="text-align: center;">Phase</th>
 								<th style="text-align: center;">ICD11</th>
 								<th style="text-align: center;">ATC</th>
 								<th style="text-align: center;">Association score</th>
-								<th style="text-align: center;border-left: 1px solid #cccccc;">Phase</th>
-								<th style="text-align: center;">Approved</th>
 							</tr>
 							<!-- Filter Row for header -->
 							<tr>
@@ -673,7 +668,6 @@
 								<td style="text-align: center;" data-dt-order="disable"></td>
 								<td style="text-align: center;" data-dt-order="disable"></td>
 								<td style="text-align: center;" data-dt-order="disable"></td>
-								<td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
 								<td style="text-align: center;" data-dt-order="disable"></td>
 							</tr>
 						</thead>
@@ -923,7 +917,7 @@
 		var pageSpecificDefs = [];
 
 		pageSpecificDefs = [
-			{ targets: [5, 9], className: 'border-left' }
+			{ targets: [5], className: 'border-left' }
 		];
 
 		// digit fixed value
@@ -934,7 +928,7 @@
 
 		// Define columns
 		var columns = [
-			{data: "Gene name", name: "Gene name",width: "5%", render: function (data, type, row, meta) {
+			{data: "Gene name", name: "Gene name",width: "6%", render: function (data, type, row, meta) {
 				if (type === 'display') {
 					const originalData = data; // Raw data
 					const transformedData = data.replace('_human', '').toUpperCase(); // Transformed display value
@@ -946,11 +940,11 @@
 				}
 				return data; // Raw data for sorting
 			}},
-			{data: "Protein name", name: "Protein name", width: "7%"},
-			{data: "Receptor family", name: "Receptor family", width: "9%"},
-			{data: "Ligand type", name: "Ligand type", width: "8%"},
-			{data: "Class", name: "Class", width: "7%", render: function (data) { return data.split(' (')[0]; }},
-			{data: "Indication name", name: "Indication",width: "15%",render: function (data, type, row, meta) {
+			{data: "Protein name", name: "Protein name", width: "8%"},
+			{data: "Receptor family", name: "Receptor family", width: "10%"},
+			{data: "Ligand type", name: "Ligand type", width: "9%"},
+			{data: "Class", name: "Class", width: "6%", render: function (data) { return data.replace(/^Class\s*/, "").split(' (')[0]; }},
+			{data: "Indication name", name: "Indication",width: "25%",render: function (data, type, row, meta) {
 				if (type === 'display') {
 					if (row && row.ICD11) {
 						const transformedData = data || 'Unknown'; // Fallback if Indication name is missing
@@ -965,11 +959,10 @@
 				}
 				return data; // Use raw data for sorting
 			}},
+			{data: "Highest_phase", name: "Highest phase", width: "5%"},
 			{data: "ICD11", name: "ICD11", width: "7%"},
 			{data: 'ATC', name: "ATC", width: "7%"},
-			{data: 'Association score', name: "Association score", width: "10%", render: function (data) {return data === "" || data === null ? data : parseFloat(data).toFixed(digit_fixed);}},
-			{data: "Highest_phase", name: "Highest phase", width: "3%"},
-			{data: "Approved", name: "Approved", width: "8%"}
+			{data: 'Association score', name: "Association score", width: "10%", render: function (data) {return data === "" || data === null ? data : parseFloat(data).toFixed(digit_fixed);}}
 		];
 
 		// Initialize the DataTable
@@ -1086,9 +1079,9 @@
 
 		// Create and apply the filters
 		var column_filters = [];
-		column_filters = column_filters.concat(CreateColumnFilters(table, 0, 8, "Multi-select-exact"));
-		 column_filters = column_filters.concat(CreateColumnFilters(table, 8, 2, "Range-float-vertical"));
-		 column_filters = column_filters.concat(CreateColumnFilters(table, 10, 1, "Multi-select-exact"));
+		column_filters = column_filters.concat(CreateColumnFilters(table, 0, 6, "Multi-select-exact"));
+		 column_filters = column_filters.concat(CreateColumnFilters(table, 6, 1, "Range-float-vertical"));
+		 column_filters = column_filters.concat(CreateColumnFilters(table, 7, 3, "Multi-select-exact"));
 
 		createDropdownFilters(table, column_filters);
 
@@ -1197,14 +1190,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
     $(document).ready(function () {
-		// $('#agent_drug_tab').click();
-        // Check if the navigation came from the Drug page
-        if (localStorage.getItem('fromDrugPage') === 'true') {
-            // Simulate a click on the "Agent/Drug" tab
-            $('#agent_drug_tab').click();
-
-            // Clear the flag after use
-            localStorage.removeItem('fromDrugPage');
+		const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab === 'agent_drug') {
+            // Trigger a click event on the Agent/drug tab
+            document.getElementById('agent_drug_tab').click();
         }
     });
 </script>

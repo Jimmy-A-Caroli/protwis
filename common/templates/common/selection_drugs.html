@@ -794,7 +794,7 @@
                 // Set a flag in localStorage to indicate the navigation is from the drug page
                 localStorage.setItem('fromDrugPage', 'true');
 
-                var url = '/ligand/' + selectedID + '/info'; // Construct the URL
+                var url = '/ligand/' + selectedID + '/info?tab=agent_drug'; // Construct the URL
                 if (action === 'newTab') {
                     window.open(url, '_blank'); // Open the URL in a new tab
                 } else if (action === 'navigate') {
