@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
 
 <!-- Custom CSS to adjust Select2 dropdown height -->
 <style>
@@ -187,6 +188,7 @@
         width: 100%;
         text-align: center;
     }
+
 </style>
 {% endblock %}
 {% block content %}
@@ -684,12 +686,18 @@
 {% endblock %}
 {% block addon_js %}
 <!-- Make sure the Select2 JS file is included -->
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
 <script src="{% static 'home/js/sankey.js' %}"></script>
 <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
+<script src="{% static 'home/js/compoundPreviewTooltip.js' %}">
+
+<script type="text/javascript">
+    window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+</script>
 
 <script type="text/javascript">
     var page = '{{ page }}';
@@ -1063,13 +1071,28 @@
                     if (type === 'display') {
                         // Ensure row.Variable exists
                         if (row && row.LigandID) {
-                            data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                            // console.log("Row in render:", row);
+                            const smilesVal = row.smiles_for_image || "";
+                            const picVal    = row.picture || "Not_available";
+                            const ligID     = row.LigandID;
+                            // Wrap the text in <a class="struct" ...>
+                            return `
+                                <a class="struct"
+                                    href="/ligand/${ligID}/info"
+                                    target="_blank"
+                                    data-smiles="${smilesVal}"
+                                    rel="${picVal}"
+                                >
+                                ${data}
+                                </a>
+                            `;
                         } else {
-                            data = data || ''; // Fallback to plain text if Variable is missing
+                            return data || '';
                         }
                     }
-                    return data; // Ensure raw data is returned for filtering
-                }},
+                    return data; 
+                }
+            },
                     {data: "Modality", name: "Type",width: "7%"}, 
                     {data: "Mode of action", name: "Modality",width: "10%"},
                     {data: "Indication name", name: "Indication",render: function (data, type, row, meta) {
@@ -1093,6 +1116,7 @@
                     {data: "Highest_phase", name: "Highest",width: "5%"},
                     {data: "Approved", name: "Approved",width: "8%"}
                 ];
+
             } else if (type === 'Targets for Indications') {
                 columns = [
                     {data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
@@ -1146,17 +1170,23 @@
                 ];
             } else if (type === 'Agents/Drugs') {
                 columns = [
-                    {data: "Drug name", name: "Drug name",width: "10%", render: function (data, type, row, meta) {
-                    if (type === 'display') {
-                        // Ensure row.Variable exists
+                {
+                    data: "Drug name",
+                    name: "Drug name",
+                    width: "10%",
+                    render: function(data, type, row, meta) {
+                      if (type === 'display') {
                         if (row && row.LigandID) {
-                            data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                          const smilesVal = row.smiles_for_image || "";
+                          const picVal = row.picture || "Not_available";
+                          return '<a class="struct" href="/ligand/' + row.LigandID + '/info" target="_blank" data-smiles="' + smilesVal + '" rel="' + picVal + '">' + data + '</a>';
                         } else {
-                            data = data || ''; // Fallback to plain text if Variable is missing
+                          return data || ''; // Fallback to plain text if missing
                         }
+                      }
+                      return data; // For non-display types, just return the data
                     }
-                    return data; // Ensure raw data is returned for filtering
-                }},
+                  },
                     {data: "Highest_phase", name: "Max",width: "6%"},
                     {data: "Approved", name: "Approved",width: "9%"},
                     {data: "Molecule_type", name: "Type",width: "7%"},
@@ -1190,6 +1220,9 @@
                 if (searchedText) {
                     $('.search-info').html(searchedText); // Update the placeholder dynamically
                 }
+                if (page === "Targets" || page === "Indications") {
+                    compoundPreview("a.struct");
+                }
             } else {
                 var table = $(tableId).DataTable({
                     dom: "<'row'<'col-sm-1 dt-btn'B><'col-sm-3'f><'col-sm-7 text-end search-info'>>" +  // Buttons and search bar in the same row
@@ -1213,6 +1246,9 @@
                         // Add the searchedText dynamically after initialization
                         if (searchedText) {
                             $('.search-info').html(searchedText);
+                        }
+                        if (page === "Targets" || page === "Indications") {
+                            compoundPreview("a.struct");
                         }
                     }
                 });
@@ -1322,4 +1358,5 @@
     }
 }
 </script>
+
 {% endblock %}

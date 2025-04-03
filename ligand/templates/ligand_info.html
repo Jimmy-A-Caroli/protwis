@@ -14,6 +14,12 @@
 <link rel="stylesheet" href="{% static 'home/css/bootstrap2-toggle.min.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
 <style type="text/css">
+
+	.name:hover {
+		overflow: visible;
+		white-space: normal;
+	}
+
 	.select2-result-label {
 		font-size: x-small;
 		font-size: 10px;
@@ -291,11 +297,13 @@
         <li class="nav-item active">
             <a class="nav-link active" data-toggle="tab" href="#bioactivity" id="bioactivity_tab">Bioactivity</a>
         </li>
+		{% comment %}
 		{% if ligand.labels.endogenous == 'Endogenous' %}
 			<li class="nav-item">
 				<a class="nav-link" data-toggle="tab" href="#endogenous" id="endogenous_tab">Endogenous</a>
 			</li>
 		{% endif %}
+		{% endcomment %}
     </ul>
     <br/>
     <br/>
@@ -675,6 +683,7 @@
 				</div>
             {% endif %}
         </div>
+		{% comment %}
 		{% if ligand.labels.endogenous == 'Endogenous' %}
 			<!-- Endogenous -->
 			<div class="tab-pane container" id="endogenous">
@@ -685,6 +694,7 @@
 				{% endif %}
 			</div>
 		{% endif %}
+		{% endcomment %}
     </div>
     <br>
 </div>
