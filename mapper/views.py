@@ -440,7 +440,19 @@ class DataMapperHome(TemplateView):
                 Q(family_id__slug__startswith='008')
             )
 
+             # Extract the familes
             families = ProteinFamily.objects.all()
+
+            # Extract the entry names first
+            entry_names = all_proteins.values_list('entry_name', flat=True)
+
+            # Then get the relevant name mappings using those entry_names
+            proteins = Protein.objects.filter(entry_name__in=entry_names).values(
+                'entry_name', 'name'
+            ).order_by('entry_name')
+
+            # Build the conversion dict
+            names_conversion_dict = {item['entry_name']: item['name'] for item in proteins}
 
         elif type == "Odorant":
             all_proteins = Protein.objects.filter(
@@ -451,31 +463,56 @@ class DataMapperHome(TemplateView):
             )
 
             families = ProteinFamily.objects.filter(slug__startswith='007')
+            names_conversion_dict = {item['entry_name']: item['name'] for item in all_proteins}
 
         else:
             raise ValueError(f"Unsupported data structure type: {type}")
         
+        
         def build_family_tree(families):
             datatree = {}
-            conversion = {}
 
             for item in families:
                 slug_parts = item.slug.split('_')
-                conversion[item.slug] = item.name
                 current_level = datatree
 
                 for i, part in enumerate(slug_parts):
                     full_slug = '_'.join(slug_parts[:i + 1])
+                    name = item.name if full_slug == item.slug else None
 
                     if i == len(slug_parts) - 1:
                         if len(slug_parts) == 4:
-                            current_level.setdefault(full_slug, []).append(item.name)
+                            # Instead of list, make receptor a key with metadata
+                            current_level.setdefault(name, {})[item.name] = {"Data": 0}
                         else:
-                            current_level.setdefault(full_slug, {})
+                            current_level.setdefault(name, {})
                     else:
-                        current_level = current_level.setdefault(full_slug, {})
+                        if name:
+                            current_level = current_level.setdefault(name, {})
+                        else:
+                            current_level = current_level.setdefault(full_slug, {})  # Temp key
 
-            return datatree, conversion
+            def convert_keys(tree):
+                new_tree = {}
+                for key, value in tree.items():
+                    new_key = key
+                    if isinstance(value, dict):
+                        new_tree[new_key] = convert_keys(value)
+                    else:
+                        new_tree[new_key] = value
+                return new_tree
+
+            return convert_keys(datatree)
+
+        
+        # Build family tree
+        datatree = build_family_tree(families)
+
+        # Final result
+        return {
+            "Data": datatree,
+            "conversion_dict": names_conversion_dict
+        }
 
 
     @staticmethod
@@ -1400,3 +1437,18 @@ class plotrender(TemplateView):
             # Handle the case when Plot_evaluation_json is None
             # This could happen if the form was submitted without the JSON data
             return HttpResponse("Missing sample data")
+
+
+class GPCRomeRender(TemplateView):
+    template_name = 'mapper/GPCRomeRender.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Call your data generator
+        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+
+        # Add it to context
+        context["gpcr_tree"] = gpcr_data["Data"]
+        context["gpcr_conversion"] = gpcr_data["conversion_dict"]
+        
+        return context  # ✅ Don't forget to return the context!
