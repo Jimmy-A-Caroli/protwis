@@ -517,7 +517,7 @@ $(document).ready(function () {
 
     function getToggleButtons() {
         const toggleCompoundsButton = {
-            text: '<span class="dt-button-check"></span> Toggle Compounds',
+            text: '<span class="dt-button-check"></span> Toggle Agents/drugs',
             className: 'dt-button-active', // Mark as active initially
             action: function (e, dt, node, config) {
                 const indices = layout === "drugs"
@@ -548,7 +548,7 @@ $(document).ready(function () {
 
     function createSingleButtons(layout, hideColumns) {
       const drugsGroups = {
-          Compounds: [
+          'Agents/drugs': [
               { index: 0, name: "Name" },
               { index: 1, name: "Type" },
               { index: 2, name: "Modality" },
@@ -586,7 +586,7 @@ $(document).ready(function () {
               { index: 3, name: "Ligand type" },
               { index: 4, name: "Class" }
           ],
-          Compounds: [
+          'Agents/drugs': [
               { index: 5, name: "Name" },
               { index: 6, name: "Type" },
               { index: 7, name: "Modality" },
@@ -612,13 +612,13 @@ $(document).ready(function () {
       // Define placeholder counts for each group
       if (layout === "drugs") {
         placeholderCounts = {
-            Compounds: (hideColumns ? 4 : 10),
+            'Agents/drugs': (hideColumns ? 4 : 10),
             Targets: (hideColumns ? 0 : 0),
             Diseases: (hideColumns ? 0 : 6)
         };
       } else {
         placeholderCounts = {
-            Compounds: (hideColumns ? 0 : 6),
+            'Agents/drugs': (hideColumns ? 0 : 6),
             Targets: (hideColumns ? 4 : 10),
             Diseases: (hideColumns ? 0 : 6)
         };
@@ -738,8 +738,8 @@ $(document).ready(function () {
       // Update the row count information
       const totalRows = table.rows().count();
       const rowCountText = layout === "targets"
-          ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
-          : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
+          ? `${uniqueCount} unique target(s) with ${totalRows} Target–agent/drug–disease rows`
+          : `${uniqueCount} unique compound(s) with ${totalRows} Agent/drug–target–disease rows`;
       $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
       // create compound preview
       compoundPreview("a.struct");
@@ -767,8 +767,8 @@ $(document).ready(function () {
               const api = this.api(); // Access the DataTable API
               const totalRows = api.rows().count(); // Use the API to get row count
               const rowCountText = layout === "targets"
-                ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
-                : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
+                ? `${uniqueCount} unique target(s) with ${totalRows} Target–agent/drug–disease rows`
+                : `${uniqueCount} unique compound(s) with ${totalRows} Agent/drug–target–disease rows`;
               $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
               // create compound preview
               compoundPreview("a.struct");

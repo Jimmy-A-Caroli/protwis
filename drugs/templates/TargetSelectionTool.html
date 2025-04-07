@@ -204,7 +204,7 @@
                         <th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Literature</th>
                         <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Novelty</th>
                         <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Structures</th>
-                        <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">All Drugs & Agents</th>
+                        <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">All drugs & agents</th>
                         <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Stimulatory</th>
                         <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Inhibitory</th>
                         <th colspan="50" style="text-align:center;border-left: 1px solid #cccccc;">Tissue expression</th>
@@ -285,7 +285,7 @@
                     <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
                         <th colspan="6" style="text-align:center;">Targets</th>
                         <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Diseases</th>
-                        <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Compounds</th>
+                        <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Agents/drugs</th>
                         <th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Disease associations</th>
                     </tr>
                     <!-- Header Row -->
@@ -468,7 +468,18 @@ $(document).ready(function() {
     // Define columns dynamically based on the type
     var target_columns = [
         {data: "Target ID", name: "Target ID", visible: false}, // Hidden Target ID column
-        {data: "Gene name", name: "Gene name", width: "125px", className: "sticky-column", render: function (data) { return data.replace('_human', '').toUpperCase(); }},
+        {data: "Gene name", name: "Gene name",width: "125px", className: "sticky-column", render: function (data, type, row, meta) {
+                    if (type === 'display') {
+                        const originalData = data; // Raw data
+                        const transformedData = data.replace('_human', '').toUpperCase(); // Transformed display value
+
+                        return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+                    } else if (type === 'filter') {
+                        // Return transformed data for the filter dropdown
+                        return data.replace('_human', '').toUpperCase();
+                    }
+                    return data; // Raw data for sorting
+                    }},
         {data: "Protein name", name: "Protein name", width: "125px", render: function (data) { return data.replace('receptor', ''); }},
         {data: "Receptor family", name: "Receptor family", width: "150px",className: "receptor-width", render: function (data) { return data.replace('receptors', ''); }},
         {data: "Ligand type", name: "Ligand type", width: "150px"},
@@ -532,13 +543,38 @@ $(document).ready(function() {
     // Define columns dynamically based on the type
     var disease_columns = [
         {data: "Target ID", name: "Target ID", visible: false}, // Hidden Target ID column
-        {data: "Gene name", name: "Gene name", width: "125px", className: "sticky-column", render: function (data) { return data.replace('_human', '').toUpperCase(); }},
+        {data: "Gene name", name: "Gene name",width: "125px", className: "sticky-column", render: function (data, type, row, meta) {
+                    if (type === 'display') {
+                        const originalData = data; // Raw data
+                        const transformedData = data.replace('_human', '').toUpperCase(); // Transformed display value
+
+                        return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+                    } else if (type === 'filter') {
+                        // Return transformed data for the filter dropdown
+                        return data.replace('_human', '').toUpperCase();
+                    }
+                    return data; // Raw data for sorting
+                    }},
         {data: "Protein name", name: "Protein name", width: "125px", render: function (data) { return data.replace('receptor', ''); }},
         {data: "Receptor family", name: "Receptor family", width: "150px",className: "receptor-width", render: function (data) { return data.replace('receptors', ''); }},
         {data: "Ligand type", name: "Ligand type", width: "150px"},
         {data: "Class", name: "Class", width: "50px", render: function (data) { return data.split(' (')[0].replace('Class ', ''); }},
         {data: "Master Indication", name: "Master Indication", width: "150px", className: "medium-width"},
-        {data: "Indication", name: "Indication", width: "200px", className: "small-width"},
+        {data: "Indication", name: "Indication",width: "200px", className: "small-width",render: function (data, type, row, meta) {
+                        if (type === 'display') {
+                            if (row && row.ICD11) {
+                                const transformedData = data || 'Unknown'; // Fallback if Indication name is missing
+                                const link = '/drugs/indication/' + row.ICD11 + '/'; // Create the link using row.ICD11
+                                return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
+                            } else {
+                                return data || ''; // Fallback to plain text if ICD11 is missing
+                            }
+                        } else if (type === 'filter') {
+                            // Provide the raw data for filtering
+                            return data || 'Unknown'; // Ensure it aligns with the displayed text
+                        }
+                        return data; // Use raw data for sorting
+                    }},
         {data: "ATC Parent Name", name: "ATC Parent Name", width: "125px", className: "large-width", render: function (data) {
             if (data && typeof data === 'string') {
                 return data
@@ -568,16 +604,40 @@ $(document).ready(function() {
     // Define columns dynamically based on the type
     var untapped_columns = [
         {data: "Target ID", name: "Target ID", visible: false}, // Hidden Target ID column
-        {data: "Gene name", name: "Gene name", width: "5%", className: "sticky-column", render: function (data) { return data.replace('_human', '').toUpperCase(); }},
+        {data: "Gene name", name: "Gene name", width: "5%", className: "sticky-column", render: function (data, type, row, meta) {
+                    if (type === 'display') {
+                        const originalData = data; // Raw data
+                        const transformedData = data.replace('_human', '').toUpperCase(); // Transformed display value
+
+                        return '<a href="/protein/' + originalData + '/" target="_blank">' + transformedData + '</a>';
+                    } else if (type === 'filter') {
+                        // Return transformed data for the filter dropdown
+                        return data.replace('_human', '').toUpperCase();
+                    }
+                    return data; // Raw data for sorting
+                    }},
         {data: "Protein name", name: "Protein name", width: "10%", render: function (data) { return data.replace('receptor', ''); }},
         {data: "Receptor family", name: "Receptor family", width: "10%",className: "receptor-width", render: function (data) { return data.replace('receptors', ''); }},
         {data: "Ligand type", name: "Ligand type", width: "10%"},
         {data: "Class", name: "Class", width: "5%", render: function (data) { return data.split(' (')[0].replace('Class ', ''); }},
         {data: "Master Indication", name: "Master Indication", width: "25%", className: "large-width"},
-        {data: "Indication", name: "Indication", width: "25%", className: "large-width"},
+        {data: "Indication", name: "Indication",width: "25%", className: "large-width",render: function (data, type, row, meta) {
+                        if (type === 'display') {
+                            if (row && row.ICD11) {
+                                const transformedData = data || 'Unknown'; // Fallback if Indication name is missing
+                                const link = '/drugs/indication/' + row.ICD11 + '/'; // Create the link using row.ICD11
+                                return '<a href="' + link + '" target="_blank">' + transformedData + '</a>';
+                            } else {
+                                return data || ''; // Fallback to plain text if ICD11 is missing
+                            }
+                        } else if (type === 'filter') {
+                            // Provide the raw data for filtering
+                            return data || 'Unknown'; // Ensure it aligns with the displayed text
+                        }
+                        return data; // Use raw data for sorting
+                    }},
         {data: "Association Score", name: "Association Score", width: "10%", className: "small-width", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(digit_fixed); }}
     ];
-
 
     function initializeDataTable(tableId, data, columns, columnDefs) {
         // Initialize DataTable

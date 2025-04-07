@@ -1657,6 +1657,7 @@ class TargetSelectionTool(TemplateView):
             'ligand',  # Ligand ID
             'indication__title',  # Indication title
             'indication__slug',  # Indication slug
+            'indication__code',
             'disease_association__association_score',  # Association score
             'drug_status'  # Status
         )
@@ -1673,6 +1674,7 @@ class TargetSelectionTool(TemplateView):
             'ligand': "Ligand ID",
             'indication__title': 'Indication',
             'indication__slug': 'Indication Slug',
+            'indication__code': "ICD11",
             'disease_association__association_score': 'Association Score',
             'drug_status': 'Status'
         }, inplace=True)
@@ -1719,7 +1721,7 @@ class TargetSelectionTool(TemplateView):
             unique_df = df.drop_duplicates(subset=[
                 'Target ID', 'Gene name', 'Protein name', 'Receptor family',
                 'Ligand type', 'Class', 'Master Indication', 'Indication',
-                'ATC Code', 'ATC Parent Name', 'ATC Name', 'Association Score'
+                'ATC Code', 'ATC Parent Name', 'ATC Name', 'Association Score','ICD11'
             ])
 
             # Compute counts for 'Drug' and 'Agent' using crosstab
@@ -1769,7 +1771,7 @@ class TargetSelectionTool(TemplateView):
         keep_cols = [
             'Target ID', 'Gene name', 'Protein name', 'Receptor family', 'Ligand type',
             'Class', 'Master Indication', 'Indication', 'ATC Code',
-            'ATC Parent Name', 'ATC Name', 'Association Score', 'Drug Count', 'Agent Count'
+            'ATC Parent Name', 'ATC Name', 'Association Score', 'Drug Count', 'Agent Count','ICD11'
         ]
         df_table_2 = df_table_2[keep_cols]
 
@@ -1799,6 +1801,7 @@ class TargetSelectionTool(TemplateView):
             'indication__title',  # Indication title
             'indication__slug', # Indication slug
             'association_score',  # Association score
+            'indication__code' #ICD11
         )
 
         # Convert the filtered QuerySet to a DataFrame
@@ -1814,6 +1817,7 @@ class TargetSelectionTool(TemplateView):
             'indication__title': 'Indication',
             'indication__slug': 'Indication Slug',
             'association_score': 'Association Score',
+            'indication__code': "ICD11"
         }, inplace=True)
 
         # Fetch master indications and create mapping
