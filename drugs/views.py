@@ -2194,7 +2194,7 @@ def fetch_sankey_indi_data_view(request):
         return JsonResponse({'error': 'An internal server error occurred'}, status=500)
 
 def get_sankey_indi_data(code):
-    
+
     code = code.upper()
 
     indication_data = Drugs.objects.filter(indication__code=code).prefetch_related('ligand',
