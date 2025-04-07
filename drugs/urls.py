@@ -18,4 +18,5 @@ urlpatterns = [
     ############################################################################################
     url(r'^TargetSelectionTool', views.TargetSelectionTool.as_view(), name='TargetSelectionTool'),
     path('get_sankey_data/', views.fetch_sankey_data_view, name='get_sankey_data'),
+    path('get_sankey_indi_data/', views.fetch_sankey_indi_data_view, name='get_sankey_indi_data'),
 ]

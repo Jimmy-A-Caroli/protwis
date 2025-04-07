@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
 <style type="text/css">
   textarea {
     resize: none;
@@ -52,11 +53,24 @@
     color: #333;
   }
   .popover {
-    z-index: 9999 !important; /* Ensures it appears above all elements */
+    z-index: 9999 !important;
   }
   .overflow-visible {
     overflow: visible !important;
   }
+
+  /* Styling for tooltip */
+  .d3-tip {
+        font-family: Arial;
+        background: #eef8ff;
+        padding: 9px;
+        border: 1px;
+        border-radius: 10px;
+        color: black;
+        z-index: 5070;
+        position: absolute;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
 {% block content %}
@@ -176,8 +190,32 @@
               <th style="text-align: center;">Indication area<br>(ATC)</th>
               <th style="text-align: center;">Indication<br>(ATC)</th>
               <th style="text-align: center;">Indication code<br>(ATC)</th>
-              <th style="text-align: center;">In trial</th>
-              <th style="text-align: center;">Approved</th>
+              <th style="text-align: center;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span>In<br>trial</span>
+                  <span class="glyphicon glyphicon-info-sign"
+                    data-html="true"
+                    data-toggle="popover"
+                    data-trigger="hover"
+                    data-placement="right"
+                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is likely being repurposed."
+                    style="font-size: 14px;">
+                  </span>
+                </div>
+              </th>
+              <th style="text-align: center;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span>Approved</span>
+                  <span class="glyphicon glyphicon-info-sign"
+                    data-html="true"
+                    data-toggle="popover"
+                    data-trigger="hover"
+                    data-placement="right"
+                    data-content="A drug is approved if authorized by a major regulatory agency (e.g., FDA, EMA, PMDA)."
+                    style="font-size: 14px;">
+                  </span>
+                </div>
+              </th>
               <th style="text-align: center;border-left: 1px solid #cccccc">Disease area<br>(ICD11)</th>
               <th style="text-align: center;">Disease<br>(ICD11)</th>
               <th style="text-align: center;">Disease code<br>(ICD11)</th>
@@ -245,6 +283,8 @@
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
 <script src="{% static 'home/js/selection.js' %}"></script>
+<script src="{% static 'home/js/compoundPreviewTooltip.js' %}"></script> <!-- Needed for the hover display of ligands-->
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- Dependency for the hover display of ligands-->
 
 <script>
   ! function($) {
@@ -252,6 +292,10 @@
       window.prettyPrint && prettyPrint()
     })
   }(window.jQuery)
+</script>
+
+<script type="text/javascript">
+  window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
 </script>
 
 <script type="text/javascript" charset="utf-8">
@@ -289,6 +333,8 @@ $(document).ready(function () {
   var gprotein_ID = {{ phases_dict_keys|safe }};
   var fullData = {{ Full_data|safe }};
   const layout = "{{ layout|escapejs }}";
+
+  console.log(fullData)
 
   function getArrayFromData(gprotein) {
     var lines = gdata[gprotein].split("\n");
@@ -337,12 +383,27 @@ $(document).ready(function () {
 
     // Define column configurations for "drugs" and "targets"
     const drugsColumns = [
-        { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) { 
+        { data: "Ligand name", name: "Name",width: "7%", render: function (data, type, row, meta) {
             if (type === 'display') {
+                // Ensure row.Variable exists
                 if (row && row.LigandID) {
-                    data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                    // console.log("Row in render:", row);
+                    const smilesVal = row.smiles_for_image || "";
+                    const picVal    = row.picture || "Not_available";
+                    const ligID     = row.LigandID;
+                    // Wrap the text in <a class="struct" ...>
+                    return `
+                        <a class="struct"
+                            href="/ligand/${ligID}/info?tab=agent_drug"
+                            target="_blank"
+                            data-smiles="${smilesVal}"
+                            rel="${picVal}"
+                        >
+                        ${data}
+                        </a>
+                    `;
                 } else {
-                    data = data || '';
+                    return data || '';
                 }
             }
             return data;
@@ -403,12 +464,27 @@ $(document).ready(function () {
         { data: "Receptor family", name: "Receptor family" },
         { data: "Ligand type", name: "Ligand type" },
         { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
-        { data: "Ligand name", name: "Ligand name", render: function (data, type, row, meta) {
+        { data: "Ligand name", name: "Name", render: function (data, type, row, meta) {
             if (type === 'display') {
+                // Ensure row.Variable exists
                 if (row && row.LigandID) {
-                    data = '<a href="/ligand/' + row.LigandID + '/info" target="_blank">' + data + '</a>';
+                    // console.log("Row in render:", row);
+                    const smilesVal = row.smiles_for_image || "";
+                    const picVal    = row.picture || "Not_available";
+                    const ligID     = row.LigandID;
+                    // Wrap the text in <a class="struct" ...>
+                    return `
+                        <a class="struct"
+                            href="/ligand/${ligID}/info?tab=agent_drug"
+                            target="_blank"
+                            data-smiles="${smilesVal}"
+                            rel="${picVal}"
+                        >
+                        ${data}
+                        </a>
+                    `;
                 } else {
-                    data = data || '';
+                    return data || '';
                 }
             }
             return data;
@@ -669,6 +745,8 @@ $(document).ready(function () {
           ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
           : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
       $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+      // create compound preview
+      compoundPreview("a.struct");
     } else {
       table = $(tableId).DataTable({
         dom: "<'row align-items-center justify-content-between overflow-visible'<'col-sm-3 dt-btn'B><'col-sm-6 text-center row-count-info'><'col-sm-3 text-end'f>>" + 
@@ -696,6 +774,8 @@ $(document).ready(function () {
                 ? `${uniqueCount} unique target(s) with ${totalRows} Target–compound–disease rows`
                 : `${uniqueCount} unique compound(s) with ${totalRows} Compound–target–disease rows`;
               $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
+              // create compound preview
+              compoundPreview("a.struct");
           }
       });
     }

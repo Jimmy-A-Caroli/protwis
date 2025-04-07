@@ -272,10 +272,10 @@
                 <!-- Primary Tabs -->
                 <ul class="nav nav-tabs" id="targetsPrimaryTabs" role="tablist">
                     <li class="active">
-                        <a id="sankey-plot-tab" data-toggle="tab" href="#sankey-plot" role="tab" aria-controls="sankey-plot" aria-selected="false">Sankey</a>
+                        <a id="sankey-plot-tab" data-toggle="tab" href="#sankey-plot" role="tab" aria-controls="sankey-plot" aria-selected="true">Sankey</a>
                     </li>
                     <li>
-                        <a  id="drugs-table-tab" data-toggle="tab" href="#drugs-table" role="tab" aria-controls="drugs-table" aria-selected="true">Agent/drug-disease pairs</a>
+                        <a  id="drugs-table-tab" data-toggle="tab" href="#drugs-table" role="tab" aria-controls="drugs-table" aria-selected="false">Agent/drug-disease pairs</a>
                     </li>
                     
                 </ul>
@@ -292,19 +292,18 @@
                                         {% if page == 'Drugs' %}
                                             <td colspan="11" style="text-align: center" data-dt-order="disable"></td>
                                         {% elif page == 'Targets' %}
-                                            <td colspan="9" style="text-align: center" data-dt-order="disable"></td>
+                                            <td colspan="10" style="text-align: center" data-dt-order="disable"></td>
                                         {% endif %}
                                     </tr>
                                     <!-- Super Header Row -->
                                     <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
                                         {% if page == 'Drugs' %}
                                             <th colspan="5" style="text-align:center">Target</th>
-                                            <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Indication</th>
+                                            <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Disease</th>
                                             <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Agent/Drug</th>
                                         {% elif page == 'Targets' %}
-                                            <th colspan="3" style="text-align:center">Molecule</th>
-                                            <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Indication</th>
-                                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Agent/Drug</th>
+                                            <th colspan="5" style="text-align:center">Agent/drug</th>
+                                            <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Disease</th>
                                         {% endif %}
                                     </tr>
                                     <!-- Header Row -->
@@ -325,12 +324,37 @@
                                             <th style="text-align: center;">Name</th>
                                             <th style="text-align: center;">Type</th>
                                             <th style="text-align: center;">Modality</th>
-                                            <th style="text-align: center;border-left: 1px solid #cccccc;">Indication name</th>
+                                            <th style="text-align: center;">
+                                                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                                <span>In<br>trial</span>
+                                                    <span class="glyphicon glyphicon-info-sign"
+                                                    data-html="true"
+                                                    data-toggle="popover"
+                                                    data-trigger="hover"
+                                                    data-placement="right"
+                                                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is likely being repurposed."
+                                                    style="font-size: 14px;">
+                                                    </span>
+                                              </div></th>
+                                            <th style="text-align: center;">
+                                                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                                    <span>Approved</span>
+                                                    <span class="glyphicon glyphicon-info-sign"
+                                                        data-html="true"
+                                                        data-toggle="popover"
+                                                        data-trigger="hover"
+                                                        data-placement="right"
+                                                        data-content="A drug is approved if authorized by a major regulatory agency (e.g., FDA, EMA, PMDA)."
+                                                        style="font-size: 14px;">
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th style="text-align: center;border-left: 1px solid #cccccc;">Name</th>
+                                            <th style="text-align: center;">Phase</th>
                                             <th style="text-align: center;">ICD11</th>
                                             <th style="text-align: center;">ATC</th>
                                             <th style="text-align: center;">Association score</th>
-                                            <th style="text-align: center;border-left: 1px solid #cccccc;">Phase</th>
-                                            <th style="text-align: center;">Approved</th>
+
                                         {% endif %}
                                     </tr>
                                     <!-- Filter Row for Header -->
@@ -351,11 +375,12 @@
                                             <td style="text-align: center;" data-dt-order="disable"></td>
                                             <td style="text-align: center;" data-dt-order="disable"></td>
                                             <td style="text-align: center;" data-dt-order="disable"></td>
+                                            <td style="text-align: center;" data-dt-order="disable"></td>
+                                            <td style="text-align: center;" data-dt-order="disable"></td>
                                             <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
                                             <td style="text-align: center;" data-dt-order="disable"></td>
                                             <td style="text-align: center;" data-dt-order="disable"></td>
                                             <td style="text-align: center;" data-dt-order="disable"></td>
-                                            <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
                                             <td style="text-align: center;" data-dt-order="disable"></td>
                                         {% endif %}
                                     </tr>
@@ -497,20 +522,42 @@
       </div>
       <div class="container" id="indications-container" style="margin-top: 30px; display: none;">
           <ul class="nav nav-tabs" id="indications-tab" role="tablist">
-              <li class="active">
-                  <a id="targets-indication-tab" data-toggle="tab" href="#targets-indication" role="tab" aria-controls="targets-indication" aria-selected="true">Targets</a>
-              </li>
-              <li>
-                  <a id="agents-drugs-indication-tab" data-toggle="tab" href="#agents-drugs-indication" role="tab" aria-controls="agents-drugs-indication" aria-selected="false">Agents/Drugs</a>
-              </li>
+                <li class="active">
+                    <a id="sankey-plot-tab" data-toggle="tab" href="#sankey-plot" role="tab" aria-controls="sankey-plot" aria-selected="false">Sankey</a>
+                </li>
+                <li>
+                    <a id="agents-drugs-indication-tab" data-toggle="tab" href="#agents-drugs-indication" role="tab" aria-controls="agents-drugs-indication" aria-selected="false">Agents/drugs</a>
+                </li>
+                <li>
+                    <a id="targets-indication-tab" data-toggle="tab" href="#targets-indication" role="tab" aria-controls="targets-indication" aria-selected="false">Targets</a>
+                </li>
           </ul>
+          
           <div class="tab-content" id="indications-tab-content">
+            <!-- Sankey Plot Tab Pane -->
+            <div class="tab-pane fade in active" id="sankey-plot" role="tabpanel" aria-labelledby="sankey-plot-tab">
+                <!-- Placeholder for Sankey Plot -->
+                <div id="sankey_plot"></div>
+                <p>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="false">
+                            <span class="glyphicon glyphicon-download"></span> Download <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a href="javascript:saveSankeySvgAsSVG(document.getElementById('sankey'), 'sankey.svg');">SVG</a></li>
+                            <li><a href="javascript:saveSankeySvgAsPng(document.getElementById('sankey'), 'sankey.png');">PNG</a></li>
+                            <li><a href="javascript:saveSankeySvgAsJpg(document.getElementById('sankey'),'sankey.jpg');">JPG</a></li>
+                        </ul>
+                    </div>
+                </p>
+                </div>
               <!-- Targets Tab Content -->
-              <div class="tab-pane fade in active" id="targets-indication" role="tabpanel" aria-labelledby="targets-indication-tab">
+              <div class="tab-pane fade" id="targets-indication" role="tabpanel" aria-labelledby="targets-indication-tab">
                   <!-- Button Group for Column Visibility Control -->
                   <div class="btn-group" role="group" aria-label="Column visibility controls" style="margin-top: 15px;margin-bottom: 15px;">
                       <button type="button" class="btn btn-primary" data-column="0">Disease Association</button>
-                      <button type="button" class="btn btn-secondary" data-column="1">Agents/Drugs</button>
+                      <button type="button" class="btn btn-secondary" data-column="1">Agents/drugs</button>
                   </div>
                   <!-- Single DataTable for All Sub-Tabs -->
                   <table width="100%" class="display compact" id="targetsTable">
@@ -637,23 +684,46 @@
                 <table width="100%" class="display compact mt-4" id="agentsDrugsSuperTable">
                     <thead>
                         <tr>
-                            <td colspan="10" style="text-align: center" data-dt-order="disable"></td>
+                            <td colspan="11" style="text-align: center" data-dt-order="disable"></td>
                         </tr>
                         <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-                            <th colspan="1" style="text-align:center">Drug</th>
-                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Phase</th>
-                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Molecule</th>
+                            <th colspan="5" style="text-align:center">Agent/drug</th>
+                            <th colspan="1" style="text-align:center;border-left: 1px solid #cccccc;">Disease</th>
                             <th colspan="5" style="text-align:center;border-left: 1px solid #cccccc;">Target</th>
                         </tr>
                         <tr>
                             <!-- Drug -->
-                            <th style="text-align: center">Drug name</th>
-                            <!-- Phase -->
-                            <th style="text-align: center;border-left: 1px solid #cccccc;">Max</th>
-                            <th style="text-align: center">Approved</th>
-                            <!-- Molecule -->
-                            <th style="text-align: center;border-left: 1px solid #cccccc;">Type</th>
+                            <th style="text-align: center">Name</th>
+                            <th style="text-align: center;">Type</th>
                             <th style="text-align: center">Modality</th>
+                            <th style="text-align: center;">
+                                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                  <span>In<br>trial</span>
+                                  <span class="glyphicon glyphicon-info-sign"
+                                    data-html="true"
+                                    data-toggle="popover"
+                                    data-trigger="hover"
+                                    data-placement="right"
+                                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is likely being repurposed."
+                                    style="font-size: 14px;">
+                                  </span>
+                                </div>
+                            </th>
+                            <th style="text-align: center;">
+                                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                  <span>Approved</span>
+                                  <span class="glyphicon glyphicon-info-sign"
+                                    data-html="true"
+                                    data-toggle="popover"
+                                    data-trigger="hover"
+                                    data-placement="right"
+                                    data-content="A drug is approved if authorized by a major regulatory agency (e.g., FDA, EMA, PMDA)."
+                                    style="font-size: 14px;">
+                                  </span>
+                                </div>
+                            </th>
+                            <!-- Phase -->
+                            <th style="text-align: center;border-left: 1px solid #cccccc;">Phase</th>
                             <!-- Target -->
                             <th style="text-align: center;border-left: 1px solid #cccccc;">Gene</th>
                             <th style="text-align: center">Protein</th>
@@ -664,10 +734,11 @@
                         </tr>
                         <tr>
                             <td style="text-align: center" data-dt-order="disable"></td>
-                            <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
+                            <td style="text-align: center" data-dt-order="disable"></td>
+                            <td style="text-align: center" data-dt-order="disable"></td>
+                            <td style="text-align: center" data-dt-order="disable"></td>
                             <td style="text-align: center" data-dt-order="disable"></td>
                             <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
-                            <td style="text-align: center" data-dt-order="disable"></td>
                             <td style="text-align: center;border-left: 1px solid #cccccc;" data-dt-order="disable"></td>
                             <td style="text-align: center" data-dt-order="disable"></td>
                             <td style="text-align: center" data-dt-order="disable"></td>
@@ -686,14 +757,14 @@
 {% endblock %}
 {% block addon_js %}
 <!-- Make sure the Select2 JS file is included -->
-<script src="{% static 'home/js/openchemlib-full.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="{% static 'home/js/d3.v4.min.js' %}"></script>
 <script src="{% static 'home/js/sankey.js' %}"></script>
 <script src="{% static 'home/js/saveSankeySvgAsPng.js' %}"></script> <!-- For Saving Sankey plot -->
-<script src="{% static 'home/js/compoundPreviewTooltip.js' %}">
+<script src="{% static 'home/js/compoundPreviewTooltip.js' %}"></script> <!-- Needed for the hover display of ligands-->
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- Dependency for the hover display of ligands-->
 
 <script type="text/javascript">
     window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
@@ -894,13 +965,29 @@
                 // Get Sankey data for the selected target
                 const Entry_name_sankey = Selected_table_data[0]['Gene name']; // Assuming one match
 
-                // Fetch Sankey data via AJAX and render it
-                fetchSankeyData(Entry_name_sankey);
-
-                renderSankey(Selected_sankey_data);
-
-                // Show the tab content only after the search is clicked
+                // Show the container
                 $('#targets-container').show();
+
+                // Get the tab link and pane
+                var sankeyTabLink = $('#sankey-plot-tab');
+                var sankeyTabPane = $('#sankey-plot');
+
+                // Check if Sankey tab is already active
+                if (sankeyTabPane.hasClass('active')) {
+                    // Already active → just fetch and render
+                    fetchSankeyData(Entry_name_sankey);
+                    renderSankey(Selected_sankey_data);
+                } else {
+                    // Not active → wait for the tab to finish showing
+                    sankeyTabLink.one('shown.bs.tab', function () {
+                        fetchSankeyData(Entry_name_sankey);
+                        renderSankey(Selected_sankey_data);
+                    });
+
+                    // Show the tab
+                    sankeyTabLink.tab('show');
+                }
+
 
                 if (Selected_table_data.length > 0) {
                     var Linkdata = Selected_table_data[0]['Gene name']; // Assuming one match
@@ -908,6 +995,7 @@
                     searchedText = 'Target: <a href="/protein/' + Linkdata + '/" target="_blank">' + displayData + '</a>';
                 }
             } else if (page === 'Indications') {
+
                 var targets_selected_data = Full_data_targets.filter(function(row) {
                     return row['Indication ID'] == selected_id;
                 });
@@ -924,11 +1012,32 @@
                         ? targets_selected_data[0]['ICD11'] 
                         : drugs_selected_data[0]['ICD11']);
                     
-                    searchedText = 'Indication: <a href="/drugs/indication/' + icd11 + '/" target="_blank">' + indicationName + '</a>';
+                    searchedText = 'Disease: <a href="/drugs/indication/' + icd11 + '/" target="_blank">' + indicationName + '</a>';
                 }
-
                 // Show the tab content only after the search is clicked
                 $('#indications-container').show();
+
+                // Programmatically activate the Sankey tab so it's open/visible
+                $('#sankey-plot-tab').tab('show');
+
+                // Check if Sankey tab is already active
+                var sankeyTabLink = $('#sankey-plot-tab');
+                var sankeyTabPane = $('#sankey-plot');
+
+                if (sankeyTabPane.hasClass('active')) {
+                    // If already active, fetch and render right away
+                    fetchSankeyIndicationData(icd11);
+                    renderSankey(Selected_sankey_data);
+                } else {
+                    // Otherwise, wait until the tab is shown
+                    sankeyTabLink.one('shown.bs.tab', function () {
+                        fetchSankeyIndicationData(icd11);
+                        renderSankey(Selected_sankey_data);
+                    });
+
+                    // Trigger the tab switch
+                    sankeyTabLink.tab('show');
+                }
 
                 // Reset filters
                 reset_all();
@@ -1001,11 +1110,11 @@
                 ];
             } else if (type === 'Targets') {
                 pageSpecificDefs = [
-                    { targets: [3, 7], className: 'border-left' }
+                    { targets: [5], className: 'border-left' }
                 ];
             } else if (type === 'Agents/Drugs') {
                 pageSpecificDefs = [
-                    { targets: [1, 3,5], className: 'border-left' }
+                    { targets: [5,6], className: 'border-left' }
                 ];
             } else if (type === 'Targets for Indications') {
                 pageSpecificDefs = [
@@ -1068,33 +1177,34 @@
             } else if (type === 'Targets') {
                 columns = [
                     {data: "Ligand name", name: "Name",width: "7%", render: function (data, type, row, meta) {
-                    if (type === 'display') {
-                        // Ensure row.Variable exists
-                        if (row && row.LigandID) {
-                            // console.log("Row in render:", row);
-                            const smilesVal = row.smiles_for_image || "";
-                            const picVal    = row.picture || "Not_available";
-                            const ligID     = row.LigandID;
-                            // Wrap the text in <a class="struct" ...>
-                            return `
-                                <a class="struct"
-                                    href="/ligand/${ligID}/info"
-                                    target="_blank"
-                                    data-smiles="${smilesVal}"
-                                    rel="${picVal}"
-                                >
-                                ${data}
-                                </a>
-                            `;
-                        } else {
-                            return data || '';
+                        if (type === 'display') {
+                            // Ensure row.Variable exists
+                            if (row && row.LigandID) {
+                                // console.log("Row in render:", row);
+                                const smilesVal = row.smiles_for_image || "";
+                                const picVal    = row.picture || "Not_available";
+                                const ligID     = row.LigandID;
+                                // Wrap the text in <a class="struct" ...>
+                                return `
+                                    <a class="struct"
+                                        href="/ligand/${ligID}/info?tab=agent_drug"
+                                        target="_blank"
+                                        data-smiles="${smilesVal}"
+                                        rel="${picVal}"
+                                    >
+                                    ${data}
+                                    </a>
+                                `;
+                            } else {
+                                return data || '';
+                            }
                         }
-                    }
-                    return data; 
-                }
-            },
+                        return data;
+                    }},
                     {data: "Modality", name: "Type",width: "7%"}, 
                     {data: "Mode of action", name: "Modality",width: "10%"},
+                    {data: "In trial", name: "In trial",width: "8%"},
+                    {data: "Approved", name: "Approved",width: "8%"},
                     {data: "Indication name", name: "Indication",render: function (data, type, row, meta) {
                         if (type === 'display') {
                             if (row && row.ICD11) {
@@ -1110,11 +1220,10 @@
                         }
                         return data; // Use raw data for sorting
                     }},
+                    {data: "Highest_phase", name: "Highest",width: "5%"},
                     {data: "ICD11", name: "ICD11",width: "5%"},
                     {data: 'ATC', name: "ATC",width: "5%"},
-                    {data: 'Association score', name: "Association score",width: "10%", render: function (data) {return data === "" || data === null ? data : parseFloat(data).toFixed(digit_fixed);}}, // Format to 4 decimal places
-                    {data: "Highest_phase", name: "Highest",width: "5%"},
-                    {data: "Approved", name: "Approved",width: "8%"}
+                    {data: 'Association score', name: "Association score",width: "10%", render: function (data) {return data === "" || data === null ? data : parseFloat(data).toFixed(digit_fixed);}} // Format to 4 decimal places
                 ];
 
             } else if (type === 'Targets for Indications') {
@@ -1170,27 +1279,23 @@
                 ];
             } else if (type === 'Agents/Drugs') {
                 columns = [
-                {
-                    data: "Drug name",
-                    name: "Drug name",
-                    width: "10%",
-                    render: function(data, type, row, meta) {
-                      if (type === 'display') {
-                        if (row && row.LigandID) {
-                          const smilesVal = row.smiles_for_image || "";
-                          const picVal = row.picture || "Not_available";
-                          return '<a class="struct" href="/ligand/' + row.LigandID + '/info" target="_blank" data-smiles="' + smilesVal + '" rel="' + picVal + '">' + data + '</a>';
-                        } else {
-                          return data || ''; // Fallback to plain text if missing
+                    {data: "Drug name",name: "Drug name",width: "10%",render: function(data, type, row, meta) {
+                        if (type === 'display') {
+                            if (row && row.LigandID) {
+                            const smilesVal = row.smiles_for_image || "";
+                            const picVal = row.picture || "Not_available";
+                            return '<a class="struct" href="/ligand/' + row.LigandID + '/info" target="_blank" data-smiles="' + smilesVal + '" rel="' + picVal + '">' + data + '</a>';
+                            } else {
+                            return data || ''; // Fallback to plain text if missing
+                            }
                         }
-                      }
-                      return data; // For non-display types, just return the data
-                    }
-                  },
-                    {data: "Highest_phase", name: "Max",width: "6%"},
-                    {data: "Approved", name: "Approved",width: "9%"},
+                        return data; // For non-display types, just return the data
+                    }},
                     {data: "Molecule_type", name: "Type",width: "7%"},
                     {data: "Mode of action", name: "Modality",width: "7%"},
+                    {data: "In trial", name: "In trial",width: "9%"},
+                    {data: "Approved", name: "Approved",width: "9%"},
+                    {data: "Highest_phase", name: "Max",width: "6%"},
                     {data: "Gene name", name: "Gene name",width: "5%", render: function (data, type, row, meta) {
                     if (type === 'display') {
                         const originalData = data; // Raw data
@@ -1268,8 +1373,9 @@
 
             } else if (type === 'Targets') {
                 column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,6,"Multi-select-exact"));
-                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,6,2,"Range-float-vertical"));
-                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,8,1,"Multi-select-exact"));
+                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,6,1,"Range-float-vertical"));
+                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,7,2,"Multi-select-exact"));
+                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,9,1,"Range-float-vertical"));
             } else if (type === 'Targets for Indications') {
                 column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,5,"Multi-select-exact"));
                 column_filters = column_filters.concat(CreateColumnFilters(Table_selector,5,32,"Range-float-vertical"));
@@ -1356,6 +1462,33 @@
             }
         });
     }
+
+    function fetchSankeyIndicationData(code) {
+        $.ajax({
+            url: '/drugs/get_sankey_indi_data/',  // Must match the path in urls.py
+            type: 'GET',
+            data: {
+                code: code  // Send the entry_name
+            },
+            success: function(response) {
+                if (response.sankey_data) {
+                    renderSankey(response.sankey_data);  // Pass the Sankey data for rendering
+                } else {
+                    console.error("No Sankey data received.");
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error("Error fetching Sankey data:", xhr.responseText);
+            }
+        });
+    }
+    // Tool tip hover function
+    $('[data-toggle="popover"]').popover({
+      trigger: 'hover',
+      html: true,
+      container: 'body',
+      delay: { show: 100, hide: 300 } // Makes it less twitchy
+    });
 }
 </script>
 

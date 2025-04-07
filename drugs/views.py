@@ -80,6 +80,8 @@ def Venn(request, origin="both"):
             'ligand__id',
             'ligand__name',
             'ligand__ligand_type__name',
+            'ligand__smiles',
+            'ligand__mw',
             'moa__name',
             'indication__title',
             'indication__slug',
@@ -87,6 +89,7 @@ def Venn(request, origin="both"):
             'indication_max_phase',
             'disease_association__association_score',
             'drug_status',
+
         )
 
         # Convert the table_data queryset to a list of dictionaries
@@ -112,8 +115,16 @@ def Venn(request, origin="both"):
             'indication__code': 'ICD11',
             'indication_max_phase': 'Phase',
             'disease_association__association_score': 'Association score',
-            'drug_status': 'Approved'
+            'drug_status': 'Approved',
+            'ligand__smiles': 'raw_smiles',
+            'ligand__mw': 'mw'
         }, inplace=True)
+
+        # Preprocess SMILES data
+        extra_df = df.apply(DrugSectionSelection.process_smiles, axis=1)
+
+        # Merge the extra DataFrame with the main DataFrame
+        df = pd.concat([df, extra_df], axis=1)
 
         # Convert 'Approved' from integer to 'Yes'/'No'
         df['Approved'] = df['Approved'].apply(lambda x: 'Yes' if x == "Approved" else 'No')
@@ -224,12 +235,18 @@ class DrugSectionSelection(TemplateView):
             # Convert `resource_data` queryset to a list of dictionaries
             resource_data_list = list(resource_data)
 
+            def clean_index(val):
+                val_str = str(val)
+                if val_str.endswith('.0'):
+                    return val_str[:-2]  # Removes the trailing ".0"
+                return val_str
+
             # Transform `resource_data_list` into a structure for merging
             resource_dict = defaultdict(dict)
             for row in resource_data_list:
                 ligand_id = row['ligand']
-                resource_name = row['web_resource__name']
-                resource_index = row['index']
+                resource_name = str(row['web_resource__name'])
+                resource_index = clean_index(row['index'])
                 resource_dict[ligand_id][resource_name] = resource_index
 
             # Add resource data to the table DataFrame by mapping from `resource_dict`
@@ -362,6 +379,9 @@ class DrugSectionSelection(TemplateView):
 
             # Convert 'Approved' from integer to 'Yes'/'No'
             Modified_df['Approved'] = Modified_df['Approved'].apply(lambda x: 'Yes' if x == 1 else 'No')
+
+            # Add In Trial column
+            Modified_df['In trial'] = df['Phase'].apply(lambda phase: 'Yes' if phase < 4 else 'No')
 
             # Convert DataFrame to JSON
             json_records = Modified_df.to_json(orient='records')
@@ -567,7 +587,7 @@ class DrugSectionSelection(TemplateView):
             # ###########################
             # Data Aggregation for Drugs
             # ###########################
-            group_cols_drugs = ['Indication ID', 'ICD11', 'Gene name', 'Drug name', 'LigandID', 'Indication name', 'Protein name', 'Receptor family', 'Ligand type', 'Class', 'Molecule_type','Mode of action']
+            group_cols_drugs = ['Indication ID', 'ICD11', 'Gene name', 'Drug name', 'LigandID', 'Indication name', 'Protein name', 'Receptor family', 'Ligand type', 'Class', 'Molecule_type','Mode of action','Phase']
 
             # Precompute relevant columns
             df_drugs['Is_Approved'] = df_drugs['Status'].apply(lambda x: 1 if x == 'Approved' else 0)
@@ -591,6 +611,9 @@ class DrugSectionSelection(TemplateView):
 
             # Convert 'Approved' from integer to 'Yes'/'No'
             agg_data_drugs['Approved'] = agg_data_drugs['Approved'].apply(lambda x: 'Yes' if x == 1 else 'No')
+
+            # Add In Trial column
+            agg_data_drugs['In trial'] = agg_data_drugs['Phase'].apply(lambda phase: 'Yes' if phase < 4 else 'No')
 
             # Convert DataFrame to JSON
             json_records_drugs = agg_data_drugs.to_json(orient='records')
@@ -2148,3 +2171,177 @@ def indication_detail(request, code):
     context['targets'] = list(caches['entries'])
     context['ligands'] = list(caches['ligands'])
     return render(request, 'indication_detail.html', context)
+
+
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+def fetch_sankey_indi_data_view(request):
+    logger.info("fetch_sankey_data_view called")  # Log the function call
+    code = request.GET.get('code', None)  # Extract `entry_name` from the request
+
+    if not code:
+        logger.error("No ICD11 provided in the request")
+        return JsonResponse({'error': 'Missing ICD11'}, status=400)
+
+    logger.info(f"Received ICD11: {code}")  # Log the entry name
+
+    try:
+        sankey_data = get_sankey_indi_data(code)  # Call your helper function
+        if sankey_data:
+            logger.info(f"Sankey data successfully retrieved for ICD11: {code}")
+            return JsonResponse({'sankey_data': sankey_data}, status=200)
+        else:
+            logger.warning(f"No data found for ICD11: {code}")
+            return JsonResponse({'error': 'No data found for this ICD11'}, status=404)
+    except Exception:
+        logger.exception(f"An error occurred while fetching sankey data for ICD11: {code}")
+        return JsonResponse({'error': 'An internal server error occurred'}, status=500)
+
+def get_sankey_indi_data(code):
+    
+    code = code.upper()
+
+    #code = '4A8Z'
+    indication_data = Drugs.objects.filter(indication__code=code).prefetch_related('ligand',
+                                                                                        'target',
+                                                                                        'indication',
+                                                                                        'indication__uri')
+
+    indication_name = Indication.objects.filter(code=code).values_list('title', flat=True).distinct()[0]
+
+    sankey = {"nodes": [],
+              "links": []}
+    caches = {'indication':[],
+              'level_0': [],
+              'ligands': [],
+              'targets': [],
+              'entries': []}
+
+    node_counter = 0
+    # Initialize the path source matrix
+    path_matrix = []
+    link_id = 0  # Unique identifier for each link
+    row_id = 0
+    for record in indication_data:
+        #assess the values for indication/ligand/protein
+        indication_code = record.indication.title.capitalize()
+        indication_uri = record.indication.uri.index if record.indication.uri else ''
+        ligand_name = record.ligand.name.capitalize()
+        indication_0 = record.indication.get_level_0().title
+        uri = record.indication.uri.index if record.indication.uri else ''
+        ligand_id = record.ligand.id
+        protein_name = record.target.name
+        target_name = record.target.entry_name
+        #check for each value if it exists and retrieve the source node value
+        if indication_code not in caches['indication']:
+            sankey['nodes'].append({"node": node_counter, "name": indication_code, "url":'https://icd.who.int/browse/2024-01/mms/en#'+indication_uri,"column":"x4"})
+            node_counter += 1
+            caches['indication'].append(indication_code)
+        indi_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_code), None)
+
+        if indication_0 not in caches['level_0']:
+            sankey['nodes'].append({"node": node_counter, "name": indication_0, "url":'https://icd.who.int/browse/2024-01/mms/en#'+uri,"column":"x3"})
+            node_counter += 1
+            caches['level_0'].append(indication_0)
+        level_0_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_0), None)
+
+        if [ligand_name, ligand_id] not in caches['ligands']:
+            sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url":'/ligand/'+str(ligand_id)+'/info',"column":"x2"})
+            node_counter += 1
+            caches['ligands'].append([ligand_name, ligand_id])
+        lig_node = next((item['node'] for item in sankey['nodes'] if item['name'] == ligand_name), None)
+
+        if protein_name not in caches['targets']:
+            sankey['nodes'].append({"node": node_counter, "name": protein_name, "url":'/protein/'+str(target_name),"column":"x1"})
+            node_counter += 1
+            caches['targets'].append(protein_name)
+            caches['entries'].append(target_name)
+        prot_node = next((item['node'] for item in sankey['nodes'] if item['name'] == protein_name), None)
+
+        # create matrix row
+        row = {
+            'row_id': row_id,
+            'x1': prot_node,
+            'x2': lig_node,
+            'x3': level_0_node,
+            'x4': indi_node,
+            'x1_name': protein_name,
+            'x2_name': ligand_name,
+            'x3_name': indication_0,
+            'x4_name': indication_name
+        }
+
+        sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x1 -> x2 (Protein → Ligand)
+        link_id += 1
+        sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_0, "linkage_key": "primary","link_identifier": link_id})  # x2 -> x3 (Ligand → Level 0)
+        link_id += 1
+        sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x3 -> x4 (Level 0 → Indication)
+        link_id += 1
+        path_matrix.append(row)
+        row_id += 1
+
+    #Fixing redundancy in sankey['links']
+    unique_combinations = {}
+
+    for d in sankey['links']:
+        # Create a key based on source and target for identifying unique combinations
+        key = (d['source'], d['target'])
+
+        if key in unique_combinations:
+            # If the combination exists, add the value to the existing entry
+            unique_combinations[key]['value'] += d['value']
+        else:
+            # If it's a new combination, add it to the dictionary
+            unique_combinations[key] = d
+
+    # Convert the unique_combinations back to a list of dictionaries
+    sankey['links'] = list(unique_combinations.values())
+
+    # Find all nodes that are actually used in the links
+    used_nodes = set()
+    for link in sankey['links']:
+        used_nodes.add(link['source'])
+        used_nodes.add(link['target'])
+
+    # Build new nodes list and a mapping from old to new node indices
+    old_to_new = {}
+    new_nodes = []
+    new_index = 0
+    for node_dict in sankey['nodes']:
+        old_idx = node_dict["node"]
+        if old_idx in used_nodes:
+            # Only keep nodes that are actually used
+            new_node_dict = {
+                "node": new_index,
+                "name": node_dict["name"],
+                "url": node_dict["url"],
+                "column": node_dict['column']
+            }
+            new_nodes.append(new_node_dict)
+            old_to_new[old_idx] = new_index
+            new_index += 1
+
+    # Update the source and target indices in the links
+    for link in sankey['links']:
+        link["source"] = old_to_new[link["source"]]
+        link["target"] = old_to_new[link["target"]]
+
+    # Replace the nodes list with the new one
+    sankey['nodes'] = new_nodes
+
+    total_points = len(caches['targets']) + len(caches['targets']) + 1
+    if len(caches['ligands']) > len(caches['targets']):
+        nodes_nr = len(caches['ligands'])
+    else:
+        nodes_nr = len(caches['targets'])
+
+    sankey_data = {
+        'sankey': sankey,
+        'total_points': total_points,
+        'nodes_nr': nodes_nr,
+        'path_matrix': path_matrix
+    }
+
+    return sankey_data
