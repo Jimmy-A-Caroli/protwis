@@ -88,8 +88,7 @@ def Venn(request, origin="both"):
             'indication__code',
             'indication_max_phase',
             'disease_association__association_score',
-            'drug_status',
-
+            'drug_status'
         )
 
         # Convert the table_data queryset to a list of dictionaries
@@ -110,14 +109,14 @@ def Venn(request, origin="both"):
             'ligand__name': 'Ligand name',
             'ligand__ligand_type__name': 'Drug type',
             'moa__name': 'Modality',
+            'ligand__smiles': 'raw_smiles',
+            'ligand__mw': 'mw',
             'indication__slug': 'Indication Slug',
             'indication__title': 'Indication name',
             'indication__code': 'ICD11',
             'indication_max_phase': 'Phase',
             'disease_association__association_score': 'Association score',
-            'drug_status': 'Approved',
-            'ligand__smiles': 'raw_smiles',
-            'ligand__mw': 'mw'
+            'drug_status': 'Approved'
         }, inplace=True)
 
         # Preprocess SMILES data
