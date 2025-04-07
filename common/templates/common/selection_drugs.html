@@ -1380,9 +1380,9 @@
                 column_filters = column_filters.concat(CreateColumnFilters(Table_selector,5,32,"Range-float-vertical"));
                 // column_filters = column_filters.concat(CreateColumnFilters(Table_selector,11,1,"Multi-select-exact"));
             } else if (type === 'Agents/Drugs') {
-                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,1,"Multi-select-exact"));
-                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,1,1,"Range-float-vertical"));
-                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,2,8,"Multi-select-exact"));
+                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,0,5,"Multi-select-exact"));
+                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,5,1,"Range-float-vertical"));
+                column_filters = column_filters.concat(CreateColumnFilters(Table_selector,6,5,"Multi-select-exact"));
             }
             // Create the filteres
             createDropdownFilters(Table_selector,column_filters);
