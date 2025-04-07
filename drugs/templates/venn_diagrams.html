@@ -334,8 +334,6 @@ $(document).ready(function () {
   var fullData = {{ Full_data|safe }};
   const layout = "{{ layout|escapejs }}";
 
-  console.log(fullData)
-
   function getArrayFromData(gprotein) {
     var lines = gdata[gprotein].split("\n");
     var table = new Array();
@@ -387,7 +385,6 @@ $(document).ready(function () {
             if (type === 'display') {
                 // Ensure row.Variable exists
                 if (row && row.LigandID) {
-                    // console.log("Row in render:", row);
                     const smilesVal = row.smiles_for_image || "";
                     const picVal    = row.picture || "Not_available";
                     const ligID     = row.LigandID;
@@ -468,7 +465,6 @@ $(document).ready(function () {
             if (type === 'display') {
                 // Ensure row.Variable exists
                 if (row && row.LigandID) {
-                    // console.log("Row in render:", row);
                     const smilesVal = row.smiles_for_image || "";
                     const picVal    = row.picture || "Not_available";
                     const ligID     = row.LigandID;

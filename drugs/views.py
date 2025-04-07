@@ -2172,11 +2172,6 @@ def indication_detail(request, code):
     context['ligands'] = list(caches['ligands'])
     return render(request, 'indication_detail.html', context)
 
-
-
-# Set up logging
-logger = logging.getLogger(__name__)
-
 def fetch_sankey_indi_data_view(request):
     logger.info("fetch_sankey_data_view called")  # Log the function call
     code = request.GET.get('code', None)  # Extract `entry_name` from the request
@@ -2203,7 +2198,6 @@ def get_sankey_indi_data(code):
     
     code = code.upper()
 
-    #code = '4A8Z'
     indication_data = Drugs.objects.filter(indication__code=code).prefetch_related('ligand',
                                                                                         'target',
                                                                                         'indication',
