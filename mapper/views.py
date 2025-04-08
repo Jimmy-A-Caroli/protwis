@@ -345,6 +345,8 @@ class DataMapperHome(TemplateView):
             "Class B2 (Adhesion)": "B2",
             "Class C (Glutamate)": "C",
             "Class F (Frizzled)": "F",
+            "Class O1 (fish-like odorant)": "O1",
+            "Class O2 (tetrapod specific odorant)": "O2",
             "Class T2 (Taste 2)": "T2",
             "Other GPCRs": "Classless"
         }
@@ -427,7 +429,7 @@ class DataMapperHome(TemplateView):
     
     @staticmethod
     def GenerateGPCRomeDataStructure(type: str = "Classic"):
-        
+
         # Determine which proteins and families to use based on type
         if type == "Classic":
             all_proteins = Protein.objects.filter(
@@ -440,37 +442,52 @@ class DataMapperHome(TemplateView):
                 Q(family_id__slug__startswith='008')
             )
 
-             # Extract the familes
-            families = ProteinFamily.objects.all()
+            families = ProteinFamily.objects.exclude(slug='000')
 
-            # Extract the entry names first
-            entry_names = all_proteins.values_list('entry_name', flat=True)
+            # Get valid names (for pruning) from all_proteins
+            valid_names = set(all_proteins.values_list('name', flat=True))
 
-            # Then get the relevant name mappings using those entry_names
-            proteins = Protein.objects.filter(entry_name__in=entry_names).values(
+            # Build name-to-entry_name mapping
+            proteins = Protein.objects.filter(
+                species_id=1,
+                name__in=valid_names
+            ).values(
                 'entry_name', 'name'
             ).order_by('entry_name')
 
-            # Build the conversion dict
-            names_conversion_dict = {item['entry_name']: item['name'] for item in proteins}
+            name_to_entry = {item['name']: item['entry_name'] for item in proteins}
 
         elif type == "Odorant":
             all_proteins = Protein.objects.filter(
                 species_id=1,
                 parent_id__isnull=True,
-                accession__isnull=False,
-                family_id__slug__startswith='007'
+                accession__isnull=False
+            ).filter(
+                Q(family_id__slug__startswith='007') | Q(family_id__slug__startswith='008')
             )
 
-            families = ProteinFamily.objects.filter(slug__startswith='007')
-            names_conversion_dict = {item['entry_name']: item['name'] for item in all_proteins}
+            families = ProteinFamily.objects.filter(
+                Q(slug__startswith='007') | Q(slug__startswith='008')
+            )
+
+            valid_names = set(all_proteins.values_list('name', flat=True))
+
+            proteins = Protein.objects.filter(
+                species_id=1,
+                name__in=valid_names
+            ).values(
+                'entry_name', 'name'
+            ).order_by('entry_name')
+
+            name_to_entry = {item['name']: item['entry_name'] for item in proteins}
 
         else:
             raise ValueError(f"Unsupported data structure type: {type}")
-        
-        
+
+        # Tree building
         def build_family_tree(families):
             datatree = {}
+            slug_to_name = {fam.slug: fam.name for fam in families}
 
             for item in families:
                 slug_parts = item.slug.split('_')
@@ -482,8 +499,14 @@ class DataMapperHome(TemplateView):
 
                     if i == len(slug_parts) - 1:
                         if len(slug_parts) == 4:
-                            # Instead of list, make receptor a key with metadata
-                            current_level.setdefault(name, {})[item.name] = {"Data": 0}
+                            if item.name in name_to_entry:
+                                entry_name = name_to_entry[item.name]
+                                entry_code = entry_name.split('_')[0].upper()
+                                current_level[item.name] = {
+                                    "Data": 0,
+                                    "EntryName": entry_code,
+                                    "Color": "White"
+                                }
                         else:
                             current_level.setdefault(name, {})
                     else:
@@ -495,24 +518,109 @@ class DataMapperHome(TemplateView):
             def convert_keys(tree):
                 new_tree = {}
                 for key, value in tree.items():
-                    new_key = key
-                    if isinstance(value, dict):
-                        new_tree[new_key] = convert_keys(value)
-                    else:
-                        new_tree[new_key] = value
+                    new_key = slug_to_name.get(key, key)
+                    new_tree[new_key] = convert_keys(value) if isinstance(value, dict) else value
                 return new_tree
 
             return convert_keys(datatree)
 
-        
-        # Build family tree
-        datatree = build_family_tree(families)
+        # Prune tree to remove anything not in valid_names
+        def prune_tree(tree, valid_leaves):
+            pruned = {}
+            for key, value in tree.items():
+                if isinstance(value, dict):
+                    if 'Data' in value:
+                        if key in valid_leaves:
+                            pruned[key] = value
+                    else:
+                        pruned_subtree = prune_tree(value, valid_leaves)
+                        if pruned_subtree:
+                            pruned[key] = pruned_subtree
+            return pruned if pruned else None
 
-        # Final result
-        return {
-            "Data": datatree,
-            "conversion_dict": names_conversion_dict
+        # Build and prune the tree
+        datatree = build_family_tree(families)
+        GPCRomeStructureDict = prune_tree(datatree, valid_names)
+
+        # Class renaming
+        class_rename_map = {
+            "Class A (Rhodopsin)": "A",
+            "Class B1 (Secretin)": "B1",
+            "Class B2 (Adhesion)": "B2",
+            "Class C (Glutamate)": "C",
+            "Class F (Frizzled)": "F",
+            "Class O1 (fish-like odorant)": "O1",
+            "Class O2 (tetrapod specific odorant)": "O2",
+            "Class T2 (Taste 2)": "T2",
+            "Other GPCRs": "Classless"
         }
+
+        if type == "Classic" and GPCRomeStructureDict:
+            GPCRome_dict = {
+                "Circle_1": {},
+                "Circle_2": {},
+                "Circle_3": {},
+                "Circle_4": {},
+                "Circle_5": {}
+            }
+
+            class_A_receptor_families = 0
+
+            for Class, ligand_types in GPCRomeStructureDict.items():
+                renamed_class = class_rename_map.get(Class, Class)
+
+                if Class == "Class A (Rhodopsin)":
+                    sorted_receptor_families = []
+
+                    for Ligand_type, receptor_families in ligand_types.items():
+                        if Ligand_type == "Orphan receptors":
+                            continue
+
+                        for Receptor_Family in receptor_families:
+                            if Receptor_Family == "Class A Orphans":
+                                continue
+
+                            sorted_receptor_families.append(
+                                (Ligand_type, Receptor_Family, receptor_families[Receptor_Family])
+                            )
+
+                    sorted_receptor_families.sort(key=lambda x: x[1])  # sort by receptor family name
+
+                    for Ligand_type, Receptor_Family, receptors in sorted_receptor_families:
+                        target_circle = "Circle_1" if class_A_receptor_families < 43 else "Circle_2"
+
+                        GPCRome_dict.setdefault(target_circle, {}).setdefault(renamed_class, {}).setdefault(Ligand_type, {})[Receptor_Family] = receptors
+                        class_A_receptor_families += 1
+
+                    # Add Class A orphans to Circle_2 if present
+                    orphans = ligand_types.get("Orphan receptors", {})
+                    if "Class A orphans" in orphans:
+                        GPCRome_dict["Circle_2"].setdefault(renamed_class, {}).setdefault("Orphan receptors", {})["Class A orphans"] = orphans["Class A orphans"]
+
+                elif Class in ["Class B1 (Secretin)", "Class B2 (Adhesion)"]:
+                    GPCRome_dict["Circle_3"].setdefault(renamed_class, {}).update(ligand_types)
+
+                elif Class in ["Class C (Glutamate)", "Class F (Frizzled)"]:
+                    GPCRome_dict["Circle_4"].setdefault(renamed_class, {}).update(ligand_types)
+
+                elif Class in ["Class T2 (Taste 2)", "Other GPCRs"]:
+                    GPCRome_dict["Circle_5"].setdefault(renamed_class, {}).update(ligand_types)
+
+            # Remove the ligand type layer
+            for circle in GPCRome_dict:
+                for class_name in list(GPCRome_dict[circle].keys()):
+                    new_structure = {}
+
+                    for ligand_type in list(GPCRome_dict[circle][class_name].keys()):
+                        for receptor_family, receptors in GPCRome_dict[circle][class_name][ligand_type].items():
+                            new_structure[receptor_family] = receptors
+
+                    # Replace the old structure with the flattened one
+                    GPCRome_dict[circle][class_name] = new_structure
+            # Final return (renamed and sorted into circles)
+            return {
+                "Data": GPCRome_dict
+            }
 
 
     @staticmethod
@@ -1449,6 +1557,6 @@ class GPCRomeRender(TemplateView):
 
         # Add it to context
         context["gpcr_tree"] = gpcr_data["Data"]
-        context["gpcr_conversion"] = gpcr_data["conversion_dict"]
+        # context["gpcr_conversion"] = gpcr_data["conversion_dict"]
         
         return context  # ✅ Don't forget to return the context!

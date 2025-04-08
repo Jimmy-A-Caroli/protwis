@@ -3730,7 +3730,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                     for (const receptor of Object.keys(circleData[classKey][receptorFamily])) {
                         Circle_array.push(receptor); // Push receptor directly
                         const receptorObj = circleData[classKey][receptorFamily][receptor];
-                        DataFill[receptor] = receptorObj.Value1 || 0;
+                        DataFill[receptor] = receptorObj.Data || 0;
                     }
                 }
                 if (classKey == "T2") {
@@ -3866,7 +3866,6 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                 if (match) {
                     let firstLetter = match[1];
                     let index = match.index + match[0].length - 1;
-                    console.log(str);
                     return str.slice(0, index) + firstLetter.toUpperCase() + str.slice(index + 1);
                 }
 
@@ -3952,6 +3951,13 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                const labelText = getLabelText(d);
                return GPCRome_formatTextWithHTML(labelText,CircleSubHeaders);
            })
+            .on("click", (event, d) => {
+                const labelText = Circle_array[d]; // make sure it's the actual receptor name
+                if (!CircleHeaders.includes(labelText) && !CircleSubHeaders.includes(labelText)) {
+                    handleReceptorClick(labelText);
+                }
+            })
+            .style("cursor", d => (!CircleHeaders.includes(d) && !CircleSubHeaders.includes(d)) ? "pointer" : "default")
            .style("font-size", d => CircleHeaders.includes(d) ? FontsizeClass : FontsizeGlobal)
            .style("font-family", FontStyle)
            .style("font-weight", d => CircleHeaders.includes(d) || CircleSubHeaders.includes(d) ? "950" : "normal")
