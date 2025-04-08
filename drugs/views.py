@@ -8,7 +8,7 @@ from structure.models import Structure
 from drugs.models import Drugs, Indication, ATCCodes, IndicationAssociation
 from protein.views import get_sankey_data
 from protein.models import Protein, ProteinFamily, TissueExpression
-from mapper.views import LandingPage
+from mapper.views import DataMapperHome
 from ligand.models import AssayExperiment, LigandID
 from ligand.functions import standardize_smiles
 
@@ -703,9 +703,9 @@ class DruggedGPCRome(TemplateView):
             if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
                 datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
 
-        datatree2 = LandingPage.convert_keys(datatree, conversion)
+        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
         datatree2.pop('Parent family', None)
-        datatree3 = LandingPage.filter_dict(datatree2, names)
+        datatree3 = DataMapperHome.filter_dict(datatree2, names)
         data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in drug_count_receptor_dict.items()}
         Data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
         context['GPCRome_data'] = json.dumps(Data_full["NameList"])
@@ -738,7 +738,7 @@ class DruggedGPCRome(TemplateView):
                 #     print(len(unique_entries),sorted(unique_entries))
                 drug_dict[target][key] = len(unique_entries)  # Replace the list with the count
 
-        tree, tree_options, circles, receptors = LandingPage.generate_tree_plot(drug_dict)
+        tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(drug_dict)
         #Remove 0 circles
         for key, outer_dict in circles.items():
             circles[key] = {k: v for k, v in outer_dict.items() if v != 0}
@@ -779,7 +779,7 @@ class DruggedGPCRome(TemplateView):
                 else:
                     drug_dict[drug[1]]['Outer1'] += 1
 
-        repurposed_tree, repurposed_tree_options, repurposed_circles, repurposed_receptors = LandingPage.generate_tree_plot(drug_dict)
+        repurposed_tree, repurposed_tree_options, repurposed_circles, repurposed_receptors = DataMapperHome.generate_tree_plot(drug_dict)
         #Remove 0 circles
         for key, outer_dict in repurposed_circles.items():
             repurposed_circles[key] = {k: v for k, v in outer_dict.items() if v != 0}
