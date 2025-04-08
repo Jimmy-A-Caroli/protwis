@@ -150,7 +150,7 @@
                     data-toggle="popover"
                     data-trigger="hover"
                     data-placement="right"
-                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is likely being repurposed."
+                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is being repurposed."
                     style="font-size: 14px;">
                   </span>
                 </div>
@@ -163,7 +163,7 @@
                     data-toggle="popover"
                     data-trigger="hover"
                     data-placement="right"
-                    data-content="A drug is approved if authorized by a major regulatory agency (e.g., FDA, EMA, PMDA)."
+                    data-content="A 'Yes' means the drug is approved by a major regulatory agency (e.g., FDA, EMA, PMDA)."
                     style="font-size: 14px;">
                   </span>
                 </div>
@@ -198,7 +198,7 @@
                     data-toggle="popover"
                     data-trigger="hover"
                     data-placement="right"
-                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is likely being repurposed."
+                    data-content="A agent/drug is classified as in trial if it is currently undergoing clinical trials (phases I–III). If it is also listed as approved (see adjacent column), it is being repurposed."
                     style="font-size: 14px;">
                   </span>
                 </div>
@@ -211,7 +211,7 @@
                     data-toggle="popover"
                     data-trigger="hover"
                     data-placement="right"
-                    data-content="A drug is approved if authorized by a major regulatory agency (e.g., FDA, EMA, PMDA)."
+                    data-content="A 'Yes' means the drug is approved by a major regulatory agency (e.g., FDA, EMA, PMDA)."
                     style="font-size: 14px;">
                   </span>
                 </div>
@@ -768,7 +768,7 @@ $(document).ready(function () {
               const totalRows = api.rows().count(); // Use the API to get row count
               const rowCountText = layout === "targets"
                 ? `${uniqueCount} unique target(s) with ${totalRows} Target–agent/drug–disease rows`
-                : `${uniqueCount} unique compound(s) with ${totalRows} Agent/drug–target–disease rows`;
+                : `${uniqueCount} unique agent(s)/drug(s) with ${totalRows} Agent/drug–target–disease rows`;
               $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
               // create compound preview
               compoundPreview("a.struct");
