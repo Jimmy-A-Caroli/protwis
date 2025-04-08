@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
 
 <!-- <link rel="stylesheet" href="{% static 'home/css/signprot-multitabtable.css' %}" type="text/css" /> -->
 
@@ -277,7 +278,15 @@
                         <td style="text-align:right">{{value.4}}</td>
 
                         <!-- ligand block -->
-                        <td style="text-align:left" class="expand"><a href='/ligand/{{value.19}}/info' target='_blank'>{{value.5|title}}</a></td>
+                        <td style="text-align:left" class="expand">
+                            <a class="struct" 
+                               href='/ligand/{{value.19}}/info' 
+                               target='_blank'
+                               data-smiles="{{ value.24|safe }}"
+                               rel="{{ value.25 }}">
+                              {{ value.5|title }}
+                            </a>
+                        </td>
                         <td style="text-align:left">{{value.7|title}}</td>
                         <td style="text-align:left" class="pathway">{{value.8|floatformat:0}}</td>
                         <td style="text-align:left" class="pathway">{{value.9}}</td>
@@ -357,7 +366,20 @@
 <script src="{% static 'home/js/grayscale.js' %}"></script>
 <script src="{% static 'home/js/gpcrdb.js' %}"></script>
 <script src="{% static 'home/js/signprot-multitabtable.js' %}"></script>
-<script src="{% static 'home/js/xlsx.full.min.js' %}"></script>  
+<script src="{% static 'home/js/xlsx.full.min.js' %}"></script>
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- for rendering ligand images -->
+<script src="{% static 'home/js/compoundPreviewTooltip.js' %}">
+
+
+<script type="text/javascript">
+    window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+</script>
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        compoundPreview("a.struct");
+    });
+</script>
 
 <script>
   //triggered when modal is about to be shown
