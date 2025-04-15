@@ -863,11 +863,11 @@ function updatePlotWithAnnotations() {
         },
         plot_bgcolor: '#FFFFFF',
         autosize: false,
-        width: 1024,
+        width: 1200,
         height: 700,
         margin: {
             l: 50,
-            r: 374,
+            r: 200,
             t: 50,
             b: 50
         }
@@ -3605,9 +3605,11 @@ function Draw_GPCRomes(layout_data, fill_data, location, GPCRome_styling, odoran
     .attr("transform-origin", "center");
 }
 
+// =========================================
+// ===  Draw / generate the GPCRome plot ===
+// =========================================
 
-// Draw / generate the GPCRome plot
-function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
+function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
 
     dimensions = { height: 1000, width: 1000 };
 
@@ -3615,8 +3617,14 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
     const FontsizeGlobal = GPCRome_styling.FontsizeGlobal || "11px";
     const FontsizeClass = GPCRome_styling.FontsizeClass || "20px";
     const FontStyle = GPCRome_styling.Fontstyle || "Arial";
-    // const ColorSetup = GPCRome_styling.ColorSetup || "One";
-
+    const DataType = GPCRome_styling.DataType || "Numeric";
+    const ColorSetup = GPCRome_styling.ColorSetup || "One";
+    const MinValue = GPCRome_styling.GPCRomeMin || 0
+    const MaxValue = GPCRome_styling.GPCRomeMax || 1
+    const AvgValue =  GPCRome_styling.GPCRomeAvg || 0.5
+    const ColorMin =  GPCRome_styling.colorStart || "#FFFFFF"
+    const ColorMax =  GPCRome_styling.colorEnd || "#000000"
+    const ColorAvg = "#FFFFFF"
 
 
     const svg = d3v4.select("#" + location)
@@ -3627,7 +3635,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
     .attr("xmlns", "http://www.w3.org/2000/svg")  // Add the SVG namespace
     .attr("xmlns:xlink", "http://www.w3.org/1999/xlink");  // Add the xlink namespace for images
 
-//    // Get the image URL from the data-attribute
+    // Get the image URL from the data-attribute
     const imageUrl = document.getElementById("image-container").getAttribute("data-image-url");
 
     if (showIcon) {
@@ -3750,9 +3758,17 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
         
                     // Loop through receptors inside each receptor family
                     for (const receptor of Object.keys(circleData[classKey][receptorFamily])) {
-                        Circle_array.push(receptor); // Push receptor directly
+                        let label = GPCRome_styling.LabelType === "Gene"
+                            ? (circleData[classKey][receptorFamily][receptor]["EntryName"] || receptor)
+                            : receptor;
+
+                        Circle_array.push(label);
                         const receptorObj = circleData[classKey][receptorFamily][receptor];
-                        DataFill[receptor] = receptorObj.Data || 0;
+                        if (DataType === "Text") {
+                            DataFill[label] = receptorObj.Color || "White";
+                        } else {
+                            DataFill[label] = receptorObj.Data || 0;
+                        }
                     }
                 }
                 if (classKey == "T2") {
@@ -3973,13 +3989,13 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                const labelText = getLabelText(d);
                return GPCRome_formatTextWithHTML(labelText,CircleSubHeaders);
            })
-            .on("click", (event, d) => {
-                const labelText = Circle_array[d]; // make sure it's the actual receptor name
-                if (!CircleHeaders.includes(labelText) && !CircleSubHeaders.includes(labelText)) {
-                    handleReceptorClick(labelText);
-                }
-            })
-            .style("cursor", d => (!CircleHeaders.includes(d) && !CircleSubHeaders.includes(d)) ? "pointer" : "default")
+            // .on("click", (event, d) => { // Function for clicking the receptors (NAR2027)
+            //     const labelText = Circle_array[d]; // make sure it's the actual receptor name
+            //     if (!CircleHeaders.includes(labelText) && !CircleSubHeaders.includes(labelText)) {
+            //         handleReceptorClick(labelText);
+            //     }
+            // })
+            // .style("cursor", d => (!CircleHeaders.includes(d) && !CircleSubHeaders.includes(d)) ? "pointer" : "default") // Function for clicking the receptors (NAR2027)
            .style("font-size", d => CircleHeaders.includes(d) ? FontsizeClass : FontsizeGlobal)
            .style("font-family", FontStyle)
            .style("font-weight", d => CircleHeaders.includes(d) || CircleSubHeaders.includes(d) ? "950" : "normal")
@@ -4139,25 +4155,27 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
         // ################
         // Define color scale for continuous data
         let colorScale;
+        
+        if (DataType === "Numeric") {
+            if (ColorSetup === 'One') {
+            // White to Max (One color)
+            colorScale = d3v4.scaleLinear()
+                .domain([MinValue, MaxValue])  // Only two points in the domain
+                .range([ColorAvg, ColorMax]);  // White to Max color
 
-        if (GPCRome_styling.ColorSetup === 'One') {
-        // White to Max (One color)
-        colorScale = d3v4.scaleLinear()
-            .domain([GPCRome_styling.GPCRomeMin, GPCRome_styling.GPCRomeMax])  // Only two points in the domain
-            .range(['#FFFFFF', GPCRome_styling.colorEnd]);  // White to Max color
+            } else if (ColorSetup === 'Two') {
+            // Min to Max (Two colors)
+            colorScale = d3v4.scaleLinear()
+                .domain([MinValue, MaxValue])  // Min to Max in the domain
+                .range([ColorMin, ColorMax]);  // Min to Max color in range
 
-        } else if (GPCRome_styling.ColorSetup === 'Two') {
-        // Min to Max (Two colors)
-        colorScale = d3v4.scaleLinear()
-            .domain([GPCRome_styling.GPCRomeMin, GPCRome_styling.GPCRomeMax])  // Min to Max in the domain
-            .range([GPCRome_styling.colorStart, GPCRome_styling.colorEnd]);  // Min to Max color in range
-
-        } else if (GPCRome_styling.ColorSetup === 'Three') {
-        // Min to White to Max (Three colors)
-        colorScale = d3v4.scaleLinear()
-            .domain([GPCRome_styling.GPCRomeMin, GPCRome_styling.GPCRomeAvg, GPCRome_styling.GPCRomeMax])  // Min, Avg, Max in the domain
-            .range([GPCRome_styling.colorStart, '#FFFFFF', GPCRome_styling.colorEnd]);  // Min to White to Max in range
-}
+            } else if (ColorSetup === 'Three') {
+            // Min to White to Max (Three colors)
+            colorScale = d3v4.scaleLinear()
+                .domain([MinValue, AvgValue, MaxValue])  // Min, Avg, Max in the domain
+                .range([ColorMin, ColorAvg, ColorMax]);  // Min to White to Max in range
+            }
+        }
 
         // Add large hollow pie chart for the entire level
         const arcGenerator = d3v4.arc()
@@ -4182,13 +4200,15 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
             .attr("transform", `translate(${width / 2}, ${height / 2})`)
             .style("fill", (d) => {
                 const value = DataFill[d.data];
-                // Use color scale for continuous data
-                const numericValue = parseFloat(value);
-
-                if (numericValue === 0) {
-                    return "white";  // Return "white" if the value is 0
+            
+                if (DataType === "Text") {
+                    return value || "none";  // Use Color directly
                 }
-
+            
+                const numericValue = parseFloat(value);
+                // if (numericValue === 0) {
+                //     return "white";
+                // }
                 return !isNaN(numericValue) ? colorScale(numericValue) : "none";
             })
             .style("stroke", (d) => {
@@ -4200,14 +4220,190 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling, mode="Numeric") {
                 return value === "" ? 0.5 : 0.5;  // Set stroke-width to 0 if the value is an empty string
             });
     }
+    // === Legends ===
+    let AddBottomHeight = 0;
+    if (DataType === "Numeric") {
+        // Add gradient bar legend for numeric data
+        const legendGroup = svg.append("g").attr("class", "legend-gradient-bar");
+        
+        const barWidth = GPCRome_styling.LegendbarLength || 300;
+        const barHeight = 20;
+        const barX = (dimensions.width - barWidth) / 2;
+        const barY = dimensions.height + 20;
+        const BarFixedDigit = GPCRome_styling.LegendbarDigit || 2;
+        const BarFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+    
+        // Create defs and linearGradient
+        const defs = svg.append("defs");
+        const gradient = defs.append("linearGradient")
+            .attr("id", "gradient-bar")
+            .attr("x1", "0%")
+            .attr("x2", "100%")
+            .attr("y1", "0%")
+            .attr("y2", "0%");
+    
+        if (ColorSetup === "Three") {
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", ColorMin);
+    
+            gradient.append("stop")
+                .attr("offset", "50%")
+                .attr("stop-color", ColorAvg);
+    
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", ColorMax);
+        } else if (ColorSetup === "Two") {
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", ColorMin || ColorMax);
+    
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", ColorMax);
+        } else {
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .attr("stop-color", ColorAvg);
+    
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", ColorMax);
+        }
+    
+        // Draw the gradient bar
+        legendGroup.append("rect")
+            .attr("x", barX)
+            .attr("y", barY)
+            .attr("width", barWidth)
+            .attr("height", barHeight)
+            .style("fill", "url(#gradient-bar)")
+            .style("stroke", "black");
+    
+        // Add min, avg (if needed), and max labels
+        legendGroup.append("text")
+            .attr("x", barX)
+            .attr("y", barY + barHeight + 15)
+            .attr("text-anchor", "start")
+            .style("font-size", BarFontSize)
+            .text(parseFloat(MinValue).toFixed(BarFixedDigit));
+    
+        legendGroup.append("text")
+            .attr("x", barX + barWidth / 2)
+            .attr("y", barY + barHeight + 15)
+            .attr("text-anchor", "middle")
+            .style("font-size", BarFontSize)
+            .text(parseFloat(AvgValue).toFixed(BarFixedDigit));
+    
+        legendGroup.append("text")
+            .attr("x", barX + barWidth)
+            .attr("y", barY + barHeight + 15)
+            .attr("text-anchor", "end")
+            .style("font-size", BarFontSize)
+            .text(parseFloat(MaxValue).toFixed(BarFixedDigit));
+        
+        AddBottomHeight = 50;
+    } else {
+        const legendGroup = svg.append("g").attr("class", "legend-text-categories");
+
+    const spacingY = 25;
+    const padding = 10;
+    const startX = 50;
+    const startY = dimensions.height + 40;
+    let x = startX;
+    let y = startY;
+
+    const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
+    const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+
+    const legendItems = new Set();
+
+    function extractColorData(obj) {
+        if (typeof obj !== "object" || obj === null) return;
+        if ("Color" in obj && "Data" in obj) {
+            const pairKey = `${obj.Color}|||${obj.Data}`;
+            legendItems.add(pairKey);
+        }
+        for (const key in obj) {
+            extractColorData(obj[key]);
+        }
+    }
+
+    Object.values(Data).forEach(circleData => {
+        extractColorData(circleData);
+    });
+
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const sortedItems = Array.from(legendItems)
+        .filter(pair => {
+            const [color, label] = pair.split("|||");
+            return !(color === "#FFFFFF" && label === "Empty");
+        })
+        .sort((a, b) => {
+            const labelA = a.split("|||")[1];
+            const labelB = b.split("|||")[1];
+            return collator.compare(labelA, labelB);
+        });
+
+    const tempText = svg.append("text")
+        .attr("x", -9999)
+        .attr("y", -9999)
+        .style("font-size", LegendFontSize)
+        .style("font-family", LegendFontStyle);
+
+    const maxItemWidth = dimensions.width - 100;
+
+    sortedItems.forEach(pairKey => {
+        let [color, label] = pairKey.split("|||");
+
+        tempText.text(label);
+        const labelWidth = tempText.node().getComputedTextLength();
+        const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+        // Check if item itself is too wide even on a new line
+        if (totalWidth > maxItemWidth) {
+            label = "⚠ Too long label";
+            tempText.text(label);
+        }
+
+        const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+        if (x + fixedWidth > dimensions.width - 50) {
+            x = startX;
+            y += spacingY;
+        }
+
+        legendGroup.append("circle")
+            .attr("cx", x)
+            .attr("cy", y)
+            .attr("r", 6)
+            .style("fill", color)
+            .style("stroke", "black");
+
+        legendGroup.append("text")
+            .attr("x", x + 10)
+            .attr("y", y + 4)
+            .attr("text-anchor", "start")
+            .style("font-size", LegendFontSize)
+            .style("font-family", LegendFontStyle)
+            .text(label);
+
+        x += fixedWidth;
+    });
+        // Clean up measuring element
+        tempText.remove();
+        // 
+        AddBottomHeight = 150;
+    }
+    
     // Add padding and scale
     const padding = 10;  // Adjust padding value as needed (50px for this example)
     const originalWidth = +svg.attr("width");
     const originalHeight = +svg.attr("height");
 
     // Adjust the viewBox to add padding
-    svg.attr("viewBox", `-${padding} -${padding} ${originalWidth + 2 * padding} ${originalHeight + 2 * padding}`);
-
+    svg.attr("viewBox", `-${padding} -${padding} ${originalWidth + 2 * padding} ${originalHeight + 2 * padding + AddBottomHeight}`);
     // Apply scaling to the content (e.g., 95% of the original size)
     svg.attr("transform", "scale(0.95)")
     .attr("transform-origin", "center");

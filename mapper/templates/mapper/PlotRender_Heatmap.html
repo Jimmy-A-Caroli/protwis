@@ -1,0 +1,486 @@
+{% extends "home/base.html" %}
+{% load static %}
+{% load humanize %}
+{% block addon_css %}
+<link rel="stylesheet" href="{% static 'home/css/nv.d3.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+<div style="padding-top: 10px; font-size: 11px; white-space: nowrap;"></div>
+<!-- Receptor label switch -->
+<div class="col-md-12" style="margin-top: 20px;">
+<div>
+    Receptor names:
+    <div class="btn-group" role="group" id="gtp_plus">
+        <button id="Heatmap_UniProtNames" class="btn btn-info active">UniProt</button>
+        <button id="Heatmap_IUPHARNames" class="btn btn-info">GtPdb</button>
+    </div>
+</div>
+</div>
+<div class="col-md-12" style="margin-top: 20px;margin-bottom: 30px;">
+<div class="col-md-2">
+<div class="dropdown" style="width: 500px !important;">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    Color styling
+    </button>
+    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+    <!-- Color complexity Dropdown -->
+    <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
+        <div class="col-md-6" style="width:150px;margin-right: 20px;">
+        <select id="Heatmap_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateColorPickers()">
+            <option value="One" selected>White - Color</option>
+            <option value="Two">Color - Color</option>
+            <option value="Three">Color - White - Color</option>
+        </select>
+        </div>
+
+        <!-- Color Selector Dropdown -->
+        <div class="col-md-6" style="height: 15px;width: 200px;">
+            <div class="col-md-3" id="Heatmap_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
+            <input type="text" id="Heatmap_colorPicker_min" />
+            </div>
+        <!-- Color Selector Dropdown -->
+            <div class="col-md-3" id="Heatmap_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
+            <input type="text" id="Heatmap_colorPicker_max"/>
+            </div>
+        </div>
+    </div>
+    <!-- Set Colors Buttons -->
+    <div class="text-center" style="margin-bottom: 15px;">
+        <div class="col-md-12" style="margin-bottom: 5px;">
+        <div class="col-md-6"><button id="GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
+        <div class="col-md-6"><button id="GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
+        </div>
+        <div class="col-md-12" style="margin-bottom: 15px;">
+        <div class="col-md-6"><button id="RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
+        <div class="col-md-6"><button id="TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
+        </div>
+    </div>
+    </div>
+</div>
+</div>
+
+<!-- ################# -->
+<!-- # Label Styling  # -->
+<!-- ################# -->
+<div class="col-md-2">
+<div class="dropdown" style="width: 400px !important;">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    Label Styling
+    </button>
+    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+
+    <!-- Label Orientation Toggle Button -->
+    <div class="col-md-12" style="margin-top: 20px;margin-bottom: 10px;">
+        <div class="text-center">
+        <button id="toggleLabelOrientation" class="btn btn-primary" style="width:150px;">Vertical</button>
+        </div>
+    </div>
+
+    <!-- Label Position Toggle Button -->
+    <div class="col-md-12" style="margin-top: 10px;margin-bottom: 20px;">
+        <div class="text-center">
+        <button id="toggleLabelPosition" class="btn btn-primary" style="width:150px;">Bottom</button>
+        </div>
+    </div>
+
+    <!-- Label Font Size Slider -->
+    <div class="col-md-12" style="text-align: center;">
+        <label id="Heatmap_fontSizeSliderLabel" class="form-label">Label Font Size: 14px</label>
+    </div>
+    <div class="col-md-12" style="margin-bottom: 30px;">
+        <input type="range" class="form-range" min="10" max="16" id="Heatmap_fontSizeSlider" value="14">
+    </div>
+
+    <!-- Receptor Font Size Slider -->
+    <div class="col-md-12" style="text-align: center;">
+        <label id="Heatmap_receptor_fontSizeSliderLabel" class="form-label">Receptor Font Size: 14px</label>
+    </div>
+    <div class="col-md-12" style="margin-bottom: 30px;">
+        <input type="range" class="form-range" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14">
+    </div>
+
+    </div>
+</div>
+</div>
+<!-- ################### -->
+<!-- # Label modifier  # -->
+<!-- ################### -->
+<div class="col-md-2">
+<div class="dropdown" style="width: 400px !important;">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="LabelModifier_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    Label Modifier
+    </button>
+    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="LabelModifier_Menu">
+    <div id="dynamicInputs" class="p-3"></div>
+    </div>
+</div>
+</div>
+
+<!-- ################# -->
+<!-- # Data Styling  # -->
+<!-- ################# -->
+<div class="col-md-2">
+<div class="dropdown" style="width: 400px !important;">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_DataStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    Data styling
+    </button>
+    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Heatmap_DataStyling_Menu">
+
+    <!-- Data Labels Toggle Button -->
+    <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;text-align:center;">
+        <button id="Heatmap_data_labels" class="btn btn-primary" style="width:150px;">Data Labels: Yes</button>
+    </div>
+
+    <!-- Data border Toggle Button -->
+    <div class="col-md-12" style="width:300px;margin-bottom: 20px;text-align:center;">
+        <button id="Heatmap_Border_Styling" class="btn btn-primary" style="width:150px;">Data Border: Yes</button>
+    </div>
+
+    <!-- Data Font Size Slider -->
+    <div class="col-md-12" style="text-align: center;">
+        <label id="Heatmap_data_fontSizeSliderLabel" class="form-label">Data Label Font Size: 12px</label>
+    </div>
+    <div class="col-md-12" style="margin-bottom: 30px;">
+        <input type="range" class="form-range" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12">
+    </div>
+
+    </div>
+</div>
+</div>
+
+<div class="col-md-4">
+    <div class="text-center">
+    <div class="dropdown">
+        <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right-middle">
+        <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.svg');">SVG</a></li>
+        <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('Heatmap_plot_svg'), 'Heatmap.png');">PNG</a></li>
+        <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.jpg');">JPG</a></li>
+        <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('Heatmap_plot_svg'), 'Heatmap.tiff');">TIFF</a></li>
+        </div>
+    </div>
+    </div>
+</div>
+</div>
+<div id="heatmapPlot" class="text-center" style="margin-left: -150px;"></div>
+
+
+{% endblock %}
+
+{% block addon_js %}
+<script src="{% static 'home/js/d3.min.js' %}"></script>
+<script src="{% static 'home/js/nv.d3.min.js' %}"></script>
+<script src="{% static 'home/js/d3.v4.min.js' %}"></script>
+<script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
+<script src="{% static 'home/js/saveSvg.js' %}"></script>
+<script src="{% static 'home/js/datamapper.js' %}"></script>
+<script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
+<script src="{% static 'home/js/ml.js' %}"></script>
+<script src="{% static 'home/js/plotly_v1_58_5.js' %}"></script>
+
+
+<!-- Universal scripts -->
+<script>
+$('.dropdown-menu').on('click', function(event){
+    event.stopPropagation();
+});
+
+</script>
+
+<script>
+$(document).ready(function() {
+    // Function to initialize Spectrum color picker
+    function initializeColorPicker(elementId, start_color) {
+        $("#" + elementId).spectrum({
+            color: start_color,
+            showPalette: true,
+            showInput: true,
+            preferredFormat: "hex",
+            palette: [
+                ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+                ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
+                ["#800000", "#808000", "#008000", "#800080", "#008080"],
+                ["#000080"]
+            ],
+            change: function(color) {
+                updateHeatmapColors(); // Automatically update heatmap when color changes
+            },
+            move: function(color) {
+                updateHeatmapColors(); // Update heatmap in real-time as user moves the slider
+            }
+        });
+    }
+
+    // Initialize all color pickers
+    initializeColorPicker("Heatmap_colorPicker_min", "#1a80bb");
+    initializeColorPicker("Heatmap_colorPicker_max", "#a00000");
+
+    // Set Red-Blue scale as default when page loads
+    $("#RedBlueScale").trigger("click");
+});
+</script>
+  
+<script>
+
+var heatmap = {{ heatmap_data|safe }};
+var label_converter = {{ Label_converter|safe }};
+// var label_x_converter = {{Heatmap_Label_dict|safe}};
+
+var label_x_converter = {'Value1':'bob','Value2':'Bob number2','Value3':'Bobber','Value4':'Bobbilious','Value5':'Non-Bob'}
+
+var heatmap_DataStyling = heatmap_DataStyling();
+
+
+document.addEventListener("DOMContentLoaded", function() {
+// Initialize heatmap
+Heatmap(heatmap, 'heatmapPlot', heatmap_DataStyling, label_x_converter);
+});
+  
+// Function to update the visualization
+function Heatmap_updateVisualization() {
+    // Clear existing SVG content
+    d3.select("#heatmapPlot svg").remove();
+    // Re-render the visualization
+    Heatmap(heatmap, 'heatmapPlot', heatmap_DataStyling, label_x_converter);
+    }
+
+$('.dropdown-menu').on('click', function(event){
+event.stopPropagation();
+});
+
+
+// ###################
+// ## Color styling ##
+// ###################
+
+// Function to dynamically update heatmap based on selected colors or style
+function updateHeatmapColors() {
+    const Color_styling = document.querySelector('#Heatmap_color_styling').value;
+    const Color_min = $("#Heatmap_colorPicker_min").spectrum("get").toHexString();
+    const Color_max = $("#Heatmap_colorPicker_max").spectrum("get").toHexString();
+
+    if (Color_styling === 'One') {
+        heatmap_DataStyling.min_color = '#FFFFFF';
+        heatmap_DataStyling.max_color = Color_max;
+        heatmap_DataStyling.Number_of_colors = 'One';
+    } else if (Color_styling === 'Two') {
+        heatmap_DataStyling.min_color = Color_min;
+        heatmap_DataStyling.max_color = Color_max;
+        heatmap_DataStyling.Number_of_colors = 'Two';
+    } else if (Color_styling === 'Three') {
+        heatmap_DataStyling.min_color = Color_min;
+        heatmap_DataStyling.max_color = Color_max;
+        heatmap_DataStyling.Number_of_colors = 'Three';
+    }
+
+    // Trigger heatmap update after color change
+    Heatmap_updateVisualization();
+}
+
+// Function to set color pickers to predefined colors (called by preset buttons)
+function setColors(colorMin, colorMax, optionValue) {
+    $("#Heatmap_colorPicker_min").spectrum("set", colorMin);
+    $("#Heatmap_colorPicker_max").spectrum("set", colorMax);
+    $("#Heatmap_color_styling").val(optionValue).trigger("change");
+}
+
+// Event listener for color complexity dropdown
+$("#Heatmap_color_styling").change(function() {
+    UpdateColorPickers(); // Update color pickers visibility based on complexity
+    updateHeatmapColors(); // Update heatmap colors dynamically
+});
+
+// Preset buttons event listeners
+$("#GrayScale").click(function() {
+    heatmap_DataStyling.min_color = "#b8b8b8";
+    heatmap_DataStyling.max_color = "#707070";
+    setColors(heatmap_DataStyling.min_color, heatmap_DataStyling.max_color, "Two");
+});
+
+$("#GrayBlueScale").click(function() {
+    heatmap_DataStyling.min_color = "#97a6c4";
+    heatmap_DataStyling.max_color = "#384860";
+    setColors(heatmap_DataStyling.min_color, heatmap_DataStyling.max_color, "Two");
+});
+
+$("#RedBlueScale").click(function() {
+    heatmap_DataStyling.min_color = "#1a80bb";
+    heatmap_DataStyling.max_color = "#a00000";
+    setColors(heatmap_DataStyling.min_color, heatmap_DataStyling.max_color, "Three");
+});
+
+$("#TealMagentaScale").click(function() {
+    heatmap_DataStyling.min_color = "#298c8c";
+    heatmap_DataStyling.max_color = "#800074";
+    setColors(heatmap_DataStyling.min_color, heatmap_DataStyling.max_color, "Three");
+});
+
+// Update color pickers visibility dynamically based on dropdown
+function UpdateColorPickers() {
+    const Color_styling_value = $('#Heatmap_color_styling').val();
+    const Heatmap_Color_min_container = $("#Heatmap_Color_min_container");
+
+    if (Color_styling_value == 'One') {
+        Heatmap_Color_min_container.hide(); // Hide min color picker for 'One'
+    } else {
+        Heatmap_Color_min_container.show(); // Show min color picker for 'Two' and 'Three'
+    }
+}
+
+
+// ###################
+// ## Label Styling ##
+// ###################
+
+// Function to update the label styling
+function updateLabelStyling() {
+// Get the values for label styling from the data object
+const xlabel_orientation = heatmap_DataStyling.rotation;
+const xlabel_position = heatmap_DataStyling.label_position;
+const xlabel_fontsize = document.getElementById('Heatmap_fontSizeSlider').value;
+const ylabel_fontsize = document.getElementById('Heatmap_receptor_fontSizeSlider').value;
+
+// Update the data styling values
+heatmap_DataStyling.label_fontsize = xlabel_fontsize;
+heatmap_DataStyling.receptor_fontsize = ylabel_fontsize;
+
+// Update the heatmap
+Heatmap_updateVisualization();
+}
+
+// Toggle label orientation between Horizontal and Vertical
+const toggleLabelOrientation = document.getElementById("toggleLabelOrientation");
+toggleLabelOrientation.addEventListener("click", function() {
+if (heatmap_DataStyling.rotation === 90) {
+    heatmap_DataStyling.rotation = 0;
+    toggleLabelOrientation.textContent = "Horizontal";
+} else {
+    heatmap_DataStyling.rotation = 90;
+    toggleLabelOrientation.textContent = "Vertical";
+}
+updateLabelStyling();  // Update the visualization when toggled
+});
+
+// Toggle label position between Bottom and Top
+const toggleLabelPosition = document.getElementById("toggleLabelPosition");
+toggleLabelPosition.addEventListener("click", function() {
+if (heatmap_DataStyling.label_position === "Bottom") {
+    heatmap_DataStyling.label_position = "Top";
+    toggleLabelPosition.textContent = "Top";
+} else {
+    heatmap_DataStyling.label_position = "Bottom";
+    toggleLabelPosition.textContent = "Bottom";
+}
+updateLabelStyling();  // Update the visualization when toggled
+});
+
+// Dynamic Font Size Updates
+const Heatmap_fontSizeSlider = document.getElementById('Heatmap_fontSizeSlider');
+const Heatmap_fontSizeLabel = document.getElementById('Heatmap_fontSizeSliderLabel');
+Heatmap_fontSizeSlider.addEventListener('input', () => {
+Heatmap_fontSizeLabel.textContent = `Label Font Size: ${Heatmap_fontSizeSlider.value}px`;
+updateLabelStyling();
+});
+
+const Heatmap_receptor_fontSizeSlider = document.getElementById('Heatmap_receptor_fontSizeSlider');
+const Heatmap_receptor_fontSizeLabel = document.getElementById('Heatmap_receptor_fontSizeSliderLabel');
+Heatmap_receptor_fontSizeSlider.addEventListener('input', () => {
+Heatmap_receptor_fontSizeLabel.textContent = `Receptor Font Size: ${Heatmap_receptor_fontSizeSlider.value}px`;
+updateLabelStyling();
+});
+
+
+// ###################
+// ## Data styling ##
+// ###################
+
+document.addEventListener('DOMContentLoaded', (event) => {
+
+    // ########################
+    // ## Toggle Data Labels ##
+    // ########################
+    const dataLabelsToggleButton = document.getElementById('Heatmap_data_labels');
+    dataLabelsToggleButton.addEventListener('click', () => {
+    heatmap_DataStyling.datalabels = !heatmap_DataStyling.datalabels; // Toggle the state
+
+    // Update the button appearance and text
+    if (heatmap_DataStyling.datalabels) {
+        dataLabelsToggleButton.textContent = 'Data Labels: Yes';
+        dataLabelsToggleButton.classList.add('btn-primary');
+        dataLabelsToggleButton.classList.remove('btn-danger');
+    } else {
+        dataLabelsToggleButton.textContent = 'Data Labels: No';
+        dataLabelsToggleButton.classList.remove('btn-primary');
+        dataLabelsToggleButton.classList.add('btn-danger');
+    }
+    // Re-render heatmap
+    Heatmap_updateVisualization();
+    });
+
+    // ############################
+    // ## Toggle Data Border ##
+    // ############################
+    const dataBorderToggleButton = document.getElementById('Heatmap_Border_Styling');
+    dataBorderToggleButton.addEventListener('click', () => {
+    heatmap_DataStyling.data_border = !heatmap_DataStyling.data_border; // Toggle the state
+
+    // Update the button appearance and text
+    if (heatmap_DataStyling.data_border) {
+        dataBorderToggleButton.textContent = 'Data Border: Yes';
+        dataBorderToggleButton.classList.add('btn-primary');
+        dataBorderToggleButton.classList.remove('btn-danger');
+    } else {
+        dataBorderToggleButton.textContent = 'Data Border: No';
+        dataBorderToggleButton.classList.remove('btn-primary');
+        dataBorderToggleButton.classList.add('btn-danger');
+    }
+    // Re-render heatmap
+    Heatmap_updateVisualization();
+    });
+
+    // #############################
+    // ## Data Label Font Size ##
+    // #############################
+    const Heatmap_data_fontSizeSlider = document.getElementById('Heatmap_data_fontSizeSlider');
+    const Heatmap_data_fontSizeLabel = document.getElementById('Heatmap_data_fontSizeSliderLabel');
+
+    // Update the font size label based on slider value
+    Heatmap_data_fontSizeSlider.addEventListener('input', () => {
+    const fontSize = Heatmap_data_fontSizeSlider.value;
+    Heatmap_data_fontSizeLabel.textContent = `Data Label Font Size: ${fontSize}px`;
+    heatmap_DataStyling.data_fontsize = fontSize;
+
+    // Re-render heatmap as font size changes dynamically
+    Heatmap_updateVisualization();
+    });
+});
+
+
+
+// ###################
+// ## Label switch ###
+// ###################
+
+$("#Heatmap_UniProtNames").click(function() {
+    $("#Heatmap_UniProtNames").addClass("active");
+    $("#Heatmap_IUPHARNames").removeClass("active");
+    heatmap_DataStyling.LabelType = 'UniProt';
+    Heatmap_updateVisualization();
+});
+
+$("#Heatmap_IUPHARNames").click(function() {
+    $("#Heatmap_UniProtNames").removeClass("active");
+    $("#Heatmap_IUPHARNames").addClass("active");
+    heatmap_DataStyling.LabelType = 'IUPHAR';
+    Heatmap_updateVisualization();
+});
+
+</script>
+
+{% endblock %}

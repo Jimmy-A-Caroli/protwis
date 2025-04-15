@@ -1,0 +1,358 @@
+{% extends "home/base.html" %}
+{% load static %}
+{% load humanize %}
+{% block addon_css %}
+<link rel="stylesheet" href="{% static 'home/css/nv.d3.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+<div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
+    <div class="col-md-12" style="margin-bottom: 20px;">
+      <div class="col-md-3" style="padding-top: 5px;">
+        Receptor names:
+          <div class="btn-group" role="group" id="gtp_plus">
+              <button id="GPCRome_Gene" class="btn btn-info ">UniProt</button>
+              <button id="GPCRome_Protein" class="btn btn-info active">GtPdb</button>
+          </div>
+      </div>
+  
+      <div class="col-md-2" style="padding-top: 5px;">
+        Icon toggle:
+        <button id="ToggleIcon" class="btn btn-info active">On</button>
+      </div>
+  
+      <!-- # Download button # -->
+      <div class="col-md-2">
+        <div class="dropdown" style="width: 500px !important;">
+          <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_Color_Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Color styling
+          </button>
+          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="GPCRome_Color_Styling_Menu">
+            <!-- Color complexity Dropdown -->
+            <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
+              <div class="col-md-6" style="width:150px;margin-right: 20px;">
+                <select id="GPCRome_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateGPCRomeColorPickers()">
+                  <option value="One" selected>White - Color</option>
+                  <option value="Two">Color - Color</option>
+                  <option value="Three">Color - White - Color</option>
+                </select>
+              </div>
+  
+              <!-- Color Selector Dropdown -->
+              <div class="col-md-6" style="height: 15px;width: 200px;">
+                <div class="col-md-3" id="GPCRome_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
+                  <input type="text" id="GPCRome_colorPicker_min" />
+                </div>
+                <div class="col-md-3" id="GPCRome_Color_avg_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
+                  <input type="text" id="GPCRome_colorPicker_avg" />
+                </div>
+                <div class="col-md-3" id="GPCRome_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
+                  <input type="text" id="GPCRome_colorPicker_max"/>
+                </div>
+              </div>
+            </div>
+  
+            <!-- Set Colors Buttons -->
+            <div class="text-center" style="margin-bottom: 15px;">
+              <div class="col-md-12" style="margin-bottom: 5px;">
+                <div class="col-md-6"><button id="GPCRome_GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
+                <div class="col-md-6"><button id="GPCRome_GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
+              </div>
+              <div class="col-md-12" style="margin-bottom: 15px;">
+                <div class="col-md-6"><button id="GPCRome_RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
+                <div class="col-md-6"><button id="GPCRome_TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2"></div>
+      <div class="col-md-3">
+        <div class="text-center">
+          <div class="dropdown">
+            <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-right-middle">
+              <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.svg');">SVG</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.png');">PNG</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.jpg');">JPG</a></li>
+              <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.tiff');">TIFF</a></li>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<div id="image-container" data-image-url="{% static 'home/images/DataMapper_GPCRome_icon_legend.png' %}"></div>
+<div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
+    <div id="GPCRome_plot" class="text-center"></div>
+</div>
+</div>
+{% endblock %}
+
+{% block addon_js %}
+<script src="{% static 'home/js/d3.min.js' %}"></script>
+<script src="{% static 'home/js/nv.d3.min.js' %}"></script>
+<script src="{% static 'home/js/d3.v4.min.js' %}"></script>
+<script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
+<script src="{% static 'home/js/saveSvg.js' %}"></script>
+<script src="{% static 'home/js/datamapper.js' %}"></script>
+<script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
+
+
+<!-- Universal scripts -->
+<script>
+$('.dropdown-menu').on('click', function(event){
+    event.stopPropagation();
+});
+
+</script>
+<script>
+
+// Load the data
+var GPCRome_WheelDict = {{ GPCRomeData|safe }};
+var PlotType = "{{ PlotType }}";
+
+console.log(GPCRome_WheelDict)
+console.log(PlotType)
+
+if (PlotType === 'Numeric') {
+  // Extract min and max data (for numeric version)
+  const GPCRomeWheelValues = extractDataValues(GPCRome_WheelDict)
+      .filter(value => value !== null && value !== '');
+
+  const GPCRomeMin = GPCRomeWheelValues.length > 0 ? Math.min(...GPCRomeWheelValues) : null;
+  const GPCRomeMax = GPCRomeWheelValues.length > 0 ? Math.max(...GPCRomeWheelValues) : null;
+  const GPCRomeAvg = GPCRomeWheelValues.length > 0 ? (GPCRomeMin + GPCRomeMax) / 2 : null;
+
+  var GPCRomes_styling = {
+      GPCRomeMin: GPCRomeMin,
+      GPCRomeMax: GPCRomeMax,
+      GPCRomeAvg: GPCRomeAvg,
+      LegendbarDigit: 1,
+      LegendbarLength: 300,
+      LegendbarFontsize: "11px",
+      FontStyle: "Arial",
+      FontsizeGlobal: "11px",
+      FontsizeClass: "20px",
+      DataType: "Numeric",
+      colorStart: "#e64b35",
+      colorAvg: "#FFFFFF",
+      colorEnd: "#3c5488",
+      ColorSetup: 'One',
+      showIcon: true,
+      LabelType: "Protein"
+  };
+
+let GPCRome_location = "GPCRome_plot";
+DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling);
+
+// Recursively extract all "Data" values from a nested object
+function extractDataValues(obj) {
+    let values = [];
+
+    function findData(node) {
+        if (typeof node === "object" && node !== null) {
+            for (const key in node) {
+                const value = node[key];
+
+                if (value && typeof value === "object" && "Data" in value) {
+                    const dataValue = Number(value.Data);
+                    if (!isNaN(dataValue)) {
+                        values.push(dataValue);
+                    }
+                } else {
+                    findData(value); // keep digging
+                }
+            }
+        }
+    }
+
+    findData(obj);
+    return values;
+}
+
+function updateGPCRome() {
+    // Remove current
+    d3.select("#" + GPCRome_location).select("svg").remove();
+    // Redraw the GPCRome wheel plot
+    DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling); // ← Use the updated copy
+}
+
+
+document.getElementById("GPCRome_Protein").addEventListener("click", () => {
+    GPCRomes_styling.LabelType = "Protein";
+    updateGPCRome();
+    setActiveButton("GPCRome_Protein");
+});
+
+document.getElementById("GPCRome_Gene").addEventListener("click", () => {
+    GPCRomes_styling.LabelType = "Gene";
+    updateGPCRome();
+    setActiveButton("GPCRome_Gene");
+});
+
+function setActiveButton(id) {
+    document.getElementById("GPCRome_Protein").classList.remove("active");
+    document.getElementById("GPCRome_Gene").classList.remove("active");
+    document.getElementById(id).classList.add("active");
+}
+
+// Attach event listener to the button
+d3.select("#ToggleIcon").on("click", toggleIcon);
+
+// Function to toggle the icon visibility and redraw the GPCRomes
+function toggleIcon() {
+    const button = d3.select("#ToggleIcon");
+
+    // Toggle the showIcon property in GPCRomes_styling
+    GPCRomes_styling.showIcon = !GPCRomes_styling.showIcon;
+
+    // Update button text and state
+    if (GPCRomes_styling.showIcon) {
+        button.text("On");
+        button.classed("active", true);
+    } else {
+        button.text("Off");
+        button.classed("active", false);
+    }
+
+    // Redraw the GPCRomes with the updated icon state
+    updateGPCRome();
+}
+
+// ###################
+// ## Color styling ##
+// ###################
+
+function UpdateGPCRomeColorPickers() {
+  // Color complexity
+  const Color_styling = document.querySelector('#GPCRome_color_styling');
+
+  // Color picker containers
+  const GPCRome_Color_min_container = document.getElementById("GPCRome_Color_min_container");
+  const GPCRome_Color_avg_container = document.getElementById("GPCRome_Color_avg_container");
+  const GPCRome_Color_max_container = document.getElementById("GPCRome_Color_max_container");
+
+  // Get the selected layer value
+  const Color_styling_value = Color_styling.value;
+
+  if (Color_styling_value === 'One') {
+    GPCRome_Color_min_container.style.display = 'None';
+    GPCRome_Color_avg_container.style.display = 'None';
+    GPCRomes_styling.ColorSetup = "One";
+  } else if (Color_styling_value === 'Two') {
+    GPCRome_Color_min_container.style.display = 'Block';
+    GPCRome_Color_avg_container.style.display = 'None';
+    GPCRomes_styling.ColorSetup = "Two";
+  } else if (Color_styling_value === 'Three') {
+    GPCRome_Color_min_container.style.display = 'Block';
+    GPCRome_Color_avg_container.style.display = 'None';
+    GPCRomes_styling.ColorSetup = "Three";
+  }
+
+  // Set color to current color
+  $("#GPCRome_colorPicker_min").spectrum("set", GPCRomes_styling.colorStart);
+  $("#GPCRome_colorPicker_avg").spectrum("set", GPCRomes_styling.colorAvg);
+  $("#GPCRome_colorPicker_max").spectrum("set", GPCRomes_styling.colorEnd);
+
+  // Dynamically update the plot
+  updateGPCRome();
+}
+
+// Initialize all color pickers for GPCRomeWheel
+$(document).ready(function() {
+  function initializeGPCRomeColorPicker(elementId, start_color) {
+    $("#" + elementId).spectrum({
+      color: start_color,
+      showPalette: true,
+      showInput: true,
+      preferredFormat: "hex",
+      palette: [
+        ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+        ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
+        ["#800000", "#808000", "#008000", "#800080", "#008080"],
+        ["#000080"]
+      ],
+      change: function(color) {
+        updateGPCRomeVisualization();
+      },
+      move: function(color) {
+        updateGPCRomeVisualization();
+      }
+    });
+  }
+
+  // Initialize color pickers
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.colorAvg);
+  initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
+});
+
+// Function to set color pickers to predefined colors
+function setGPCRomeColors(colorMin, colorAvg, colorMax, optionValue) {
+  $("#GPCRome_colorPicker_min").spectrum("set", colorMin);
+  $("#GPCRome_colorPicker_avg").spectrum("set", colorAvg);
+  $("#GPCRome_colorPicker_max").spectrum("set", colorMax);
+  GPCRomes_styling.ColorSetup = optionValue;
+  $("#GPCRome_color_styling").val(optionValue).trigger("change");
+}
+
+// Event listeners for predefined color scales
+$("#GPCRome_GrayScale").click(function() {
+  GPCRomes_styling.colorStart = "#b8b8b8";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#707070";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.colorAvg, GPCRomes_styling.colorEnd, "Two");
+  // Dynamically update the plot
+  updateGPCRome();
+});
+
+$("#GPCRome_GrayBlueScale").click(function() {
+  GPCRomes_styling.colorStart = "#97a6c4";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#384860";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.colorAvg, GPCRomes_styling.colorEnd, "Two");
+  // Dynamically update the plot
+  updateGPCRome();
+});
+
+$("#GPCRome_RedBlueScale").click(function() {
+  GPCRomes_styling.colorStart = "#a00000";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#1a80bb";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.colorAvg, GPCRomes_styling.colorEnd, "Three");
+  // Dynamically update the plot
+  updateGPCRome();
+});
+
+$("#GPCRome_TealMagentaScale").click(function() {
+  GPCRomes_styling.colorStart = "#298c8c";
+  GPCRomes_styling.colorAvg = "#FFFFFF";
+  GPCRomes_styling.colorEnd = "#800074";
+  setGPCRomeColors(GPCRomes_styling.colorStart, GPCRomes_styling.color_avg, GPCRomes_styling.colorEnd, "Three");
+  // Dynamically update the plot
+  updateGPCRome();
+});
+
+function updateGPCRomeVisualization() {
+  const colorMin = $("#GPCRome_colorPicker_min").spectrum("get").toHexString();
+  const colorAvg = $("#GPCRome_colorPicker_avg").spectrum("get").toHexString();
+  const colorMax = $("#GPCRome_colorPicker_max").spectrum("get").toHexString();
+
+  GPCRomes_styling.colorStart = colorMin;
+  GPCRomes_styling.colorAvg = colorAvg;
+  GPCRomes_styling.colorEnd = colorMax;
+
+  // Dynamically update the plot
+  updateGPCRome();
+}
+
+}
+</script>
+
+{% endblock %}

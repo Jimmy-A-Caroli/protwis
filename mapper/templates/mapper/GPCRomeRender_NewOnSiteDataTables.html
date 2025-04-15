@@ -60,10 +60,12 @@ $(document).ready(function() {
 });
 
 var GPCRome_WheelDict = {{ gpcr_tree|safe }};
+// var raw_data = {{raw_data|safe}}
 // var GPCRome_conversion = {{ gpcr_conversion|safe }};
 var Updated_GPCRome_WheelDict = structuredClone(GPCRome_WheelDict);
 
 console.log(GPCRome_WheelDict)
+// console.log(raw_data)
 
 
 // Recursively extract all "Data" values from a nested object

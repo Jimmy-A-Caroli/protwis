@@ -341,11 +341,16 @@
           </div>
           <div class="modal-footer" style="display: flex; justify-content: space-between;">
               <button type="button" class="btn btn-primary" onclick="window.location.href=window.location.href;">Back</button>
-              <form method="POST" action="{% url 'data_mapper_plotrender' %}">
+              <form method="POST" 
+                  action="{% if plot_name == 'GPCRome wheel' %}{% url 'DataMapperGPCRome' %}
+                          {% elif plot_name == 'Tree' %}{% url 'tree_render' %}
+                          {% elif plot_name == 'Cluster' %}{% url 'cluster_render' %}
+                          {% elif plot_name == 'List' %}{% url 'list_render' %}
+                          {% elif plot_name == 'Heatmap' %}{% url 'heatmap_render' %}
+                          {% endif %}">
                   {% csrf_token %}
-                  <input type="hidden" name="Plot" value="{{ plot_name }}">
-                  <input type="hidden" name="Datatype" value="{{ plot_type }}">
                   <input type="hidden" name="Data" value="{{ Data }}">
+                  <input type="hidden" name="PlotType" value="{{ plot_type }}">
                   <button type="submit" class="btn btn-primary">Continue</button>
               </form>
           </div>

@@ -19,6 +19,7 @@ except ImportError:
     sys.modules['importlib.metadata'] = __import__('importlib_metadata')
 
 import pandas as pd
+import numpy as np
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
 import matplotlib.colors as mcolors
@@ -503,9 +504,9 @@ class DataMapperHome(TemplateView):
                                 entry_name = name_to_entry[item.name]
                                 entry_code = entry_name.split('_')[0].upper()
                                 current_level[item.name] = {
-                                    "Data": 0,
+                                    "Data": "Empty",
                                     "EntryName": entry_code,
-                                    "Color": "White"
+                                    "Color": "#FFFFFF"
                                 }
                         else:
                             current_level.setdefault(name, {})
@@ -622,7 +623,43 @@ class DataMapperHome(TemplateView):
                 "Data": GPCRome_dict
             }
 
+    @staticmethod
+    def update_nested_GPCRome_data(structure_dict, raw_data):
+        def normalize_key(raw_key):
+            return raw_key.split("_")[0].upper()
 
+        # Normalize and extract only non-null values
+        normalized_raw_data = {
+            normalize_key(key): {
+                'Data': val.get("Value1"),
+                'Color': val.get("Value2")  # Might be None
+            }
+            for key, val in raw_data.items()
+            if isinstance(val, dict) and "Value1" in val
+        }
+
+        def recursive_update(d):
+            if isinstance(d, dict):
+                if "EntryName" in d and "Data" in d:
+                    entry = d["EntryName"].upper()
+                    if entry in normalized_raw_data:
+                        d["Data"] = normalized_raw_data[entry]["Data"]
+                        
+                        color = normalized_raw_data[entry].get("Color")
+                        if color is not None:
+                            d["Color"] = color
+
+                for value in d.values():
+                    recursive_update(value)
+            elif isinstance(d, list):
+                for item in d:
+                    recursive_update(item)
+
+        recursive_update(structure_dict)
+        return structure_dict
+
+
+    
     @staticmethod
     def generate_tree_plot(input_data): #ADD AN INPUT FILTER DICTIONARY
         ### TREE SECTION
@@ -727,18 +764,19 @@ class DataMapperHome(TemplateView):
         if 'Value1' in data_df.columns:
             data_df['Value1'] = data_df['Value1'].fillna(0)
 
-        # Check if Value2 exists in the data
         if 'Value2' in data_df.columns:
-            # If some entries have Value2 but others don’t, fill missing ones
             if data_df['Value2'].isnull().sum() > 0:
-                # Applying fail-safe.
-                # Strategy: Fill missing Value2 with the **mean** of existing ones
-                mean_value2 = data_df['Value2'].mean()
-                data_df['Value2'] = data_df['Value2'].fillna(mean_value2)
+                data_df['Value2'].fillna(data_df['Value2'].mean(), inplace=True)
 
-        if 'Value2' in data_df.columns:
-            # Example usage
-            reduced_df = DataMapperHome.reduce_and_cluster(data_df['Value2'], method=method)
+            # --- Compute distance matrix from Value2 ---
+            values = data_df[['Value2']].values  # shape: (n, 1)
+            distance_matrix = np.abs(values - values.T)  # shape: (n, n)
+            distance_df = pd.DataFrame(distance_matrix, index=data_df.index, columns=data_df.index)
+
+            # --- Run reduction ---
+            reduced_df = DataMapperHome.reduce_and_cluster(distance_df, method=method, is_distance_matrix=True)
+
+            # --- Merge metadata ---
             df_merged = pd.merge(reduced_df, data_df['Value1'], left_on='label', right_index=True, how='left')
             df_merged.rename(columns={'Value1': 'fill'}, inplace=True)
 
@@ -859,26 +897,30 @@ class DataMapperHome(TemplateView):
         return merged_df
 
     @staticmethod
-    def reduce_and_cluster(data, method='tsne', n_components=2, n_clusters=5):
-        # if method == 'umap':
-        #     reducer = umap.UMAP(n_components=n_components, random_state=42)
+    def reduce_and_cluster(data, method='tsne', n_components=2, n_clusters=5, is_distance_matrix=False):
+
+        # Figure out how many points we have
+        n_points = data.shape[0]  
+
+        # Simple heuristic: scale perplexity and clamp it between 2 and 50
+        suggested_perplexity = max(2, min(n_points / 5, 50))
+
         if method == 'tsne':
-            reducer = TSNE(n_components=n_components, random_state=42)
-        # elif method == 'pca':
-        #     reducer = PCA(n_components=n_components, random_state=42)
+            if is_distance_matrix:
+                reducer = TSNE(n_components=n_components, metric='precomputed', random_state=42,perplexity=suggested_perplexity)
+            else:
+                reducer = TSNE(n_components=n_components, random_state=42,perplexity=suggested_perplexity)
         else:
-            raise ValueError("Method should be either 'umap' or 'tsne'")
+            raise ValueError("Method should be 'tsne' for now (or add other methods)")
 
         reduced_data = reducer.fit_transform(data)
 
-        # Clustering the reduced data
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         clusters = kmeans.fit_predict(reduced_data)
 
-        # Prepare the data for D3.js
         df = pd.DataFrame(reduced_data, columns=['x', 'y'])
         df['cluster'] = clusters
-        df['label'] = data.index
+        df['label'] = data.index if hasattr(data, 'index') else range(len(data))
 
         return df
 
@@ -978,14 +1020,14 @@ class DataMapperHome(TemplateView):
                             plot_name_global = ""
                             plot_type_global = ""
 
-                            # def is_valid_color(color):
-                            #     # Check if it's a named color
-                            #     if color.lower() in mcolors.CSS4_COLORS:
-                            #         return True
+                            def is_valid_color(color):
+                                # Check if it's a named color
+                                if color.lower() in mcolors.CSS4_COLORS:
+                                    return True
                                 
-                            #     # Check if it's a valid hex color
-                            #     hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
-                            #     return bool(re.match(hex_pattern, color))
+                                # Check if it's a valid hex color
+                                hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+                                return bool(re.match(hex_pattern, color))
 
                             # For each sheet in the workbook #
                             for sheet_name in sheet_names:
@@ -1004,70 +1046,95 @@ class DataMapperHome(TemplateView):
                                     ### GPCRome wheel Plot ###
                                     ##########################
                                     if Plot_name == "GPCRome wheel":
+                                        # Set empty sheet value
+                                        empty_sheet = True
 
-                                        Incorrect_values['GPCRs'] = {}
-                                        Incorrect_values['GPCR Value (Column B)'] = {}
-                                        empty_sheet = True  # Initialize the flag
-
-                                        # Check if the sheet is empty
+                                        # Efficient empty check using values only
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
-                                            # Check if column B (index 1) has any non-empty value
                                             if row[1] not in (None, ""):
                                                 empty_sheet = False
                                                 break
-                                        # If sheet is empty continue and report
-                                        if empty_sheet:
-                                            print("passed")
-                                            pass
-                                        else:
-                                            # If sheet is not empty then start handling the data
-                                            # Iterate through the rows and validate the data
-                                            for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                                                # Check the "Receptor (Uniprot)" column for correct values
-                                                if row[0] not in Proteins_GPCRomeTree:
-                                                    if row[0] in (None, ""):
-                                                        pass
-                                                    else:
-                                                        Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the GPCRome wheel plot.'.format(row[0])
-                                                else:
-                                                    # Check if data row is in data and/or initialize it
-                                                    if row[0] not in Data:
-                                                        Data[row[0]] = {}
-                                                    # Check datatype -> Numeric
-                                                    if Plot_type == 'Numeric':
-                                                        if row[1] not in (None, ""):
-                                                            try:
-                                                                float_value = float(row[1])
-                                                                Data[row[0]]['Value1'] = float_value
-                                                            except ValueError:
-                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value'
-                                                    # Check datatype -> Text
-                                                    elif Plot_type == 'Text':
-                                                        if row[1] not in (None, ""):
-                                                            try:
-                                                                Text_value = str(row[1])
-                                                                Data[row[0]]['Value1'] = Text_value
-                                                            except ValueError:
-                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Corrupted Value, not a string'
-                                                    else:
-                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
 
-                                        # Check if any values are incorrect #
+                                        if empty_sheet:
+                                            pass #If sheet is empty pass the checking and report the findings
+                                        else:
+                                            for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
+                                                receptor = row[0].value
+
+                                                # Validate receptor
+                                                if receptor not in Proteins_GPCRomeTree:
+                                                    if receptor in (None, ""):
+                                                        continue
+                                                    else:
+                                                        Incorrect_values.setdefault('GPCRs', {})[index] = f'"{receptor}" is an invalid entry for the GPCRome wheel plot.'
+                                                        continue
+
+                                                if receptor not in Data:
+                                                    Data[receptor] = {}
+
+                                                # ==== NUMERIC ====
+                                                if Plot_type == 'Numeric':
+                                                    DataValue = row[1].value
+                                                    if DataValue not in (None, ""):
+                                                        try:
+                                                            Data[receptor]['Value1'] = float(DataValue)
+                                                        except ValueError:
+                                                            Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Non-numeric Value'
+
+                                                # ==== TEXT ====
+                                                elif Plot_type == 'Text':
+                                                    DataValue = row[1].value
+                                                    color_fill_cell = row[2] if len(row) > 2 else None
+                                                    color_override_cell = row[3] if len(row) > 3 else None
+                                                    if DataValue not in (None, ""):
+                                                        try:
+                                                            Data[receptor]['Value1'] = str(DataValue)
+                                                        except ValueError:
+                                                            Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Corrupted Value, not a string'
+
+                                                    # Handle optional fill and override color
+                                                    color_fill = None
+                                                    color_override = None
+
+                                                    if color_fill_cell and color_fill_cell.fill:
+                                                        fgColor = color_fill_cell.fill.fgColor
+                                                        if fgColor and fgColor.type == 'rgb' and fgColor.rgb:
+                                                            argb = fgColor.rgb
+                                                            if len(argb) >= 6:
+                                                                color_fill = f"#{argb[-6:]}"  # Use RRGGBB
+
+                                                    if color_override_cell and color_override_cell.value not in (None, ""):
+                                                        color_override = str(color_override_cell.value).strip()
+
+                                                    if color_override:
+                                                        if is_valid_color(color_override):
+                                                            Data[receptor]['Value2'] = color_override
+                                                        else:
+                                                            Incorrect_values.setdefault('GPCR Value (Column D)', {})[index] = 'Not a valid Hexcode'
+                                                            Data[receptor]['Value2'] = "Black"
+                                                    elif color_fill:
+                                                        Data[receptor]['Value2'] = color_fill
+                                                    else:
+                                                        Data[receptor]['Value2'] = "Black"
+
+                                                else:
+                                                    Incorrect_values.setdefault('Errors', {})[index] = (
+                                                        'Incorrect datatype: Unable to determine if Numeric or Text. Excel sheet may not match template.'
+                                                    )
+
+                                        # === Determine plot status ===
                                         status = 'Success'
 
                                         if empty_sheet:
                                             status = 'Empty sheet'
                                         elif Data:
-                                            for Error_entries in Incorrect_values:
-                                                # Check if there are any assigned index values for this col_idx
-                                                if any(Incorrect_values[Error_entries].values()):
-                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                            for field_errors in Incorrect_values.values():
+                                                if any(field_errors.values()):
                                                     status = 'Failed'
                                                     break
                                         else:
                                             status = 'Failed'
-                                            
-                                        ## Update Plot_parser for GPCRome Wheel
+
                                         Plot_parser = status
                             
                                     #################
@@ -1439,14 +1506,15 @@ class DataMapperHome(TemplateView):
 
                             plot_data_json = json.dumps(Data) if Data else "No Data"
 
+                            prot = Protein.objects.prefetch_related('genes').get(entry_name='5ht1a_human')
+                            print(prot.genes.all())
+
                             if Plot_parser in ('Success','Empty sheet'):
                                 context = {'upload_status': 'Success',
                                         'Plot_parser': Plot_parser,
                                         'plot_name': plot_name_global,
                                         'plot_type': plot_type_global,
                                         'Data': plot_data_json}
-                                if plot_type_global == 'Text' and plot_name_global == 'GPCRome wheel':
-                                    print("bob")
                             else:
                                 context = {'upload_status': 'Success',
                                         'Plot_parser': Plot_parser,
@@ -1548,15 +1616,142 @@ class plotrender(TemplateView):
 
 
 class GPCRomeRender(TemplateView):
-    template_name = 'mapper/GPCRomeRender.html'
+    template_name = 'mapper/PlotRender_GPCRome.html'  # default fallback
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Call your data generator
-        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+    def get_template_names(self):
+        # If PlotType is set during post, switch template accordingly
+        plot_type = getattr(self, 'plot_type', None)
+        if plot_type == "Text":
+            return ['mapper/PlotRender_GPCRome_Text.html']
+        return ['mapper/PlotRender_GPCRome.html']
 
-        # Add it to context
-        context["gpcr_tree"] = gpcr_data["Data"]
-        # context["gpcr_conversion"] = gpcr_data["conversion_dict"]
+    def post(self, request, *args, **kwargs):
+        Data_json = request.POST.get('Data')
+        PlotType = request.POST.get('PlotType')
+
+        try:
+            Data = json.loads(Data_json)
+            gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+            updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], Data)
+
+            # Store PlotType so get_template_names can access it
+            self.plot_type = PlotType
+
+            context = {
+                'GPCRomeData': updated_data,
+                'PlotType': PlotType
+            }
+            return self.render_to_response(context)
+
+        except json.JSONDecodeError:
+            return HttpResponse("Invalid JSON data")
+
+class TreeRender(TemplateView):
+    template_name = 'mapper/PlotRender_Tree.html'  # default fallback
+
+    def get_template_names(self):
+        # If PlotType is set during post, switch template accordingly
+        plot_type = getattr(self, 'plot_type', None)
+        if plot_type == "Text":
+            return ['mapper/PlotRender_Tree_Text.html']
+        return ['mapper/PlotRender_Tree.html']
+
+    def post(self, request, *args, **kwargs):
+        Data_json = request.POST.get('Data')
+        PlotType = request.POST.get('PlotType')
+
+        try:
+            Data = json.loads(Data_json)
+            tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(Data)
+
+            # Store PlotType so get_template_names can access it
+            self.plot_type = PlotType
+
+            context = {
+                'tree': json.dumps(tree),
+                'tree_options': tree_options,
+                'circles': json.dumps(circles),
+                'whole_dict': json.dumps(receptors),
+                'PlotType': PlotType
+            }
+            return self.render_to_response(context)
+
+        except json.JSONDecodeError:
+            return HttpResponse("Invalid JSON data")
         
-        return context  # ✅ Don't forget to return the context!
+class ClusterRender(TemplateView):
+    template_name = 'mapper/PlotRender_Cluster.html'  # default fallback
+
+    def post(self, request, *args, **kwargs):
+        Data_json = request.POST.get('Data')
+        # PlotType = request.POST.get('PlotType')
+
+        try:
+            # Get data
+            Data = json.loads(Data_json)
+            # Calculate the plot
+            output_seq = DataMapperHome.clustering_test('tsne', Data,'seq')
+            # Create the context
+            context = {
+                'cluster_data_seq': output_seq
+                }
+            # Return context
+            return self.render_to_response(context)
+
+        except json.JSONDecodeError:
+            return HttpResponse("Invalid JSON data")
+        
+class ListRender(TemplateView):
+    template_name = 'mapper/PlotRender_List.html'  # default fallback
+
+    def get_template_names(self):
+        # If PlotType is set during post, switch template accordingly
+        plot_type = getattr(self, 'plot_type', None)
+        if plot_type == "Text":
+            return ['mapper/PlotRender_List_Text.html']
+        return ['mapper/PlotRender_List.html']
+
+    def post(self, request, *args, **kwargs):
+        Data_json = request.POST.get('Data')
+        PlotType = request.POST.get('PlotType')
+
+        try:
+            Data = json.loads(Data_json)
+            listplot_data = DataMapperHome.generate_list_plot(Data)
+
+            # Store PlotType so get_template_names can access it
+            self.plot_type = PlotType
+
+            context = {
+                'listplot_data': json.dumps(listplot_data["NameList"]),
+                'listplot_data_variables': json.dumps(listplot_data['DataPoints']),
+                'Label_Conversion': json.dumps(listplot_data['LabelConversionDict']),
+                'PlotType': PlotType
+            }
+            return self.render_to_response(context)
+
+        except json.JSONDecodeError:
+            return HttpResponse("Invalid JSON data")
+
+class HeatmapRender(TemplateView):
+    template_name = 'mapper/PlotRender_Heatmap.html'  # default fallback
+
+    def post(self, request, *args, **kwargs):
+        Data_json = request.POST.get('Data')
+        # PlotType = request.POST.get('PlotType')
+
+        try:
+            # Get data
+            Data = json.loads(Data_json)
+            # Calculate the plot
+            label_converter = DataMapperHome.Label_conversion_info(Data)
+            # Create the context
+            context = {
+                'Label_converter': json.dumps(label_converter),
+                'heatmap_data': json.dumps(Data)
+                }
+            # Return context
+            return self.render_to_response(context)
+
+        except json.JSONDecodeError:
+            return HttpResponse("Invalid JSON data")
