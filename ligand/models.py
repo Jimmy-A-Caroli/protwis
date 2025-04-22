@@ -382,6 +382,8 @@ class LigandPeptideStructure(models.Model):
 class LigandRole(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
+    type = models.CharField(max_length=100)
+    effect = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
