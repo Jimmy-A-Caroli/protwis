@@ -8,7 +8,7 @@ from common.models import WebResource, WebLink, Publication
 from protein.models import Protein, TissueExpression, CancerType, CancerExpression, Tissues, ExpressionValue
 from drugs.models import Drugs, Indication, IndicationAssociation, ATCCodes
 from ligand.models import Ligand, LigandID, LigandType, LigandRole
-from common.tools import test_model_updates
+from common.tools import test_model_updates, find_role
 
 import pandas as pd
 import os
@@ -554,8 +554,9 @@ class Command(BaseCommand):
         lr = None
         if action in conversion.keys():
             query = conversion[action]
-            role_slug = slugify(query)
-            lr, _ = LigandRole.objects.get_or_create(slug=role_slug, defaults={'name': query})
+            lr = find_role(query)
+            # role_slug = slugify(query)
+            # lr, _ = LigandRole.objects.get_or_create(slug=role_slug, defaults={'name': query})
         return lr
 
     @staticmethod

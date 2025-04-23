@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.utils.text import slugify
 from django.core.cache import cache
-
+from difflib import get_close_matches
+from common import definitions
+import re
 import os
 import sys
 import yaml
@@ -284,3 +286,37 @@ def urlopen_with_retry(url, data = None, retries = 5, sleeptime = 5):
             return response
         elif retry == retries:
             return False
+
+def find_role(role_str, fuzzy_cutoff=0.75):
+    role_dict = definitions.ROLE_DICTIONARY
+    # Pre‐compile your regex patterns once
+    _role_patterns = []
+    for role_type, subs in role_dict.items():
+        for sub_key, synonyms in subs.items():
+            escaped = [re.escape(s) for s in synonyms if s]
+            if not escaped:
+                continue
+            _role_patterns.append((
+                re.compile(r'\b(?:' + '|'.join(escaped) + r')\b', re.IGNORECASE),
+                sub_key
+            ))
+
+    # Flatten all canonical sub_keys for fuzzy matching
+    _all_sub_keys = [
+        sub_key
+        for subs in role_dict.values()
+        for sub_key in subs.keys()
+    ]
+    # 1) Regex‐based exact/insensitive match
+    for pattern, sub_key in _role_patterns:
+        if pattern.search(role_str):
+            return LigandRole.objects.filter(name=sub_key)
+
+    # 2) Fuzzy‐string fallback
+    candidates = get_close_matches(role_str, _all_sub_keys, n=1, cutoff=fuzzy_cutoff)
+    if candidates:
+        return LigandRole.objects.filter(name=candidates[0])
+
+    # 3) Default to “Unknown”
+    #    Assumes you’ve already bulk‐created a LigandRole with name='Unknown'
+    return LigandRole.objects.filter(name='Unknown')

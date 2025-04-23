@@ -8,7 +8,7 @@ from construct.models import *
 
 from ligand.models import Ligand, LigandType, LigandRole
 
-from common.tools import fetch_from_web_api
+from common.tools import fetch_from_web_api, find_role
 from urllib.parse import quote
 from string import Template
 from urllib.request import urlopen
@@ -1482,12 +1482,13 @@ def add_construct(d):
             if 'ligand_activity' not in d['construct_crystal']:
                 d['construct_crystal']['ligand_activity'] = 'unknown'
             if ligand and 'ligand_activity' in d['construct_crystal']:
-                role_slug = slugify(d['construct_crystal']['ligand_activity'])
-                try:
-                    lr, created = LigandRole.objects.get_or_create(slug=role_slug,
-                    defaults={'name': d['construct_crystal']['ligand_activity']})
-                except IntegrityError:
-                    lr = LigandRole.objects.get(slug=role_slug)
+                lr = find_role(d['construct_crystal']['ligand_activity'])
+                # role_slug = slugify(d['construct_crystal']['ligand_activity'])
+                # try:
+                #     lr, created = LigandRole.objects.get_or_create(slug=role_slug,
+                #     defaults={'name': d['construct_crystal']['ligand_activity']})
+                # except IntegrityError:
+                #     lr = LigandRole.objects.get(slug=role_slug)
             if ligand:
                 ligand_c = CrystallizationLigandConc()
                 ligand_c.construct_crystallization = c

@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.utils.text import slugify
+from common import definitions
 from common.models import WebResource, WebLink, PublicationJournal, Publication
 from common.tools import test_model_updates
 from protein.models import (ProteinSegment, ProteinAnomaly, ProteinAnomalyType, ProteinAnomalyRuleSet,
@@ -226,3 +228,32 @@ class Command(BaseCommand):
                                         source_file))
         test_model_updates(self.all_models, self.tracker, check=True)
         self.logger.info('COMPLETED CREATING PROTEIN ANOMALIES')
+
+    def create_ligand_roles(self):
+        self.logger.info('CREATING LIGAND ROLES')
+        role_dict = definitions.ROLE_DICTIONARY
+        ligand_roles = []
+
+        for key in role_dict.keys():
+            for sub_key in role_dict[key].keys():
+                # Determine the effect based on the sub_key value
+                if sub_key in ['Agonist', 'Agonist (partial)', 'Inverse agonist', 'PAM', 'Allosteric agonist', 'Allosteric inverse agonist', 'Ago-PAM']:
+                    effect = 'stimulatory'
+                elif sub_key in ['Antagonist', 'NAM', 'Allosteric antagonist']:
+                    effect = 'inhibitory'
+                elif sub_key in ['Cofactor', 'Stabilizing ligand']:
+                    effect = 'stabilizer'
+                else:
+                    effect = 'unknown'
+
+                # Append a new instance to the list
+                ligand_roles.append(LigandRole(
+                    slug=slugify(sub_key),
+                    name=sub_key,
+                    type=key,
+                    effect=effect
+                ))
+
+        LigandRole.objects.bulk_create(ligand_roles)
+        test_model_updates(self.all_models, self.tracker, check=True)
+        self.logger.info('COMPLETED CREATING LIGAND ROLES')

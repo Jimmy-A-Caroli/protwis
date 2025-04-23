@@ -5,7 +5,7 @@ from django.utils.text import slugify
 from django.db import IntegrityError
 from django.db.models import Count, Q
 
-from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates
+from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role
 from common.models import WebLink, WebResource, Publication, PublicationJournal
 from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole
 from protein.models import Protein, Species
@@ -1517,9 +1517,9 @@ class Command(BaseBuild):
         lr = None
         if lig_function in conversion.keys():
             query = conversion[lig_function]
-            role_slug = slugify(query)
-            lr, _ = LigandRole.objects.get_or_create(
-                slug=role_slug, defaults={'name': query})
+            lr = find_role(query)
+            # role_slug = slugify(query)
+            # lr, _ = LigandRole.objects.get_or_create(slug=role_slug, defaults={'name': query})
         return lr
 
     @staticmethod
