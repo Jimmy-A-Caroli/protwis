@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="{% static 'home/css/select2.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/modal.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
+
 <style>
     /*Assay description tooltip*/
     .AssayCell {
@@ -45,17 +47,6 @@
         margin: .5em 0;
         overflow: auto;
         width: 800px;
-    }
-
-    #struct {
-        display: none;
-        position: absolute;
-        z-index: 100;
-        border: 1px;
-        background-color: white;
-        border-style: solid;
-        border-width: 1px;
-        padding: 3px;
     }
     .scroll-container {
         /*max-width: 200px;*/
@@ -280,6 +271,7 @@
 {% endblock %}
 
 {% block addon_js %}
+<script src="{% static 'home/js/openchemlib-full.js' %}"></script>
 <script src="{% static 'home/js/jquery.dataTables.min.js' %}"> </script>
 <script src="{% static 'home/js/dataTables.tableTools.min.js' %}"> </script>
 <script src="{% static 'home/js/jquery.dataTables.columnFilter.js' %}"> </script>
@@ -288,6 +280,11 @@
 <script src="{% static 'home/js/select2.js' %}"> </script>
 <script src="{% static 'home/js/gpcrdb.js' %}"></script>
 <script src="{% static 'home/js/alphaSortCaseInsensitive.js' %}"></script>
+<script src="{% static 'home/js/compoundPreviewTooltip.js' %}">
+
+<script type="text/javascript">
+  window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
+</script>
 
 <!--<script src="https://cdn.datatables.net/plug-ins/2.1.5/sorting/natural.js"></script>--><!-- Requires update to DataTables2+ -->
 
@@ -301,33 +298,7 @@
     target_details_affinity_pages[key_0_affinity] = true;
     var key_0_potency = '0_'+target_details_iDisplayLength_potency; 
     target_details_potency_pages[key_0_potency] = true;
-
-    this.compoundPreview = function (selection="a.struct") {
-
-        //Define position of the tooltip in relation to the cursor
-        xOffset = 30;
-        yOffset = -10;
-
-        $(selection).hover(function (e) {
-            this.t = this.title;
-            this.title = "";
-            var c = (this.t != "") ? "<br/>" + this.t : "";
-            $("body").append("<p id='struct'><img style='max-width: 200px; height: auto' src='" + this.rel + "'/>" + c + "</p>");
-            $("#struct")
-                .css("top", (e.pageY - yOffset) + "px")
-                .css("left", (e.pageX + xOffset) + "px")
-                .fadeIn("fast");
-        },
-            function () {
-                this.title = this.t;
-                $("#struct").remove();
-            });
-        $(selection).mousemove(function (e) {
-            $("#struct")
-                .css("top", (e.pageY - yOffset) + "px")
-                .css("left", (e.pageX + xOffset) + "px");
-        });
-    };
+  
     var mode = '{{ mode }}';
     var ligand_query = '{{ ligand_query }}';
     console.log(mode);
@@ -416,6 +387,7 @@
         var other_YADCF_filters_smiles = {sort_as: 'alpha', case_insensitive: false};
         if(mode == 'extended'){
           var smiles_column = 21;
+          var name_column = 1;
           column_filters = column_filters.concat(createYADCFfilters(1, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_text));
           column_filters = column_filters.concat(createYADCFfilters(2, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_num));
           column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Select", false, "exact", "rendered_html", "50px", null, null, null, other_YADCF_filters_text));
@@ -429,6 +401,7 @@
         }else{
           if(!ligand_query){
             var smiles_column = 22;
+            var name_column = 1;
             column_filters = column_filters.concat(createYADCFfilters(1, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_text));
             column_filters = column_filters.concat(createYADCFfilters(2, 1, "multi_select", "select2", "Select", false, "exact", "html", "80px", null, null, null, other_YADCF_filters_num));
             column_filters = column_filters.concat(createYADCFfilters(3, 2, "multi_select", "select2", "Select", false, "exact", "rendered_html", "50px", null, null, null, other_YADCF_filters_text));
@@ -445,9 +418,9 @@
             // if(!ligand_query) {...}  // Already perfect above.
             // else => we come here => ligand_query == true
             const SSHIFT = {% if ligand_similarity %}1{% else %}0{% endif %};
-          
-            var smiles_column = 25 + SSHIFT;
-          
+            var smiles_column = 26 + SSHIFT;
+            var name_column = 1 + SSHIFT;
+
             // If 'ligand_similarity' is true, column 1 is the “Similarity” column (numeric).
             // So apply a range_number filter on that column:
             {% if ligand_similarity %}
@@ -469,7 +442,7 @@
             column_filters = column_filters.concat(
               createYADCFfilters(
                 1 + SSHIFT,
-                1,
+                4,
                 "multi_select",
                 "select2",
                 "Select",
@@ -483,43 +456,7 @@
                 other_YADCF_filters_text
               )
             );
-          
-            column_filters = column_filters.concat(
-              createYADCFfilters(
-                2 + SSHIFT,
-                1,
-                "multi_select",
-                "select2",
-                "Select",
-                false,
-                "exact",
-                "html",
-                "80px",
-                null,
-                null,
-                null,
-                other_YADCF_filters_num
-              )
-            );
-          
-            column_filters = column_filters.concat(
-              createYADCFfilters(
-                3 + SSHIFT,
-                2,
-                "multi_select",
-                "select2",
-                "Select",
-                false,
-                "exact",
-                "rendered_html",
-                "50px",
-                null,
-                null,
-                null,
-                other_YADCF_filters_text
-              )
-            );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
                 5 + SSHIFT,
@@ -533,10 +470,10 @@
                 "30px"
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
-                7 + SSHIFT,
+                8 + SSHIFT,
                 5,
                 "multi_select",
                 "select2",
@@ -551,10 +488,10 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
-                12 + SSHIFT,
+                13 + SSHIFT,
                 1,
                 "range_number",
                 null,
@@ -565,10 +502,10 @@
                 "30px"
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
-                13 + SSHIFT,
+                14 + SSHIFT,
                 1,
                 "multi_select",
                 "select2",
@@ -583,10 +520,10 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
-                14 + SSHIFT,
+                15 + SSHIFT,
                 4,
                 "range_number",
                 null,
@@ -597,10 +534,10 @@
                 "30px"
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
-                18 + SSHIFT,
+                19 + SSHIFT,
                 2,
                 "multi_select",
                 "select2",
@@ -615,10 +552,10 @@
                 other_YADCF_filters_text
               )
             );
-          
+
             column_filters = column_filters.concat(
               createYADCFfilters(
-                20 + SSHIFT,
+                21 + SSHIFT,
                 5,
                 "range_number",
                 null,
@@ -629,11 +566,11 @@
                 "30px"
               )
             );
-          
+
             // Finally, the SMILES column at (25 + SSHIFT)
             column_filters = column_filters.concat(
               createYADCFfilters(
-                25 + SSHIFT,
+                26 + SSHIFT,
                 1,
                 "multi_select",
                 "select2",
@@ -649,8 +586,6 @@
               )
             );
           }
-          
-
         }
 
         yadcf.init(table_potency.draw(), column_filters, {
@@ -758,7 +693,7 @@
           let affinity_columns = Array.from(new Array(affinity_length - 1), (x, i) => i);
           table_affinity.columns(affinity_columns).visible(true, false);
           table_affinity.draw();
-        } );    
+        } );
         
         $('#csv_btn_potency').click(function () {
             // TODO: redactor in a single fucntion shared by csv_btn_potency and csv_btn_potency affinity
@@ -770,7 +705,7 @@
               csv_data.push('Lig. Name;GPCRdb ID;Ref. Ligand;Vendors;Species;;Assay type;Activ. type;Activ. relation;Activ. value;p-value (-log);Fold selectivity (Potency);Tested GPCRs;Assay descript.;Source; Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles;DOI')
             {% endif %}
             {% if mode == 'compact' %}
-              csv_data.push('Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Potency);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
+              csv_data.push('{% if ligand_similarity %}Similarity;{% endif %}Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Potency);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
             {% endif %}
             for (i = 0; i < checked_data.length; i++) {
                 var csv_row = []
@@ -807,7 +742,7 @@
               csv_data.push('Lig. Name;GPCRdb ID;Ref. Ligand;Vendors;Species;;Assay type;Activ. type;Activ. relation;Activ. value;p-value (-log);Fold selectivity (Affinity);Tested GPCRs;Assay descript.;Source; Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles;DOI')
             {% endif %}
             {% if mode == 'compact' %}
-              csv_data.push('Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Affinity);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
+              csv_data.push('{% if ligand_similarity %}Similarity;{% endif %}Lig. Name;GPCRdb ID;Lig. type;Ref. Ligand;Vendors;Species;;{% if ligand_query %}Receptor (Protein);Receptor (Gene);Class;Family;{% endif %}Assay type;Activ. Value;No. Records;Min;Avg;Max;Fold selectivity (Affinity);Tested GPCRs;Source;Mol. weight;Rot. Bonds;H don;H acc;LogP;Smiles')
             {% endif %}
             
             for (i = 0; i < checked_data.length; i++) {
@@ -843,7 +778,7 @@
             let processed = [];
             for (i = 0; i < checked_data.length; i++) {
                 var div = document.createElement("div");
-                div.innerHTML = checked_data[i][1];
+                div.innerHTML = checked_data[i][name_column];
                 name = div.textContent;
                 if (!processed.includes(name)){
                   let smi_row = checked_data[i][smiles_column] + "\t" + name;
@@ -871,7 +806,7 @@
             let processed = [];
             for (i = 0; i < checked_data.length; i++) {
                 var div = document.createElement("div");
-                div.innerHTML = checked_data[i][1];
+                div.innerHTML = checked_data[i][name_column];
                 name = div.textContent;
                 if (!processed.includes(name)){
                   let smi_row = checked_data[i][smiles_column] + "\t" + name;
@@ -952,8 +887,8 @@
       <div class="btn-group">
         <button id="selectall_potency" type="button" class="btn btn-primary" style="margin-top:10px;margin-top:3px">Select full table</button>
       </div>
-      <br />
-      <br />
+      <br/>
+      <br/>
       <div class="double_scroll" style="padding-top: 0px; font-size: 10px; white-space: nowrap;">
           <table style="width:100%" class="display" id="proteins_potency">
               <thead>
@@ -1219,7 +1154,7 @@
                    <th style="border-left: 1px solid black; text-align:left">Species<br /><br /></th>
                    <th style="text-align:left"> </th> <!-- placeholder -->
                    {% if ligand_query %}
-                   <th style="text-align:left">Protein<br />name<br>name</th>
+                   <th style="text-align:left">Protein<br />name</th>
                    <th style="text-align:left">Gene<br />name</th>
                    <th style="text-align:left">Class<br /><br /></th>
                    <th style="text-align:left">Family<br /><br /></th>
@@ -1248,7 +1183,15 @@
                        {% if ligand_similarity %}
                        <td align="right">{{record.ligand_similarity|stringformat:".2f"}}</td>
                        {% endif %}
-                       <td><a class="struct struct_potency" rel="{{record.picture}}" href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.ligand_name|safe}}</a></td>
+                       <td>
+                        <a class="struct struct_potency"
+                           rel="{{ record.picture }}"
+                           data-smiles="{{ record.smiles_for_image|default:'' }}"
+                           href="/ligand/{{ record.lig_id }}/info" 
+                           target="_blank">
+                          {{ record.ligand_name|safe }}
+                        </a>
+                      </td>
                        <td align="right"><a href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.lig_id}}</a></td>
                        <td>{{record.ligand_type}}</td>
                        <td>{{record.reference}}</td>
@@ -1276,7 +1219,6 @@
                        <td align="right">{{record.hacc}}</td>
                        <td align="right">{{record.logp|floatformat:1}}</td>
                        <td class="dt-left">{{record.smiles}}</td>
-
                    </tr>
                    {% endfor %}
                </tbody>
@@ -1284,8 +1226,8 @@
        </div>
     </div>
     <div class="tab-pane container" id="affinity">
-      <br />
-      <br />
+      <br/>
+      <br/>
       {% if ligand_query %}
       <div class="btn-group">
         <a class="btn btn-primary" href="/ligand/ligand_by_name" style="margin-top:10px;margin-top:3px">New Search</a>
@@ -1316,8 +1258,8 @@
       <div class="btn-group">
         <button id="selectall_affinity" type="button" class="btn btn-primary" style="margin-top:10px;margin-top:3px">Select full table</button>
       </div>
-      <br />
-      <br />
+      <br/>
+      <br/>
       <div style="padding-top: 0px; font-size: 10px; white-space: nowrap;" class="scroll-container double_scroll">
 
         <table style="width:100%" class="display" id="proteins_affinity">
@@ -1360,11 +1302,8 @@
                           ">
                     <span aria-hidden="true">&times;</span>
                   </button>
-
-
-
                 </th>
-                 <th style="border-left: 1px solid black; text-align:left" colspan="9">Activity
+                <th style="border-left: 1px solid black; text-align:left" colspan="9">Activity
                   <button type="button"
                           class="close hide_columns"
                           aria-label="Close"
@@ -1379,7 +1318,6 @@
                   </button>
                 </th>
                 <th style="border-left: 1px solid black; text-align:left" colspan="6">Chemical information
-
                   <button type="button"
                           class="close hide_columns"
                           aria-label="Close"
@@ -1391,7 +1329,6 @@
                           ">
                     <span aria-hidden="true">&times;</span>
                   </button>
-                
                 </th>
              </tr>
              <tr class="table-filter-dropdown">
@@ -1426,7 +1363,7 @@
                 <th style="text-align:left">LogP<br /><br /></th>
                 <th style="text-align:left">Smiles<br /><br /></th>
              </tr>
-           </thead>
+            </thead>
             <tbody>
                 {% for record in affinity_data %}
                 <tr>
@@ -1434,7 +1371,15 @@
                     {% if ligand_similarity %}
                     <td align="right">{{record.ligand_similarity|stringformat:".2f"}}</td>
                     {% endif %}
-                    <td><a class="struct struct_affinity" rel="{{record.picture}}" href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.ligand_name|safe}}</a></td>
+                    <td>
+                      <a class="struct struct_potency"
+                         rel="{{ record.picture }}"
+                         data-smiles="{{ record.smiles_for_image|default:'' }}"
+                         href="/ligand/{{ record.lig_id }}/info" 
+                         target="_blank">
+                        {{ record.ligand_name|safe }}
+                      </a>
+                    </td>
                     <td align="right"><a href="/ligand/{{record.lig_id}}/info" target="_blank">{{record.lig_id}}</a></td>
                     <td>{{record.ligand_type}}</td>
                     <td>{{record.reference}}</td>
@@ -1466,7 +1411,6 @@
                 {% endfor %}
             </tbody>
         </table>
-
       </div>
     </div>
   </div>

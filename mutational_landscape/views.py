@@ -7,12 +7,11 @@ try:
 except:
     cache_variation = cache
 
-from django.db.models import Count, Sum, Avg, Q
-from django.views.decorators.cache import cache_page
+from django.db.models import Q
 
 import hashlib
 
-from protein.models import Protein, ProteinConformation, ProteinFamily, Gene
+from protein.models import Protein, ProteinConformation
 from residue.models import Residue, ResiduePositionSet
 from mutational_landscape.models import NaturalMutations, PTMs
 
@@ -30,12 +29,9 @@ from common.views import AbsTargetSelectionTable
 from family.views import linear_gradient
 
 import json
-import numpy as np
-from copy import deepcopy
 
 from io import BytesIO
 import unicodedata
-import urllib
 import xlsxwriter #sudo pip3 install XlsxWriter
 import string
 
@@ -196,7 +192,6 @@ def render_variants(request, protein=None, family=None, download=None, receptor_
             NM.functional_annotation = functional_annotation
             # print(NM.functional_annotation)
             jsondata[SN] = [NM.amino_acid, NM.allele_frequency, NM.allele_count, NM.allele_number, NM.number_homozygotes, NM.type, effect, color, functional_annotation]
-
 
         natural_mutation_list = {}
         max_snp_pos = 1

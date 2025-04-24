@@ -39,42 +39,34 @@
       color: #f5bcbf;
       font-size: 15px;
   }
-
   .color_phase2 {
       color: #f17270;
       font-size: 15px;
   }
-
   .color_phase3 {
       color: #dd2628;
       font-size: 15px;
   }
-
   .color_phase4 {
       color: #2c87c8;
       font-size: 15px;
   }
-
   .color_untapped {
       color: #D3D3D3;
       font-size: 15px;
   }
-
   .color_sensory {
       color: #A3D9C8;
       font-size: 15px;
   }
-
-
-#plotContainer_cluster {
-    width: 1600px; /* Set width */
-    height: 1200px; /* Set height */
-    margin: auto; /* Center the plot */
-}
-.hidden {
-    display: none;
-}
-
+  #plotContainer_cluster {
+      width: 1600px; /* Set width */
+      height: 1200px; /* Set height */
+      margin: auto; /* Center the plot */
+  }
+  .hidden {
+      display: none;
+  }
 .color-picker {
   display: flex;
   align-items: center;
@@ -85,7 +77,6 @@
   margin-right: 10px;
   border: 1px solid #000;
 }
-
 /* Style adjustments for better visibility */
 .custom-control-label {
   cursor: pointer;
@@ -111,12 +102,10 @@
     border-color: #5bc0de;
     color: #fff; /* Darker text for better contrast */
 }
-
 .btn-custom-blue:hover {
     background-color: #31b0d5; /* Lighter sky blue for hover effect */
     border-color: #31b0d5;
 }
-
 .dot {
     display: inline-block;
     width: 10px;
@@ -133,25 +122,18 @@
   padding: 0;
   margin: 0;
 }
-
 .no-bullet-indent li {
     padding-left: 20px;  /* Add indentation */
 }
-
 .hover-pointer {
     cursor: pointer; /* Changes cursor to a pointer on hover */
 }
-
 .hover-pointer:hover {
     text-decoration: underline; /* Optional: Add an underline effect on hover */
 }
-
 </style>
 {% endblock %}
-
 {% block content %}
-
-
 <ul class="nav nav-tabs">
     <li class="active">
       <a href="#summary" data-toggle="tab">Outline</a>
@@ -160,7 +142,6 @@
       <a href="#list" data-toggle="tab">List</a>
     </li>
 </ul>
-
 
 <div class="tab-content">
   <div id="summary" class="tab-pane fade in active">
@@ -203,7 +184,6 @@
           <div id="ListPlot" class="text-left" style="margin-top: 10px;"></div>
         </div>
         <!-- ## Download button ## -->
-        <!-- ## Download button ## -->
         <div style="position: absolute; top: 43px; left: 850px;">
           <div class="dropdown">
             <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -217,14 +197,11 @@
             </div>
           </div>
         </div>
-        
-
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
-
 {% block addon_js %}
 <script src="{% static 'home/js/d3.min.js' %}"></script>
 <script src="{% static 'home/js/nv.d3.min.js' %}"></script>
@@ -233,7 +210,6 @@
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/datamapper.js' %}"></script>
 <script src="{% static 'home/js/plotly_v1_58_5.js' %}"></script>
-<script src="{% static 'home/js/popper.min.js' %}"></script>
 <script src="{% static 'home/js/popper.min.js' %}"></script>
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
 <script src="{% static 'home/js/ml.js' %}"></script>
@@ -248,7 +224,6 @@ var list_data_wow = {{ listplot_data_variables|safe }};
 var data_types_list = {{listplot_datatypes|safe}};
 var Label_conversion_dict = {{Label_Conversion|safe}};
 var List_Data_result = {{List_Data_result|safe}};
-
 var modded_list_data = Initialize_Data(listdata);
 
 // #################################
@@ -261,7 +236,8 @@ var Layout_dict = {columns: 2, col_breaker: 'Custom', col_max_label: 'Custom', C
 //  Initialize styling
 var Styling_Option_dict = {
     ReceptorFamily: {Bold: true, Italic: false, Underline: false, Fontsize: "11px", Color: "#000"},
-    Receptor: {Bold: false, Italic: false, Underline: false, Fontsize: "10px", Color: "#000"}};
+    Receptor: {Bold: false, Italic: false, Underline: false, Fontsize: "10px", Color: "#000"}
+};
 
 // ## Initialization of global data for list ##
 function fixedStyling(list_data_wow, data_types_list) {
@@ -284,7 +260,6 @@ function fixedStyling(list_data_wow, data_types_list) {
         };
 
     // Run through data and set min and max values
-
     function updateDataMinMax(column, key, currentObj) {
         if (Data_styling[column].Data === "Yes" && Data_styling[column].Datatype === 'Continuous' && currentObj.hasOwnProperty(key)) {
             if (currentObj[key] > Data_styling[column].Data_max) {
@@ -338,14 +313,5 @@ document.addEventListener("DOMContentLoaded", function() {
 $('.dropdown-menu').on('click', function(event){
     event.stopPropagation();
   });
-
-// Trigger initialization when the document is fully loaded
-// document.addEventListener("DOMContentLoaded", initializeStylingOptions());
-
-// ###################
-// ## Data styling ##
-// ###################
-
 </script>
-
 {% endblock %}

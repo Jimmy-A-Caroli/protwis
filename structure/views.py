@@ -29,6 +29,7 @@ from residue.models import Residue, ResidueNumberingScheme, ResiduePositionSet
 from contactnetwork.models import Interaction
 from mapper.views import LandingPage
 from ligand.models import LigandPeptideStructure
+from ligand.functions import standardize_smiles
 
 import io
 import numpy as np
@@ -4728,15 +4729,16 @@ class StructureBlastView(View):
 
 class LigandComplexModels(TemplateView):
     template_name = "ligand_complex_models.html"
+
     def get_context_data(self, **kwargs):
         context = super(LigandComplexModels, self).get_context_data(**kwargs)
         try:
             subquery_gene = Gene.objects.filter(
                 proteins=OuterRef('protein_conformation__protein__pk')
             ).values('name')[:1]
-            
-            # Annotate the main queryset with an Exists subquery
-            context['structure_model'] = Structure.objects.filter(
+
+            # Get the structure models along with prefetching ligands and related data
+            structures = Structure.objects.filter(
                 structure_type__slug__in=['af-signprot-peptide', 'af-rfaa-sm']
             ).prefetch_related(
                 "protein_conformation__protein__family",
@@ -4747,14 +4749,14 @@ class LigandComplexModels(TemplateView):
                 "protein_conformation__protein__parent__family",
                 "pdb_code",
                 Prefetch(
-                "structureafscores_set",
-                queryset=StructureAFScores.objects.all(),
-                to_attr='prefetch_af_scores'
+                    "structureafscores_set",
+                    queryset=StructureAFScores.objects.all(),
+                    to_attr='prefetch_af_scores'
                 ),
                 Prefetch(
-                "structurerfaascores_set",
-                queryset=StructureRFAAScores.objects.all(),
-                to_attr='prefetch_rfaa_scores'
+                    "structurerfaascores_set",
+                    queryset=StructureRFAAScores.objects.all(),
+                    to_attr='prefetch_rfaa_scores'
                 ),
                 Prefetch(
                     "ligandpeptidestructure_set",
@@ -4766,7 +4768,6 @@ class LigandComplexModels(TemplateView):
                 )
             ).annotate(
                 gene_name=Subquery(subquery_gene),
-                # Annotate with the existence of a matching experimental PDB
                 experimental_pdb_exists=Exists(
                     StructureLigandInteraction.objects.filter(
                         structure__structure_type__slug__in=[
@@ -4785,7 +4786,26 @@ class LigandComplexModels(TemplateView):
             ).exclude(
                 experimental_pdb_exists=True
             )
+
+            # Process each ligand using standardize_smiles
+            # We assume that each structure has a prefetch_ligands list with at least one element.
+            for structure in structures:
+                if hasattr(structure, 'prefetch_ligands'):
+                    for ligand_struct in structure.prefetch_ligands:
+                        ligand = ligand_struct.ligand
+                        # Get the raw SMILES and molecular weight (adjust attribute names as needed)
+                        raw_smiles = getattr(ligand, 'smiles', None)
+                        mw = getattr(ligand, 'mw', None)
+                        # Process the SMILES using your function
+                        canonical_smiles, smiles_for_image, picture_flag = standardize_smiles(raw_smiles, mw)
+                        # Attach these values to the ligand instance so that your template can access them
+                        ligand.smiles_for_image = smiles_for_image
+                        ligand.picture = picture_flag
+
+            context['structure_model'] = structures
+
         except Structure.DoesNotExist as e:
+            # Optionally log the exception
             pass
 
         return context

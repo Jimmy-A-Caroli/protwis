@@ -16,7 +16,6 @@ from random import SystemRandom
 from copy import deepcopy
 from collections import defaultdict, OrderedDict
 
-
 from django.middleware.csrf import get_token
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseServerError, JsonResponse
@@ -38,7 +37,7 @@ from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.selection import Selection, SelectionItem
 from mapper.views import LandingPage
 from ligand.models import Ligand, LigandVendorLink, BiasedPathways, AssayExperiment, BiasedData, Endogenous_GTP, LigandID, LigandPeptideStructure, LigandMol, LigandFingerprint
-from ligand.functions import OnTheFly, AddPathwayData
+from ligand.functions import OnTheFly, AddPathwayData, standardize_smiles
 from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
 from interaction.models import StructureLigandInteraction
 from mutation.models import MutationExperiment
@@ -1007,11 +1006,8 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
 
         for lig in ligs:
             records = d[lig]
-            if lig.smiles is not None and (lig.mw is None or lig.mw < 800):
-                picture = img_setup_smiles.format(urllib.parse.quote(lig.smiles))
-            else:
-                # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
-                picture = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/600px-No_image_available.svg.png?20190827162820"
+
+            canonical_smiles, smiles_for_image, picture = standardize_smiles(lig.smiles, lig.mw)
 
             purchasability = vendors_dict[lig.id] if lig.id in vendors_dict.keys() else 0
 
@@ -1085,13 +1081,14 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
                                     'value_type': value_type,
                                     'ligand_type': lig.ligand_type.name.replace('-',' ').capitalize(),
                                     'source': source,
-                                    'smiles': lig.smiles,
+                                    'smiles': canonical_smiles,
                                     'mw': lig.mw,
                                     'rotatable_bonds': lig.rotatable_bonds,
                                     'hdon': lig.hdon,
                                     'hacc': lig.hacc,
                                     'logp': lig.logp,
                                     'reference': record.reference_ligand,
+                                    'smiles_for_image': smiles_for_image,
                                 }
                                 if ligand_search:
                                     binding_dict['name'] = Protein(name=protein.name).short()
@@ -1118,13 +1115,14 @@ def LigandListDetails(mode, ps,ligand_search=False,ligand_similarities=None):
                                     'value_type': value_type,
                                     'ligand_type': lig.ligand_type.name.replace('-',' ').capitalize(),
                                     'source': source,
-                                    'smiles': lig.smiles,
+                                    'smiles': canonical_smiles,
                                     'mw': lig.mw,
                                     'rotatable_bonds': lig.rotatable_bonds,
                                     'hdon': lig.hdon,
                                     'hacc': lig.hacc,
                                     'logp': lig.logp,
                                     'reference': record.reference_ligand,
+                                    'smiles_for_image': smiles_for_image,
                                 }
                                 if ligand_search:
                                     functional_dict['name'] = Protein(name=protein.name).short()
@@ -2063,11 +2061,11 @@ class BiasedSignallingOnTheFlyCalculation(TemplateView):
                         double_path = reference_data[pub]
                         try:
                             log_first = round(math.log((jitterDict[pub][ligand]['Emax_Tau']/float(jitterDict[pub][ligand]['EC50_KA'])),10),2)
-                        except TypeError:
+                        except (TypeError, ValueError) as e:
                             log_first = '-'
                         try:
                             log_second = round(math.log((jitterDict[pub][ligand]['2nd_Pathway_emax_tau']/float(jitterDict[pub][ligand]['2nd_Pathway_EC50_KA'])),10),2)
-                        except TypeError:
+                        except (TypeError, ValueError) as e:
                             log_second = '-'
                     if self.subtype:
                         big = [sign_prot_conversion[jitterDict[pub][ligand]["signalling_prot"]], jitterDict[pub][ligand]['delta'], jitterDict[pub][ligand]['Emax_Tau'], jitterDict[pub][ligand]['EC50_KA'],
@@ -2728,18 +2726,26 @@ class LigandInformationView(TemplateView):
         context.update({'structure': structures})
         context.update({'ligand': ligand_data})
         # Convert assay data to JSON
-        if assay_data_affinity:
+        if len(assay_data_affinity) > 0:
             df_affinity = pd.DataFrame(assay_data_affinity)
-            context['assay_affinity_json'] = df_affinity.to_json(orient='records')
+            json_affinity = df_affinity.to_json(orient='records')   # Could become "[]"
+            # If it's not empty, keep it; otherwise set to "" or None
+            context['assay_affinity_json'] = json_affinity if json_affinity != "[]" else ""
         else:
-            context['assay_affinity_json'] = None
-        if assay_data_potency:
+            context['assay_affinity_json'] = "[]"
+
+        if len(assay_data_potency) > 0:
             df_potency = pd.DataFrame(assay_data_potency)
-            context['assay_potency_json'] = df_potency.to_json(orient='records')
+            json_potency = df_potency.to_json(orient='records')
+            context['assay_potency_json'] = json_potency if json_potency != "[]" else ""
         else:
-            context['assay_potency_json'] = None
-        # context.update({'assay_affinity': assay_data_affinity})
-        # context.update({'assay_potency': assay_data_potency})
+            context['assay_potency_json'] = "[]"
+
+        if context['assay_affinity_json'] == "[]" or context['assay_potency_json'] == "[]":
+            context['assay_existence'] = 'no'
+        else:
+            context['assay_existence'] = 'yes'
+
         context.update({'mutations': mutations})
 
         ##### ADDING SECTION FOR SANKEY #####
@@ -2760,49 +2766,69 @@ class LigandInformationView(TemplateView):
                       'entries': []}
 
             node_counter = 0
+            # Initialize the path source matrix
+            path_matrix = []
+            link_id = 0  # Unique identifier for each link
+            row_id = 0
             for record in indication_data:
                 #assess the values for indication/ligand/protein
                 indication_name = record.indication.title.capitalize()
                 indication_code = record.indication.code
                 indication_0 = record.indication.get_level_0().title
-                uri = record.indication.uri.index
+                uri = record.indication.uri.index if record.indication.uri else ''
                 ligand_name = record.ligand.name.capitalize()
                 ligand_id = record.ligand.id
                 protein_name = record.target.name
                 target_name = record.target.entry_name
                 #check for each value if it exists and retrieve the source node value
                 if indication_name not in caches['indication']:
-                    sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code})
+                    sankey['nodes'].append({"node": node_counter, "name": indication_name, "url": '/drugs/indication/'+indication_code,"column":"x4"})
                     node_counter += 1
                     caches['indication'].append(indication_name)
                 indi_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_name), None)
 
                 if indication_0 not in caches['level_0']:
-                    sankey['nodes'].append({"node": node_counter, "name": indication_0, "url":'https://icd.who.int/browse/2024-01/mms/en#'+uri})
+                    sankey['nodes'].append({"node": node_counter, "name": indication_0, "url":'https://icd.who.int/browse/2024-01/mms/en#'+uri,"column":"x3"})
                     node_counter += 1
                     caches['level_0'].append(indication_0)
                 level_0_node = next((item['node'] for item in sankey['nodes'] if item['name'] == indication_0), None)
 
                 if [ligand_name, ligand_id] not in caches['ligands']:
-                    sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url": '/ligand/'+str(ligand_id)+'/info'})
+                    sankey['nodes'].append({"node": node_counter, "name": ligand_name, "url": '/ligand/'+str(ligand_id)+'/info',"column":"x2"})
                     node_counter += 1
                     caches['ligands'].append([ligand_name, ligand_id])
                 lig_node = next((item['node'] for item in sankey['nodes'] if item['name'] == ligand_name), None)
 
                 if protein_name not in caches['targets']:
-                    sankey['nodes'].append({"node": node_counter, "name": protein_name, "url": '/protein/'+str(target_name)})
+                    sankey['nodes'].append({"node": node_counter, "name": protein_name, "url": '/protein/'+str(target_name),"column":"x1"})
                     node_counter += 1
                     caches['targets'].append(protein_name)
                     caches['entries'].append(target_name)
                 prot_node = next((item['node'] for item in sankey['nodes'] if item['name'] == protein_name), None)
 
-                #append connection between indication and level 0
-                sankey['links'].append({"source":lig_node, "target":level_0_node, "value":1, "ligtrace": protein_name, "prottrace": indication_0})
-                #append connection between level 0 and ligand
-                sankey['links'].append({"source":level_0_node, "target":indi_node, "value":1, "ligtrace": protein_name, "prottrace": indication_name})
-                #append connection between ligand and target
-                sankey['links'].append({"source":prot_node, "target":lig_node, "value":1, "ligtrace": protein_name, "prottrace": indication_name})
+                # create matrix row
+                row = {
+                    'row_id': row_id,
+                    'x1': prot_node,
+                    'x2': lig_node,
+                    'x3': level_0_node,
+                    'x4': indi_node,
+                    'x1_name': protein_name,
+                    'x2_name': ligand_name,
+                    'x3_name': indication_0,
+                    'x4_name': indication_name
+                }
+                
+                sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x1 -> x2 (Protein → Ligand)
+                link_id += 1
+                sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_0, "linkage_key": "primary","link_identifier": link_id})  # x2 -> x3 (Ligand → Level 0)
+                link_id += 1
+                sankey['links'].append({"source": level_0_node, "target": indi_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x3 -> x4 (Level 0 → Indication)
+                link_id += 1
 
+                path_matrix.append(row)
+                row_id += 1
+                
             #Fixing redundancy in sankey['links']
             unique_combinations = {}
 
@@ -2819,7 +2845,93 @@ class LigandInformationView(TemplateView):
 
             # Convert the unique_combinations back to a list of dictionaries
             sankey['links'] = list(unique_combinations.values())
-            total_points = len(caches['targets']) + len(caches['indication']) + 1;
+
+            # Find all nodes that are actually used in the links
+            used_nodes = set()
+            for link in sankey['links']:
+                used_nodes.add(link['source'])
+                used_nodes.add(link['target'])
+
+            # Build new nodes list and a mapping from old to new node indices
+            old_to_new = {}
+            new_nodes = []
+            new_index = 0
+            for node_dict in sankey['nodes']:
+                old_idx = node_dict["node"]
+                if old_idx in used_nodes:
+                    # Only keep nodes that are actually used
+                    new_node_dict = {
+                        "node": new_index,
+                        "name": node_dict["name"],
+                        "url": node_dict["url"],
+                        "column": node_dict['column']
+                    }
+                    new_nodes.append(new_node_dict)
+                    old_to_new[old_idx] = new_index
+                    new_index += 1
+
+            # Update the source and target indices in the links
+            for link in sankey['links']:
+                link["source"] = old_to_new[link["source"]]
+                link["target"] = old_to_new[link["target"]]
+
+            # Replace the nodes list with the new one
+            sankey['nodes'] = new_nodes
+            # Needed in future updates of the sankey (matrix implementation)
+            # def update_max_paths(sankey_nodes, path_matrix):
+
+            #     # Function to count unique paths leading **to** the node
+            #     def count_unique_paths_to(previous_col, current_col, node_name):
+            #         unique_paths = set()
+            #         # Filter rows to include only those leading to the current node
+            #         filtered_rows = [row for row in path_matrix if row[current_col + '_name'] == node_name]
+            #         for row in filtered_rows:
+            #             from_node = row[previous_col]
+            #             to_node = row[current_col]
+            #             unique_paths.add((from_node, to_node))
+            #         return len(unique_paths)
+
+            #     # Function to count unique paths leading **from** the node
+            #     def count_unique_paths_from(current_col, next_col, node_name):
+            #         unique_paths = set()
+            #         # Filter rows to include only those originating from the current node
+            #         filtered_rows = [row for row in path_matrix if row[current_col + '_name'] == node_name]
+            #         for row in filtered_rows:
+            #             from_node = row[current_col]
+            #             to_node = row[next_col]
+            #             unique_paths.add((from_node, to_node))
+            #         return len(unique_paths)
+
+            #     # Iterate over all nodes and calculate max_paths, unique_left, and unique_right
+            #     for node in sankey_nodes:
+            #         node_name = node['name']
+            #         node_column = node['column']
+
+            #         # Calculate incoming and outgoing unique paths
+            #         if node_column == 'x1':
+            #             node['unique_right'] = count_unique_paths_from('x1', 'x2', node_name)
+            #             node['unique_left'] = 0  # No incoming paths for x1 nodes
+            #             node['max_paths'] = node['unique_right']
+            #         elif node_column == 'x2':
+            #             node['unique_left'] = count_unique_paths_to('x1', 'x2', node_name)
+            #             node['unique_right'] = count_unique_paths_from('x2', 'x3', node_name)
+            #             node['max_paths'] = max(node['unique_left'], node['unique_right'])
+            #         elif node_column == 'x3':
+            #             node['unique_left'] = count_unique_paths_to('x2', 'x3', node_name)
+            #             node['unique_right'] = count_unique_paths_from('x3', 'x4', node_name)
+            #             node['max_paths'] = max(node['unique_left'], node['unique_right'])
+            #         elif node_column == 'x4':
+            #             node['unique_left'] = count_unique_paths_to('x3', 'x4', node_name)
+            #             node['unique_right'] = 0  # No outgoing paths for x4 nodes
+            #             node['max_paths'] = node['unique_left']
+
+            # # Call the function to update max_paths, unique_left, and unique_right
+            # update_max_paths(sankey['nodes'], path_matrix)
+
+
+            # Convert the unique_combinations back to a list of dictionaries
+            sankey['links'] = list(unique_combinations.values())
+            total_points = len(caches['targets']) + len(caches['indication']) + 1
             if len(caches['indication']) > len(caches['targets']):
                 nodes_nr = len(caches['indication'])
             else:
@@ -2834,12 +2946,14 @@ class LigandInformationView(TemplateView):
             df['Is_Phase_I'] = (df['indication_max_phase'] == 1).astype(int)
             df['Is_Phase_II'] = (df['indication_max_phase'] == 2).astype(int)
             df['Is_Phase_III'] = (df['indication_max_phase'] == 3).astype(int)
+            df['Is_Phase_IV'] = (df['indication_max_phase'] == 4).astype(int)
             df['Is_Approved'] = (df['drug_status'] == 'Approved').astype(int)
 
             phase_counts = df.agg({
                 'Is_Phase_I': 'sum',
                 'Is_Phase_II': 'sum',
                 'Is_Phase_III': 'sum',
+                'Is_Phase_IV': 'sum',
                 'Is_Approved': 'max'
                 }).to_dict()
             
@@ -2849,14 +2963,15 @@ class LigandInformationView(TemplateView):
                 'Phase_I_trials': phase_counts.get('Is_Phase_I', 0),
                 'Phase_II_trials': phase_counts.get('Is_Phase_II', 0),
                 'Phase_III_trials': phase_counts.get('Is_Phase_III', 0),
+                'Phase_IV_trials': phase_counts.get('Is_Phase_IV', 0),
                 'Approved': phase_counts.get('Is_Approved', 'No')
                 })
 
             context.update({'sankey': json.dumps(sankey)})
+            context.update({'path_matrix': json.dumps(path_matrix)})
             context.update({'points': total_points})
             context.update({'nodes_nr': nodes_nr})
             context.update({'plot_existence': 'yes'})
-        
 
             ##### ADDING SECTION FOR DRUG TABLE #####
             # The code was derived from drugs/views.py class DrugSectionSelection
@@ -2950,18 +3065,22 @@ class LigandInformationView(TemplateView):
 
                 # Convert DataFrame to JSON
                 context['Full_data_drug_table'] = Modified_df_drug.to_json(orient='records')
-
-
+                if context['Full_data_drug_table'] == "[]":
+                    context['Full_data_drug_table_exists'] = 'no'
+                else:
+                    context['Full_data_drug_table_exists'] = 'yes'
+            else:
+                context['Full_data_drug_table'] = None
+                context['Full_data_drug_table_exists'] = 'no'
         else:
             context.update({
                 'Phase_I_trials': 0,
                 'Phase_II_trials': 0,
                 'Phase_III_trials': 0,
                 'Approved': 'No',
-                'Full_data_drug_table': None
+                'Full_data_drug_table': None,
+                'Full_data_drug_table_exists': 'no'
                 })
-
-        #####################################
 
         return context
 
@@ -3124,11 +3243,9 @@ class LigandInformationView(TemplateView):
 
     @staticmethod
     def process_ligand(ligand_data, endogenous_ligands):
-        img_setup_smiles = "<img style=\"height: 80%; width: 80%;;\" src=\"https://cactus.nci.nih.gov/chemical/structure/{}/image\">"
         ld = dict()
         ld['ligand_id'] = ligand_data.id
         ld['ligand_name'] = ligand_data.name
-        ld['ligand_smiles'] = ligand_data.smiles
         ld['ligand_inchikey'] = ligand_data.inchikey
         try:
             ld['type'] = ligand_data.ligand_type.name.replace('-',' ').capitalize()
@@ -3142,12 +3259,8 @@ class LigandInformationView(TemplateView):
         ld['mw'] = ligand_data.mw
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
+        ld['ligand_smiles'], ld['ligand_smiles_for_image'], ld['picture'] = standardize_smiles(ligand_data.smiles, ld['mw'])
 
-        if ligand_data.smiles is not None and (ld['mw'] is None or ld['mw'] < 800):
-            ld['picture'] = img_setup_smiles.format(urllib.parse.quote(ligand_data.smiles))
-        else:
-            # "No image available" SVG (source: https://commons.wikimedia.org/wiki/File:No_image_available.svg)
-            ld['picture'] = None
         #Sorting links if ligand is endogenous
         if ligand_data.id in endogenous_ligands:
             sorted_list = ['Guide To Pharmacology', 'DrugBank', 'Drug Central', 'ChEMBL_compound_ids', 'PubChem']
@@ -3522,7 +3635,8 @@ class PhysiologicalLigands(TemplateView):
                         'Ligand name', 'GtP link', 'GtP Classification', 'Potency Ranking', 'Type','smiles','inchikey',
                         'pEC50 - min', 'pEC50 - mid', 'pEC50 - max',
                         'pKi - min', 'pKi - mid', 'pKi - max', 'Reference', 'ID',
-                        'Entry Name', 'Accession', 'pdb_code', 'structure_type']
+                        'Entry Name', 'Accession', 'pdb_code', 'structure_type',
+                        'smiles_for_image', 'picture']
         data_subsets = []
 
         # Subqueries to get the desired fields directly
@@ -3650,6 +3764,15 @@ class PhysiologicalLigands(TemplateView):
                 data_subset['Accession'] = data[21]                                         #21
                 data_subset["pdb_code"] = data[22]                                          #22
                 data_subset['structure_type'] = data[23]
+
+                if data[10] and data[10] != "-":
+                    canonical_smiles, smiles_for_image, picture_flag = standardize_smiles(data[10], None)
+                else:
+                    smiles_for_image = ""
+                    picture_flag = "Not_available"
+                data_subset['smiles_for_image'] = smiles_for_image                          #23
+                data_subset['picture'] = picture_flag                                       #24
+
                 data_subsets.append(data_subset)
 
         table = pd.DataFrame(data_subsets, columns=browser_columns)

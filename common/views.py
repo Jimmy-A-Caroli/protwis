@@ -123,7 +123,7 @@ def getLigandCountTable():
     # data_table = None
     if data_table == None:
         proteins = Protein.objects.filter(sequence_type__slug="wt",
-                                          family__slug__startswith="00").prefetch_related(
+                                          family__slug__startswith="0").prefetch_related(
                                           # species__common_name="Human").prefetch_related(
             "family",
             "family__parent__parent__parent",
@@ -136,11 +136,7 @@ def getLigandCountTable():
         approved = {}
         for entry in drugtargets_approved:
             approved[entry['entry_name']] = entry['num_ligands']
-        drugtargets_trials = list(Protein.objects.filter(
-            drugs__drug_status="Active",
-            drugs__indication_max_phase__in=[1, 2, 3]
-        ).values(
-            "entry_name").annotate(num_ligands=Count("drugs__ligand", distinct=True)))
+        drugtargets_trials = list(Protein.objects.filter(drugs__drug_status="Active").values("entry_name").annotate(num_ligands=Count("drugs__ligand", distinct=True)))
 
         trials = {}
         for entry in drugtargets_trials:
@@ -255,7 +251,7 @@ def getTargetTable():
     data_table = cache.get("target_table")
     if data_table == None:
         proteins = Protein.objects.filter(sequence_type__slug="wt",
-                                          family__slug__startswith="00",
+                                          family__slug__startswith="0",
                                           species__common_name="Human").prefetch_related(
             "family",
             "family__parent__parent__parent"
@@ -264,7 +260,7 @@ def getTargetTable():
         slug_list = [ p.family.slug for p in proteins ]
 
         # Acquire all targets that do not have a human ortholog
-        missing_slugs = list(Protein.objects.filter(sequence_type__slug="wt", family__slug__startswith="00")\
+        missing_slugs = list(Protein.objects.filter(sequence_type__slug="wt", family__slug__startswith="0")\
                                          .exclude(family__slug__in=slug_list)\
                                          .distinct("family__slug")\
                                          .values_list("family__slug", flat=True))
@@ -287,12 +283,8 @@ def getTargetTable():
             else:
                 allpdbs[pdb[1]].append(pdb[0])
 
-        drugtargets_approved = list(Protein.objects.filter(drugs__status="approved").values_list("entry_name", flat=True))
-        drugtargets_trials = list(Protein.objects.filter(drugs__status__in=["in trial"],
-                                                         drugs__clinicalstatus__in=["completed", "not open yet",
-                                                                                    "ongoing", "recruiting",
-                                                                                    "suspended"]).values_list(
-            "entry_name", flat=True))
+        drugtargets_approved = list(Protein.objects.filter(drugs__drug_status="Approved").values_list("entry_name", flat=True).distinct())
+        drugtargets_trials = list(Protein.objects.filter(drugs__drug_status="Active").values_list("entry_name", flat=True).distinct())
 
         ligand_set = list(AssayExperiment.objects.values("protein__family__slug")\
             .annotate(num_ligands=Count("ligand", distinct=True)))
@@ -459,7 +451,7 @@ def getReferenceTable(pathway, subtype):
         proteins = Protein.objects.filter(
                                           entry_name__in=biased_entry_names,
                                           sequence_type__slug="wt",
-                                          family__slug__startswith="00").prefetch_related(
+                                          family__slug__startswith="0").prefetch_related(
             "family",
             "family__parent__parent__parent",
             "species"
@@ -673,7 +665,7 @@ class AbsReferenceSelectionTable(TemplateView):
     import_export_box = True
     default_species = 'Human'
     default_slug = '000'
-    default_subslug = '00'
+    default_subslug = '0'
 
     numbering_schemes = False
     search = False
@@ -737,7 +729,7 @@ class AbsReferenceSelectionTable(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -787,7 +779,7 @@ class AbsTargetSelectionTable(TemplateView):
 
     default_species = 'Human'
     default_slug = '000'
-    default_subslug = '00'
+    default_subslug = '0'
 
     numbering_schemes = False
     search = False
@@ -855,7 +847,7 @@ class AbsTargetSelectionTable(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -909,7 +901,7 @@ class AbsTargetSelection(TemplateView):
     target_input = True
     default_species = 'Human'
     default_slug = '000'
-    default_subslug = '00'
+    default_subslug = '0'
     numbering_schemes = False
     search = True
     family_tree = True
@@ -974,7 +966,7 @@ class AbsTargetSelection(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
@@ -1170,7 +1162,7 @@ class AbsMiscSelection(TemplateView):
         selection = Selection()
 
         # on the first page of a workflow, clear the selection (or dont' import from the session)
-        if self.step is not 1:
+        if self.step != 1:
             if simple_selection:
                 selection.importer(simple_selection)
 
