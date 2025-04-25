@@ -458,6 +458,18 @@ class DataMapperHome(TemplateView):
 
             name_to_entry = {item['name']: item['entry_name'] for item in proteins}
 
+            # Create flat list of entry names
+            entry_names = [item['entry_name'] for item in proteins]
+
+            # Fetch proteins with prefetch on genes
+            protein_genes = Protein.objects.prefetch_related('genes').filter(entry_name__in=entry_names)
+
+            # Create mapping from entry_name to gene name (position == 0 only)
+            entry_to_gene = {
+                protein.entry_name: next((g.name for g in protein.genes.all() if g.position == 0), None)
+                for protein in protein_genes
+            }
+
         elif type == "Odorant":
             all_proteins = Protein.objects.filter(
                 species_id=1,
@@ -503,9 +515,11 @@ class DataMapperHome(TemplateView):
                             if item.name in name_to_entry:
                                 entry_name = name_to_entry[item.name]
                                 entry_code = entry_name.split('_')[0].upper()
+                                gene_symbol = entry_to_gene.get(entry_name)  # Entrez name, if available
                                 current_level[item.name] = {
                                     "Data": "Empty",
                                     "EntryName": entry_code,
+                                    "Entrez": gene_symbol if gene_symbol else "UNKNOWN",
                                     "Color": "#FFFFFF"
                                 }
                         else:
@@ -742,17 +756,34 @@ class DataMapperHome(TemplateView):
         else:
             pass
 
-        whole_receptors = Protein.objects.prefetch_related("family", "family__parent__parent__parent")
+        entry_names_list = list(input_data.keys())  # or: input_data.keys()
+
+        # Step 2: Trim protein queries
+        whole_receptors = Protein.objects.filter(entry_name__in=entry_names_list).prefetch_related("family", "family__parent__parent__parent")
+            
+        protein_genes = Protein.objects.filter(entry_name__in=entry_names_list).prefetch_related('genes')
+            
+        entry_to_gene = {
+            protein.entry_name: next((g.name for g in protein.genes.all() if g.position == 0), None)
+            for protein in protein_genes
+        }
+
         whole_rec_dict = {}
+        entrez_label_dict = {}
         for rec in whole_receptors:
+            rec_entryname = rec.entry_name
             rec_uniprot = rec.entry_short()
             rec_iuphar = rec.family.name.replace("receptor", '').replace("<i>", "").replace("</i>", "").strip()
             if (rec_iuphar[0].isupper()) or (rec_iuphar[0].isdigit()):
                 whole_rec_dict[rec_uniprot] = [rec_iuphar]
             else:
                 whole_rec_dict[rec_uniprot] = [rec_iuphar.capitalize()]
+            # Entrez label — safely
+            gene_name = entry_to_gene.get(rec_entryname)
+            if gene_name:
+                entrez_label_dict[rec_uniprot] = [gene_name]
 
-        return master_dict, general_options, circles, whole_rec_dict
+        return master_dict, general_options, circles, whole_rec_dict, entrez_label_dict
 
     @staticmethod
     def clustering_test(method, data, data_type):
@@ -937,16 +968,37 @@ class DataMapperHome(TemplateView):
 
     @staticmethod
     def Label_conversion_info(data):
-        # Get list of keys
+        # Get list of keys (UniProt-style entry names)
         Name_list = list(data.keys())
-        # Names conversion dict
+
+        # Fetch IUPHAR names
         names_dict = Protein.objects.filter(entry_name__in=Name_list).values('entry_name', 'name').order_by('entry_name')
         UniProt_to_IUPHAR_converter = {item['entry_name']: item['name'] for item in names_dict}
         IUPHAR_to_UniProt_converter = {item['name']: item['entry_name'] for item in names_dict}
-        Label_converter = {'UniProt_to_IUPHAR_converter':UniProt_to_IUPHAR_converter,'IUPHAR_to_UniProt_converter':IUPHAR_to_UniProt_converter}
-        return Label_converter
-    
 
+        # Fetch genes with position == 0
+        protein_genes = Protein.objects.prefetch_related('genes').filter(entry_name__in=Name_list)
+        UniProt_to_Gene_converter = {
+            protein.entry_name: next((g.name for g in protein.genes.all() if g.position == 0), None)
+            for protein in protein_genes
+        }
+
+        # Create IUPHAR to Gene mapping using the two converters above
+        IUPHAR_to_Gene_converter = {
+            iuphar: UniProt_to_Gene_converter.get(entry)
+            for iuphar, entry in IUPHAR_to_UniProt_converter.items()
+            if UniProt_to_Gene_converter.get(entry) is not None
+        }
+
+        # Final converter dict
+        Label_converter = {
+            'UniProt_to_IUPHAR_converter': UniProt_to_IUPHAR_converter,
+            'IUPHAR_to_UniProt_converter': IUPHAR_to_UniProt_converter,
+            'UniProt_to_Gene_converter': UniProt_to_Gene_converter,
+            'IUPHAR_to_Gene_converter': IUPHAR_to_Gene_converter
+        }
+
+        return Label_converter
     
 
     def post(self, request, *args, **kwargs):
@@ -988,6 +1040,26 @@ class DataMapperHome(TemplateView):
                             ).exclude(
                                 family_id__slug__startswith='008'
                             ).values_list('entry_name', flat=True).distinct()
+                        
+                        # Fetch proteins with prefetch on genes
+                        proteins = Protein.objects.prefetch_related('genes').filter(entry_name__in=all_proteins)
+
+                        # Create mapping from entry_name to gene name (position == 0 only)
+                        entry_to_gene = {
+                            protein.entry_name: next((g.name for g in protein.genes.all() if g.position == 0), None)
+                            for protein in proteins
+                        }
+
+                        # Reverse gene → entry_name mapping
+                        gene_to_entry = {v.upper(): k for k, v in entry_to_gene.items() if v}
+
+                        # entry_name → entry_name, matching uppercased
+                        entry_name_upper_to_entry = {k.upper(): k for k in entry_to_gene.keys()}
+
+                        # stripped (non-species-specific) → entry_name
+                        entry_name_no_species_to_entry = {
+                            k.split('_')[0].upper(): k for k in entry_to_gene.keys()
+                        }
 
                         # Load excel file (workbook) and get sheet names #
                         sheet_names = workbook.sheetnames
@@ -1029,6 +1101,27 @@ class DataMapperHome(TemplateView):
                                 hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
                                 return bool(re.match(hex_pattern, color))
 
+                            def normalize_receptor_input(receptor_raw):
+                                if not receptor_raw:
+                                    return None
+
+                                receptor = receptor_raw.strip().upper()
+
+                                # Gene name match
+                                if receptor in gene_to_entry:
+                                    return gene_to_entry[receptor]
+
+                                # Full UniProt-style match
+                                if receptor in entry_name_upper_to_entry:
+                                    return entry_name_upper_to_entry[receptor]
+
+                                # Fallback: stripped version without species suffix
+                                if receptor in entry_name_no_species_to_entry:
+                                    return entry_name_no_species_to_entry[receptor]
+
+                                # No match
+                                return None
+
                             # For each sheet in the workbook #
                             for sheet_name in sheet_names:
 
@@ -1059,15 +1152,21 @@ class DataMapperHome(TemplateView):
                                             pass #If sheet is empty pass the checking and report the findings
                                         else:
                                             for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-                                                receptor = row[0].value
+                                                
+                                                # Get raw input
+                                                receptor_raw = row[0].value
+
+                                                # Skip empty rows early
+                                                if receptor_raw in (None, ""):
+                                                    continue
+
+                                                # Normalize input
+                                                receptor = normalize_receptor_input(receptor_raw)
 
                                                 # Validate receptor
                                                 if receptor not in Proteins_GPCRomeTree:
-                                                    if receptor in (None, ""):
-                                                        continue
-                                                    else:
-                                                        Incorrect_values.setdefault('GPCRs', {})[index] = f'"{receptor}" is an invalid entry for the GPCRome wheel plot.'
-                                                        continue
+                                                    Incorrect_values.setdefault('GPCRs', {})[index] = f'"{row[0].value}" is an invalid entry for the GPCRome wheel plot.'
+                                                    continue
 
                                                 if receptor not in Data:
                                                     Data[receptor] = {}
@@ -1177,37 +1276,48 @@ class DataMapperHome(TemplateView):
                                             else:
                                                 # If sheet is not empty then start handling the data
                                                 # Iterate through the rows and validate the data
-                                                for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
+                                                for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
+
+                                                    # Get raw input
+                                                    receptor_raw = row[0].value
+
+                                                    # Skip empty rows early
+                                                    if receptor_raw in (None, ""):
+                                                        continue
+
+                                                    # Normalize input
+                                                    receptor = normalize_receptor_input(receptor_raw)
+
                                                     # Check the "Receptor (Uniprot)" column for correct values
-                                                    if row[0] not in Proteins_GPCRomeTree:
-                                                        if row[0] in (None, ""):
+                                                    if receptor not in Proteins_GPCRomeTree:
+                                                        if receptor in (None, ""):
                                                             pass
                                                         else:
-                                                            Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Tree plot.'.format(row[0])
+                                                            Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Tree plot.'.format(receptor)
                                                     else:
                                                         # Check if data row is in data and/or initialize it
-                                                        if row[0] not in Data:
-                                                            Data[row[0]] = {}
+                                                        if receptor not in Data:
+                                                            Data[receptor] = {}
                                                         # Check datatype -> Numeric or Text:
                                                         if Plot_type in ('Numeric','Text'):
                                                             for i in range(1,7):
                                                                 # Check datatype -> Numeric
                                                                 if Plot_type == 'Numeric':
-                                                                    if row[i] not in (None, ""):
+                                                                    if row[i].value not in (None, ""):
                                                                         try:
-                                                                            float_value = float(row[i])
+                                                                            float_value = float(row[i].value)
                                                                             if i == 1:
-                                                                                Data[row[0]]['Inner'] = float_value
+                                                                                Data[receptor]['Inner'] = float_value
                                                                             else:
-                                                                                Data[row[0]]['Outer{}'.format(i-1)] = float_value
+                                                                                Data[receptor]['Outer{}'.format(i-1)] = float_value
                                                                         except ValueError:
                                                                             Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
                                                                 # Check datatype -> Text
                                                                 elif Plot_type == 'Text':
-                                                                    if row[i] not in (None, ""):
+                                                                    if row[i].value not in (None, ""):
                                                                         try:
-                                                                            Text_value = str(row[i])
-                                                                            Data[row[0]]['Value{}'.format(i)] = Text_value
+                                                                            Text_value = str(row[i].value)
+                                                                            Data[receptor]['Value{}'.format(i)] = Text_value
                                                                         except ValueError:
                                                                             Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Corrupted Value, not a string'
                                                         else:
@@ -1265,48 +1375,58 @@ class DataMapperHome(TemplateView):
                                             # If sheet is not empty then start handling the data
                                             # Iterate through the rows and validate the data
                                             for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                                                # Check the "Receptor (Uniprot)" column for correct values
-                                                if row[0] not in all_proteins:
-                                                    if row[0] in (None, ""):
-                                                        pass
-                                                    else:
-                                                        Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Cluster plot.'.format(row[0])
-                                                else:
-                                                    # Check if data row is in data and/or initialize it
-                                                    if row[0] not in Data:
-                                                        Data[row[0]] = {}
-                                                    if ClusterSpacialPositionCheck:
-                                                        # Check datatype -> Numeric
-                                                        if Plot_type == 'Numeric':
-                                                            if row[1] not in (None, ""):
-                                                                try:
-                                                                    float_value = float(row[1])
-                                                                    Data[row[0]]['Value1'] = float_value
-                                                                except ValueError:
-                                                                    Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
-                                                                try:
-                                                                    float_value = float(row[2])
-                                                                    Data[row[0]]['Value2'] = float_value
-                                                                except ValueError:
-                                                                    Incorrect_values['GPCR Spacial position (Column C)'][index] = 'Non-numeric Value.'
+
+                                                # Get raw input
+                                                receptor_raw = row[0]
+
+                                                # Skip empty rows early
+                                                if receptor_raw in (None, ""):
+                                                    continue
+
+                                                # Normalize input
+                                                receptor = normalize_receptor_input(receptor_raw)
+
+                                                # Validate receptor
+                                                if receptor not in all_proteins:
+                                                    Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Cluster plot.'.format(row[0])
+                                                    continue
+
+                                                # Check if data row is in data and/or initialize it
+                                                if receptor not in Data:
+                                                    Data[receptor] = {}
+                                                
+                                                if ClusterSpacialPositionCheck:
+                                                    # Check datatype -> Numeric
+                                                    if Plot_type == 'Numeric':
+                                                        if row[1] not in (None, ""):
+                                                            try:
+                                                                float_value = float(row[1])
+                                                                Data[receptor]['Value1'] = float_value
+                                                            except ValueError:
+                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
+                                                            try:
+                                                                float_value = float(row[2])
+                                                                Data[receptor]['Value2'] = float_value
+                                                            except ValueError:
+                                                                Incorrect_values['GPCR Spacial position (Column C)'][index] = 'Non-numeric Value.'
+                                                        else:
+                                                            if row[2] not in (None, ""):
+                                                                Incorrect_values['GPCR Value (Column B & C)'][index] = 'You have Spacial position (Column C) without a value assign (Column B), Please assign a value to this row in Column B.'
                                                             else:
-                                                                if row[2] not in (None, ""):
-                                                                    Incorrect_values['GPCR Value (Column B & C)'][index] = 'You have Spacial position (Column C) without a value assign (Column B), Please assign a value to this row in Column B.'
-                                                                else:
-                                                                    pass
-                                                        else:
-                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
+                                                                pass
                                                     else:
-                                                        # Check datatype -> Numeric
-                                                        if Plot_type == 'Numeric':
-                                                            if row[1] not in (None, ""):
-                                                                try:
-                                                                    float_value = float(row[1])
-                                                                    Data[row[0]]['Value1'] = float_value
-                                                                except ValueError:
-                                                                    Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
-                                                        else:
-                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
+                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
+                                                else:
+                                                    # Check datatype -> Numeric
+                                                    if Plot_type == 'Numeric':
+                                                        if row[1] not in (None, ""):
+                                                            try:
+                                                                float_value = float(row[1])
+                                                                Data[receptor]['Value1'] = float_value
+                                                            except ValueError:
+                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
+                                                    else:
+                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
 
                                         # Check if any values are incorrect #
                                         status = 'Success'
@@ -1353,51 +1473,68 @@ class DataMapperHome(TemplateView):
                                         else:
                                             # If sheet is not empty then start handling the data
                                             # Iterate through the rows and validate the data
-                                            for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                                                # Check the "Receptor (Uniprot)" column for correct values
-                                                if row[0] not in all_proteins:
-                                                    if row[0] in (None, ""):
-                                                        pass
-                                                    else:
-                                                        Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the List plot.'.format(row[0])
-                                                else:
-                                                    # Check if data row is in data and/or initialize it
-                                                    if row[0] not in Data:
-                                                        Data[row[0]] = {}
-                                                    # Check datatype -> Numeric or Text:
-                                                    if Plot_type in ('Numeric','Text'):
-                                                        # Handle value checks
-                                                        for i in range(1,5):
-                                                            # Check datatype -> Numeric
-                                                            if Plot_type == 'Numeric':
-                                                                if row[i] not in (None, ""):
-                                                                    try:
-                                                                        float_value = float(row[i])
-                                                                        Data[row[0]]['Value{}'.format(i)] = float_value
-                                                                    except ValueError:
-                                                                        Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
-                                                            # Check datatype -> Text
-                                                            elif Plot_type == 'Text':
-                                                                if row[i] not in (None, ""):
-                                                                    try:
-                                                                        Text_value = str(row[i])
-                                                                        Data[row[0]]['Value{}'.format(i)] = Text_value
-                                                                    except ValueError:
-                                                                        Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Corrupted Value, not a string'
-                                                        # Handle shapes
-                                                        for i in range(5,9):
-                                                            if row[i] not in (None, ""):
-                                                                if row[i] in ('Circle', 'Diamond', 'Rectangle', 'Star', 'Triangle'):
-                                                                    Text_value = str(row[i])
-                                                                    Data[row[0]]['Value{}'.format(i)] = Text_value
-                                                                else:
-                                                                    Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Value assigned is not empty, Circle, Diamond, Rectangle, Star, or Triangle.'
-                                                            else:
-                                                                if row[i-4] not in (None, ""):  # Check columns B (1) to E (4)
-                                                                    Data[row[0]]['Value{}'.format(i)] = 'Circle'
+                                            for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
+                                                
+                                                 # Get raw input
+                                                receptor_raw = row[0].value
 
-                                                    else:
-                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                                # Skip empty rows early
+                                                if receptor_raw in (None, ""):
+                                                    continue
+
+                                                # Normalize input
+                                                receptor = normalize_receptor_input(receptor_raw)
+
+                                                # Validate receptor
+                                                if receptor not in Proteins_GPCRomeTree:
+                                                    Incorrect_values.setdefault('GPCRs', {})[index] = f'"{receptor}" is an invalid entry for the  List plot.'
+                                                    continue
+
+                                                if receptor not in Data:
+                                                    Data[receptor] = {}
+
+                                                # Check datatype -> Numeric or Text
+                                                if Plot_type in ('Numeric', 'Text'):
+                                                    for i in range(1, 5):
+                                                        cell_value = row[i].value
+                                                        col_label = 'GPCR Value (Column {})'.format(IndexToColumn[i])
+
+                                                        if cell_value not in (None, ""):
+                                                            if Plot_type == 'Numeric':
+                                                                try:
+                                                                    float_value = float(cell_value)
+                                                                    Data.setdefault(receptor, {})['Value{}'.format(i)] = float_value
+                                                                except ValueError:
+                                                                    Incorrect_values.setdefault(col_label, {})[index] = 'Non-numeric Value'
+
+                                                            elif Plot_type == 'Text':
+                                                                try:
+                                                                    text_value = str(cell_value)
+                                                                    Data.setdefault(receptor, {})['Value{}'.format(i)] = text_value
+                                                                except ValueError:
+                                                                    Incorrect_values.setdefault(col_label, {})[index] = 'Corrupted Value, not a string'
+
+                                                    # Handle shapes in columns F (5) to I (8)
+                                                    for i in range(5, 9):
+                                                        shape_value = row[i].value
+                                                        col_label = 'GPCR Value (Column {})'.format(IndexToColumn[i])
+
+                                                        if shape_value not in (None, ""):
+                                                            if shape_value in ('Circle', 'Diamond', 'Rectangle', 'Star', 'Triangle'):
+                                                                Data.setdefault(receptor, {})['Value{}'.format(i)] = str(shape_value)
+                                                            else:
+                                                                Incorrect_values.setdefault(col_label, {})[index] = (
+                                                                    'Value assigned is not empty, Circle, Diamond, Rectangle, Star, or Triangle.'
+                                                                )
+                                                        else:
+                                                            # If a shape is missing but its associated numeric/text value (B–E) is present
+                                                            if row[i - 4].value not in (None, ""):
+                                                                Data.setdefault(receptor, {})['Value{}'.format(i)] = 'Circle'
+
+                                                else:
+                                                    Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.'
+
+                                                    Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
                                             # Check if any values are incorrect #
                                             status = 'Success'
 
@@ -1459,29 +1596,40 @@ class DataMapperHome(TemplateView):
                                                 # If sheet is not empty then start handling the data
                                                 # Iterate through the rows and validate the data
                                                 for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                                                    # Check the "Receptor (Uniprot)" column for correct values
-                                                    if row[0] not in all_proteins:
-                                                        if row[0] in (None, ""):
-                                                            pass
-                                                        else:
-                                                            Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Heatmap plot.'.format(row[0])
+                                                    
+                                                     # Get raw input
+                                                    receptor_raw = row[0]
+
+                                                    # Skip empty rows early
+                                                    if receptor_raw in (None, ""):
+                                                        continue
+
+                                                    # Normalize input
+                                                    receptor = normalize_receptor_input(receptor_raw)
+
+                                                    # Validate receptor
+                                                    if receptor not in Proteins_GPCRomeTree:
+                                                        Incorrect_values.setdefault('GPCRs', {})[index] = f'"{receptor}" is an invalid entry for the Heatmap plot.'
+                                                        continue
+
+                                                    if receptor not in Data:
+                                                        Data[receptor] = {}
+                                                    
+                                                    # Check datatype -> Numeric or Text:
+                                                    if Plot_type in ('Numeric', 'Text'):
+                                                        for i in range(1, 6):
+                                                            cell_value = row[i]
+                                                            col_label = 'GPCR Value (Column {})'.format(IndexToColumn[i])
+
+                                                            if Plot_type == 'Numeric':
+                                                                if cell_value not in (None, ""):
+                                                                    try:
+                                                                        float_value = float(cell_value)
+                                                                        Data.setdefault(receptor, {})['Value{}'.format(i)] = float_value
+                                                                    except ValueError:
+                                                                        Incorrect_values.setdefault(col_label, {})[index] = 'Non-numeric Value'
                                                     else:
-                                                        # Check if data row is in data and/or initialize it
-                                                        if row[0] not in Data:
-                                                            Data[row[0]] = {}
-                                                        # Check datatype -> Numeric or Text:
-                                                        if Plot_type in ('Numeric','Text'):
-                                                            for i in range(1,6):
-                                                                # Check datatype -> Numeric
-                                                                if Plot_type == 'Numeric':
-                                                                    if row[i] not in (None, ""):
-                                                                        try:
-                                                                            float_value = float(row[i])
-                                                                            Data[row[0]]['Value{}'.format(i)] = float_value
-                                                                        except ValueError:
-                                                                            Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
-                                                        else:
-                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
                                                 # Check if any values are incorrect #
                                                 status = 'Success'
 
@@ -1662,7 +1810,7 @@ class TreeRender(TemplateView):
 
         try:
             Data = json.loads(Data_json)
-            tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(Data)
+            tree, tree_options, circles, receptors, genes = DataMapperHome.generate_tree_plot(Data)
 
             # Store PlotType so get_template_names can access it
             self.plot_type = PlotType
@@ -1671,8 +1819,10 @@ class TreeRender(TemplateView):
                 'tree': json.dumps(tree),
                 'tree_options': tree_options,
                 'circles': json.dumps(circles),
-                'whole_dict': json.dumps(receptors),
-                'PlotType': PlotType
+                'Receptor_dict': json.dumps(receptors),
+                'Entrez_dict': json.dumps(genes),
+                'PlotType': PlotType,
+                'Data': json.dumps(Data)
             }
             return self.render_to_response(context)
 
@@ -1691,9 +1841,11 @@ class ClusterRender(TemplateView):
             Data = json.loads(Data_json)
             # Calculate the plot
             output_seq = DataMapperHome.clustering_test('tsne', Data,'seq')
+            label_converter = DataMapperHome.Label_conversion_info(Data)
             # Create the context
             context = {
-                'cluster_data_seq': output_seq
+                'cluster_data_seq': output_seq,
+                'Label_converter': json.dumps(label_converter)
                 }
             # Return context
             return self.render_to_response(context)
@@ -1718,6 +1870,7 @@ class ListRender(TemplateView):
         try:
             Data = json.loads(Data_json)
             listplot_data = DataMapperHome.generate_list_plot(Data)
+            label_converter = DataMapperHome.Label_conversion_info(Data)
 
             # Store PlotType so get_template_names can access it
             self.plot_type = PlotType
@@ -1725,7 +1878,7 @@ class ListRender(TemplateView):
             context = {
                 'listplot_data': json.dumps(listplot_data["NameList"]),
                 'listplot_data_variables': json.dumps(listplot_data['DataPoints']),
-                'Label_Conversion': json.dumps(listplot_data['LabelConversionDict']),
+                'Label_Conversion': json.dumps(label_converter),
                 'PlotType': PlotType
             }
             return self.render_to_response(context)

@@ -15,11 +15,12 @@
 <!-- ############ -->
 <div class="col-md-8" style="margin-top: 30px;">
     <!-- Receptor label switch -->
-    <div class="col-md-4" style="margin-left: 10px; margin-right: -40px;">
+    <div class="col-md-5" style="margin-left: 10px; margin-right: -40px;">
       Receptor names:
         <div class="btn-group" role="group" id="gtp_plus">
-            <button id="List_UniProtNames" class="btn btn-info">UniProt</button>
-            <button id="List_IUPHARNames" class="btn btn-info active">GtPdb</button>
+          <button id="List_IUPHARNames" class="btn btn-info active">GtPdb</button>
+          <button id="List_GeneNames" class="btn btn-info">Gene</button>
+          <button id="List_UniProtNames" class="btn btn-info">UniProt</button>
         </div>
     </div>
   <div class="col-md-2" style="margin-left: 10px; margin-right: -40px;">
@@ -292,10 +293,6 @@ $('.dropdown-menu').on('click', function(event){
 
 <script>
 $(document).ready(function() {
-    // Apply passive event listeners globally for touch and wheel events
-    // ["touchstart", "touchmove", "wheel"].forEach(event => {
-    //   document.addEventListener(event, function(e) {}, { passive: true });
-    // });
 
     // Function to initialize Spectrum color picker
     function initialize_List_Styling_ColorPicker(elementId, start_color, layer) {
@@ -338,8 +335,7 @@ $(document).ready(function() {
 
 var listdata = {{ listplot_data|safe }};
 var list_data_wow = {{ listplot_data_variables|safe }};
-// var data_types_list = {{listplot_datatypes|safe}};
-var Label_conversion_dict = {{Label_Conversion|safe}};
+var Label_conversion_dicts = {{Label_Conversion|safe}};
 
 var modded_list_data = Initialize_Data(listdata);
 
@@ -411,28 +407,28 @@ var Data_Category_array = List_Data_result.category_array;
 // #################################
 
 function Listplot_render_visualization(){
-const Col_break_number = Layout_dict.col_max_label === "Auto" ? Math.ceil(Data_array.length / Layout_dict.columns) : Layout_dict.Col_break_number;
-var layout_spacing = Calculate_dimension(Data_array, Data_Category_array, Col_break_number, Layout_dict.columns, Label_conversion_dict, Label_names, Styling_Option_dict);
-RenderListPlot_Labels(Data_array,Data_Category_array, 'ListPlot',Styling_Option_dict,Layout_dict,Label_conversion_dict,Label_names);
-data_visualization(Data_array, Data_Category_array, 'ListPlot', Layout_dict, Data_styling, layout_spacing);
+  const Col_break_number = Layout_dict.col_max_label === "Auto" ? Math.ceil(Data_array.length / Layout_dict.columns) : Layout_dict.Col_break_number;
+  var layout_spacing = Calculate_dimension(Data_array, Data_Category_array, Col_break_number, Layout_dict.columns, Label_conversion_dicts, Label_names, Styling_Option_dict);
+  RenderListPlot_Labels(Data_array,Data_Category_array, 'ListPlot',Styling_Option_dict,Layout_dict,Label_conversion_dicts,Label_names);
+  data_visualization(Data_array, Data_Category_array, 'ListPlot', Layout_dict, Data_styling, layout_spacing);
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-initializeStyling();
-Listplot_render_visualization();
+  initializeStyling();
+  Listplot_render_visualization();
 });
 
 
 function Recalculate_data_and_update() {
-// Recalculate the data
-const List_Data_result = Data_resorter(modded_list_data);
+  // Recalculate the data
+  const List_Data_result = Data_resorter(modded_list_data);
 
-// Update the previously declared variables with new values
-Data_array = List_Data_result.final_array; 
-Data_Category_array = List_Data_result.category_array;
+  // Update the previously declared variables with new values
+  Data_array = List_Data_result.final_array; 
+  Data_Category_array = List_Data_result.category_array;
 
-// Call the function to update the visualization
-updateVisualization_list();
+  // Call the function to update the visualization
+  updateVisualization_list();
 }
 
 // Function to update the visualization
@@ -445,10 +441,6 @@ function updateVisualization_list() {
 
 // Add event listeners to checkboxes
 d3.selectAll('input[type="checkbox"]').on("change", Recalculate_data_and_update);
-
-$('.dropdown-menu').on('click', function(event){
-    event.stopPropagation();
-});
 
 
 // #####################
@@ -713,14 +705,24 @@ populateListPlotStyling();
 $("#List_UniProtNames").click(function() {
     $("#List_UniProtNames").addClass("active");
     $("#List_IUPHARNames").removeClass("active");
-    Label_names = 'Gene';
+    $("#List_GeneNames").removeClass("active");
+    Label_names = 'UniProt';
     updateVisualization_list();
 });
 
 $("#List_IUPHARNames").click(function() {
     $("#List_UniProtNames").removeClass("active");
+    $("#List_GeneNames").removeClass("active");
     $("#List_IUPHARNames").addClass("active");
     Label_names = 'Protein';
+    updateVisualization_list();
+});
+
+$("#List_GeneNames").click(function() {
+    $("#List_UniProtNames").removeClass("active");
+    $("#List_IUPHARNames").removeClass("active");
+    $("#List_GeneNames").addClass("active");
+    Label_names = 'Gene';
     updateVisualization_list();
 });
 

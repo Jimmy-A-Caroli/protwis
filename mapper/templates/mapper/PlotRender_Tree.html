@@ -15,6 +15,7 @@
       Receptor names:
         <div class="btn-group" role="group" id="gtp_plus">
             <button id="TREE_UniProtNames" class="btn btn-info active">UniProt</button>
+            <button id="TREE_Entrez" class="btn btn-info">Gene</button>
             <button id="TREE_IUPHARNames" class="btn btn-info">GtPdb</button>
         </div>
     </div>
@@ -238,7 +239,7 @@
           <div class="col-md-12" style="margin-bottom: 10px;">
             <input type="range" class="form-range" min="1" max="6" value="3" id="Tree_circleSizeSlider">
             <div style="text-align: center;">
-              <span id="Tree_circleSizeValue">1</span>
+              <span id="Tree_circleSizeValue">3</span>
             </div>
           </div>
 
@@ -249,7 +250,7 @@
           <div class="col-md-12" style="margin-bottom: 10px;">
             <input type="range" class="form-range" min="0" max="2" value="1" id="Tree_circleSpacerSlider">
             <div style="text-align: center;">
-              <span id="Tree_circleSpacerValue">0</span>
+              <span id="Tree_circleSpacerValue">1</span>
             </div>
           </div>
         </div>
@@ -319,7 +320,15 @@ $('.dropdown-menu').on('click', function(event){
 tree_data = {{ tree | safe }};
 tree_options = {{ tree_options | safe }};
 Tree_circles = {{ circles|safe }};
-Tree_label_dict = {{ whole_dict|safe }};
+Tree_label_dict = {{ Receptor_dict|safe }};
+Tree_label_dict_Gene = {{ Entrez_dict|safe }};
+
+let Tree_label_dicts = {
+  "IUPHAR": Tree_label_dict,
+  "Gene": Tree_label_dict_Gene,
+  "UniProt": {}  // No lookup needed; label is just the receptor ID
+};
+
 const maxLeafNodeLength_scaler = 10
 
 tree_data = update_tree_data(tree_data,tree_options.depth);
@@ -346,17 +355,20 @@ Tree_colors = {"Inner":["#FFFFFF","#000000"],
 
 // Function to change the active button and call changeLeavesLabels with the active value
 function updateLeavesLabels() {
-    var activeLabelType;
+    let activeLabelType;
 
-    // Check which button is active
     if (document.getElementById("TREE_UniProtNames").classList.contains("active")) {
-        activeLabelType = "UniProt";  // If "Gene" button is active
+        activeLabelType = "UniProt";
+    } else if (document.getElementById("TREE_Entrez").classList.contains("active")) {
+        activeLabelType = "Gene";
     } else {
-        activeLabelType = "IUPHAR";  // If "Protein" button is active
+        activeLabelType = "IUPHAR";
     }
 
-    // Call the function with the active label type
-    changeLeavesLabels("tree_plot", activeLabelType, Tree_label_dict);
+    // Get the correct label dictionary
+    let activeDict = Tree_label_dicts[activeLabelType];
+
+    changeLeavesLabels("tree_plot", activeLabelType, activeDict);
 }
 
 function ReDraw_all() {
@@ -380,14 +392,24 @@ function ReDraw_cicles_and_bars() {
 // # Change leaves buttons #
 $("#TREE_UniProtNames").click(function(){
     $("#TREE_UniProtNames").addClass("active");
+    $("#TREE_Entrez").removeClass("active");
     $("#TREE_IUPHARNames").removeClass("active");
     ReDraw_Circles_and_Labels();
 });
 $("#TREE_IUPHARNames").click(function() {
   $("#TREE_UniProtNames").removeClass("active");
+  $("#TREE_Entrez").removeClass("active");
   $("#TREE_IUPHARNames").addClass("active");
   ReDraw_Circles_and_Labels();
 });
+
+$("#TREE_Entrez").click(function(){
+    $("#TREE_Entrez").addClass("active");
+    $("#TREE_UniProtNames").removeClass("active");
+    $("#TREE_IUPHARNames").removeClass("active");
+    ReDraw_Circles_and_Labels();
+});
+
 // # Initialize tree plot #
 document.addEventListener("DOMContentLoaded", function() {
   initdraw();

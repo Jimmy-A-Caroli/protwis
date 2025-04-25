@@ -295,42 +295,42 @@ function formatTextWithHTML(text) {
 }
 
 // Change the labels
-function changeLeavesLabels(location, value, dict){
+function changeLeavesLabels(location, value, dict) {
     // Initialize leaf node length
     maxLeafNodeLength = 0;
-    // Find longest label
-    gNodes = d3.select('#'+location).selectAll('g');
+
+    // Select all leaf nodes
+    let gNodes = d3.select('#' + location).selectAll('g');
+
     gNodes.each(function(d) {
-      if (d3.select(this).attr("id") !== null) {
-        name = d3.select(this).attr("id").substring(1);
-        labelName = dict[name][0];
-        labelName = formatTextWithHTML(labelName)
-        node = d3.select('#'+location).select('#X'+name);
-        if (node.size() !== 0){
-          if (value === "IUPHAR"){
-            node.selectAll("text")[0].forEach(
-              function(node_label){
-                node_label.innerHTML = labelName;
-                labelSize = node_label.getBBox().width*1.05 + 0.5 * 10
-                if (labelSize > maxLeafNodeLength){
-                  // change initialization label length, needed for outer circles
-                  maxLeafNodeLength = labelSize
-                }
-              });
-          } else if (value === "UniProt"){
-            node.selectAll("text")[0].forEach(
-              function(node_label){
-                node_label.innerHTML = name;
-                labelSize = node_label.getBBox().width*1.05 + 0.5 * 10
-                if (labelSize > maxLeafNodeLength){
-                  maxLeafNodeLength = labelSize
-                }
-              });
-          }
+        let g = d3.select(this);
+        if (g.attr("id") !== null) {
+            let name = g.attr("id").substring(1);  // skip leading "X"
+
+            let labelName;
+            if (value === "UniProt") {
+                labelName = name;
+            } else if (dict[name]) {
+                labelName = dict[name][0];
+                labelName = formatTextWithHTML(labelName);
+            } else {
+                labelName = name; // fallback if label not found
+            }
+
+            let node = d3.select('#' + location).select('#X' + name);
+            if (node.size() !== 0) {
+                node.selectAll("text")[0].forEach(function(node_label) {
+                    node_label.innerHTML = labelName;
+
+                    let labelSize = node_label.getBBox().width * 1.05 + 0.5 * 10;
+                    if (labelSize > maxLeafNodeLength) {
+                        maxLeafNodeLength = labelSize;
+                    }
+                });
+            }
         }
-      }
     });
-  }
+}
 
 // Draw the circles (data) of the tree plot
 
@@ -609,6 +609,11 @@ function naturalSort(a, b) {
     return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
+function decodeHtmlEntities(text) {
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = text;
+    return textarea.value;
+}
 
 // Function to create traces for the plot
 function createTraces(colorOption, showLabels, colorMapping, textColorEnabled) {
@@ -631,7 +636,7 @@ function createTraces(colorOption, showLabels, colorMapping, textColorEnabled) {
                 mode: showLabels ? 'none' : 'markers',  // Hide markers if labels are shown
                 type: 'scatter',
                 hoverinfo: 'text',
-                text: clusterData.map(d => `${d.label.toUpperCase()}`),  // Combine label and fill for hover text
+                text: clusterData.map(d => `${decodeHtmlEntities(d.label)}`),  // Combine label and fill for hover text
                 marker: {
                     size: marker_size,
                     symbol: 'circle',
@@ -661,7 +666,7 @@ function createTraces(colorOption, showLabels, colorMapping, textColorEnabled) {
             mode: showLabels ? 'none' : 'markers',  // Hide markers if labels are shown
             type: 'scatter',
             hoverinfo: 'text',
-            text: currentClusterData.map(d => `${d.label.toUpperCase()}: ${d.fill}`),  // Combine label and fill for hover text
+            text: currentClusterData.map(d => `${decodeHtmlEntities(d.label)}: ${d.fill}`),  // Combine label and fill for hover text
             marker: {
                 size: marker_size,
                 symbol: 'circle',
@@ -764,7 +769,7 @@ function createAnnotations(filteredData, colorOption, textColorEnabled, colorMap
             y: d.y,
             xref: 'x',
             yref: 'y',
-            text: `${d.label.toUpperCase()}`,  // Combine label and fill for hover text
+            text: `${decodeHtmlEntities(d.label)}`,  // Combine label and fill for hover text
             showarrow: false,
             font: {
                 family: 'Arial',
@@ -1245,7 +1250,7 @@ function Data_resorter(data) {
 }
 
 // Calculate the dimensions of the plot
-function Calculate_dimension(data, Category_data, Col_break_number, columns, label_conversion_dict, label_names, styling_option) {
+function Calculate_dimension(data, Category_data, Col_break_number, columns, label_conversion_dicts, label_names, styling_option) {
 
     // Define the column tracking variables
     let temp_col_state = 1; // Current column
@@ -1298,9 +1303,9 @@ function Calculate_dimension(data, Category_data, Col_break_number, columns, lab
 
         } else if (category === 'Receptor') {
             // For Receptors, apply the label conversion based on 'label_names'
-            if (label_names === 'Gene') {
+            if (label_names === 'UniProt') {
                 // Convert based on UniProt data
-                label = label_conversion_dict[label];
+                label = label_conversion_dicts.IUPHAR_to_UniProt_converter[label];
                 label = label ? label.replace(/_human/g, '').toUpperCase() : label; // Clean up UniProt receptor names
             } else if (label_names === 'Protein') {
                 // Apply IUPHAR-specific replacements and clean up
@@ -1309,6 +1314,9 @@ function Calculate_dimension(data, Category_data, Col_break_number, columns, lab
 
                 // Subscript handling for accurate label length measurement
                 label = label.replace(/<sub>.*?<\/sub>/g, ''); // Simplified subscript removal for length estimation
+            } else if (label_names === 'Gene') {
+                // Convert based on UniProt data
+                label = label_conversion_dicts.IUPHAR_to_Gene_converter[label];;
             }
         }
 
@@ -1364,7 +1372,7 @@ function Calculate_dimension(data, Category_data, Col_break_number, columns, lab
 }
 
 // Genreate the printing of the labels
-function RenderListPlot_Labels(data, category_data, location, styling_option, Layout_dict, label_conversion_dict, label_names,y_off_set_variable=30) {
+function RenderListPlot_Labels(data, category_data, location, styling_option, Layout_dict, label_conversion_dicts, label_names,y_off_set_variable=30) {
     // ######################
     // ## Initialization   ##
     // ######################
@@ -1387,7 +1395,7 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
     const margin = { top: 40, right: 20, bottom: 20, left: 20 };
 
     // ## Calculate all spacing and dimensions ##
-    let spacing_dict = Calculate_dimension(data, category_data, Col_break_number, columns, label_conversion_dict, label_names, styling_option);
+    let spacing_dict = Calculate_dimension(data, category_data, Col_break_number, columns, label_conversion_dicts, label_names, styling_option);
 
     // Calculate total width based on spacing_dict and columns
     const col_list = ['Col1', 'Col2', 'Col3', 'Col4'];
@@ -1490,9 +1498,24 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
                     }
                 });
 
+            } else if (label_names === 'UniProt') {
+                // Handle UniProt receptor labels
+                label = label_conversion_dicts.IUPHAR_to_UniProt_converter[label_key]?.replace(/_human/g, '').toUpperCase() || label_key;
+                svg.append('text')
+                    .attr('x', margin.left + xOffset + 80)
+                    .attr('y', yOffset)
+                    .attr('class', category)
+                    .attr('dy', '-0.3em') // Adjust this value to move the text higher
+                    .style('dominant-baseline', 'middle') // Set vertical alignment
+                    .style('font-weight', bold ? 'bold' : 'normal')
+                    .style('font-style', italic ? 'italic' : 'normal')
+                    .style('text-decoration', underline ? 'underline' : 'none')
+                    .style('font-size', fontSize)
+                    .style('fill', color)
+                    .text(label);
             } else if (label_names === 'Gene') {
                 // Handle UniProt receptor labels
-                label = label_conversion_dict[label_key]?.replace(/_human/g, '').toUpperCase() || label_key;
+                label = label_conversion_dicts.IUPHAR_to_Gene_converter[label_key] || label_key;
                 svg.append('text')
                     .attr('x', margin.left + xOffset + 80)
                     .attr('y', yOffset)
@@ -1506,6 +1529,7 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
                     .style('fill', color)
                     .text(label);
             }
+
         } else if (category === 'ReceptorFamily') {
             // Handle ReceptorFamily (subscript handling but no label_names logic)
             label = label_key.replace(/( receptors|neuropeptide )/g, '').split(" (")[0];
@@ -1865,7 +1889,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                 .style("text-anchor", "middle") // Center the text horizontally
                 .style("font-weight", "bold")   // Make the text bold
                 .attr('id', `legend_${column.substr(3)}`)
-                .text(`Data column ${column.substr(3)}`); // Use the column name as the text
+                .text(`Dataset ${column.substr(3)}`); // Use the column name as the text
 
             // Gradient definition
             const gradient = defs.append('linearGradient')
@@ -2065,7 +2089,16 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
 
     const margin = { top: 30, right: 100, bottom: 30, left: 60 }; // Adjusted margin for row labels
     const rows = Object.keys(data);
-    const cols = Object.keys(data[rows[0]]);
+    // Create a Set to collect all unique column keys
+    const colSet = new Set();
+
+    // Loop through each row and collect all keys from its columns
+    rows.forEach(row => {
+        Object.keys(data[row] || {}).forEach(col => colSet.add(col));
+    });
+
+    // Convert Set to array
+    const cols = Array.from(colSet);
     const col_labels = cols.map(col => label_x_converter[col]);
 
     const rotation = heatmap_DataStyling.rotation;
@@ -2229,7 +2262,7 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
       .attr("y", d => y(d.row))
       .attr("width", x.rangeBand())
       .attr("height", y.rangeBand())
-      .style("fill", d => myColor(d.value))
+      .style("fill", d => isNaN(d.value) ? 'None' : myColor(d.value))
       .each(function(d) {
         if (heatmap_DataStyling.data_border) {
             d3.select(this)
@@ -2241,6 +2274,9 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
 
     if (data_labels) {
       rects.each(function(d) {
+
+        if (isNaN(d.value)) return;  // Skip label if value is NaN
+
         const rect = d3.select(this);
         const textColor = getContrastColor(myColor(d.value));
 
@@ -3758,9 +3794,16 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
         
                     // Loop through receptors inside each receptor family
                     for (const receptor of Object.keys(circleData[classKey][receptorFamily])) {
-                        let label = GPCRome_styling.LabelType === "Gene"
-                            ? (circleData[classKey][receptorFamily][receptor]["EntryName"] || receptor)
-                            : receptor;
+                        
+                        let label;
+
+                        if (GPCRome_styling.LabelType === "Uniprot") {
+                            label = circleData[classKey][receptorFamily][receptor]["EntryName"] || receptor;
+                        } else if (GPCRome_styling.LabelType === "Entrez") {
+                            label = circleData[classKey][receptorFamily][receptor]["Entrez"] || receptor;
+                        } else {
+                            label = receptor; // fallback
+                        }
 
                         Circle_array.push(label);
                         const receptorObj = circleData[classKey][receptorFamily][receptor];
@@ -4227,9 +4270,11 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
         const legendGroup = svg.append("g").attr("class", "legend-gradient-bar");
         
         const barWidth = GPCRome_styling.LegendbarLength || 300;
-        const barHeight = 20;
-        const barX = (dimensions.width - barWidth) / 2;
-        const barY = dimensions.height + 20;
+        const barHeight = 15;
+        const legendPaddingRight = 20;
+        const legendPaddingTop = 20;
+        const barX = dimensions.width - barWidth - legendPaddingRight;
+        const barY = legendPaddingTop;
         const BarFixedDigit = GPCRome_styling.LegendbarDigit || 2;
         const BarFontSize = GPCRome_styling.LegendbarFontsize || "11px";
     
@@ -4290,107 +4335,99 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             .text(parseFloat(MinValue).toFixed(BarFixedDigit));
     
         legendGroup.append("text")
-            .attr("x", barX + barWidth / 2)
-            .attr("y", barY + barHeight + 15)
-            .attr("text-anchor", "middle")
-            .style("font-size", BarFontSize)
-            .text(parseFloat(AvgValue).toFixed(BarFixedDigit));
-    
-        legendGroup.append("text")
             .attr("x", barX + barWidth)
             .attr("y", barY + barHeight + 15)
             .attr("text-anchor", "end")
             .style("font-size", BarFontSize)
             .text(parseFloat(MaxValue).toFixed(BarFixedDigit));
-        
-        AddBottomHeight = 50;
+
     } else {
         const legendGroup = svg.append("g").attr("class", "legend-text-categories");
 
-    const spacingY = 25;
-    const padding = 10;
-    const startX = 50;
-    const startY = dimensions.height + 40;
-    let x = startX;
-    let y = startY;
+        const spacingY = 25;
+        const padding = 10;
+        const startX = 50;
+        const startY = dimensions.height + 40;
+        let x = startX;
+        let y = startY;
 
-    const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
-    const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+        const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
+        const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
 
-    const legendItems = new Set();
+        const legendItems = new Set();
 
-    function extractColorData(obj) {
-        if (typeof obj !== "object" || obj === null) return;
-        if ("Color" in obj && "Data" in obj) {
-            const pairKey = `${obj.Color}|||${obj.Data}`;
-            legendItems.add(pairKey);
+        function extractColorData(obj) {
+            if (typeof obj !== "object" || obj === null) return;
+            if ("Color" in obj && "Data" in obj) {
+                const pairKey = `${obj.Color}|||${obj.Data}`;
+                legendItems.add(pairKey);
+            }
+            for (const key in obj) {
+                extractColorData(obj[key]);
+            }
         }
-        for (const key in obj) {
-            extractColorData(obj[key]);
-        }
-    }
 
-    Object.values(Data).forEach(circleData => {
-        extractColorData(circleData);
-    });
-
-    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-    const sortedItems = Array.from(legendItems)
-        .filter(pair => {
-            const [color, label] = pair.split("|||");
-            return !(color === "#FFFFFF" && label === "Empty");
-        })
-        .sort((a, b) => {
-            const labelA = a.split("|||")[1];
-            const labelB = b.split("|||")[1];
-            return collator.compare(labelA, labelB);
+        Object.values(Data).forEach(circleData => {
+            extractColorData(circleData);
         });
 
-    const tempText = svg.append("text")
-        .attr("x", -9999)
-        .attr("y", -9999)
-        .style("font-size", LegendFontSize)
-        .style("font-family", LegendFontStyle);
+        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+        const sortedItems = Array.from(legendItems)
+            .filter(pair => {
+                const [color, label] = pair.split("|||");
+                return !(color === "#FFFFFF" && label === "Empty");
+            })
+            .sort((a, b) => {
+                const labelA = a.split("|||")[1];
+                const labelB = b.split("|||")[1];
+                return collator.compare(labelA, labelB);
+            });
 
-    const maxItemWidth = dimensions.width - 100;
-
-    sortedItems.forEach(pairKey => {
-        let [color, label] = pairKey.split("|||");
-
-        tempText.text(label);
-        const labelWidth = tempText.node().getComputedTextLength();
-        const totalWidth = 6 * 2 + padding + labelWidth + 20;
-
-        // Check if item itself is too wide even on a new line
-        if (totalWidth > maxItemWidth) {
-            label = "⚠ Too long label";
-            tempText.text(label);
-        }
-
-        const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
-
-        if (x + fixedWidth > dimensions.width - 50) {
-            x = startX;
-            y += spacingY;
-        }
-
-        legendGroup.append("circle")
-            .attr("cx", x)
-            .attr("cy", y)
-            .attr("r", 6)
-            .style("fill", color)
-            .style("stroke", "black");
-
-        legendGroup.append("text")
-            .attr("x", x + 10)
-            .attr("y", y + 4)
-            .attr("text-anchor", "start")
+        const tempText = svg.append("text")
+            .attr("x", -9999)
+            .attr("y", -9999)
             .style("font-size", LegendFontSize)
-            .style("font-family", LegendFontStyle)
-            .text(label);
+            .style("font-family", LegendFontStyle);
 
-        x += fixedWidth;
-    });
+        const maxItemWidth = dimensions.width - 100;
+
+        sortedItems.forEach(pairKey => {
+            let [color, label] = pairKey.split("|||");
+
+            tempText.text(label);
+            const labelWidth = tempText.node().getComputedTextLength();
+            const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+            // Check if item itself is too wide even on a new line
+            if (totalWidth > maxItemWidth) {
+                label = "⚠ Too long label";
+                tempText.text(label);
+            }
+
+            const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+            if (x + fixedWidth > dimensions.width - 50) {
+                x = startX;
+                y += spacingY;
+            }
+
+            legendGroup.append("circle")
+                .attr("cx", x)
+                .attr("cy", y)
+                .attr("r", 6)
+                .style("fill", color)
+                .style("stroke", "black");
+
+            legendGroup.append("text")
+                .attr("x", x + 10)
+                .attr("y", y + 4)
+                .attr("text-anchor", "start")
+                .style("font-size", LegendFontSize)
+                .style("font-family", LegendFontStyle)
+                .text(label);
+
+            x += fixedWidth;
+        });
         // Clean up measuring element
         tempText.remove();
         // 

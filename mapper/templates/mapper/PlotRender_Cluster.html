@@ -10,6 +10,14 @@
 {% block content %}
 
 <div style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
+    <div class="col-md-12" style="padding-top: 5px;">
+        Receptor names:
+          <div class="btn-group" role="group" id="gtp_plus">
+            <button id="Cluster_Receptor" class="btn btn-info active">GtPdb</button>
+            <button id="Cluster_Gene" class="btn btn-info">Gene</button>
+            <button id="Cluster_UniProt" class="btn btn-info">UniProt</button>
+          </div>
+      </div>
     <div class="col-md-12" style="padding-top: 20px;">
       <div class="col-md-1">Color by:</div>
         <div class="col-md-7">
@@ -153,9 +161,15 @@ $('.dropdown-menu').on('click', function(event){
 
 // Global variables for cluster data
 var cluster_data_seq = {{ cluster_data_seq|safe }};
-var currentClusterData = cluster_data_seq; // Default to cluster_data_seq
+var Label_converter = {{ Label_converter|safe }};
 
-console.log(cluster_data_seq)
+var currentClusterData = cluster_data_seq; // Default to cluster_data_seq
+var labelDict_IUPHAR = Label_converter.UniProt_to_IUPHAR_converter;
+var labelDict_Gene = Label_converter.UniProt_to_Gene_converter;
+
+currentClusterData.forEach(point => {
+    point.original_label = point.label;  // Save original UniProt label
+});
 
 // Predefined 20-color palette
 const colorPalette = [
@@ -419,8 +433,60 @@ function performClustering(numClusters) {
     }
 }
 
+// Label switch buttons
+$("#Cluster_UniProt").click(function(){
+    $(this).addClass("active");
+    $("#Cluster_Gene").removeClass("active");
+    $("#Cluster_Receptor").removeClass("active");
+
+    switchClusterLabels("UniProt");
+});
+
+$("#Cluster_Gene").click(function(){
+    $(this).addClass("active");
+    $("#Cluster_UniProt").removeClass("active");
+    $("#Cluster_Receptor").removeClass("active");
+
+    switchClusterLabels("Entrez");
+});
+
+$("#Cluster_Receptor").click(function(){
+    $(this).addClass("active");
+    $("#Cluster_UniProt").removeClass("active");
+    $("#Cluster_Gene").removeClass("active");
+
+    switchClusterLabels("IUPHAR");
+});
+
+function switchClusterLabels(labelType) {
+    // Always reset labels to UniProt first
+    // Reset to original UniProt labels using .original_label
+    currentClusterData.forEach((point) => {
+        point.label = point.original_label.toUpperCase();
+    });
+    // Select which dictionary to use
+    let dict = null;
+    if (labelType === "IUPHAR") {
+        dict = labelDict_IUPHAR;
+    } else if (labelType === "Entrez") {
+        dict = labelDict_Gene;
+    }
+
+    // Update labels if a dictionary is selected
+    if (dict) {
+        currentClusterData.forEach((point) => {
+            let key = point.original_label.toLowerCase() + "_human";  // Match dictionary key format
+            if (dict[key]) {
+                point.label = dict[key];  // dict[key] is already a string, no [0] needed
+            }
+        });
+    }
+    updatePlotWithAnnotations();
+}
+
 // Attach the plotly_relayout event listener for zoom handling using jQuery
 $('#plotContainer_cluster').on('plotly_relayout', function(eventdata) {
+    switchClusterLabels("IUPHAR");
     updatePlotWithAnnotations(); // Update annotations on zoom or pan
 });
 

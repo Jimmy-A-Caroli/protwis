@@ -14,8 +14,9 @@
       <div class="col-md-3" style="padding-top: 5px;">
         Receptor names:
           <div class="btn-group" role="group" id="gtp_plus">
-              <button id="GPCRome_Gene" class="btn btn-info ">UniProt</button>
-              <button id="GPCRome_Protein" class="btn btn-info active">GtPdb</button>
+            <button id="GPCRome_Protein" class="btn btn-info active">GtPdb</button>
+              <button id="GPCRome_Entrez" class="btn btn-info">Gene</button>
+              <button id="GPCRome_Uniprot" class="btn btn-info ">UniProt</button>
           </div>
       </div>
   
@@ -117,9 +118,6 @@ $('.dropdown-menu').on('click', function(event){
 var GPCRome_WheelDict = {{ GPCRomeData|safe }};
 var PlotType = "{{ PlotType }}";
 
-console.log(GPCRome_WheelDict)
-console.log(PlotType)
-
 if (PlotType === 'Numeric') {
   // Extract min and max data (for numeric version)
   const GPCRomeWheelValues = extractDataValues(GPCRome_WheelDict)
@@ -134,7 +132,7 @@ if (PlotType === 'Numeric') {
       GPCRomeMax: GPCRomeMax,
       GPCRomeAvg: GPCRomeAvg,
       LegendbarDigit: 1,
-      LegendbarLength: 300,
+      LegendbarLength: 200,
       LegendbarFontsize: "11px",
       FontStyle: "Arial",
       FontsizeGlobal: "11px",
@@ -190,15 +188,22 @@ document.getElementById("GPCRome_Protein").addEventListener("click", () => {
     setActiveButton("GPCRome_Protein");
 });
 
-document.getElementById("GPCRome_Gene").addEventListener("click", () => {
-    GPCRomes_styling.LabelType = "Gene";
+document.getElementById("GPCRome_Uniprot").addEventListener("click", () => {
+    GPCRomes_styling.LabelType = "Uniprot";
     updateGPCRome();
-    setActiveButton("GPCRome_Gene");
+    setActiveButton("GPCRome_Uniprot");
+});
+
+document.getElementById("GPCRome_Entrez").addEventListener("click", () => {
+    GPCRomes_styling.LabelType = "Entrez";
+    updateGPCRome();
+    setActiveButton("GPCRome_Entrez");
 });
 
 function setActiveButton(id) {
     document.getElementById("GPCRome_Protein").classList.remove("active");
-    document.getElementById("GPCRome_Gene").classList.remove("active");
+    document.getElementById("GPCRome_Uniprot").classList.remove("active");
+    document.getElementById("GPCRome_Entrez").classList.remove("active");
     document.getElementById(id).classList.add("active");
 }
 
