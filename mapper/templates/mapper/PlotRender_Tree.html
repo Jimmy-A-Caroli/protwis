@@ -14,9 +14,9 @@
     <div class="col-md-3" style="padding-top: 5px;">
       Receptor names:
         <div class="btn-group" role="group" id="gtp_plus">
-            <button id="TREE_UniProtNames" class="btn btn-info active">UniProt</button>
+            <button id="TREE_IUPHARNames" class="btn btn-info active">GtPdb</button>
             <button id="TREE_Entrez" class="btn btn-info">Gene</button>
-            <button id="TREE_IUPHARNames" class="btn btn-info">GtPdb</button>
+            <button id="TREE_UniProtNames" class="btn btn-info">UniProt</button>
         </div>
     </div>
     <!-- ######################### -->
@@ -335,12 +335,12 @@ tree_data = update_tree_data(tree_data,tree_options.depth);
 const depth = tree_options.depth;  // Set this value when the page loads
 
 var Tree_circle_styling_dict = {
-  "Inner":'Three',
+  "Inner":'One',
   "Outer1":"One",
-  "Outer2":"Two",
-  "Outer3":"Two",
-  "Outer4":"Two",
-  "Outer5":"Three",
+  "Outer2":"One",
+  "Outer3":"One",
+  "Outer4":"One",
+  "Outer5":"One",
 }
 
 Tree_datatypes_dict = {'Inner':'Continuous','Outer1':'Continuous','Outer2':'Continuous','Outer3':'Continuous','Outer4':'Continuous','Outer5':'Continuous'}
@@ -683,7 +683,7 @@ function initdraw() {
 <script type="text/javascript" charset="utf-8">
   $(document).ready(function() {
     // Function to initialize Spectrum color picker
-    function initialize_Tree_ColorPicker(elementId, start_color, updateTreeColors, key, index) {
+    function initialize_Tree_ColorPicker(elementId, start_color, updateTreeColors, key, index, disabled = false) {
         $("#" + elementId).spectrum({
             color: start_color,
             showPalette: true,
@@ -708,7 +708,8 @@ function initdraw() {
                 // Redraw circles and legends after the final selection
                 DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
                 createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict);
-            }
+            },
+            disabled: disabled // 🛑 this disables it if you pass true
         });
     }
 
@@ -726,32 +727,32 @@ function initdraw() {
 
     // Initialize all color pickers
     // Inner
-    initialize_Tree_ColorPicker("Tree_colorPicker_min_Inner", "#FFFFFF", Tree_colors, 'Inner', 0);
+    initialize_Tree_ColorPicker("Tree_colorPicker_min_Inner", "#FFFFFF", Tree_colors, 'Inner', 0, true);
     initialize_Tree_StaticColorBox("Tree_colorPicker_middle_Inner", "#FFFFFF"); // Static middle color
     initialize_Tree_ColorPicker("Tree_colorPicker_max_Inner", "#000", Tree_colors, 'Inner', 1);
 
     // Outer 1
-    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer1", "#FFFFFF", Tree_colors, 'Outer1', 0);
+    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer1", "#FFFFFF", Tree_colors, 'Outer1', 0, true);
     initialize_Tree_StaticColorBox("Tree_colorPicker_middle_Outer1", "#FFFFFF"); // Static middle color
     initialize_Tree_ColorPicker("Tree_colorPicker_max_Outer1", "#0000FF", Tree_colors, 'Outer1', 1);
 
     // Outer 2
-    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer2", "#FFFFFF", Tree_colors, 'Outer2', 0);
+    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer2", "#FFFFFF", Tree_colors, 'Outer2', 0, true);
     initialize_Tree_StaticColorBox("Tree_colorPicker_middle_Outer2", "#FFFFFF"); // Static middle color
     initialize_Tree_ColorPicker("Tree_colorPicker_max_Outer2", "#FF0000", Tree_colors, 'Outer2', 1);
 
     // Outer 3
-    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer3", "#FFFFFF", Tree_colors, 'Outer3', 0);
+    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer3", "#FFFFFF", Tree_colors, 'Outer3', 0, true);
     initialize_Tree_StaticColorBox("Tree_colorPicker_middle_Outer3", "#FFFFFF"); // Static middle color
     initialize_Tree_ColorPicker("Tree_colorPicker_max_Outer3", "#22c7b1", Tree_colors, 'Outer3', 1);
 
     // Outer 4
-    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer4", "#FFFFFF", Tree_colors, 'Outer4', 0);
+    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer4", "#FFFFFF", Tree_colors, 'Outer4', 0, true);
     initialize_Tree_StaticColorBox("Tree_colorPicker_middle_Outer4", "#FFFFFF"); // Static middle color
     initialize_Tree_ColorPicker("Tree_colorPicker_max_Outer4", "#008000", Tree_colors, 'Outer4', 1);
 
     // Outer 5
-    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer5", "#FFFFFF", Tree_colors, 'Outer5', 0);
+    initialize_Tree_ColorPicker("Tree_colorPicker_min_Outer5", "#FFFFFF", Tree_colors, 'Outer5', 0, true);
     initialize_Tree_StaticColorBox("Tree_colorPicker_middle_Outer5", "#FFFFFF"); // Static middle color
     initialize_Tree_ColorPicker("Tree_colorPicker_max_Outer5", "#FFA500", Tree_colors, 'Outer5', 1);
 });

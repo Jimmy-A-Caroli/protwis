@@ -322,7 +322,7 @@ function changeLeavesLabels(location, value, dict) {
                 node.selectAll("text")[0].forEach(function(node_label) {
                     node_label.innerHTML = labelName;
 
-                    let labelSize = node_label.getBBox().width * 1.05 + 0.5 * 10;
+                    let labelSize = node_label.getBBox().width;
                     if (labelSize > maxLeafNodeLength) {
                         maxLeafNodeLength = labelSize;
                     }
@@ -383,11 +383,10 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
 
                     // Create color scale based on min and max values
                     var colorScale;
-                    if (styling === "Drugged_tree") {
-                        // Discrete color scale for "Drugged_tree"
-                        colorScale = d3.scale.ordinal()
-                        .domain([1, 2, 3, 4])
-                        .range(["#f5bcbf", "#f17270", "#dd2628", "#2c87c8"]);
+                    if (styling === "One") {
+                        colorScale = d3.scale.linear()
+                            .domain([minValue, maxValue])
+                            .range(["#FFFFFF", dict[unit][1]]);
                     } else if (styling === "Three") {
                         // Three-color gradient with white in the middle
                         colorScale = d3.scale.linear()
@@ -424,7 +423,11 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
 
                     // Create color scale based on min and max values
                     var colorScale;
-                    if (styling === "Three") {
+                    if (styling === "One") {
+                        colorScale = d3.scale.linear()
+                            .domain([minValue, maxValue])
+                            .range(["#FFFFFF", dict[unit][1]]);
+                    } else if (styling === "Three") {
                         // Three-color gradient with white in the middle
                         colorScale = d3.scale.linear()
                             .domain([minValue, (minValue + maxValue) / 2, maxValue])
@@ -509,12 +512,20 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             .attr("y2", "0%");
 
         var styling = circle_styling_dict[category] || "Two";
+
         if (styling === "Three") {
             gradient.append("stop")
                 .attr("offset", "0%")
                 .attr("stop-color", colors[0]);
             gradient.append("stop")
                 .attr("offset", "50%")
+                .attr("stop-color", "#FFFFFF");
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .attr("stop-color", colors[1]);
+        } else if (styling === "One") {
+            gradient.append("stop")
+                .attr("offset", "0%")
                 .attr("stop-color", "#FFFFFF");
             gradient.append("stop")
                 .attr("offset", "100%")
@@ -547,7 +558,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             skippedDiscreteCount++; // Increment the count of skipped discrete bars
             return; // Skip this category if it's Discrete
         }
-
+        var BarText = category.replace(/([a-zA-Z]+)(\d+)/, '$1 $2');
         var gradientId = colorScales[category];
         var minValue = categoryMax[category].min;
         var maxValue = categoryMax[category].max;
@@ -574,7 +585,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             .attr("x", xPosition + barWidth / 2)
             .attr("y", margin.top - 10)
             .attr("text-anchor", "middle")
-            .text(category);
+            .text(BarText);
 
         // Add min and max value labels
         svg.append("text")
@@ -3655,12 +3666,13 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
     const FontStyle = GPCRome_styling.Fontstyle || "Arial";
     const DataType = GPCRome_styling.DataType || "Numeric";
     const ColorSetup = GPCRome_styling.ColorSetup || "One";
-    const MinValue = GPCRome_styling.GPCRomeMin || 0
-    const MaxValue = GPCRome_styling.GPCRomeMax || 1
-    const AvgValue =  GPCRome_styling.GPCRomeAvg || 0.5
-    const ColorMin =  GPCRome_styling.colorStart || "#FFFFFF"
-    const ColorMax =  GPCRome_styling.colorEnd || "#000000"
-    const ColorAvg = "#FFFFFF"
+    const MinValue = GPCRome_styling.GPCRomeMin || 0;
+    const MaxValue = GPCRome_styling.GPCRomeMax || 1;
+    const AvgValue =  GPCRome_styling.GPCRomeAvg || 0.5;
+    const ColorMin =  GPCRome_styling.colorStart || "#FFFFFF";
+    const ColorMax =  GPCRome_styling.colorEnd || "#000000";
+    const ColorAvg = "#FFFFFF";
+    const ShowLegend = GPCRome_styling.ShowLegend || false;
 
 
     const svg = d3v4.select("#" + location)
@@ -3693,7 +3705,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             svg.append("image")
                 .attr("xlink:href", dataUrl)  // Use 'xlink:href' for D3 v4 compatibility
                 .attr("x", 0)  // Top-left corner
-                .attr("y", -45)  // Top-left corner
+                .attr("y", -30)  // Top-left corner
                 .attr("width", 230)  // Set width for the image
                 .attr("height", 230)  // Set height for the image
                 .attr("class", "toggle-image");  // Add a class to control visibility
@@ -4265,173 +4277,183 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
     }
     // === Legends ===
     let AddBottomHeight = 0;
-    if (DataType === "Numeric") {
-        // Add gradient bar legend for numeric data
-        const legendGroup = svg.append("g").attr("class", "legend-gradient-bar");
+    if (ShowLegend === true) {
+        if (DataType === "Numeric") {
+            // Add gradient bar legend for numeric data
+            const legendGroup = svg.append("g").attr("class", "legend-gradient-bar");
+            
+            const barWidth = GPCRome_styling.LegendbarLength || 300;
+            const barHeight = 15;
+            const legendPaddingRight = 20;
+            const legendPaddingTop = 40;
+            const barX = dimensions.width - barWidth - legendPaddingRight;
+            const barY = legendPaddingTop;
+            const BarFixedDigit = GPCRome_styling.LegendbarDigit || 2;
+            const BarFontSize = GPCRome_styling.LegendbarFontsize || "11px";
         
-        const barWidth = GPCRome_styling.LegendbarLength || 300;
-        const barHeight = 15;
-        const legendPaddingRight = 20;
-        const legendPaddingTop = 20;
-        const barX = dimensions.width - barWidth - legendPaddingRight;
-        const barY = legendPaddingTop;
-        const BarFixedDigit = GPCRome_styling.LegendbarDigit || 2;
-        const BarFontSize = GPCRome_styling.LegendbarFontsize || "11px";
-    
-        // Create defs and linearGradient
-        const defs = svg.append("defs");
-        const gradient = defs.append("linearGradient")
-            .attr("id", "gradient-bar")
-            .attr("x1", "0%")
-            .attr("x2", "100%")
-            .attr("y1", "0%")
-            .attr("y2", "0%");
-    
-        if (ColorSetup === "Three") {
-            gradient.append("stop")
-                .attr("offset", "0%")
-                .attr("stop-color", ColorMin);
-    
-            gradient.append("stop")
-                .attr("offset", "50%")
-                .attr("stop-color", ColorAvg);
-    
-            gradient.append("stop")
-                .attr("offset", "100%")
-                .attr("stop-color", ColorMax);
-        } else if (ColorSetup === "Two") {
-            gradient.append("stop")
-                .attr("offset", "0%")
-                .attr("stop-color", ColorMin || ColorMax);
-    
-            gradient.append("stop")
-                .attr("offset", "100%")
-                .attr("stop-color", ColorMax);
+            // Create defs and linearGradient
+            const defs = svg.append("defs");
+            const gradient = defs.append("linearGradient")
+                .attr("id", "gradient-bar")
+                .attr("x1", "0%")
+                .attr("x2", "100%")
+                .attr("y1", "0%")
+                .attr("y2", "0%");
+        
+            if (ColorSetup === "Three") {
+                gradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", ColorMin);
+        
+                gradient.append("stop")
+                    .attr("offset", "50%")
+                    .attr("stop-color", ColorAvg);
+        
+                gradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", ColorMax);
+            } else if (ColorSetup === "Two") {
+                gradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", ColorMin || ColorMax);
+        
+                gradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", ColorMax);
+            } else {
+                gradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", ColorAvg);
+        
+                gradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", ColorMax);
+            }
+        
+            // Draw the gradient bar
+            legendGroup.append("rect")
+                .attr("x", barX)
+                .attr("y", barY)
+                .attr("width", barWidth)
+                .attr("height", barHeight)
+                .style("fill", "url(#gradient-bar)")
+                .style("stroke", "black");
+        
+            // Add min, avg (if needed), and max labels
+            legendGroup.append("text")
+                .attr("x", barX)
+                .attr("y", barY + barHeight + 15)
+                .attr("text-anchor", "start")
+                .style("font-size", BarFontSize)
+                .text(() => {
+                    return Number.isInteger(MinValue) 
+                        ? parseInt(MinValue) 
+                        : parseFloat(MinValue).toFixed(BarFixedDigit);
+                });
+        
+            legendGroup.append("text")
+                .attr("x", barX + barWidth)
+                .attr("y", barY + barHeight + 15)
+                .attr("text-anchor", "end")
+                .style("font-size", BarFontSize)
+                .text(() => {
+                    return Number.isInteger(MaxValue) 
+                        ? parseInt(MaxValue) 
+                        : parseFloat(MaxValue).toFixed(BarFixedDigit);
+                });
+
         } else {
-            gradient.append("stop")
-                .attr("offset", "0%")
-                .attr("stop-color", ColorAvg);
-    
-            gradient.append("stop")
-                .attr("offset", "100%")
-                .attr("stop-color", ColorMax);
-        }
-    
-        // Draw the gradient bar
-        legendGroup.append("rect")
-            .attr("x", barX)
-            .attr("y", barY)
-            .attr("width", barWidth)
-            .attr("height", barHeight)
-            .style("fill", "url(#gradient-bar)")
-            .style("stroke", "black");
-    
-        // Add min, avg (if needed), and max labels
-        legendGroup.append("text")
-            .attr("x", barX)
-            .attr("y", barY + barHeight + 15)
-            .attr("text-anchor", "start")
-            .style("font-size", BarFontSize)
-            .text(parseFloat(MinValue).toFixed(BarFixedDigit));
-    
-        legendGroup.append("text")
-            .attr("x", barX + barWidth)
-            .attr("y", barY + barHeight + 15)
-            .attr("text-anchor", "end")
-            .style("font-size", BarFontSize)
-            .text(parseFloat(MaxValue).toFixed(BarFixedDigit));
+            const legendGroup = svg.append("g").attr("class", "legend-text-categories");
 
-    } else {
-        const legendGroup = svg.append("g").attr("class", "legend-text-categories");
+            const spacingY = 25;
+            const padding = 10;
+            const startX = 50;
+            const startY = dimensions.height + 40;
+            let x = startX;
+            let y = startY;
 
-        const spacingY = 25;
-        const padding = 10;
-        const startX = 50;
-        const startY = dimensions.height + 40;
-        let x = startX;
-        let y = startY;
+            const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
+            const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
 
-        const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
-        const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+            const legendItems = new Set();
 
-        const legendItems = new Set();
-
-        function extractColorData(obj) {
-            if (typeof obj !== "object" || obj === null) return;
-            if ("Color" in obj && "Data" in obj) {
-                const pairKey = `${obj.Color}|||${obj.Data}`;
-                legendItems.add(pairKey);
+            function extractColorData(obj) {
+                if (typeof obj !== "object" || obj === null) return;
+                if ("Color" in obj && "Data" in obj) {
+                    const pairKey = `${obj.Color}|||${obj.Data}`;
+                    legendItems.add(pairKey);
+                }
+                for (const key in obj) {
+                    extractColorData(obj[key]);
+                }
             }
-            for (const key in obj) {
-                extractColorData(obj[key]);
-            }
-        }
 
-        Object.values(Data).forEach(circleData => {
-            extractColorData(circleData);
-        });
-
-        const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-        const sortedItems = Array.from(legendItems)
-            .filter(pair => {
-                const [color, label] = pair.split("|||");
-                return !(color === "#FFFFFF" && label === "Empty");
-            })
-            .sort((a, b) => {
-                const labelA = a.split("|||")[1];
-                const labelB = b.split("|||")[1];
-                return collator.compare(labelA, labelB);
+            Object.values(Data).forEach(circleData => {
+                extractColorData(circleData);
             });
 
-        const tempText = svg.append("text")
-            .attr("x", -9999)
-            .attr("y", -9999)
-            .style("font-size", LegendFontSize)
-            .style("font-family", LegendFontStyle);
+            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+            const sortedItems = Array.from(legendItems)
+                .filter(pair => {
+                    const [color, label] = pair.split("|||");
+                    return !(color === "#FFFFFF" && label === "Empty");
+                })
+                .sort((a, b) => {
+                    const labelA = a.split("|||")[1];
+                    const labelB = b.split("|||")[1];
+                    return collator.compare(labelA, labelB);
+                });
 
-        const maxItemWidth = dimensions.width - 100;
-
-        sortedItems.forEach(pairKey => {
-            let [color, label] = pairKey.split("|||");
-
-            tempText.text(label);
-            const labelWidth = tempText.node().getComputedTextLength();
-            const totalWidth = 6 * 2 + padding + labelWidth + 20;
-
-            // Check if item itself is too wide even on a new line
-            if (totalWidth > maxItemWidth) {
-                label = "⚠ Too long label";
-                tempText.text(label);
-            }
-
-            const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
-
-            if (x + fixedWidth > dimensions.width - 50) {
-                x = startX;
-                y += spacingY;
-            }
-
-            legendGroup.append("circle")
-                .attr("cx", x)
-                .attr("cy", y)
-                .attr("r", 6)
-                .style("fill", color)
-                .style("stroke", "black");
-
-            legendGroup.append("text")
-                .attr("x", x + 10)
-                .attr("y", y + 4)
-                .attr("text-anchor", "start")
+            const tempText = svg.append("text")
+                .attr("x", -9999)
+                .attr("y", -9999)
                 .style("font-size", LegendFontSize)
-                .style("font-family", LegendFontStyle)
-                .text(label);
+                .style("font-family", LegendFontStyle);
 
-            x += fixedWidth;
-        });
-        // Clean up measuring element
-        tempText.remove();
-        // 
-        AddBottomHeight = 150;
+            const maxItemWidth = dimensions.width - 100;
+
+            sortedItems.forEach(pairKey => {
+                let [color, label] = pairKey.split("|||");
+
+                tempText.text(label);
+                const labelWidth = tempText.node().getComputedTextLength();
+                const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+                // Check if item itself is too wide even on a new line
+                if (totalWidth > maxItemWidth) {
+                    label = "⚠ Too long label";
+                    tempText.text(label);
+                }
+
+                const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+                if (x + fixedWidth > dimensions.width - 50) {
+                    x = startX;
+                    y += spacingY;
+                }
+
+                legendGroup.append("circle")
+                    .attr("cx", x)
+                    .attr("cy", y)
+                    .attr("r", 6)
+                    .style("fill", color)
+                    .style("stroke", "black");
+
+                legendGroup.append("text")
+                    .attr("x", x + 10)
+                    .attr("y", y + 4)
+                    .attr("text-anchor", "start")
+                    .style("font-size", LegendFontSize)
+                    .style("font-family", LegendFontStyle)
+                    .text(label);
+
+                x += fixedWidth;
+            });
+            // Clean up measuring element
+            tempText.remove();
+            // 
+            AddBottomHeight = 150;
+        }
     }
     
     // Add padding and scale

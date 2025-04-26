@@ -24,6 +24,11 @@
         Icon toggle:
         <button id="ToggleIcon" class="btn btn-info active">On</button>
       </div>
+
+      <div class="col-md-2" style="padding-top: 5px;">
+        Legend toggle:
+        <button id="ToggleIconLegend" class="btn btn-info active">On</button>
+      </div>
   
       <!-- # Download button # -->
       <div class="col-md-2">
@@ -88,7 +93,7 @@
       </div>
     </div>
 
-<div id="image-container" data-image-url="{% static 'home/images/DataMapper_GPCRome_icon_legend.png' %}"></div>
+<div id="image-container" data-image-url="{% static 'home/images/DataMapper/DataMapper_GPCRome_icon_legend.png' %}"></div>
 <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
     <div id="GPCRome_plot" class="text-center"></div>
 </div>
@@ -127,11 +132,37 @@ if (PlotType === 'Numeric') {
   const GPCRomeMax = GPCRomeWheelValues.length > 0 ? Math.max(...GPCRomeWheelValues) : null;
   const GPCRomeAvg = GPCRomeWheelValues.length > 0 ? (GPCRomeMin + GPCRomeMax) / 2 : null;
 
+  function determineDecimalPlaces(minValue, maxValue) {
+    const allValues = [minValue, maxValue];
+    let maxDecimals = 0;
+
+    allValues.forEach(value => {
+        if (value == null) return; // Ignore nulls
+
+        const valueStr = Math.abs(value).toString();
+
+        if (valueStr.includes('e')) {
+            // Handle scientific notation separately
+            const parts = valueStr.split('e-');
+            if (parts.length === 2) {
+                const exp = parseInt(parts[1], 10);
+                maxDecimals = Math.max(maxDecimals, exp);
+            }
+        } else if (valueStr.includes('.')) {
+            const decimals = valueStr.split('.')[1].length;
+            maxDecimals = Math.max(maxDecimals, decimals);
+        }
+    });
+
+    // Cap at maximum 6 digits
+    return Math.min(maxDecimals, 6);
+  }
+
   var GPCRomes_styling = {
       GPCRomeMin: GPCRomeMin,
       GPCRomeMax: GPCRomeMax,
       GPCRomeAvg: GPCRomeAvg,
-      LegendbarDigit: 1,
+      LegendbarDigit: determineDecimalPlaces(GPCRomeMin,GPCRomeMax),
       LegendbarLength: 200,
       LegendbarFontsize: "11px",
       FontStyle: "Arial",
@@ -143,7 +174,8 @@ if (PlotType === 'Numeric') {
       colorEnd: "#3c5488",
       ColorSetup: 'One',
       showIcon: true,
-      LabelType: "Protein"
+      LabelType: "Protein",
+      ShowLegend: true
   };
 
 let GPCRome_location = "GPCRome_plot";
@@ -219,6 +251,29 @@ function toggleIcon() {
 
     // Update button text and state
     if (GPCRomes_styling.showIcon) {
+        button.text("On");
+        button.classed("active", true);
+    } else {
+        button.text("Off");
+        button.classed("active", false);
+    }
+
+    // Redraw the GPCRomes with the updated icon state
+    updateGPCRome();
+}
+
+// Attach event listener to the button
+d3.select("#ToggleIconLegend").on("click", toggleIconLegend);
+
+// Function to toggle the icon visibility and redraw the GPCRomes
+function toggleIconLegend() {
+    const button = d3.select("#ToggleIconLegend");
+
+    // Toggle the showIcon property in GPCRomes_styling
+    GPCRomes_styling.ShowLegend = !GPCRomes_styling.ShowLegend;
+
+    // Update button text and state
+    if (GPCRomes_styling.ShowLegend) {
         button.text("On");
         button.classed("active", true);
     } else {
