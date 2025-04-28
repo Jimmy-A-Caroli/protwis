@@ -33,6 +33,11 @@ class Command(BaseBuild):
     #Setting the variables for the test tracking of the model upadates
     tracker = {}
     all_models = django.apps.apps.get_models()[6:]
+    data_dir = os.sep.join([settings.DATA_DIR, 'ligand_data'])
+    helm_chembl_filepath = os.sep.join([data_dir, 'HELM_CHEMBL.csv'])
+    helm_cid_filepath = os.sep.join([data_dir, 'HELM_CID.csv'])
+    helm_chembl = pd.read_csv(helm_chembl_filepath, index_col=0)
+    helm_cid = pd.read_csv(helm_cid_filepath, index_col=0)
     test_model_updates(all_models, tracker, initialize=True)
 
     def add_arguments(self, parser):
@@ -137,23 +142,18 @@ class Command(BaseBuild):
         ligand_data = pd.DataFrame(ligand_expanded)
         gtp_peptides = pd.DataFrame(peptides_expanded)
 
-        # HERE ADD THE MERGE WITH HELM DATA
-
-        helm_chembl = pd.read_csv('HELM_CHEMBL.csv', index_col=0)
-        helm_cid = pd.read_csv('HELM_CID.csv', index_col=0)
-
         # Build mask: not NaN, and not empty/whitespace-only
         mask_chembl = (
-            helm_chembl['helm_notation'].notna()
-            & helm_chembl['helm_notation'].astype(str).str.strip().ne('')
+            Command.helm_chembl['helm_notation'].notna()
+            & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
         )
         mask_cid = (
             helm_cid['helm_notation'].notna()
         )
 
         # Apply mask
-        helm_chembl_clean = helm_chembl.loc[mask_chembl]
-        helm_cid_clean = helm_cid.loc[mask_cid]
+        helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
+        helm_cid_clean = Command.helm_cid.loc[mask_cid]
         # And clean CID data
         helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
             lambda x: str(int(x)) if pd.notna(x) else np.nan
@@ -819,19 +819,17 @@ class Command(BaseBuild):
         ligand_data.replace(["", "None", "null", "NaN"], np.nan, inplace=True)
         print(f"Found {len(ligand_data)} ligands")
 
-        helm_chembl = pd.read_csv('HELM_CHEMBL.csv', index_col=0)
-        helm_cid = pd.read_csv('HELM_CID.csv', index_col=0)
         # Build mask: not NaN, and not empty/whitespace-only
         mask_chembl = (
-            helm_chembl['helm_notation'].notna()
-            & helm_chembl['helm_notation'].astype(str).str.strip().ne('')
+            Command.helm_chembl['helm_notation'].notna()
+            & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
         )
         mask_cid = (
             helm_cid['helm_notation'].notna()
         )
         # Apply mask
-        helm_chembl_clean = helm_chembl.loc[mask_chembl]
-        helm_cid_clean = helm_cid.loc[mask_cid]
+        helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
+        helm_cid_clean = Command.helm_cid.loc[mask_cid]
         # And clean CID data
         helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
             lambda x: str(int(x)) if pd.notna(x) else np.nan
