@@ -137,8 +137,67 @@ class Command(BaseBuild):
         ligand_data = pd.DataFrame(ligand_expanded)
         gtp_peptides = pd.DataFrame(peptides_expanded)
 
+        # HERE ADD THE MERGE WITH HELM DATA
+
+        helm_chembl = pd.read_csv('HELM_CHEMBL.csv', index_col=0)
+        helm_cid = pd.read_csv('HELM_CID.csv', index_col=0)
+
+        # Build mask: not NaN, and not empty/whitespace-only
+        mask_chembl = (
+            helm_chembl['helm_notation'].notna()
+            & helm_chembl['helm_notation'].astype(str).str.strip().ne('')
+        )
+        mask_cid = (
+            helm_cid['helm_notation'].notna()
+        )
+
+        # Apply mask
+        helm_chembl_clean = helm_chembl.loc[mask_chembl]
+        helm_cid_clean = helm_cid.loc[mask_cid]
+        # And clean CID data
+        helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
+            lambda x: str(int(x)) if pd.notna(x) else np.nan
+        )
+
+        # First Merge
+        ligand_data_merged = pd.merge(
+            ligand_data,
+            helm_chembl_clean,
+            left_on='chembl_id',
+            right_on='molecule_chembl_id',
+            how='left')
+
+        # Second Merge
+        ligand_data_merged = pd.merge(
+            ligand_data_merged,
+            helm_cid_clean,
+            on='pubchem_cid',
+            how='left')
+
+        ligand_data_merged['helm_notation'] = ligand_data_merged['helm_notation_x'].fillna(ligand_data_merged['helm_notation_y'])
+        ligand_data_merged = ligand_data_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
+
+        # First Merge
+        gtp_peptides_merged = pd.merge(
+            gtp_peptides,
+            helm_chembl_clean,
+            left_on='chembl_id',
+            right_on='molecule_chembl_id',
+            how='left')
+
+        # Second Merge
+        gtp_peptides_merged = pd.merge(
+            gtp_peptides_merged,
+            helm_cid_clean,
+            on='pubchem_cid',
+            how='left')
+
+        gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
+        gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
+
+
         print('\n\nSaving the ligands in the models')
-        self.save_the_ligands_save_the_world(ligand_data, gtp_peptides)
+        self.save_the_ligands_save_the_world(ligand_data_merged, gtp_peptides_merged)
         # Assign the species to duplicated peptides
         # print('\n\nAssign the species to duplicated peptides')
         # self.assign_species_to_peptide()
@@ -758,8 +817,25 @@ class Command(BaseBuild):
         ligand_input_file = os.path.join(settings.DATA_DIR, "ligand_data", "assay_data", "chembl_cpds.csv.gz")
         ligand_data = pd.read_csv(ligand_input_file, keep_default_na=False)
         ligand_data.replace(["", "None", "null", "NaN"], np.nan, inplace=True)
-
         print(f"Found {len(ligand_data)} ligands")
+
+        helm_chembl = pd.read_csv('HELM_CHEMBL.csv', index_col=0)
+        helm_cid = pd.read_csv('HELM_CID.csv', index_col=0)
+        # Build mask: not NaN, and not empty/whitespace-only
+        mask_chembl = (
+            helm_chembl['helm_notation'].notna()
+            & helm_chembl['helm_notation'].astype(str).str.strip().ne('')
+        )
+        mask_cid = (
+            helm_cid['helm_notation'].notna()
+        )
+        # Apply mask
+        helm_chembl_clean = helm_chembl.loc[mask_chembl]
+        helm_cid_clean = helm_cid.loc[mask_cid]
+        # And clean CID data
+        helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
+            lambda x: str(int(x)) if pd.notna(x) else np.nan
+        )
 
         # Get WebResource objects
         wr_chembl = WebResource.objects.get(slug="chembl_ligand")
@@ -773,6 +849,28 @@ class Command(BaseBuild):
 
         # Set default name
         filtered_ligands["pref_name"].fillna(filtered_ligands["molecule_chembl_id"], inplace=True)
+
+        # First Merge
+        merged = pd.merge(
+            filtered_ligands,
+            helm_chembl_clean,
+            on='molecule_chembl_id',
+            how='left')
+
+        # Fix the double CID values in the merged df
+        merged['pubchem_cid'] = merged['pubchem_cid'].astype(str).str.split(';')
+        merged = merged.explode('pubchem_cid').reset_index(drop=True)
+
+        # Second Merge
+        merged = pd.merge(
+            merged,
+            helm_cid_clean,
+            on='pubchem_cid',
+            how='left')
+
+        # Remove double helm notation columns and collate them
+        merged['helm_notation'] = merged['helm_notation_x'].fillna(merged['helm_notation_y'])
+        filtered_ligands = merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
         # Fetch additional existing ligand data
         existing_cids = set(LigandID.objects.filter(web_resource=wr_pubchem).values_list("index", flat=True))
@@ -900,6 +998,7 @@ class Command(BaseBuild):
                     inchikey=row.get('standard_inchi_key'),
                     sequence=row.get("sequence"),
                     source="ChEMBL_sm",
+                    helm=row.get('helm_notation'),
                     parent=parent  # directly assign the parent (which was already created)
                 )
 
@@ -971,6 +1070,7 @@ class Command(BaseBuild):
             # Filter types
             ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True)
             ligand.source = "ChEMBL_peptide"
+            ligand.helm = row.get('helm_notation')
             ligand.save()
             # Add LigandIDs
             if pd.notna(row["other_ids"]):
@@ -1288,6 +1388,7 @@ class Command(BaseBuild):
                                 new_name = row['name'] + ' (' + row['species'] + ')'
                             ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False)
                             ligand.source = 'GuideToPharma'
+                            ligand.helm = pep_row['helm_notation']
                             ligand.save()
                             if ligand is None:
                                 print("Issue with", row['name'])
@@ -1307,6 +1408,7 @@ class Command(BaseBuild):
                             new_name = row['name'] + ' (' + row['species'] + ')'
                         ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False)
                         ligand.source = 'GuideToPharma'
+                        ligand.helm = pep_row['helm_notation']
                         ligand.save()
                         if ligand is None:
                             print("Issue with", row['name'])
@@ -1326,6 +1428,7 @@ class Command(BaseBuild):
                 #we generate the ligand, then compare it to
                 ligand = get_or_create_ligand(row['name'], ids, ligand_type, True, False)
                 ligand.source = 'GuideToPharma'
+                ligand.helm = row['helm_notation']
                 ligand.save()
                 if ligand is None:
                     print("Issue with", row['name'])

@@ -21,6 +21,7 @@ from string import Template
 from Bio import Entrez, Medline
 import xml.etree.ElementTree as etree
 from http.client import HTTPException
+from ligand.models import LigandRole
 
 
 def test_model_updates(model, master_data, initialize=False, check=False, rerun=False):
