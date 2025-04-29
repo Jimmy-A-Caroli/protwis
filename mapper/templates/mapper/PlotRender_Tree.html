@@ -23,7 +23,7 @@
     <!-- # Color Styling buttons # -->
     <!-- ######################### -->
     <!-- Main Color Styling Dropdown -->
-    <div class="col-md-2">
+    <div class="col-md-1">
         <div class="dropdown" style="width: 600px !important;">
             <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 Color styling
@@ -174,7 +174,7 @@
       <!-- ############### -->
     <!-- ### Label Styling ###  -->
       <!-- ############### -->
-    <div class="col-md-2" style="margin-left: 10px;margin-right: -10px;">
+    <div class="col-md-1" style="margin-left: 10px;margin-right: -10px;">
       <div class="dropdown" style="width: 400px !important;">
           <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
               Label Styling
@@ -221,11 +221,59 @@
       </div>
     </div>
 
+    <div class="col-md-2">
+        <div class="dropdown" style="width: 400px;">
+          <button class="btn btn-primary dropdown-toggle" type="button" id="Label_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Edit legend Labels
+          </button>
+          <div class="dropdown-menu dropdown-menu-listplot p-3" aria-labelledby="Label_Menu" style="width: 380px; padding-left: 15px;">
+      
+            <div class="form-group mb-3">
+              <label for="labelInput_Inner" class="form-label" style="text-align: left; width: 15%;">Inner</label>
+              <input type="text" maxlength="25" class="form-control" id="labelInput_Inner" value="Inner" oninput="updateLabel('Inner')">
+            </div>
+      
+            <div class="form-group mb-3">
+              <label for="labelInput_Outer1" class="form-label" style="text-align: left; width: 15%;">Outer 1</label>
+              <input type="text" maxlength="25" class="form-control" id="labelInput_Outer1" value="Outer 1" oninput="updateLabel('Outer1')">
+            </div>
+      
+            <div class="form-group mb-3">
+              <label for="labelInput_Outer2" class="form-label" style="text-align: left; width: 15%;">Outer 2</label>
+              <input type="text" maxlength="25" class="form-control" id="labelInput_Outer2" value="Outer 2" oninput="updateLabel('Outer2')">
+            </div>
+      
+            <div class="form-group mb-3">
+              <label for="labelInput_Outer3" class="form-label" style="text-align: left; width: 15%;">Outer 3</label>
+              <input type="text" maxlength="25" class="form-control" id="labelInput_Outer3" value="Outer 3" oninput="updateLabel('Outer3')">
+            </div>
+      
+            <div class="form-group mb-3">
+              <label for="labelInput_Outer4" class="form-label" style="text-align: left; width: 15%;">Outer 4</label>
+              <input type="text" maxlength="25" class="form-control" id="labelInput_Outer4" value="Outer 4" oninput="updateLabel('Outer4')">
+            </div>
+      
+            <div class="form-group mb-3">
+              <label for="labelInput_Outer5" class="form-label" style="text-align: left; width: 15%;">Outer 5</label>
+              <input type="text" maxlength="25" class="form-control" id="labelInput_Outer5" value="Outer 5" oninput="updateLabel('Outer5')">
+            </div>
+      
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-1">
+        <button id="toggleLegendBtn" class="btn btn-primary" style="width: 120px; font-size: 14px;">
+          Hide Legend
+        </button>
+      </div>
+      
+
     <!-- ################ -->
     <!-- # Data styling # -->
     <!-- ################ -->
 
-    <div class="col-md-2" style="margin-left: 10px;margin-right: -10px;">
+    <div class="col-md-1">
       <div class="dropdown" style="width: 400px !important;">
         <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           Data Styling
@@ -258,8 +306,10 @@
     </div>
 
 
+   
+
+
     <!-- # Download button # -->
-    <div class="col-md-1"></div>
     <div class="col-md-3">
       <div class="text-center">
         <div class="dropdown">
@@ -283,9 +333,9 @@
 
 
       <!-- Legend bars -->
-    <div class="col-md-12" id="legend_bars">
+    <!-- <div class="col-md-12" id="legend_bars">
       <svg width="800" height="75"></svg>
-    </div>
+    </div> -->
     <!-- Tree -->
     <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
         <div id="tree_plot" class="text-center"></div>
@@ -329,6 +379,8 @@ let Tree_label_dicts = {
   "UniProt": {}  // No lookup needed; label is just the receptor ID
 };
 
+var ShowLegend = true;
+
 const maxLeafNodeLength_scaler = 10
 
 tree_data = update_tree_data(tree_data,tree_options.depth);
@@ -352,6 +404,7 @@ Tree_colors = {"Inner":["#FFFFFF","#000000"],
               "Outer4":["#FFFFFF","#008000"],
               "Outer5":["#FFFFFF","#FFA500"]};
 
+var Label_dict = {'Inner':'Inner','Outer1':'Outer 1','Outer2':'Outer 2','Outer3':'Outer 3','Outer4':'Outer 4','Outer5':'Outer 5'}
 
 // Function to change the active button and call changeLeavesLabels with the active value
 function updateLeavesLabels() {
@@ -372,10 +425,10 @@ function updateLeavesLabels() {
 }
 
 function ReDraw_all() {
-  draw_tree(tree_data, tree_options,circle_size);
+  draw_tree(tree_data, tree_options,circle_size, ShowLegend);
   updateLeavesLabels();
   DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-  createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict);
+  if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict,Label_dict);}
 }
 
 function ReDraw_Circles_and_Labels() {
@@ -386,7 +439,7 @@ function ReDraw_Circles_and_Labels() {
 
 function ReDraw_cicles_and_bars() {
   DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-  createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict);
+  if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict,Label_dict);}
 }
 
 // # Change leaves buttons #
@@ -413,6 +466,17 @@ $("#TREE_Entrez").click(function(){
 // # Initialize tree plot #
 document.addEventListener("DOMContentLoaded", function() {
   initdraw();
+});
+
+document.getElementById('toggleLegendBtn').addEventListener('click', function() {
+    // Toggle the ShowLegend variable
+    ShowLegend = !ShowLegend;
+
+    // Update the button text
+    this.textContent = ShowLegend ? "Hide Legend" : "Show Legend";
+
+    // Redraw everything depending on the new ShowLegend value
+    ReDraw_all();
 });
 
 // ##########################
@@ -616,6 +680,17 @@ $(document).ready(function () {
     });
 });
 
+// Function to update a label and redraw the legend
+function updateLabel(category) {
+    var inputId = "labelInput_" + category;
+    var newValue = document.getElementById(inputId).value;
+
+    // Update the Label_dict
+    Label_dict[category] = newValue;
+
+    // Now re-run your createLegendBars with updated labels
+    if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict, Label_dict);}
+}
 
 // ====================
 // === Data styling ===
@@ -700,14 +775,14 @@ function initdraw() {
                 Tree_colors[key][index] = color.toHexString();
                 // Redraw circles and legends in real-time
                 DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
-                createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict);
+                if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict,Label_dict);}
             },
             change: function(color) {
                 // Final update when the user selects the color
                 Tree_colors[key][index] = color.toHexString();
                 // Redraw circles and legends after the final selection
                 DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
-                createLegendBars('legend_bars', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict);
+                if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict,Tree_datatypes_dict,Label_dict);}
             },
             disabled: disabled // 🛑 this disables it if you pass true
         });

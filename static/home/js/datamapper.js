@@ -34,7 +34,7 @@ function update_tree_data(data,depth) {
 }
 
 // Draw the Tree
-function draw_tree(data, options,circle_size) {
+function draw_tree(data, options,circle_size, showLegend = false) {
 
     // Remove existing SVG if present
     d3.select('#' + options.anchor + "_svg").remove();
@@ -255,9 +255,10 @@ function draw_tree(data, options,circle_size) {
     // Calculate the extra padding needed based on circle size and spacer
     var extraPadding = (circle_size) + (circle_spacer*2) + parseInt(options.fontSize.receptor,10)*4;  // Adjust the multiplier based on how much padding is needed
 
+    var legendMarginTop = showLegend ? 100 : 0;  // 🛠 only add margin if ShowLegend is true!
     // Calculate new dimensions
     var newWidth = diameter + extraPadding;  // Add padding to both sides
-    var newHeight = diameter + extraPadding;  // Add padding to both sides
+    var newHeight = diameter + extraPadding + legendMarginTop;  // Add padding to both sides
 
     // Set new width and height for the SVG
     svg.attr('width', newWidth)
@@ -269,7 +270,7 @@ function draw_tree(data, options,circle_size) {
 
     // Adjust the translation to keep the tree centered after scaling
     var translateX = cx;
-    var translateY = cy;
+    var translateY = cy + (legendMarginTop / 2);
 
     // Apply the transform to the 'g' element to scale and center it
     svg.select('g')
@@ -459,16 +460,21 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
 }
 
 // Create the bar legends
-function createLegendBars(location, data, conversion, circle_styling_dict, datatype_dict) {
+function createLegendBars(location, data, conversion, circle_styling_dict, datatype_dict, label_dict = {}) {
 
     var svg = d3.select('#' + location + ' svg');
 
-    // Clear existing content
-    svg.selectAll("*").remove();
+    // First: Remove any existing legend group
+    svg.selectAll(".legend-group").remove();
 
-    var margin = { top: 20, right: 20, bottom: 30, left: 60 };
-    var width = +svg.attr("width") - margin.left - margin.right;
-    var height = +svg.attr("height") - margin.top - margin.bottom;
+    var legendGroup = svg.append("g")
+    .attr("class", "legend-group")
+    .attr("transform", `translate(0, -100})`);
+
+    // Clear existing content
+    // svg.selectAll("*").remove();
+
+    var margin = { top: 50, right: 20, bottom: 30, left: 60 };
 
     // Flatten data to get categories and their max values
     var categoryMax = {};
@@ -503,7 +509,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
         var colors = conversion[category];
         var gradientId = `gradient-${category}`;
 
-        var gradient = svg.append("defs")
+        var gradient = legendGroup.append("defs")
             .append("linearGradient")
             .attr("id", gradientId)
             .attr("x1", "0%")
@@ -547,8 +553,8 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
     var spacing = 50; // Horizontal spacing between bars
 
     // Adjust SVG width if needed
-    var totalWidth = 1200;
-    svg.attr("width", totalWidth);
+    // var totalWidth = 1200;
+    // svg.attr("width", totalWidth);
 
     var skippedDiscreteCount = 0;  // Track how many discrete bars have been skipped
 
@@ -558,7 +564,10 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             skippedDiscreteCount++; // Increment the count of skipped discrete bars
             return; // Skip this category if it's Discrete
         }
-        var BarText = category.replace(/([a-zA-Z]+)(\d+)/, '$1 $2');
+        var BarText = (label_dict && label_dict[category]) 
+        ? label_dict[category] 
+        : category.replace(/([a-zA-Z]+)(\d+)/, '$1 $2');
+
         var gradientId = colorScales[category];
         var minValue = categoryMax[category].min;
         var maxValue = categoryMax[category].max;
@@ -571,7 +580,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
         var xPosition = margin.left + (index - skippedDiscreteCount) * (barWidth + spacing);
 
         // Add a rectangle to represent the gradient
-        svg.append("rect")
+        legendGroup.append("rect")
             .attr("x", xPosition)
             .attr("y", margin.top)
             .attr("width", barWidth)
@@ -581,35 +590,33 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             .style("stroke-width", "1px");
 
         // Add a label for the gradient bar
-        svg.append("text")
+        legendGroup.append("text")
             .attr("x", xPosition + barWidth / 2)
             .attr("y", margin.top - 10)
             .attr("text-anchor", "middle")
             .text(BarText);
 
         // Add min and max value labels
-        svg.append("text")
+        legendGroup.append("text")
             .attr("x", xPosition)
             .attr("y", margin.top + barHeight + 15)
             .attr("text-anchor", "start")
             .text(`${minValue}`);
 
-        svg.append("text")
+        legendGroup.append("text")
             .attr("x", xPosition + barWidth)
             .attr("y", margin.top + barHeight + 15)
             .attr("text-anchor", "end")
             .text(`${maxValue}`);
 
         // Add mid value label
-        svg.append("text")
+        legendGroup.append("text")
             .attr("x", xPosition + barWidth / 2)
             .attr("y", margin.top + barHeight + 15)
             .attr("text-anchor", "middle")
             .text(`${midValue}`);
     });
 }
-
-
 
 // #################
 // ###  CLUSTER  ###
