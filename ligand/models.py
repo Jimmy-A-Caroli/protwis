@@ -30,6 +30,7 @@ class Ligand(models.Model):
     inchikey = models.CharField(max_length=27, null=True)
     clean_inchikey = models.CharField(max_length=27, null=True, unique=True)
     sequence = models.CharField(max_length=1000, null=True)
+    helm = models.CharField(max_length=1000, null=True)
 
     # Ligand properties
     mw = models.DecimalField(max_digits=15, decimal_places=3, null=True)
