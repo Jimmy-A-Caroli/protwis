@@ -21,7 +21,6 @@ from string import Template
 from Bio import Entrez, Medline
 import xml.etree.ElementTree as etree
 from http.client import HTTPException
-from ligand.models import LigandRole
 
 
 def test_model_updates(model, master_data, initialize=False, check=False, rerun=False):
@@ -289,6 +288,7 @@ def urlopen_with_retry(url, data = None, retries = 5, sleeptime = 5):
             return False
 
 def find_role(role_str, fuzzy_cutoff=0.75):
+    from ligand.models import LigandRole
     role_dict = definitions.ROLE_DICTIONARY
     # Pre‐compile your regex patterns once
     _role_patterns = []

@@ -112,9 +112,16 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
     if not parent and "sequence" in ids:
         parent = try_get_parent({"sequence": ids["sequence"], "parent__isnull": True})
 
-    # Attempt using name if still not found
+    # Attempt using name if still not found (here need to add an exception)
     if not parent:
-        parent = try_get_parent({"name": name, "parent__isnull": True})
+        if ("smiles" in ids) and ("inchikey" in ids):
+            std_smiles = standardize_smiles(ids["smiles"])
+            head_inchi = ids["inchikey"].split('-')[0]
+            new_name = check_name(std_smiles, head_inchi, name)
+            if name != new_name
+                name = new_name
+            else:
+                parent = try_get_parent({"name": name, "parent__isnull": True})
 
     # Finally, generate a parent if none was found
     if not parent:
@@ -595,3 +602,20 @@ def try_get_parent(query_params):
         return parent_obj
     except Ligand.DoesNotExist:
         return None
+
+def check_name(smiles, inchi, name):
+    try:
+        compound = pcp.get_compounds(smiles, "smiles")
+        parent_obj = Ligand.objects.get("name": name, "parent__isnull": True)
+        input_mol = dm.to_mol(smiles, sanitize=True)
+        if input_mol:
+            # Calculate RDkit properties
+            mol_weight = dm.descriptors.mw(input_mol)
+        #we need to check that every variable is different a part from name
+        if parent_obj.smiles != smiles & parent_obj.inchikey != inchi & parent_obj.mw != mol_weight:
+            new_name = compound[0].iupac_name
+            return new_name
+        else:
+            return name
+    except Ligand.DoesNotExist:
+        return name
