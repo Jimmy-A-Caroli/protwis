@@ -196,11 +196,11 @@ function downloadPlot(format) {
         format: format,
         height: 700,
         width: 1200,
-        scale: 1
+        scale: 3
     }).then(function (dataUrl) {
         const link = document.createElement('a');
         link.href = dataUrl;
-        link.download = `plot.${format}`;
+        link.download = `Cluster.${format}`;
         link.click();
     }).catch(function (error) {
         console.error('Error exporting plot:', error);

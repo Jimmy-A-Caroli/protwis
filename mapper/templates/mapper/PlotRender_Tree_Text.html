@@ -1,0 +1,427 @@
+{% extends "home/base.html" %}
+{% load static %}
+{% load humanize %}
+{% block addon_css %}
+<link rel="stylesheet" href="{% static 'home/css/nv.d3.min.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
+{% endblock %}
+
+{% block content %}
+
+<div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
+  <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
+    <div class="col-md-3" style="padding-top: 5px;">
+      Receptor names:
+        <div class="btn-group" role="group" id="gtp_plus">
+            <button id="TREE_IUPHARNames" class="btn btn-info active">GtPdb</button>
+            <button id="TREE_Entrez" class="btn btn-info">Gene</button>
+            <button id="TREE_UniProtNames" class="btn btn-info">UniProt</button>
+        </div>
+    </div>
+    <!-- ############### -->
+    <!-- ### Label Styling ###  -->
+    <!-- ############### -->
+    <div class="col-md-1" style="margin-left: 10px;margin-right: -10px;">
+      <div class="dropdown" style="width: 400px !important;">
+          <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Label Styling
+          </button>
+          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+
+              <!-- Class Label and Slider -->
+              <div id="class_label_group" class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                      <label for="classFontSizeSlider" class="form-label">Class Font Size</label>
+                      <input type="range" class="form-range" min="8" max="20" value="16" id="classFontSizeSlider">
+                      <span id="classFontSizeValue">16</span>px
+                  </div>
+              </div>
+
+              <!-- Ligand Type Label and Slider -->
+              <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                      <label for="ligandTypeFontSizeSlider" class="form-label">Ligand Type Font Size</label>
+                      <input type="range" class="form-range" min="8" max="20" value="16" id="ligandTypeFontSizeSlider">
+                      <span id="ligandTypeFontSizeValue">16</span>px
+                  </div>
+              </div>
+
+              <!-- Receptor Family Label and Slider -->
+              <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                      <label for="receptorFamilyFontSizeSlider" class="form-label">Receptor Family Font Size</label>
+                      <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFamilyFontSizeSlider">
+                      <span id="receptorFamilyFontSizeValue">16</span>px
+                  </div>
+              </div>
+
+              <!-- Receptor Label and Slider -->
+              <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
+                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
+                      <label for="receptorFontSizeSlider" class="form-label">Receptor Font Size</label>
+                      <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFontSizeSlider">
+                      <span id="receptorFontSizeValue">16</span>px
+                  </div>
+              </div>
+
+          </div>
+      </div>
+    </div>
+
+      <div class="col-md-1">
+        <button id="toggleLegendBtn" class="btn btn-primary" style="width: 120px; font-size: 14px;">
+          Hide Legend
+        </button>
+      </div>
+      
+
+    <!-- ################ -->
+    <!-- # Data styling # -->
+    <!-- ################ -->
+
+    <div class="col-md-1">
+      <div class="dropdown" style="width: 400px !important;">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Data Styling
+        </button>
+        <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+
+          <!-- Circle Size Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="Tree_circleSizeSlider" id="Tree_circleSizeSliderLabel" class="form-label">Circle Size</label>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="1" max="6" value="3" id="Tree_circleSizeSlider">
+            <div style="text-align: center;">
+              <span id="Tree_circleSizeValue">3</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+   
+
+
+    <!-- # Download button # -->
+    <div class="col-md-3">
+      <div class="text-center">
+        <div class="dropdown">
+          <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
+          </button>
+          <div class="dropdown-menu dropdown-menu-right-middle">
+            <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('tree_plot_svg'), 'Tree.svg');">SVG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('tree_plot_svg'), 'Tree.png');">PNG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('tree_plot_svg'), 'Tree.jpg');">JPG</a></li>
+            <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('tree_plot_svg'), 'Tree.tiff');">TIFF</a></li>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+    <!-- ############# -->
+    <!-- # TREE plot # -->
+    <!-- ############# -->
+
+
+      <!-- Legend bars -->
+    <!-- <div class="col-md-12" id="legend_bars">
+      <svg width="800" height="75"></svg>
+    </div> -->
+    <!-- Tree -->
+    <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
+        <div id="tree_plot" class="text-center"></div>
+    </div>
+
+  </div>
+
+{% endblock %}
+
+{% block addon_js %}
+<script src="{% static 'home/js/d3.min.js' %}"></script>
+<script src="{% static 'home/js/nv.d3.min.js' %}"></script>
+<script src="{% static 'home/js/d3.v4.min.js' %}"></script>
+<script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
+<script src="{% static 'home/js/saveSvg.js' %}"></script>
+<script src="{% static 'home/js/datamapper.js' %}"></script>
+<script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
+
+
+<!-- Universal scripts -->
+<script>
+$('.dropdown-menu').on('click', function(event){
+    event.stopPropagation();
+});
+
+</script>
+
+<script>
+// ========================
+// === Initialize data  ===
+// ========================
+tree_data = {{ tree | safe }};
+tree_options = {{ tree_options | safe }};
+Tree_circles = {{ circles|safe }};
+Tree_label_dict = {{ Receptor_dict|safe }};
+Tree_label_dict_Gene = {{ Entrez_dict|safe }};
+
+let Tree_label_dicts = {
+  "IUPHAR": Tree_label_dict,
+  "Gene": Tree_label_dict_Gene,
+  "UniProt": {}  // No lookup needed; label is just the receptor ID
+};
+
+var ShowLegend = true;
+
+console.log(tree_data)
+console.log(Tree_circles)
+
+const maxLeafNodeLength_scaler = 10
+
+tree_data = update_tree_data(tree_data,tree_options.depth);
+const depth = tree_options.depth;  // Set this value when the page loads
+
+var Tree_circle_styling_dict = {
+  "Inner":'One',
+  "Outer1":"One",
+  "Outer2":"One",
+  "Outer3":"One",
+  "Outer4":"One",
+  "Outer5":"One",
+}
+
+Tree_datatypes_dict = {'Inner':'discrete'}
+
+Tree_colors = {"Inner":["#FFFFFF","#000000"],
+              "Outer1":["#FFFFFF","#0000FF"],
+              "Outer2":["#FFFFFF","#FF0000"],
+              "Outer3":["#FFFFFF","#22c7b1"],
+              "Outer4":["#FFFFFF","#008000"],
+              "Outer5":["#FFFFFF","#FFA500"]};
+
+var Label_dict = {'Inner':'Inner','Outer1':'Outer 1','Outer2':'Outer 2','Outer3':'Outer 3','Outer4':'Outer 4','Outer5':'Outer 5'}
+
+// Function to change the active button and call changeLeavesLabels with the active value
+function updateLeavesLabels() {
+    let activeLabelType;
+
+    if (document.getElementById("TREE_UniProtNames").classList.contains("active")) {
+        activeLabelType = "UniProt";
+    } else if (document.getElementById("TREE_Entrez").classList.contains("active")) {
+        activeLabelType = "Gene";
+    } else {
+        activeLabelType = "IUPHAR";
+    }
+
+    // Get the correct label dictionary
+    let activeDict = Tree_label_dicts[activeLabelType];
+
+    changeLeavesLabels("tree_plot", activeLabelType, activeDict);
+}
+
+function ReDraw_all() {
+  draw_tree(tree_data, tree_options,circle_size, ShowLegend);
+  updateLeavesLabels();
+  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size,'Text');
+  if (ShowLegend) {CreateTextLegend('tree_plot', Tree_circles);}
+}
+
+function ReDraw_Circles_and_Labels() {
+  updateLeavesLabels();
+  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size,'Text');
+  
+}
+
+function ReDraw_cicles_and_bars() {
+  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size,'Text');
+  if (ShowLegend) {CreateTextLegend('tree_plot', Tree_circles);}
+}
+
+// # Change leaves buttons #
+$("#TREE_UniProtNames").click(function(){
+    $("#TREE_UniProtNames").addClass("active");
+    $("#TREE_Entrez").removeClass("active");
+    $("#TREE_IUPHARNames").removeClass("active");
+    ReDraw_Circles_and_Labels();
+});
+$("#TREE_IUPHARNames").click(function() {
+  $("#TREE_UniProtNames").removeClass("active");
+  $("#TREE_Entrez").removeClass("active");
+  $("#TREE_IUPHARNames").addClass("active");
+  ReDraw_Circles_and_Labels();
+});
+
+$("#TREE_Entrez").click(function(){
+    $("#TREE_Entrez").addClass("active");
+    $("#TREE_UniProtNames").removeClass("active");
+    $("#TREE_IUPHARNames").removeClass("active");
+    ReDraw_Circles_and_Labels();
+});
+
+// # Initialize tree plot #
+document.addEventListener("DOMContentLoaded", function() {
+  initdraw();
+});
+
+document.getElementById('toggleLegendBtn').addEventListener('click', function() {
+    // Toggle the ShowLegend variable
+    ShowLegend = !ShowLegend;
+
+    // Update the button text
+    this.textContent = ShowLegend ? "Hide Legend" : "Show Legend";
+
+    // Redraw everything depending on the new ShowLegend value
+    ReDraw_all();
+});
+
+// ##########################
+  // ## DATA styling buttons ##
+  // ##########################
+
+// #################
+// # Label styling #
+// #################
+
+// Function to update the option text and show/hide labels based on depth
+function updateLabelOptions(depth) {
+    if (depth === 3) {
+        $("#class_label_group").hide();  // Hide the class label group when depth is 3
+    } else {
+        $("#class_label_group").show();  // Show class label group for other depths
+    }
+}
+
+// Function to update the font size value in the labels when the sliders are changed
+function updateFontSizeLabel(sliderId, labelId) {
+    const sliderValue = $(`#${sliderId}`).val();
+    $(`#${labelId}`).text(sliderValue);
+}
+
+// Function to apply the label styling and update the plot dynamically
+function applyLabelStyling() {
+    const classFontSize = $("#classFontSizeSlider").val();
+    const ligandTypeFontSize = $("#ligandTypeFontSizeSlider").val();
+    const receptorFamilyFontSize = $("#receptorFamilyFontSizeSlider").val();
+    const receptorFontSize = $("#receptorFontSizeSlider").val();
+
+    // Update the tree options with the new font sizes
+    tree_options.fontSize.class = `${classFontSize}px`;
+    tree_options.fontSize.ligandtype = `${ligandTypeFontSize}px`;
+    tree_options.fontSize.receptorfamily = `${receptorFamilyFontSize}px`;
+    tree_options.fontSize.receptor = `${receptorFontSize}px`;
+
+    // Recalculate max leaf node length based on the selected depth
+    if (tree_options.depth === 4) {
+        maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+    } else if (tree_options.depth === 3) {
+        maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+    }
+
+    // Redraw the tree and circles with updated font sizes
+    ReDraw_all();
+}
+
+// Attach event listeners for each slider to dynamically update the plot when changed
+$(document).ready(function () {
+    const depth = tree_options.depth;  // Example depth value, set dynamically
+
+    // Update label options based on depth
+    updateLabelOptions(depth);
+
+    // Event listeners for font size sliders to update values
+    $("#classFontSizeSlider").on("input", function () {
+        updateFontSizeLabel("classFontSizeSlider", "classFontSizeValue");
+        applyLabelStyling();  // Dynamically update the plot
+    });
+
+    $("#ligandTypeFontSizeSlider").on("input", function () {
+        updateFontSizeLabel("ligandTypeFontSizeSlider", "ligandTypeFontSizeValue");
+        applyLabelStyling();  // Dynamically update the plot
+    });
+
+    $("#receptorFamilyFontSizeSlider").on("input", function () {
+        updateFontSizeLabel("receptorFamilyFontSizeSlider", "receptorFamilyFontSizeValue");
+        applyLabelStyling();  // Dynamically update the plot
+    });
+
+    $("#receptorFontSizeSlider").on("input", function () {
+        updateFontSizeLabel("receptorFontSizeSlider", "receptorFontSizeValue");
+        applyLabelStyling();  // Dynamically update the plot
+    });
+});
+
+// Function to update a label and redraw the legend
+function updateLabel(category) {
+    var inputId = "labelInput_" + category;
+    var newValue = document.getElementById(inputId).value;
+
+    // Update the Label_dict
+    Label_dict[category] = newValue;
+
+    // Now re-run your createLegendBars with updated labels
+    if (ShowLegend) {CreateTextLegend('tree_plot', Tree_circles);}
+}
+
+// ====================
+// === Data styling ===
+// ====================
+
+// Function to recalculate and update the tree based on the current slider values
+function updateTreePlot() {
+  // Get input from sliders
+  const Tree_Slider_circleSize = document.getElementById("Tree_circleSizeSlider");
+  const Tree_Slider_circleSize_value = Tree_Slider_circleSize.value;
+
+  const Tree_Slider_circleSpacer_value = 1;
+
+  // Recalculate circle size and spacer
+  circle_size = 3 + 1 * Tree_Slider_circleSize_value;
+  circle_spacer = circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+
+  // Render tree with new values
+  ReDraw_all();
+}
+
+// Update slider value display and trigger plot update
+document.getElementById('Tree_circleSizeSlider').addEventListener('input', function() {
+  document.getElementById('Tree_circleSizeValue').textContent = this.value;
+  updateTreePlot(); // Dynamically update the tree plot
+});
+
+
+function initdraw() {
+  const Tree_Slider_circleSize = document.getElementById("Tree_circleSizeSlider");
+  const Tree_Slider_circleSize_value = Tree_Slider_circleSize.value;
+
+  const Tree_Slider_circleSpacer_value = 1;
+
+  // Recalculate circle size and spacer
+  circle_size = 3 + 1 * Tree_Slider_circleSize_value;
+  circle_spacer = circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+
+  const classFontSize = $("#classFontSizeSlider").val();
+  const ligandTypeFontSize = $("#ligandTypeFontSizeSlider").val();
+  const receptorFamilyFontSize = $("#receptorFamilyFontSizeSlider").val();
+  const receptorFontSize = $("#receptorFontSizeSlider").val();
+
+  // Update the tree options with the new font sizes
+  tree_options.fontSize.class = `${classFontSize}px`;
+  tree_options.fontSize.ligandtype = `${ligandTypeFontSize}px`;
+  tree_options.fontSize.receptorfamily = `${receptorFamilyFontSize}px`;
+  tree_options.fontSize.receptor = `${receptorFontSize}px`;
+
+  // Recalculate max leaf node length based on the selected depth
+  maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+
+  // Redraw the tree and circles with updated font sizes
+  ReDraw_all();
+}
+
+</script>
+
+
+{% endblock %}

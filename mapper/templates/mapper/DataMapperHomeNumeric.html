@@ -134,7 +134,7 @@
         <th style="text-align: center;">
           <span class="title-header">GPCRome Wheel</span>
           <br>
-          <img src="{% static 'home/images/DataMapper/gpcrome_example.png' %}" 
+          <img src="{% static 'home/images/DataMapper/GPCRome_icon.png' %}" 
                width="140" height="140" alt="GPCRome" style="margin-bottom: 5px;"/>
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#GPCRomeModal" style="margin-top: 5px;">
@@ -144,7 +144,7 @@
         <th style="text-align: center;">
           <span class="title-header">Tree</span>
           <br>
-          <img src="{% static 'home/images/DataMapper/phylo_example.png' %}" 
+          <img src="{% static 'home/images/DataMapper/tree_icon.png' %}" 
                width="140" height="140" alt="Tree" style="margin-bottom: 5px;"/>
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#phyloTreeModal" style="margin-top: 5px;">
@@ -154,7 +154,7 @@
         <th style="text-align: center;">
           <span class="title-header">Cluster</span>
           <br>
-          <img src="{% static 'home/images/DataMapper/cluster_icon_new.png' %}" 
+          <img src="{% static 'home/images/DataMapper/Cluster_icon.png' %}" 
                width="140" height="140" alt="Cluster" style="margin-bottom: 5px;"/>
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#ClusterModal" style="margin-top: 5px;">
@@ -164,7 +164,7 @@
         <th style="text-align: center;">
           <span class="title-header">List</span>
           <br>
-          <img src="{% static 'home/images/DataMapper/list_example.png' %}" 
+          <img src="{% static 'home/images/DataMapper/List_icon.png' %}" 
                width="140" height="140" alt="List" style="margin-bottom: 5px;"/>
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#ListModal" style="margin-top: 5px;">
@@ -174,7 +174,7 @@
         <th style="text-align: center;">
           <span class="title-header">Heatmap</span>
           <br>
-          <img src="{% static 'home/images/DataMapper/heatmap_example.png' %}" 
+          <img src="{% static 'home/images/DataMapper/Heatmap_icon.png' %}" 
                width="140" height="140" alt="Heatmap" style="margin-bottom: 5px;"/>
           <br>
           <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#HeatmapModal" style="margin-top: 5px;">
@@ -490,20 +490,12 @@
         <h3 class="modal-title" id="phyloTreeModalLabel">Tree</h3>
       </div>
       <div class="modal-body">
-        <div class="img-container">
-          <img src="{% static 'home/images/DataMapper/PhylogeneticsTree_Modal_Example.png' %}" width="100%" height="400" style='margin-top: 10px'>
+        <div class="img-container" style="text-align: center;">
+          <img src="{% static 'home/images/DataMapper/Tree_icon.png' %}" width="50%" style='margin-top: 10px;text-align: center;'>
         </div>
         <div style="margin-top: 20px;font-size: 15px;">
-          <span>The Phylogenetic tree analysis requires a list of receptors placed in the first column, <b>Receptor (Uniprot)</b>, to the left (Illustrated with purple arrow).
-            The analysis will then form the branches connected into families and classes.
-            There is 6 feature columns. First column, <b>1. Feature (Inner cicle)</b>, is the inner circles which is placed inbetween the receptor name and the branches (Illustrated with blue arrow).
-            The 5 other columns are the circles in the outer layer efter the receptor names (Illustrated with Green arrow). <br>
-            The different features can either be <b><u>Boolean</u></b> or <b><u>Number</u></b> values. <br>
-            <ul>
-            <li><b><u>Boolean</u></b>: This value is a Yes/No input type. It can be "Yes", "1", and "X" as present values and "No", "0", and "None" / "empty cell" as absent values.</li>
-            <li><b><u>Number</u></b>: This input can be any number.</li>
-            </ul>
-            The boolean will be a white or a colored circle. The Number will be a gradient, divided into 4 quartiles (shown in the upper left corner of the plotrender.)
+          <span>The Tree plot presents the data as a classification tree, with branches progressing from receptor class through ligand type and receptor family, ultimately ending at individual receptors. Uniquely, this plot supports up to six data points per receptor. Dataset 1 is displayed inside the branch structure, while datasets 2 through 6 are placed outside, starting closest to the receptor and extending outward.
+            The Tree plot is customizable after rendering. Available customization options include text and color scaling, placement and sizing of data circles, receptor name display format, and legend bar configuration. The Tree plot is one of three visualizations that can accommodate both numeric and text-based data.
           </span>
         </div>
       </div>
@@ -523,7 +515,7 @@
       </div>
       <div class="modal-body" style="text-align: center;">
         <div class="img-container">
-          <img src="{% static 'home/images/DataMapper/cluster_modal.png' %}" width="50%" height="40%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/Cluster_icon.png' %}" width="50%" height="40%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>The Cluster plot clusters user-uploaded receptors based on their <i>sequence similarity</i> across their shared
@@ -551,7 +543,7 @@
       </div>
       <div class="modal-body">
         <div class="img-container" style="text-align: center;">
-          <img src="{% static 'home/images/DataMapper/list_modal.png' %}" width="60%" height="30%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/List_icon.png' %}" width="60%" height="30%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>
@@ -579,7 +571,7 @@
       </div>
       <div class="modal-body">
         <div class="img-container" style="text-align: center;">
-          <img src="{% static 'home/images/DataMapper/heatmap_modal.png' %}" width="60%" height="30%" style='margin-top: 10px'>
+          <img src="{% static 'home/images/DataMapper/Heatmap_icon.png' %}" width="60%" height="30%" style='margin-top: 10px'>
         </div>
         <div style="margin-top: 10px;font-size: 15px;">
           <span>
@@ -616,8 +608,7 @@
               <b>class T2</b> and <b>class F</b>.
               In each class, receptors are listed alphabetically, first by their <i>receptor family</i> (not shown) and secondly,
               by the <i>receptor name</i>. Data is mapped to a circular band divided in sections next to the name of the receptors
-              for the subset of those that was uploaded by the user, as shown in the above image. Data can be submitted either as <b>discrete</b>
-              data (Yes, No or blank), or as <b>continuous</b> values. In the former case data will be shown
+              for the subset of those that was uploaded by the user, as shown in the above image. Data can be submitted either as numberic or text based.
           </span>
         </div>
       </div>

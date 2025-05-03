@@ -15,8 +15,9 @@
 <div>
     Receptor names:
     <div class="btn-group" role="group" id="gtp_plus">
-        <button id="Heatmap_UniProtNames" class="btn btn-info active">UniProt</button>
-        <button id="Heatmap_IUPHARNames" class="btn btn-info">GtPdb</button>
+        <button id="Heatmap_IUPHARNames" class="btn btn-info active">GtPdb</button>
+        <button id="Heatmap_GeneNames" class="btn btn-info">Gene</button>
+        <button id="Heatmap_UniProtNames" class="btn btn-info">UniProt</button>
     </div>
 </div>
 </div>
@@ -110,14 +111,42 @@
 <!-- # Label modifier  # -->
 <!-- ################### -->
 <div class="col-md-2">
-<div class="dropdown" style="width: 400px !important;">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="LabelModifier_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    Label Modifier
-    </button>
-    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="LabelModifier_Menu">
-    <div id="dynamicInputs" class="p-3"></div>
+<!-- Edit labels -->
+<div class="col-md-1" style="margin-left: 10px;margin-right: -40px;">
+    <div class="dropdown" style="width: 400px;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Label_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Edit X Labels
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot p-3" aria-labelledby="Label_Menu" style="width: 380px; padding-left: 15px;">
+  
+        <div class="form-group mb-3">
+          <label for="labelInput_Value1" class="form-label" style="text-align: left; width: 20%;">Dataset 1</label>
+          <input type="text" maxlength="25" class="form-control" id="labelInput_Value1" value="Dataset 1" oninput="updateLabel('Value1')">
+        </div>
+  
+        <div class="form-group mb-3">
+          <label for="labelInput_Value2" class="form-label" style="text-align: left; width: 20%;">Dataset 2</label>
+          <input type="text" maxlength="25" class="form-control" id="labelInput_Value2" value="Dataset 2" oninput="updateLabel('Value2')">
+        </div>
+  
+        <div class="form-group mb-3">
+          <label for="labelInput_Value3" class="form-label" style="text-align: left; width: 20%;">Dataset 3</label>
+          <input type="text" maxlength="25" class="form-control" id="labelInput_Value3" value="Dataset 3" oninput="updateLabel('Value3')">
+        </div>
+  
+        <div class="form-group mb-3">
+            <label for="labelInput_Value4" class="form-label" style="text-align: left; width: 20%;">Dataset 4</label>
+            <input type="text" maxlength="25" class="form-control" id="labelInput_Value4" value="Dataset 4" oninput="updateLabel('Value4')">
+        </div>
+
+        <div class="form-group mb-3">
+            <label for="labelInput_Value5" class="form-label" style="text-align: left; width: 20%;">Dataset 5</label>
+            <input type="text" maxlength="25" class="form-control" id="labelInput_Value5" value="Dataset 5" oninput="updateLabel('Value5')">
+        </div>
+  
+      </div>
     </div>
-</div>
+  </div>
 </div>
 
 <!-- ################# -->
@@ -230,9 +259,8 @@ $(document).ready(function() {
 
 var heatmap = {{ heatmap_data|safe }};
 var label_converter = {{ Label_converter|safe }};
-// var label_x_converter = {{Heatmap_Label_dict|safe}};
 
-var label_x_converter = {'Value1':'bob','Value2':'Bob number2','Value3':'Bobber','Value4':'Bobbilious','Value5':'Non-Bob'}
+var label_x_converter = {'Value1':'Dataset 1','Value2':'Dataset 2','Value3':'Dataset 3','Value4':'Dataset 4','Value5':'Dataset 5'}
 
 var heatmap_DataStyling = heatmap_DataStyling();
 
@@ -253,6 +281,18 @@ $('.dropdown-menu').on('click', function(event){
 event.stopPropagation();
 });
 
+// Function to update a label and redraw the legend
+function updateLabel(category) {
+    var inputId = "labelInput_" + category;
+    var newValue = document.getElementById(inputId).value;
+
+    // Update the Label_dict
+    label_x_converter[category] = newValue;
+    console.log(category,label_x_converter[category])
+
+    // Now re-run your createLegendBars with updated labels
+    Heatmap_updateVisualization();
+}
 
 // ###################
 // ## Color styling ##
@@ -468,6 +508,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
 $("#Heatmap_UniProtNames").click(function() {
     $("#Heatmap_UniProtNames").addClass("active");
+    $("#Heatmap_GeneNames").removeClass("active");
     $("#Heatmap_IUPHARNames").removeClass("active");
     heatmap_DataStyling.LabelType = 'UniProt';
     Heatmap_updateVisualization();
@@ -475,8 +516,17 @@ $("#Heatmap_UniProtNames").click(function() {
 
 $("#Heatmap_IUPHARNames").click(function() {
     $("#Heatmap_UniProtNames").removeClass("active");
+    $("#Heatmap_GeneNames").removeClass("active");
     $("#Heatmap_IUPHARNames").addClass("active");
     heatmap_DataStyling.LabelType = 'IUPHAR';
+    Heatmap_updateVisualization();
+});
+
+$("#Heatmap_GeneNames").click(function() {
+    $("#Heatmap_UniProtNames").removeClass("active");
+    $("#Heatmap_IUPHARNames").removeClass("active");
+    $("#Heatmap_GeneNames").addClass("active");
+    heatmap_DataStyling.LabelType = 'Gene';
     Heatmap_updateVisualization();
 });
 

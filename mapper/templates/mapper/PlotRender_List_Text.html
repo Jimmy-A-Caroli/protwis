@@ -228,54 +228,6 @@
         </div>
       </div>
     </div>
-    <!-- Edit labels -->
-    <div class="col-md-1" style="margin-left: 10px;margin-right: -40px;">
-      <div class="dropdown" style="width: 400px;">
-        <button class="btn btn-primary dropdown-toggle" type="button" id="Label_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          Edit legend Labels
-        </button>
-        <div class="dropdown-menu dropdown-menu-listplot p-3" aria-labelledby="Label_Menu" style="width: 380px; padding-left: 15px;">
-    
-          <div class="form-group mb-3">
-            <label for="labelInput_Col1" class="form-label" style="text-align: left; width: 20%;">Dataset 1</label>
-            <input type="text" maxlength="25" class="form-control" id="labelInput_Col1" value="Dataset 1" oninput="updateLabel('Col1')">
-          </div>
-    
-          <div class="form-group mb-3">
-            <label for="labelInput_Col2" class="form-label" style="text-align: left; width: 20%;">Dataset 2</label>
-            <input type="text" maxlength="25" class="form-control" id="labelInput_Col2" value="Dataset 2" oninput="updateLabel('Col2')">
-          </div>
-    
-          <div class="form-group mb-3">
-            <label for="labelInput_Col3" class="form-label" style="text-align: left; width: 20%;">Dataset 3</label>
-            <input type="text" maxlength="25" class="form-control" id="labelInput_Col3" value="Dataset 3" oninput="updateLabel('Col3')">
-          </div>
-    
-          <div class="form-group mb-3">
-            <label for="labelInput_Col4" class="form-label" style="text-align: left; width: 20%;">Dataset 4</label>
-            <input type="text" maxlength="25" class="form-control" id="labelInput_Col4" value="Dataset 4" oninput="updateLabel('Col4')">
-          </div>
-    
-        </div>
-      </div>
-    </div>
-
-
-  <!-- ##################### -->
-  <!-- ##  Data styling   ## -->
-  <!-- ##################### -->
-  <div class="col-md-1" style="margin-left: 80px;margin-right: -20px;">
-    <div class="dropdown" style="width: 450px !important;">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="Data_Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Data Styling
-      </button>
-      <div class="dropdown-menu dropdown-menu-listplot" style="margin-left: -8px;" aria-labelledby="Data_Styling_Menu">
-        <!-- Data Selector Dropdown -->
-        <!-- Container for dynamically generated data styling -->
-        <div id="ListPlot_DataStylingContainer" class="col-md-12" style="width:600px;"></div>
-      </div>
-    </div>
-  </div>
 
   <!-- ##################### -->
   <!-- ## Download button ## -->
@@ -369,8 +321,9 @@ var Label_conversion_dicts = {{Label_Conversion|safe}};
 
 var modded_list_data = Initialize_Data(listdata);
 
+console.log(list_data_wow)
 
-data_types_list = {'Col1':'Continuous', 'Col2':'Continuous', 'Col3':'Continuous', 'Col4':'Continuous'}
+data_types_list = {'Col1':'Discrete', 'Col2':'Discrete', 'Col3':'Discrete', 'Col4':'Discrete'}
 
 // #################################
 // ## Initialize global variables ##
@@ -442,11 +395,13 @@ function Listplot_render_visualization(){
   var layout_spacing = Calculate_dimension(Data_array, Data_Category_array, Col_break_number, Layout_dict.columns, Label_conversion_dicts, Label_names, Styling_Option_dict);
   RenderListPlot_Labels(Data_array,Data_Category_array, 'ListPlot',Styling_Option_dict,Layout_dict,Label_conversion_dicts,Label_names);
   data_visualization(Data_array, Data_Category_array, 'ListPlot', Layout_dict, Data_styling, layout_spacing,30,6,14,Barlabels);
+  CreateTextLegend_list('ListPlot', list_data_wow);
 }
 
 document.addEventListener("DOMContentLoaded", function() {
   initializeStyling();
   Listplot_render_visualization();
+  
 });
 
 // Function to update a label and redraw the legend
@@ -587,158 +542,6 @@ addEventListeners();
 
 // Trigger initialization when the document is fully loaded
 document.addEventListener("DOMContentLoaded", initializeStylingOptions);
-
-// ###################
-// ## Data styling ##
-// ###################
-
-/// Function to dynamically generate color styling options for continuous data columns
-function populateListPlotStyling() {
-var container = document.getElementById('ListPlot_DataStylingContainer');
-
-// Clear existing content
-container.innerHTML = '';
-
-// Loop through Data_styling and add rows for columns with Data: "Yes" and Datatype: "Continuous"
-Object.keys(Data_styling).forEach(function(column) {
-    if (Data_styling[column].Data === "Yes" && Data_styling[column].Datatype === 'Continuous') {
-
-    // Create a new row for each continuous data column
-    var row = document.createElement('div');
-    row.className = 'col-md-12';
-    row.style = 'width:550px; margin-top: 20px;margin-bottom: 20px;';
-
-    // Create the column label
-    var label = document.createElement('h5');
-    label.textContent = 'Data Column ' + column.substr(3);  // Extract number from column name
-    row.appendChild(label);
-
-    // Create the dropdown for choosing the style (White-Color, Color-Color, Color-White-Color)
-    var styleDropdown = document.createElement('select');
-    styleDropdown.id = `${column}_Style`;
-    styleDropdown.className = 'form-select';
-    styleDropdown.style = 'height: 30px; width: 150px;';
-    styleDropdown.innerHTML = `
-        <option value="White-Color">White-Color</option>
-        <option value="Color-Color">Color-Color</option>
-        <option value="Color-White-Color">Color-White-Color</option>
-    `;
-    //
-    row.appendChild(styleDropdown);
-
-    // Create color picker for the min color
-    var minColorPicker = document.createElement('input');
-    minColorPicker.type = 'text';
-    minColorPicker.id = `${column}_ColorPicker_min`;
-    minColorPicker.placeholder = 'Min Color';
-    minColorPicker.style = 'width: 100px; margin-left: 20px;';
-    row.appendChild(minColorPicker);
-
-    // Create color picker for the middle color (always disabled)
-    var middleColorPicker = document.createElement('input');
-    middleColorPicker.type = 'text';
-    middleColorPicker.id = `${column}_ColorPicker_middle`;
-    middleColorPicker.placeholder = 'Middle Color';
-    middleColorPicker.style = 'width: 100px; margin-left: 20px;';
-    row.appendChild(middleColorPicker);
-
-    // Create color picker for the max color
-    var maxColorPicker = document.createElement('input');
-    maxColorPicker.type = 'text';
-    maxColorPicker.id = `${column}_ColorPicker_max`;
-    maxColorPicker.placeholder = 'Max Color';
-    maxColorPicker.style = 'width: 100px; margin-left: 20px;';
-    row.appendChild(maxColorPicker);
-
-    // Append the row to the container
-    container.appendChild(row);
-
-    // Initialize color pickers for min and max colors
-    initialize_ListPlot_ColorPicker(`${column}_ColorPicker_min`, Data_styling[column].Data_color1, column, 'min');
-    initialize_ListPlot_ColorPicker(`${column}_ColorPicker_middle`, '#FFFFFF', column, 'middle'); // Always static and disabled
-    initialize_ListPlot_ColorPicker(`${column}_ColorPicker_max`, Data_styling[column].Data_color2, column, 'max');
-
-    // Disable middle color picker
-    handleColorPickerState(`${column}_ColorPicker_middle`, 'disable');
-
-    // Handle Dropdown Changes to map to data_color_complexity and control pickers
-    handleListPlotDropdownChanges(column);
-    }
-});
-}
-
-// Function to initialize Spectrum color pickers for list plot
-function initialize_ListPlot_ColorPicker(elementId, start_color, column, type) {
-$("#" + elementId).spectrum({
-    color: start_color,
-    showPalette: true,
-    showInput: true,
-    preferredFormat: "hex",
-    palette: [
-    ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
-    ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
-    ["#800000", "#808000", "#008000", "#800080", "#008080"],
-    ["#000080"]
-    ],
-    change: function(color) {
-    // Store the color in Data_styling for this column and type
-    if (type === 'min') {
-        Data_styling[column].Data_color1 = color.toHexString();
-    } else if (type === 'max') {
-        Data_styling[column].Data_color2 = color.toHexString();
-    }
-    updateVisualization_list();  // Call function to update the visualization
-    },
-    move: function(color) {
-    // Store the color in Data_styling for this column and type
-    if (type === 'min') {
-        Data_styling[column].Data_color1 = color.toHexString();
-    } else if (type === 'max') {
-        Data_styling[column].Data_color2 = color.toHexString();
-    }
-    updateVisualization_list();  // Call function to update the visualization
-    }
-});
-}
-
-// Function to handle dropdown changes for data_color_complexity
-function handleListPlotDropdownChanges(column) {
-var dropdown = document.getElementById(`${column}_Style`);
-
-dropdown.addEventListener('change', function() {
-    var selectedOption = this.value;
-
-    if (selectedOption === "White-Color") {
-    // Set data_color_complexity to "One"
-    Data_styling[column].data_color_complexity = 'One';
-    handleColorPickerState(`${column}_ColorPicker_min`, 'disable');
-    } else if (selectedOption === "Color-Color") {
-    // Set data_color_complexity to "Two"
-    Data_styling[column].data_color_complexity = 'Two';
-    handleColorPickerState(`${column}_ColorPicker_min`, 'enable');
-    } else if (selectedOption === "Color-White-Color") {
-    // Set data_color_complexity to "Three"
-    Data_styling[column].data_color_complexity = 'Three';
-    handleColorPickerState(`${column}_ColorPicker_min`, 'enable');
-    }
-
-    updateVisualization_list();  // Call function to update the visualization
-});
-}
-
-// Function to disable or enable color pickers
-function handleColorPickerState(elementId, action) {
-if (action === 'disable') {
-    $("#" + elementId).spectrum("disable");
-} else if (action === 'enable') {
-    $("#" + elementId).spectrum("enable");
-}
-}
-
-
-// Call this function to populate options for continuous data columns
-populateListPlotStyling();
-
 
 // ###################
 // ## Label switch ###

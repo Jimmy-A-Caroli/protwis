@@ -335,126 +335,93 @@ function changeLeavesLabels(location, value, dict) {
 
 // Draw the circles (data) of the tree plot
 
-function DrawCircles(location, data, starter, dict, clean = true, gradient = true, circle_styling_dict, circle_spacer, circle_size) {
+function DrawCircles(location, data, starter, dict, clean = true, gradient = true, circle_styling_dict = {}, circle_spacer = 10, circle_size = 5, mode = "Numeric") {
     var svg = d3.select('#' + location);
     var node = svg.selectAll(".node");
 
     if (clean === true) {
-        node.selectAll("circle.outerCircle, circle.innerCircle").remove();  // Remove previously drawn circles (both outer and inner)
+        node.selectAll("circle.outerCircle, circle.innerCircle").remove();
     }
 
     var spacer = circle_spacer;
-
-    // Initialize a dictionary to store min and max values for each unit
     var minMaxValues = {};
 
-    // First pass: Determine min and max values for each unit (including 'Inner')
-    for (var x in data) {
-        var keys = Object.keys(data[x]);
-        for (var unit of keys) {
-            if (!minMaxValues[unit]) {
-                minMaxValues[unit] = { min: Infinity, max: -Infinity };
-            }
-            var value = data[x][unit];
-            if (value < minMaxValues[unit].min) {
-                minMaxValues[unit].min = value;
-            }
-            if (value > minMaxValues[unit].max) {
-                minMaxValues[unit].max = value;
+    // Compute min/max values only for Numeric mode
+    if (mode === "Numeric") {
+        for (var x in data) {
+            var keys = Object.keys(data[x]).filter(key =>
+                ["Inner", "Outer1", "Outer2", "Outer3", "Outer4", "Outer5"].includes(key)
+            );
+            for (var unit of keys) {
+                if (!minMaxValues[unit]) {
+                    minMaxValues[unit] = { min: Infinity, max: -Infinity };
+                }
+                var value = data[x][unit];
+                if (value < minMaxValues[unit].min) minMaxValues[unit].min = value;
+                if (value > minMaxValues[unit].max) minMaxValues[unit].max = value;
             }
         }
     }
 
-    // Second pass: Draw the circles for both "Inner" and "Outer" units
     for (var x in data) {
-        var keys = Object.keys(data[x]);
+        // Filter keys based on mode
+        var keys = Object.keys(data[x]).filter(key => {
+            if (mode === "Numeric") {
+                return ["Inner", "Outer1", "Outer2", "Outer3", "Outer4", "Outer5"].includes(key);
+            } else if (mode === "Text") {
+                return key === "Inner";
+            }
+            return false;
+        });
 
         for (var unit of keys) {
-            var leaf = svg.selectAll('g[id=X' + x + ']');  // Use the node positions from the tree
+            var leaf = svg.selectAll('g[id=X' + x + ']');
+            var isInner = unit === 'Inner';
+            var className = isInner ? "innerCircle" : "outerCircle";
 
-            if (unit === 'Inner') {
-                // Draw 'Inner' circle at the node position
+            var transform = isInner
+                ? "translate(0,0)"
+                : "translate(" + (Math.ceil(starter) + (Object.keys(dict).indexOf(unit) + 1) * spacer) + ",0)";
+
+            var fillColor = "#FFFFFF"; // Default color
+
+            if (mode === "Numeric") {
                 if (dict[unit]) {
                     var value = data[x][unit];
                     var minValue = minMaxValues[unit].min;
                     var maxValue = minMaxValues[unit].max;
-
-                    // Determine the styling for the 'Inner' unit
                     var styling = circle_styling_dict[unit] || "Two";
 
-                    // Create color scale based on min and max values
                     var colorScale;
                     if (styling === "One") {
                         colorScale = d3.scale.linear()
                             .domain([minValue, maxValue])
                             .range(["#FFFFFF", dict[unit][1]]);
                     } else if (styling === "Three") {
-                        // Three-color gradient with white in the middle
                         colorScale = d3.scale.linear()
                             .domain([minValue, (minValue + maxValue) / 2, maxValue])
                             .range([dict[unit][0], "#FFFFFF", dict[unit][1]]);
                     } else {
-                        // Two-color gradient
                         colorScale = d3.scale.linear()
                             .domain([minValue, maxValue])
                             .range(dict[unit]);
                     }
 
-                    // Calculate color using the color scale
-                    var color = gradient ? colorScale(value) : dict[unit][0];  // Use the first color if no gradient
-
-                    // Append the 'Inner' circle
-                    leaf.append("circle")
-                        .attr("r", circle_size)  // Draw 'Inner' circle
-                        .attr("class", "innerCircle")  // Add class to distinguish inner circles
-                        .style("stroke", "black")  // Use the first color for the stroke
-                        .style("stroke-width", 0.8)
-                        .style("fill", color)
-                        .attr("transform", "translate(0,0)");  // Draw at the center of the node
+                    fillColor = gradient ? colorScale(value) : dict[unit][0];
                 }
-            } else {
-                // Draw 'Outer' circles based on the unit
-                if (dict[unit]) {
-                    var value = data[x][unit];
-                    var minValue = minMaxValues[unit].min;
-                    var maxValue = minMaxValues[unit].max;
-
-                    // Determine the styling for the outer units
-                    var styling = circle_styling_dict[unit] || "Two";
-
-                    // Create color scale based on min and max values
-                    var colorScale;
-                    if (styling === "One") {
-                        colorScale = d3.scale.linear()
-                            .domain([minValue, maxValue])
-                            .range(["#FFFFFF", dict[unit][1]]);
-                    } else if (styling === "Three") {
-                        // Three-color gradient with white in the middle
-                        colorScale = d3.scale.linear()
-                            .domain([minValue, (minValue + maxValue) / 2, maxValue])
-                            .range([dict[unit][0], "#FFFFFF", dict[unit][1]]);
-                    } else {
-                        // Two-color gradient
-                        colorScale = d3.scale.linear()
-                            .domain([minValue, maxValue])
-                            .range(dict[unit]);
-                    }
-
-                    // Calculate color using the color scale
-                    var color = gradient ? colorScale(value) : dict[unit][0];  // Use the first color if no gradient
-
-                    var multiply = 1 + Object.keys(dict).indexOf(unit);  // For spacing between outer circles
-
-                    // Append the outer circles, position them with `circle_spacer`
-                    leaf.append("circle")
-                        .attr("r", circle_size)
-                        .attr("class", "outerCircle")  // Add class to distinguish outer circles
-                        .style("stroke", "black")  // Use the first color for the stroke
-                        .style("stroke-width", 0.8)
-                        .style("fill", color)
-                        .attr("transform", "translate(" + (Math.ceil(starter) + multiply * spacer) + ",0)");
+            } else if (mode === "Text") {
+                if (data[x] && "ColorValue" in data[x]) {
+                    fillColor = data[x].ColorValue;
                 }
             }
+
+            leaf.append("circle")
+                .attr("r", circle_size)
+                .attr("class", className)
+                .style("stroke", "black")
+                .style("stroke-width", 0.8)
+                .style("fill", fillColor)
+                .attr("transform", transform);
         }
     }
 }
@@ -617,6 +584,109 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             .text(`${midValue}`);
     });
 }
+
+function CreateTextLegend(location, circle_data) {
+    const svg = d3.select('#' + location + ' svg');
+
+    // Remove any existing legend group
+    svg.selectAll(".legend-group").remove();
+
+    const legendGroup = svg.append("g")
+        .attr("class", "legend-group")
+        .attr("transform", `translate(0, 0)`); // You can adjust if needed
+
+    const spacingY = 25;
+    const padding = 10;
+    const startX = 50;
+    const startY = 40;
+    let x = startX;
+    let y = startY;
+
+    const LegendFontStyle = "Arial";
+    const LegendFontSize = "11px";
+
+    const legendItems = new Set();
+
+    // Extract unique (color, label) pairs
+    Object.entries(circle_data).forEach(([key, value]) => {
+        if (value.Inner && value.ColorValue) {
+            const pairKey = `${value.ColorValue}|||${value.Inner}`;
+            legendItems.add(pairKey);
+        }
+    });
+
+    const sortedItems = Array.from(legendItems)
+        .filter(pair => {
+            const [color, label] = pair.split("|||");
+            return !(color === "#FFFFFF" && label === "Empty");
+        })
+        .sort((a, b) => {
+            const labelA = a.split("|||")[1];
+            const labelB = b.split("|||")[1];
+            return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+    // Create a temp text element to measure label width
+    const tempText = svg.append("text")
+        .attr("x", -9999)
+        .attr("y", -9999)
+        .style("font-size", LegendFontSize)
+        .style("font-family", LegendFontStyle);
+
+    const svgNode = svg.node();
+    const svgWidth = svgNode ? svgNode.getBoundingClientRect().width : 800; // fallback to 800 if undetectable
+    const maxItemWidth = svgWidth - 100;
+
+    sortedItems.forEach(pairKey => {
+        let [color, label] = pairKey.split("|||");
+
+        tempText.text(label);
+        const labelWidth = tempText.node().getComputedTextLength();
+        const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+        // If label is too wide, truncate
+        if (totalWidth > maxItemWidth) {
+            label = "⚠ Too long label";
+            tempText.text(label);
+        }
+
+        const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+        if (x + fixedWidth > svgWidth - 50) {
+            x = startX;
+            y += spacingY;
+        }
+
+        legendGroup.append("circle")
+            .attr("cx", x)
+            .attr("cy", y)
+            .attr("r", 6)
+            .style("fill", color)
+            .style("stroke", "black");
+
+        legendGroup.append("text")
+            .attr("x", x + 10)
+            .attr("y", y + 4)
+            .attr("text-anchor", "start")
+            .style("font-size", LegendFontSize)
+            .style("font-family", LegendFontStyle)
+            .text(label);
+
+        x += fixedWidth;
+    });
+
+    tempText.remove();
+
+    // Optionally adjust SVG height dynamically if needed
+    const requiredHeight = y + spacingY;
+    if (svgNode && svg.attr("height")) {
+        const currentHeight = parseInt(svg.attr("height"));
+        if (requiredHeight > currentHeight) {
+            svg.attr("height", requiredHeight + 20);
+        }
+    }
+}
+
 
 // #################
 // ###  CLUSTER  ###
@@ -1657,7 +1727,7 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
 }
 
 // Handles the data visualization
-function data_visualization(data, category_data, location, Layout_dict, data_styling, spacing_dict,y_off_set_variable=30,data_size=6,data_fontsize_variable=14) {
+function data_visualization(data, category_data, location, Layout_dict, data_styling, spacing_dict,y_off_set_variable=30,data_size=6,data_fontsize_variable=14,BarLabels={}) {
 
     // ###########################
     // ## Initialize Variables  ##
@@ -1756,24 +1826,21 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     // ## Color Logic Function      ##
     // ###############################
 
-    function getShapeColor(column, data_value) {
+    function getShapeColor(column, data_value, receptorData = {}) {
         const column_styling = data_styling[column];
         let color = 'black';
-
+    
         if (column_styling.Datatype === 'Discrete') {
-            const Color_list = ['black', 'red', 'blue', 'green','white'];
-            if (data_value) {
-                const Discrete_values = ['yes','1']
-                data_value_modded = Discrete_values.includes(data_value.toLowerCase()) ? 'black' : 'white'
-                const valueString = String(data_value_modded); // Ensures data_value is converted to a string
-                color = Color_list.includes(valueString.toLowerCase()) ? valueString : 'black';
+            // Use ColorValue from receptorData
+            if (receptorData && receptorData.ColorValue) {
+                color = receptorData.ColorValue;
             } else {
                 color = 'black';
             }
         } else if (column_styling.Datatype === 'Continuous') {
             const gradientScale = d3.scale.linear()
                 .domain([column_styling.Data_min, column_styling.Data_max]);
-
+    
             if (column_styling.data_color_complexity === 'One') {
                 gradientScale.range(['#FFFFFF', column_styling.Data_color2]);
             } else if (column_styling.data_color_complexity === 'Two') {
@@ -1782,12 +1849,12 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                 gradientScale.range([column_styling.Data_color1, '#FFFFFF', column_styling.Data_color2])
                     .domain([column_styling.Data_min, (column_styling.Data_min + column_styling.Data_max) / 2, column_styling.Data_max]);
             }
-
+    
             color = gradientScale(data_value);
         }
-
+    
         return color;
-    }
+    }    
 
     // ###############################
     // ## Iterate through data rows ##
@@ -1831,25 +1898,25 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
 
                 // ### Column 1 ###
                 if (Col1_data_checker && (Col1_shape || Col1_data)) {
-                    const shape_color = (typeof Col1_data === 'number') ? getShapeColor('Col1', Col1_data) : 'black';
+                    const shape_color = getShapeColor('Col1', Col1_data, receptorData);
                     addShape(Shape_list.includes(Col1_shape) ? Col1_shape : 'circle', margin.left + xOffset + col1_XoffSet, yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 2 ###
                 if (Col2_data_checker && (Col2_shape || Col2_data)) {
-                    const shape_color = (typeof Col2_data === 'number') ? getShapeColor('Col2', Col2_data) : 'black';
+                    const shape_color = getShapeColor('Col2', Col2_data, receptorData);
                     addShape(Shape_list.includes(Col2_shape) ? Col2_shape : 'circle', margin.left + xOffset + col2_XoffSet, yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 3 ###
                 if (Col3_data_checker && (Col3_shape || Col3_data)) {
-                    const shape_color = (typeof Col3_data === 'number') ? getShapeColor('Col3', Col3_data) : 'black';
+                    const shape_color = getShapeColor('Col3', Col3_data, receptorData);
                     addShape(Shape_list.includes(Col3_shape) ? Col3_shape : 'circle', margin.left + xOffset + col3_XoffSet, yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 4 ###
                 if (Col4_data_checker && (Col4_shape || Col4_data)) {
-                    const shape_color = (typeof Col4_data === 'number') ? getShapeColor('Col4', Col4_data) : 'black';
+                    const shape_color = getShapeColor('Col4', Col4_data, receptorData);
                     addShape(Shape_list.includes(Col4_shape) ? Col4_shape : 'circle', margin.left + xOffset + col4_XoffSet, yOffset - 10, data_size, shape_color);
                 }
             }
@@ -1897,7 +1964,9 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
             const legend_svg = svg.append("g"); // Append group for the legend bar
             const gradientId = `Gradient_${column}`;
             const defs = svg.append('defs');
-
+            var BarText = (BarLabels && BarLabels[column]) 
+                ? BarLabels[column] 
+                : `Dataset ${column.substr(3)}`;
             // Add centered text on top of the bar specifying the data column
             legend_svg.append("text")
                 .attr('x', x_position + legendWidth / 2) // Center the text horizontally over the bar
@@ -1907,7 +1976,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                 .style("text-anchor", "middle") // Center the text horizontally
                 .style("font-weight", "bold")   // Make the text bold
                 .attr('id', `legend_${column.substr(3)}`)
-                .text(`Dataset ${column.substr(3)}`); // Use the column name as the text
+                .text(BarText); // Use the column name as the text
 
             // Gradient definition
             const gradient = defs.append('linearGradient')
@@ -2000,6 +2069,109 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     });
 }
 
+
+function CreateTextLegend_list(location, data) {
+    const svg = d3.select('#' + location + ' svg');
+
+    // Remove any existing legend group
+    svg.selectAll(".legend-group").remove();
+
+    const legendGroup = svg.append("g")
+        .attr("class", "legend-group")
+        .attr("transform", `translate(0, 0)`); // You can adjust if needed
+
+    const spacingY = 25;
+    const padding = 10;
+    const startX = 50;
+    const startY = 40;
+    let x = startX;
+    let y = startY;
+
+    const LegendFontStyle = "Arial";
+    const LegendFontSize = "11px";
+
+    const legendItems = new Set();
+
+    // Extract unique (color, label) pairs
+    Object.entries(data).forEach(([key, value]) => {
+        if (value.Value1 && value.ColorValue) {
+            const pairKey = `${value.ColorValue}|||${value.Value1}`;
+            legendItems.add(pairKey);
+        }
+    });
+
+    const sortedItems = Array.from(legendItems)
+        .filter(pair => {
+            const [color, label] = pair.split("|||");
+            return !(color === "#FFFFFF" && label === "Empty");
+        })
+        .sort((a, b) => {
+            const labelA = a.split("|||")[1];
+            const labelB = b.split("|||")[1];
+            return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+
+    // Create a temp text element to measure label width
+    const tempText = svg.append("text")
+        .attr("x", -9999)
+        .attr("y", -9999)
+        .style("font-size", LegendFontSize)
+        .style("font-family", LegendFontStyle);
+
+    const svgNode = svg.node();
+    const svgWidth = svgNode ? svgNode.getBoundingClientRect().width : 800; // fallback to 800 if undetectable
+    const maxItemWidth = svgWidth - 100;
+
+    sortedItems.forEach(pairKey => {
+        let [color, label] = pairKey.split("|||");
+
+        tempText.text(label);
+        const labelWidth = tempText.node().getComputedTextLength();
+        const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+        // If label is too wide, truncate
+        if (totalWidth > maxItemWidth) {
+            label = "⚠ Too long label";
+            tempText.text(label);
+        }
+
+        const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+        if (x + fixedWidth > svgWidth - 50) {
+            x = startX;
+            y += spacingY;
+        }
+
+        legendGroup.append("circle")
+            .attr("cx", x)
+            .attr("cy", y)
+            .attr("r", 6)
+            .style("fill", color)
+            .style("stroke", "black");
+
+        legendGroup.append("text")
+            .attr("x", x + 10)
+            .attr("y", y + 4)
+            .attr("text-anchor", "start")
+            .style("font-size", LegendFontSize)
+            .style("font-family", LegendFontStyle)
+            .text(label);
+
+        x += fixedWidth;
+    });
+
+    tempText.remove();
+
+    // Optionally adjust SVG height dynamically if needed
+    const requiredHeight = y + spacingY;
+    if (svgNode && svg.attr("height")) {
+        const currentHeight = parseInt(svg.attr("height"));
+        if (requiredHeight > currentHeight) {
+            svg.attr("height", requiredHeight + 20);
+        }
+    }
+}
+
 // #################
 // ###  HEATMAP  ###
 // #################
@@ -2018,7 +2190,7 @@ function heatmap_DataStyling() {
         data_border: true,
         data_fontsize: 12,
         legend_label: "Value intensity",
-        LabelType: 'UniProt'
+        LabelType: 'IUPHAR'
 
     }
     return heatmap_DataStyling
@@ -2058,6 +2230,9 @@ function handleRowLabels(textElement, label, labelType, fontSize) {
 
     if (labelType === 'UniProt') {
         transformedLabel = label.replace(/_human/g, '').toUpperCase();
+        textElement.text(transformedLabel);
+    } else if (labelType === 'Gene') {
+        transformedLabel = label_converter.UniProt_to_Gene_converter[label];
         textElement.text(transformedLabel);
     } else if (labelType === 'IUPHAR') {
 
@@ -2117,7 +2292,11 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
 
     // Convert Set to array
     const cols = Array.from(colSet);
-    const col_labels = cols.map(col => label_x_converter[col]);
+    const col_labels = cols.map((col, i) => {
+        const label = label_x_converter[col];
+        return (typeof label === 'string' && label.trim() !== '') ? label : `Dataset ${i + 1}`;
+      });
+    console.log(col_labels)
 
     const rotation = heatmap_DataStyling.rotation;
     const data_labels = heatmap_DataStyling.datalabels;
@@ -2149,47 +2328,71 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
 
     // Calculate the length of the longest data value
 
-    const longestDataValue = d3.max(chartData, d => Number(parseFloat(d.value).toFixed(1)).toString().length);
+    function measureTextSize(text, fontSize, fontFamily = 'sans-serif') {
+        // Create temporary SVG text element
+        const tempSvg = d3.select('body').append('svg')
+        .attr('class', 'temp-text-measurer')
+        .style('position', 'absolute')
+        .style('visibility', 'hidden');
 
-    // Calculate width based on the longest data value
-    const calculatedDataValueWidth = longestDataValue * 40 * (label_fontsize / 14);
+        const tempText = tempSvg.append('text')
+        .style('font-size', `${fontSize}px`)
+        .style('font-family', fontFamily)
+        .text(text);
 
+        const bbox = tempText.node().getBBox();
+        tempSvg.remove();  // Clean up
+
+        return { width: bbox.width, height: bbox.height };
+    }
+
+    // Measure the longest column label
+    let longestLabelSize = { width: 0, height: 0 };
+
+    col_labels.forEach(label => {
+    const size = measureTextSize(label, label_fontsize);
+    if (size.width > longestLabelSize.width) longestLabelSize.width = size.width;
+    if (size.height > longestLabelSize.height) longestLabelSize.height = size.height;
+    });
+
+    // Measure the longest numeric value as text
+    let longestDataValueText = '';
+    chartData.forEach(d => {
+    if (!isNaN(d.value)) {
+        const valText = Number(parseFloat(d.value).toFixed(1)).toString();
+        if (valText.length > longestDataValueText.length) {
+        longestDataValueText = valText;
+        }
+    }
+    });
+    const measuredDataValueSize = measureTextSize(longestDataValueText, label_fontsize);
+
+    // Set row label width
     if (rotation === 90 || rotation === 45) {
-        // Use the larger value between base width and calculated data value width for rotation
-        rowLabelWidth = Math.max(baseWidth, calculatedDataValueWidth);
+        rowLabelWidth = Math.max(baseWidth, measuredDataValueSize.height);
     } else {
-        // Calculate the width based on the longest column label
-        const calculatedLabelWidth = d3.max(col_labels, d => d.length * 40 * (label_fontsize / 14));
-
-        // Choose the maximum value between base width, calculated label width, and calculated data value width
-        rowLabelWidth = Math.max(baseWidth, calculatedLabelWidth, calculatedDataValueWidth);
+        rowLabelWidth = Math.max(baseWidth, longestLabelSize.width, measuredDataValueSize.width);
     }
 
-    // Calculate the longest column label length
-    const longestLabel = d3.max(col_labels, d => d.length);
-    if (label_position === 'Top') {
-        // Calculate the longest column label length from the data
-        const fontSize = label_fontsize; // Assuming a font size of 14px
-        // Adjust margin calculation with a scaling factor
-        if (rotation === 90) {
-            margin.top = longestLabel * (fontSize * 0.6); // Adding extra space for padding
-        }
+    // Adjust margin and legend position for top/bottom label placement
+    if (label_position === 'Top' && rotation === 90) {
+        margin.top = longestLabelSize.width + 20;  // Add padding
         legend_y_position = 0;
-    } else if (label_position === 'Bottom') {
-        if (rotation === 90) {
-             // Calculate the longest column label length from the data
-            const fontSize = label_fontsize; // Assuming a font size of 14px
-            legend_y_position = longestLabel * (fontSize * 0.55)
-        }
+    } else if (label_position === 'Bottom' && rotation === 90) {
+        legend_y_position = longestLabelSize.width;
+    } else if (label_position === 'Top' && rotation === 0) {
+        legend_y_position = 0;
     }
 
-    const width = (20 * cols.length) + rowLabelWidth;
+    const width = (rowLabelWidth * cols.length) + rowLabelWidth;
     const height = (20 * rows.length);
+    const adjustedTopMargin = (rotation === 90 && label_position === 'Top') ? longestLabelSize.width + 20 : margin.top;
+
     const svg_home = d3.select("#" + location)
-      .append("svg")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + (rotation === 90 ? (margin.top * longestLabel/3) : (margin.top*2))) // Needs to account for label length or something like it.
-      .attr("id", "Heatmap_plot_svg");
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + adjustedTopMargin * 2)
+        .attr("id", "Heatmap_plot_svg");
 
     //  x / y scale transformers
     const x = d3.scale.ordinal()
@@ -2235,7 +2438,8 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
         const text = d3.select(this);
 
         // Set text content based on label_x_converter
-        text.text(label_x_converter[col]);
+        const label = label_x_converter[col];
+        text.text((typeof label === 'string' && label.trim() !== '') ? label : `Dataset ${i + 1}`);
 
         if (rotation === 0) {
             text.style("text-anchor", "middle")
@@ -2414,14 +2618,11 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
       .style("text-anchor", "end")
       .text(Number(parseFloat(highest_value).toFixed(1)));
 
-    // Rerender height of plot as the last thing
-    let label_length_final;
-    if (rotation === 90) {
-        label_length_final = Math.ceil(-128.69+6.61*longestLabel+11.19*label_fontsize)
-        svg_home.attr("height",height + margin.bottom + label_length_final+55);
-    } else {
-        svg_home.attr("height",height + margin.bottom + 55 + 55);
-    }
+    // Rerender height of plot as the last thing using real label height
+    const extraPadding = 55;  // base padding
+    const labelHeightAdjustment = (rotation === 90) ? longestLabelSize.width + 20 : 30;
+
+    svg_home.attr("height", height + margin.bottom + labelHeightAdjustment + extraPadding);
 
   }
 

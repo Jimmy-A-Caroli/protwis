@@ -1298,28 +1298,55 @@ class DataMapperHome(TemplateView):
                                                         # Check if data row is in data and/or initialize it
                                                         if receptor not in Data:
                                                             Data[receptor] = {}
-                                                        # Check datatype -> Numeric or Text:
-                                                        if Plot_type in ('Numeric','Text'):
+                                                        # Check datatype -> Numeric:
+                                                        if Plot_type  == 'Numeric':
                                                             for i in range(1,7):
-                                                                # Check datatype -> Numeric
-                                                                if Plot_type == 'Numeric':
-                                                                    if row[i].value not in (None, ""):
-                                                                        try:
-                                                                            float_value = float(row[i].value)
-                                                                            if i == 1:
-                                                                                Data[receptor]['Inner'] = float_value
-                                                                            else:
-                                                                                Data[receptor]['Outer{}'.format(i-1)] = float_value
-                                                                        except ValueError:
-                                                                            Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
-                                                                # Check datatype -> Text
-                                                                elif Plot_type == 'Text':
-                                                                    if row[i].value not in (None, ""):
-                                                                        try:
-                                                                            Text_value = str(row[i].value)
-                                                                            Data[receptor]['Value{}'.format(i)] = Text_value
-                                                                        except ValueError:
-                                                                            Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Corrupted Value, not a string'
+
+                                                                if row[i].value not in (None, ""):
+                                                                    try:
+                                                                        float_value = float(row[i].value)
+                                                                        if i == 1:
+                                                                            Data[receptor]['Inner'] = float_value
+                                                                        else:
+                                                                            Data[receptor]['Outer{}'.format(i-1)] = float_value
+                                                                    except ValueError:
+                                                                        Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
+                                                        # ==== TEXT ====
+                                                        elif Plot_type == 'Text':
+                                                             
+                                                            DataValue = row[1].value
+                                                            color_fill_cell = row[2] if len(row) > 2 else None
+                                                            color_override_cell = row[3] if len(row) > 3 else None
+                                                            if DataValue not in (None, ""):
+                                                                try:
+                                                                    Data[receptor]['Inner'] = str(DataValue)
+                                                                except ValueError:
+                                                                    Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Corrupted Value, not a string'
+
+                                                            # Handle optional fill and override color
+                                                            color_fill = None
+                                                            color_override = None
+
+                                                            if color_fill_cell and color_fill_cell.fill:
+                                                                fgColor = color_fill_cell.fill.fgColor
+                                                                if fgColor and fgColor.type == 'rgb' and fgColor.rgb:
+                                                                    argb = fgColor.rgb
+                                                                    if len(argb) >= 6:
+                                                                        color_fill = f"#{argb[-6:]}"  # Use RRGGBB
+
+                                                            if color_override_cell and color_override_cell.value not in (None, ""):
+                                                                color_override = str(color_override_cell.value).strip()
+
+                                                            if color_override:
+                                                                if is_valid_color(color_override):
+                                                                    Data[receptor]['ColorValue'] = color_override
+                                                                else:
+                                                                    Incorrect_values.setdefault('GPCR Value (Column D)', {})[index] = 'Not a valid Hexcode'
+                                                                    Data[receptor]['ColorValue'] = "Black"
+                                                            elif color_fill:
+                                                                Data[receptor]['ColorValue'] = color_fill
+                                                            else:
+                                                                Data[receptor]['ColorValue'] = "Black"
                                                         else:
                                                             Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
                                                 # Check if any values are incorrect #
@@ -1486,15 +1513,15 @@ class DataMapperHome(TemplateView):
                                                 receptor = normalize_receptor_input(receptor_raw)
 
                                                 # Validate receptor
-                                                if receptor not in Proteins_GPCRomeTree:
+                                                if receptor not in all_proteins:
                                                     Incorrect_values.setdefault('GPCRs', {})[index] = f'"{receptor}" is an invalid entry for the  List plot.'
                                                     continue
 
                                                 if receptor not in Data:
                                                     Data[receptor] = {}
 
-                                                # Check datatype -> Numeric or Text
-                                                if Plot_type in ('Numeric', 'Text'):
+                                                # ==== NUMERIC ====
+                                                if Plot_type == 'Numeric':
                                                     for i in range(1, 5):
                                                         cell_value = row[i].value
                                                         col_label = 'GPCR Value (Column {})'.format(IndexToColumn[i])
@@ -1530,7 +1557,41 @@ class DataMapperHome(TemplateView):
                                                             # If a shape is missing but its associated numeric/text value (B–E) is present
                                                             if row[i - 4].value not in (None, ""):
                                                                 Data.setdefault(receptor, {})['Value{}'.format(i)] = 'Circle'
+                                                # ==== TEXT ====
+                                                elif Plot_type == 'Text':
+                                                    DataValue = row[1].value
+                                                    color_fill_cell = row[2] if len(row) > 2 else None
+                                                    color_override_cell = row[3] if len(row) > 3 else None
+                                                    if DataValue not in (None, ""):
+                                                        try:
+                                                            Data[receptor]['Value1'] = str(DataValue)
+                                                        except ValueError:
+                                                            Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Corrupted Value, not a string'
 
+                                                    # Handle optional fill and override color
+                                                    color_fill = None
+                                                    color_override = None
+
+                                                    if color_fill_cell and color_fill_cell.fill:
+                                                        fgColor = color_fill_cell.fill.fgColor
+                                                        if fgColor and fgColor.type == 'rgb' and fgColor.rgb:
+                                                            argb = fgColor.rgb
+                                                            if len(argb) >= 6:
+                                                                color_fill = f"#{argb[-6:]}"  # Use RRGGBB
+
+                                                    if color_override_cell and color_override_cell.value not in (None, ""):
+                                                        color_override = str(color_override_cell.value).strip()
+
+                                                    if color_override:
+                                                        if is_valid_color(color_override):
+                                                            Data[receptor]['ColorValue'] = color_override
+                                                        else:
+                                                            Incorrect_values.setdefault('GPCR Value (Column D)', {})[index] = 'Not a valid Hexcode'
+                                                            Data[receptor]['ColorValue'] = "Black"
+                                                    elif color_fill:
+                                                        Data[receptor]['ColorValue'] = color_fill
+                                                    else:
+                                                        Data[receptor]['ColorValue'] = "Black"
                                                 else:
                                                     Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.'
 
@@ -1608,7 +1669,7 @@ class DataMapperHome(TemplateView):
                                                     receptor = normalize_receptor_input(receptor_raw)
 
                                                     # Validate receptor
-                                                    if receptor not in Proteins_GPCRomeTree:
+                                                    if receptor not in all_proteins:
                                                         Incorrect_values.setdefault('GPCRs', {})[index] = f'"{receptor}" is an invalid entry for the Heatmap plot.'
                                                         continue
 
