@@ -101,16 +101,16 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
     if "smiles" in ids:
         std_smiles = standardize_smiles(ids["smiles"])
         if std_smiles:
-            parent = try_get_parent({"smiles": std_smiles, "parent__isnull": True})
+            parent = try_get_parent({"smiles":std_smiles, "parent__isnull":True})
 
     # Attempt using InChIKey if parent not yet found
     if not parent and "inchikey" in ids:
         head_inchi = ids["inchikey"].split('-')[0]
-        parent = try_get_parent({"clean_inchikey": head_inchi, "parent__isnull": True})
+        parent = try_get_parent({"clean_inchikey":head_inchi, "parent__isnull":True})
 
     # Attempt using sequence if still not found
     if not parent and "sequence" in ids:
-        parent = try_get_parent({"sequence": ids["sequence"], "parent__isnull": True})
+        parent = try_get_parent({"sequence":ids["sequence"], "parent__isnull":True})
 
     # Attempt using name if still not found (here need to add an exception)
     if not parent:
@@ -118,10 +118,10 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
             std_smiles = standardize_smiles(ids["smiles"])
             head_inchi = ids["inchikey"].split('-')[0]
             new_name = check_name(std_smiles, head_inchi, name)
-            if name != new_name
+            if name != new_name:
                 name = new_name
             else:
-                parent = try_get_parent({"name": name, "parent__isnull": True})
+                parent = try_get_parent({"name":name, "parent__isnull": True})
 
     # Finally, generate a parent if none was found
     if not parent:
@@ -606,7 +606,7 @@ def try_get_parent(query_params):
 def check_name(smiles, inchi, name):
     try:
         compound = pcp.get_compounds(smiles, "smiles")
-        parent_obj = Ligand.objects.get("name": name, "parent__isnull": True)
+        parent_obj = Ligand.objects.get(name=name, parent__isnull=True)
         input_mol = dm.to_mol(smiles, sanitize=True)
         if input_mol:
             # Calculate RDkit properties

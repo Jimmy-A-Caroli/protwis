@@ -6,8 +6,7 @@ from django.db import connection
 from django_rdkit import models as rdkit_models
 from django.contrib.postgres.indexes import GistIndex
 
-from common.models import WebResource
-from common.models import WebLink, Publication
+from common.models import WebLink, Publication, WebResource
 from common.tools import fetch_from_web_api
 from string import Template
 from structure.models import Structure
