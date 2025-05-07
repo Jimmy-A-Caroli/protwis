@@ -681,36 +681,27 @@ class DruggedGPCRome(TemplateView):
         proteins = list(Protein.objects.filter(entry_name__in=drug_count_receptor_dict.keys()
         ).values('entry_name', 'name').order_by('entry_name'))
 
-        names_conversion_dict = {item['entry_name']: item['name'] for item in proteins}
+        # Mapping for Value2
+        status_color_map = {
+            1: '#f5bcbf',
+            2: '#f17270',
+            3: '#dd2628',
+            4: '#2c87c8'
+        }
 
-        names = list(names_conversion_dict.values())
-        IUPHAR_to_uniprot_dict = {item['name']: item['entry_name'] for item in proteins}
+        # Creating the new dictionary
+        results_updated_dict = {
+            key: {
+                'Value1': value,
+                'Value2': status_color_map.get(value, '#FFFFFF')  # Default to black if key not found
+            }
+            for key, value in drug_count_receptor_dict.items()
+                }
 
-        families = ProteinFamily.objects.all()
-        datatree = {}
-        conversion = {}
+        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+        updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], results_updated_dict)
 
-        for item in families:
-            if len(item.slug) == 3 and item.slug not in datatree.keys():
-                datatree[item.slug] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 7 and item.slug not in datatree[item.slug[:3]].keys():
-                datatree[item.slug[:3]][item.slug[:7]] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 11 and item.slug not in datatree[item.slug[:3]][item.slug[:7]].keys():
-                datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
-                conversion[item.slug] = item.name
-            if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
-                datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
-
-        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
-        datatree2.pop('Parent family', None)
-        datatree3 = DataMapperHome.filter_dict(datatree2, names)
-        data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in drug_count_receptor_dict.items()}
-        Data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
-        context['GPCRome_data'] = json.dumps(Data_full["NameList"])
-        context['GPCRome_data_variables'] = json.dumps(Data_full['DataPoints'])
-        context['GPCRome_Label_Conversion'] = json.dumps(Data_full['LabelConversionDict'])
+        context['GPCRomeData'] = json.dumps(updated_data)
 
         #TREE SECTION
         drug_data = Drugs.objects.all().values_list('target__entry_name', 'ligand__name','indication_max_phase')
@@ -738,7 +729,7 @@ class DruggedGPCRome(TemplateView):
                 #     print(len(unique_entries),sorted(unique_entries))
                 drug_dict[target][key] = len(unique_entries)  # Replace the list with the count
 
-        tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(drug_dict)
+        tree, tree_options, circles, receptors, genes = DataMapperHome.generate_tree_plot(drug_dict)
         #Remove 0 circles
         for key, outer_dict in circles.items():
             circles[key] = {k: v for k, v in outer_dict.items() if v != 0}
@@ -746,7 +737,8 @@ class DruggedGPCRome(TemplateView):
         context['tree'] = json.dumps(tree)
         context['tree_options'] = tree_options
         context['circles'] = json.dumps(circles)
-        context['whole_dict'] = json.dumps(receptors)
+        context['Tree_Receptor_dict'] = json.dumps(receptors)
+        context['Tree_Entrez_dict'] = json.dumps(genes)
 
         #REPURPOSED TREE SECTION
         # Red: IndicationMaxPhase < 4 and MaxPhase (compound) < 4 [New agents in trial (lack approval)]
@@ -779,7 +771,7 @@ class DruggedGPCRome(TemplateView):
                 else:
                     drug_dict[drug[1]]['Outer1'] += 1
 
-        repurposed_tree, repurposed_tree_options, repurposed_circles, repurposed_receptors = DataMapperHome.generate_tree_plot(drug_dict)
+        repurposed_tree, repurposed_tree_options, repurposed_circles, repurposed_receptors, repurposed_genes = DataMapperHome.generate_tree_plot(drug_dict)
         #Remove 0 circles
         for key, outer_dict in repurposed_circles.items():
             repurposed_circles[key] = {k: v for k, v in outer_dict.items() if v != 0}
@@ -787,7 +779,8 @@ class DruggedGPCRome(TemplateView):
         context['rep_tree'] = json.dumps(repurposed_tree)
         context['rep_tree_options'] = repurposed_tree_options
         context['rep_circles'] = json.dumps(repurposed_circles)
-        context['rep_whole_dict'] = json.dumps(repurposed_receptors)
+        context['rep_Receptor_dict'] = json.dumps(repurposed_receptors)
+        context['rep_Entrez_dict'] = json.dumps(repurposed_genes)
 
         return context
 

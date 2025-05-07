@@ -2296,7 +2296,6 @@ function Heatmap(data, location, heatmap_DataStyling,label_x_converter) {
         const label = label_x_converter[col];
         return (typeof label === 'string' && label.trim() !== '') ? label : `Dataset ${i + 1}`;
       });
-    console.log(col_labels)
 
     const rotation = heatmap_DataStyling.rotation;
     const data_labels = heatmap_DataStyling.datalabels;
@@ -3881,6 +3880,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
     const ColorMax =  GPCRome_styling.colorEnd || "#000000";
     const ColorAvg = "#FFFFFF";
     const ShowLegend = GPCRome_styling.ShowLegend || false;
+    const LegendLabel = GPCRome_styling.LegendLabel || "";
 
 
     const svg = d3v4.select("#" + location)
@@ -3919,29 +3919,29 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
                 .attr("class", "toggle-image");  // Add a class to control visibility
         };
     }
-
     // If there is 5 circles ()
     if (Object.keys(Data).length === 5) {
-        Draw_a_GPCRome(Data.Circle_1, 0, dimensions)
-        Draw_a_GPCRome(Data.Circle_2, 1, dimensions)
-        Draw_a_GPCRome(Data.Circle_3, 2, dimensions)
-        Draw_a_GPCRome(Data.Circle_4, 3, dimensions)
-        Draw_a_GPCRome(Data.Circle_5, 4, dimensions)
+        Draw_a_GPCRome(Data.Circle_1, 0, 440, dimensions)
+        Draw_a_GPCRome(Data.Circle_2, 1, 355, dimensions)
+        Draw_a_GPCRome(Data.Circle_3, 2, 270, dimensions)
+        Draw_a_GPCRome(Data.Circle_4, 3, 185, dimensions)
+        Draw_a_GPCRome(Data.Circle_5, 4, 80, dimensions)
     } else if (Object.keys(Data).length === 4) {
-
+        Draw_a_GPCRome(Data.Circle_1, 0, 440, dimensions)
+        Draw_a_GPCRome(Data.Circle_2, 1, 345, dimensions)
+        Draw_a_GPCRome(Data.Circle_3, 2, 250, dimensions)
+        Draw_a_GPCRome(Data.Circle_4, 3, 140, dimensions)
     }
 
     // Now call Draw_a_GPCRome for both updated GPCRome_A and GPCRome_AO
 
-    function Draw_a_GPCRome(Data, level, dimensions) {
+    function Draw_a_GPCRome(Data, level, Radius, dimensions) {
 
         // Define SVG dimensions
         const width = dimensions.width;
         const height = dimensions.height;
         const label_offset = 7; // Increased offset to push labels outward
-        let GPCRome_radius;
-
-        GPCRome_radius = Math.min(width, height) / 2 - 60 - ((level === 4) ? (90 * level) : (85 * level)); // Radius for each GPCRome
+        let GPCRome_radius = Radius || Math.min(width, height) / 2 - 60 - ((level === 4) ? (90 * level) : (85 * level));
 
         function extractHeaders(circleData) {
             let CircleHeaders = Object.keys(circleData); // Top-level keys (Classes)
@@ -4498,11 +4498,12 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             const barY = legendPaddingTop;
             const BarFixedDigit = GPCRome_styling.LegendbarDigit || 2;
             const BarFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+            const uniqueGradientId = `gradient-bar-${location}`;
         
             // Create defs and linearGradient
             const defs = svg.append("defs");
             const gradient = defs.append("linearGradient")
-                .attr("id", "gradient-bar")
+                .attr("id", uniqueGradientId)
                 .attr("x1", "0%")
                 .attr("x2", "100%")
                 .attr("y1", "0%")
@@ -4523,7 +4524,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             } else if (ColorSetup === "Two") {
                 gradient.append("stop")
                     .attr("offset", "0%")
-                    .attr("stop-color", ColorMin || ColorMax);
+                    .attr("stop-color", ColorMin);
         
                 gradient.append("stop")
                     .attr("offset", "100%")
@@ -4531,7 +4532,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             } else {
                 gradient.append("stop")
                     .attr("offset", "0%")
-                    .attr("stop-color", ColorAvg);
+                    .attr("stop-color", "#FFFFFF");
         
                 gradient.append("stop")
                     .attr("offset", "100%")
@@ -4544,7 +4545,7 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
                 .attr("y", barY)
                 .attr("width", barWidth)
                 .attr("height", barHeight)
-                .style("fill", "url(#gradient-bar)")
+                .style("fill", `url(#${uniqueGradientId})`)
                 .style("stroke", "black");
         
             // Add min, avg (if needed), and max labels
@@ -4569,6 +4570,16 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
                         ? parseInt(MaxValue) 
                         : parseFloat(MaxValue).toFixed(BarFixedDigit);
                 });
+
+            // Add label above gradient bar if set
+            if (LegendLabel) {
+                legendGroup.append("text")
+                    .attr("x", barX + barWidth / 2)
+                    .attr("y", barY - 10)  // 10px above the bar
+                    .attr("text-anchor", "middle")
+                    .style("font-size", FontsizeGlobal)
+                    .text(LegendLabel);
+            }
 
         } else {
             const legendGroup = svg.append("g").attr("class", "legend-text-categories");

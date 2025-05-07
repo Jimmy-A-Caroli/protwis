@@ -494,6 +494,17 @@ class DataMapperHome(TemplateView):
 
             name_to_entry = {item['name']: item['entry_name'] for item in proteins}
 
+            entry_names = [item['entry_name'] for item in proteins]
+
+            # Fetch proteins with prefetch on genes
+            protein_genes = Protein.objects.prefetch_related('genes').filter(entry_name__in=entry_names)
+
+            # Create mapping from entry_name to gene name (position == 0 only)
+            entry_to_gene = {
+                protein.entry_name: next((g.name for g in protein.genes.all() if g.position == 0), None)
+                for protein in protein_genes
+            }
+
         else:
             raise ValueError(f"Unsupported data structure type: {type}")
 
@@ -636,6 +647,80 @@ class DataMapperHome(TemplateView):
             return {
                 "Data": GPCRome_dict
             }
+        if type == "Odorant" and GPCRomeStructureDict:
+            GPCRome_dict = {
+                "Circle_1": {},  # Family 1–4 from Class O2
+                "Circle_2": {},  # Family 5–9 from Class O2
+                "Circle_3": {},  # Family 10–14 from Class O2
+                "Circle_4": {}   # All of Class O1
+            }
+
+            for Class, ligand_types in GPCRomeStructureDict.items():
+                renamed_class = class_rename_map.get(Class, Class)
+
+                if Class == "Class O2 (tetrapod specific odorant)":
+                    sorted_families = []
+
+                    for Ligand_type, receptor_families in ligand_types.items():
+                        for Receptor_Family, receptors in receptor_families.items():
+                            try:
+                                family_number = int(Receptor_Family.replace("Odorant family", "").strip())
+                            except ValueError:
+                                continue
+
+                            sorted_families.append(
+                                (family_number, Ligand_type, Receptor_Family, receptors)
+                            )
+
+                    sorted_families.sort(key=lambda x: x[0])  # Sort numerically by family number
+
+                    for family_number, Ligand_type, Receptor_Family, receptors in sorted_families:
+                        renamed_family = f"Family {family_number}"
+                        if 1 <= family_number <= 4:
+                            circle = "Circle_1"
+                        elif 5 <= family_number <= 9:
+                            circle = "Circle_2"
+                        elif 10 <= family_number <= 14:
+                            circle = "Circle_3"
+                        else:
+                            continue  # Skip any outside defined ranges
+
+                        GPCRome_dict.setdefault(circle, {}).setdefault(renamed_class, {}).setdefault(Ligand_type, {})[renamed_family] = receptors
+
+                elif Class == "Class O1 (fish-like odorant)":
+                    renamed_ligand_types = {}
+
+                    for Ligand_type, receptor_families in ligand_types.items():
+                        renamed_receptor_families = {}
+
+                        for Receptor_Family, receptors in receptor_families.items():
+                            try:
+                                family_number = int(Receptor_Family.replace("Odorant family", "").strip())
+                                renamed_family = f"Family {family_number}"
+                            except ValueError:
+                                renamed_family = Receptor_Family  # fallback to original if parsing fails
+
+                            renamed_receptor_families[renamed_family] = receptors
+
+                        renamed_ligand_types[Ligand_type] = renamed_receptor_families
+
+                    GPCRome_dict["Circle_4"].setdefault(renamed_class, {}).update(renamed_ligand_types)
+
+            # Flatten ligand_type layer (remove ligand type level)
+            for circle in GPCRome_dict:
+                for class_name in list(GPCRome_dict[circle].keys()):
+                    new_structure = {}
+                    for ligand_type in GPCRome_dict[circle][class_name]:
+                        for receptor_family, receptors in GPCRome_dict[circle][class_name][ligand_type].items():
+                            new_structure[receptor_family] = receptors
+                    GPCRome_dict[circle][class_name] = new_structure
+
+            return {
+                "Data": GPCRome_dict
+            }
+
+
+
 
     @staticmethod
     def update_nested_GPCRome_data(structure_dict, raw_data):
