@@ -1,11 +1,13 @@
 #from django.db import connection
 #from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils.text import slugify
+from django.db import transaction
 
 from ligand.models import Ligand, LigandID, LigandType, LigandRole
 from common.models import WebResource
 from common.tools import get_or_create_url_cache, fetch_from_web_api, save_to_cache
+from collections import defaultdict, Counter
 
 import time
 import os
@@ -619,3 +621,136 @@ def check_name(smiles, inchi, name):
             return name
     except Ligand.DoesNotExist:
         return name
+
+#### Block for fixing mismatched LigandType assignment in Ligand model
+
+# map LigandType IDs:
+SMALL_MOLECULE = LigandType.objects.get(slug='small-molecule')
+PEPTIDE        = LigandType.objects.get(slug='peptide')
+PROTEIN        = LigandType.objects.get(slug='protein')
+UNKNOWN        = LigandType.objects.get(slug='na')
+
+def predict_type(ligand):
+    """
+    Predict small-molecule vs peptide vs protein from
+    the presence/length of sequence *or* the pattern of amide
+    bonds in SMILES if sequence is missing.
+    """
+    seq = (ligand.sequence or '').strip()
+    smiles = (ligand.smiles or '').strip()
+
+    # 1) If we actually have a sequence, use length
+    if seq:
+        return PEPTIDE if len(seq) <= 15 else PROTEIN
+
+    # 2) No sequence: look at SMILES
+    if smiles:
+        # count amide bonds (one per residue) in either orientation
+        smiles_up = smiles.upper()
+        count = (
+            smiles_up.count('NC(=O)')
+          + smiles_up.count('C(=O)N')
+        )
+
+        if count == 0:
+            return SMALL_MOLECULE
+        if count <= 15:
+            return PEPTIDE
+        return PROTEIN
+
+    # 3) nothing to go on
+    return UNKNOWN
+
+def score(item):
+    """
+    Same as before: (ligand, predicted_type) → numeric score
+    """
+    lig, pred = item
+    if pred in (PROTEIN, PEPTIDE):
+        return len(lig.sequence or '')      # longer is better
+    if pred == SMALL_MOLECULE:
+        return -(len(lig.smiles or ''))     # shorter is better
+    return float('-inf')
+
+def pick_canonical_type(children):
+    """
+    Given a list of Ligand children, returns the string
+    of the best ligand type (one of SMALL_MOLECULE, PEPTIDE, PROTEIN).
+    """
+    # 1) compute predictions
+    pairs = []
+    for lig in children:
+        pred = predict_type(lig)
+        pairs.append((lig, pred))
+
+    # 2) split into “matched” vs “unmatched” against actual
+    matched = []
+    for lig, pred in pairs:
+        actual = (lig.ligand_type.name.lower() if lig.ligand_type else UNKNOWN)
+        if pred == actual:
+            matched.append((lig, pred))
+
+    if matched:
+        candidates = matched
+    else:
+        # no actual matches → majority vote on predictions
+        counts = Counter(pred for _, pred in pairs)
+        most_common_pred, _ = counts.most_common(1)[0]
+        candidates = [(lig, pred) for lig, pred in pairs if pred == most_common_pred]
+
+    # 3) tie‐break by length heuristics
+    best_lig, best_pred = max(candidates, key=score)
+    return best_pred
+
+def resolve_all_parents():
+    """
+    Find all parents with children of mixed types,
+    and for each, choose the canonical child.
+    Returns a dict: parent_id → (chosen_ligand, [all_children])
+    """
+    from django.db.models import Count
+
+    # 1) find parent IDs with >1 distinct ligand_type among children
+    mixed_parents = (
+        Ligand.objects
+              .filter(parent__isnull=False)
+              .values('parent')
+              .annotate(cnt=Count('ligand_type', distinct=True))
+              .filter(cnt__gt=1)
+              .values_list('parent', flat=True)
+    )
+
+    # 2) fetch all children for those parents
+    qs = Ligand.objects.filter(parent_id__in=mixed_parents).select_related('ligand_type')
+
+    # 3) group in Python
+    by_parent = defaultdict(list)
+    for child in qs:
+        by_parent[child.parent_id].append(child)
+
+    # 4) pick canonical for each
+    result = {}
+    for pid, kids in by_parent.items():
+        result[pid] = (pick_canonical_type(kids), kids)
+
+    return result
+
+def apply_canonical_ligand_types():
+    """
+    For each parent with mixed‐type children,
+    determines the canonical LigandType (via pick_canonical_child),
+    then updates *all* those children—and the parent record itself—
+    to use that LigandType.
+    Returns the total number of rows updated.
+    """
+    mapping = resolve_all_parents()    # { parent_id: (best_type, [kids]) }
+    total_updated = 0
+
+    with transaction.atomic():
+        for parent_id, (best_type, kids) in mapping.items():
+            # collect children+p arent IDs
+            ids = [c.pk for c in kids] + [parent_id]
+            updated = Ligand.objects.filter(pk__in=ids).update(ligand_type=best_type)
+            total_updated += updated
+
+    return total_updated

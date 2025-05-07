@@ -1,5 +1,5 @@
 from build.management.commands.base_build import Command as BaseBuild
-from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent
+from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types
 from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError
@@ -266,6 +266,10 @@ class Command(BaseBuild):
         print("\n\nStarted calculating potency and affinity indexes")
         self.calculate_potency_and_affinity()
         print("Potency and affinity indexes have been added to the model")
+
+        print("\n\Fixing mismatched LigandType definition")
+        n  = apply_canonical_ligand_types()
+        print(f"\n\Updated LigandType on {n} records to their canonical type.")
 
     @staticmethod
     def purge_data():
