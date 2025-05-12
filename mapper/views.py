@@ -164,269 +164,7 @@ class DataMapperHome(TemplateView):
                 filtered_values = [v for v in value if v in elements]
                 if filtered_values:
                     filtered_dict[key] = filtered_values
-        return filtered_dict
-
-    @staticmethod
-    def generate_list_plot(listplot): #ADD AN INPUT FILTER DICTIONARY
-        # Generate the master dict of protein families
-
-        data = list(listplot.keys())
-        names = list(Protein.objects.filter(entry_name__in=data).values_list('name', flat=True))
-        # Names conversion dict
-        names_dict = Protein.objects.filter(entry_name__in=data).values('entry_name', 'name').order_by('entry_name')
-        names_conversion_dict = {item['entry_name']: item['name'] for item in names_dict}
-        IUPHAR_to_uniprot_dict = {item['name']: item['entry_name'] for item in names_dict}
-
-        families = ProteinFamily.objects.all()
-        datatree = {}
-        conversion = {}
-        for item in families:
-            if len(item.slug) == 3 and item.slug not in datatree.keys():
-                datatree[item.slug] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 7 and item.slug not in datatree[item.slug[:3]].keys():
-                datatree[item.slug[:3]][item.slug[:7]] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 11 and item.slug not in datatree[item.slug[:3]][item.slug[:7]].keys():
-                datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
-                conversion[item.slug] = item.name
-            if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
-                datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
-
-        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
-        datatree2.pop('Parent family', None)
-        datatree3 = DataMapperHome.filter_dict(datatree2, names)
-        data_converted = {names_conversion_dict[key]: value for key, value in listplot.items()}
-        Data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
-        return Data_full
-
-    @staticmethod
-    def generate_GPCRome_data(data):
-        #Adjust call to exclude odorants
-        all_proteins = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False, family_id__slug__startswith='0').exclude(
-                                            family_id__slug__startswith='007'
-                                        ).exclude(
-                                            family_id__slug__startswith='008'
-                                        )
-
-        result_dict = {}
-        for prot in all_proteins:
-            key = prot.entry_name
-            # Initialize the key in result_dict if not already present
-            if key not in result_dict:
-                result_dict[key] = '0'
-
-        for key in data:
-            if 'Value1' in data[key]:
-                if key in result_dict and bool(data[key]['Value1']):
-                    result_dict[key] = data[key]['Value1']
-
-        proteins = list(Protein.objects.filter(entry_name__in=result_dict.keys()
-            ).values('entry_name', 'name').order_by('entry_name'))
-
-        names_conversion_dict = {item['entry_name']: item['name'] for item in proteins}
-
-        names = list(names_conversion_dict.values())
-
-        IUPHAR_to_uniprot_dict = {item['name']: item['entry_name'] for item in proteins}
-
-        families = ProteinFamily.objects.all()
-        datatree = {}
-        conversion = {}
-
-        for item in families:
-            if len(item.slug) == 3 and item.slug not in datatree.keys():
-                datatree[item.slug] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 7 and item.slug not in datatree[item.slug[:3]].keys():
-                datatree[item.slug[:3]][item.slug[:7]] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 11 and item.slug not in datatree[item.slug[:3]][item.slug[:7]].keys():
-                datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
-                conversion[item.slug] = item.name
-            if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
-                datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
-
-        datatree2 = DataMapperHome.convert_keys(datatree, conversion)
-        datatree2.pop('Parent family', None)
-        datatree3 = DataMapperHome.filter_dict(datatree2, names)
-        data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in result_dict.items()}
-        data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
-
-        # Construct Master_dict for GPCRome wheel.
-        Master_dict = {}
-
-        for Class in data_full['NameList']:
-            Master_dict.setdefault(Class, {})
-
-            for Ligand_type in data_full['NameList'][Class]:
-                Master_dict[Class].setdefault(Ligand_type, {})
-
-                for Receptor_Family in data_full['NameList'][Class][Ligand_type]:
-                    Master_dict[Class][Ligand_type].setdefault(Receptor_Family, {})
-
-                    for Receptor in data_full['NameList'][Class][Ligand_type][Receptor_Family]:
-                        Master_dict[Class][Ligand_type][Receptor_Family].setdefault(Receptor, {})
-
-                        if Receptor in data_full['DataPoints']:
-                            receptor_data = data_full['DataPoints'][Receptor]
-
-                            if 'Value1' in receptor_data:
-                                Master_dict[Class][Ligand_type][Receptor_Family][Receptor]['Value1'] = receptor_data['Value1']
-                            
-                            if 'Value2' in receptor_data:
-                                Master_dict[Class][Ligand_type][Receptor_Family][Receptor]['Value2'] = receptor_data['Value2']
-
-        # Redistribute the entries from the master_dict into the GPCRome_dict.
-        # Initialize GPCRome_dict
-        GPCRome_dict = {
-            "Circle_1": {},
-            "Circle_2": {},
-            "Circle_3": {},
-            "Circle_4": {},
-            "Circle_5": {}
-        }
-
-        # Track how many Receptor Families have been added to Circle_1
-        class_A_receptor_families = 0
-
-        for Class, ligand_types in Master_dict.items():
-            
-            # Handle Class A (Rhodopsin) Separately
-            if Class == "Class A (Rhodopsin)":
-                sorted_receptor_families = []  # Collect receptor families for sorting
-                
-                for Ligand_type, receptor_families in ligand_types.items():
-                    # ** Skip "Orphan receptors" ligand type completely **
-                    if Ligand_type == "Orphan receptors":
-                        continue  
-
-                    for Receptor_Family in receptor_families:
-                        # ** Skip "Class A Orphans" in main processing **
-                        if Receptor_Family == "Class A Orphans":
-                            continue
-                        
-                        sorted_receptor_families.append((Ligand_type, Receptor_Family, receptor_families[Receptor_Family]))
-
-                # Sort receptor families alphabetically by Receptor_Family name
-                sorted_receptor_families.sort(key=lambda x: x[1])  
-
-                # Process sorted receptor families
-                for Ligand_type, Receptor_Family, receptors in sorted_receptor_families:
-                    # First 42 go into Circle_1
-                    target_circle = "Circle_1" if class_A_receptor_families < 43 else "Circle_2"
-
-                    # Insert data into the target circle using setdefault() to remove redundancy
-                    GPCRome_dict.setdefault(target_circle, {}).setdefault(Class, {}).setdefault(Ligand_type, {})[Receptor_Family] = receptors
-
-                    # Increment the count of Class A receptor families
-                    class_A_receptor_families += 1
-
-                # Move "Class A Orphans" into Circle_2 **only if not processed already**
-                if "Orphan receptors" in ligand_types and "Class A orphans" in ligand_types["Orphan receptors"]:
-                    print("bob")
-                    GPCRome_dict["Circle_2"].setdefault(Class, {}).setdefault("Orphan receptors", {})["Class A orphans"] = ligand_types["Orphan receptors"]["Class A orphans"]
-
-            # Handle Circle 3: Class B1 (Secretin) and Class B2 (Adhesion)
-            elif Class in ["Class B1 (Secretin)", "Class B2 (Adhesion)"]:
-                GPCRome_dict["Circle_3"].setdefault(Class, {}).update(ligand_types)
-
-            # Handle Circle 4: Class C (Glutamate)
-            elif Class in ["Class C (Glutamate)", "Class F (Frizzled)"]:
-                GPCRome_dict["Circle_4"].setdefault(Class, {}).update(ligand_types)
-
-            # Handle Circle 5: Class F (Frizzled), Class T2 (Taste 2), Other GPCRs
-            elif Class in ["Class T2 (Taste 2)", "Other GPCRs"]:
-                GPCRome_dict["Circle_5"].setdefault(Class, {}).update(ligand_types)
-
-        # Define a mapping for renaming classes
-        class_rename_map = {
-            "Class A (Rhodopsin)": "A",
-            "Class B1 (Secretin)": "B1",
-            "Class B2 (Adhesion)": "B2",
-            "Class C (Glutamate)": "C",
-            "Class F (Frizzled)": "F",
-            "Class O1 (fish-like odorant)": "O1",
-            "Class O2 (tetrapod specific odorant)": "O2",
-            "Class T2 (Taste 2)": "T2",
-            "Other GPCRs": "Classless"
-        }
-
-        # Rename the classes in GPCRome_dict in place
-        for circle in GPCRome_dict:
-            for old_class_name in list(GPCRome_dict[circle].keys()):
-                if old_class_name in class_rename_map:
-                    GPCRome_dict[circle][class_rename_map[old_class_name]] = GPCRome_dict[circle].pop(old_class_name)
-
-        # Remove the ligand type from the dictionary
-        for circle in GPCRome_dict:
-            for class_name in list(GPCRome_dict[circle].keys()):
-                new_structure = {}  # Dictionary to hold receptor families directly under the class
-                
-                for ligand_type in list(GPCRome_dict[circle][class_name].keys()):
-                    for receptor_family, receptors in GPCRome_dict[circle][class_name][ligand_type].items():
-                        # Merge receptor families under the class directly
-                        new_structure[receptor_family] = receptors
-
-                # Replace the old structure with the new one
-                GPCRome_dict[circle][class_name] = new_structure
-
-        
-        data_full['Master_dict'] = Master_dict
-        data_full['GPCRome_dict'] = GPCRome_dict
-
-        return data_full
-
-    @staticmethod
-    def generate_GPCRome_data_Oderant():
-
-        odorant_names = list(Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False
-                                            ).filter(Q(family_id__slug__startswith='007') | Q(family_id__slug__startswith='008')).values(
-                                            'entry_name', 'name').order_by('entry_name'))
-        odorant_families = ProteinFamily.objects.filter(Q(slug__startswith='007') | Q(slug__startswith='008'))
-
-        odoranttree = {}
-        conversion = {}
-
-        for item in odorant_families:
-            if len(item.slug) == 3 and item.slug not in odoranttree.keys():
-                odoranttree[item.slug] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 7 and item.slug not in odoranttree[item.slug[:3]].keys():
-                odoranttree[item.slug[:3]][item.slug[:7]] = {}
-                conversion[item.slug] = item.name
-            if len(item.slug) == 11 and item.slug not in odoranttree[item.slug[:3]][item.slug[:7]].keys():
-                odoranttree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
-                conversion[item.slug] = item.name
-            if len(item.slug) == 15 and item.slug not in odoranttree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
-                odoranttree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
-
-
-        odorant_conversion_dict = {item['entry_name']: item['name'] for item in odorant_names}
-        odoranttree2 = DataMapperHome.convert_keys(odoranttree, conversion)
-        names_odorant = list(odorant_conversion_dict.values())
-        odoranttree3 = DataMapperHome.filter_dict(odoranttree2, names_odorant)
-
-        # Splitting the families into three dictionaries
-        odorant_receptors = odoranttree3['Class O2 (tetrapod specific odorant)']['Odorant receptors']
-        # Families 1 to 4
-        families_1_to_4 = {key: odorant_receptors[key] for key in odorant_receptors if key[-2:] in [' 1', ' 2', ' 3', ' 4',]}
-        # Families 5 to 10
-        families_5_to_9 = {key: odorant_receptors[key] for key in odorant_receptors if key[-2:] in [' 5', ' 6', ' 7', ' 8', ' 9']}
-        # Families 11 to 14
-        families_10_to_14 = {key: odorant_receptors[key] for key in odorant_receptors if key.endswith(('10', '11', '12', '13', '14'))}
-
-        odoranttree4 = {}
-        odoranttree4['Class O1 (fish-like odorant)'] = odoranttree3['Class O1 (fish-like odorant)']
-        odoranttree4['Class O2 (tetrapod specific odorant) EXT'] = {'Odorant receptors' : families_1_to_4}
-        odoranttree4['Class O2 (tetrapod specific odorant) MID'] = {'Odorant receptors' : families_5_to_9}
-        odoranttree4['Class O2 (tetrapod specific odorant) INT'] = {'Odorant receptors' : families_10_to_14}
-
-        odorant_full = {"NameList": odoranttree4, "DataPoints": odorant_data, "LabelConversionDict":odorant_conversion_dict}
-
-        return odorant_full
-    
-    
+        return filtered_dict    
     
     @staticmethod
     def GenerateGPCRomeDataStructure(type: str = "Classic"):
@@ -719,9 +457,6 @@ class DataMapperHome(TemplateView):
                 "Data": GPCRome_dict
             }
 
-
-
-
     @staticmethod
     def update_nested_GPCRome_data(structure_dict, raw_data):
         def normalize_key(raw_key):
@@ -757,8 +492,6 @@ class DataMapperHome(TemplateView):
         recursive_update(structure_dict)
         return structure_dict
 
-
-    
     @staticmethod
     def generate_tree_plot(input_data): #ADD AN INPUT FILTER DICTIONARY
         ### TREE SECTION
@@ -1084,7 +817,6 @@ class DataMapperHome(TemplateView):
         }
 
         return Label_converter
-    
 
     def post(self, request, *args, **kwargs):
         ### This method handles POST requests for form submission ###
@@ -1125,7 +857,7 @@ class DataMapperHome(TemplateView):
                             ).exclude(
                                 family_id__slug__startswith='008'
                             ).values_list('entry_name', flat=True).distinct()
-                        
+
                         # Fetch proteins with prefetch on genes
                         proteins = Protein.objects.prefetch_related('genes').filter(entry_name__in=all_proteins)
 
@@ -1165,7 +897,7 @@ class DataMapperHome(TemplateView):
                             # Add addition for the different sheets.
                             return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "The excel file is not structured as the template file. There are incorrect sheet names and data setup."})
                         else:
-                            
+
                             ### Initialize Global values ###
                             # Data passed #
                             Data = {}
@@ -1181,7 +913,7 @@ class DataMapperHome(TemplateView):
                                 # Check if it's a named color
                                 if color.lower() in mcolors.CSS4_COLORS:
                                     return True
-                                
+
                                 # Check if it's a valid hex color
                                 hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
                                 return bool(re.match(hex_pattern, color))
@@ -1219,7 +951,7 @@ class DataMapperHome(TemplateView):
                                     plot_type_global = Plot_type
                                     # Initialize worksheet #
                                     worksheet = workbook[sheet_name]
-                                    
+
                                     ##########################
                                     ### GPCRome wheel Plot ###
                                     ##########################
@@ -1237,7 +969,7 @@ class DataMapperHome(TemplateView):
                                             pass #If sheet is empty pass the checking and report the findings
                                         else:
                                             for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-                                                
+
                                                 # Get raw input
                                                 receptor_raw = row[0].value
 
@@ -1300,7 +1032,6 @@ class DataMapperHome(TemplateView):
                                                         Data[receptor]['Value2'] = color_fill
                                                     else:
                                                         Data[receptor]['Value2'] = "Black"
-
                                                 else:
                                                     Incorrect_values.setdefault('Errors', {})[index] = (
                                                         'Incorrect datatype: Unable to determine if Numeric or Text. Excel sheet may not match template.'
@@ -1320,13 +1051,13 @@ class DataMapperHome(TemplateView):
                                             status = 'Failed'
 
                                         Plot_parser = status
-                            
+
                                     #################
                                     ### Tree plot ###
                                     #################
 
                                     elif Plot_name == 'Tree':
-                                        
+
                                         Incorrect_values['GPCRs'] = {}
                                         IndexToColumn = ['A','B','C','D','E','F','G']
                                         # Initialize the inccorect column values
@@ -1334,14 +1065,14 @@ class DataMapperHome(TemplateView):
                                             Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
                                         empty_sheet = True  # Initialize the flag
                                         TreeNonEmptyEntryCounter = 0
-                                        
+
                                         # Check if sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) to G (6) is not None or empty
                                             if any(cell not in (None, "") for cell in row[1:7]):  # Slice [1:7] to include columns B-G
                                                 empty_sheet = False
                                                 break
-                                        
+
                                         # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
@@ -1351,11 +1082,11 @@ class DataMapperHome(TemplateView):
                                                 # Check if column A has a value AND at least one column in B-G has a value
                                                 if row[0] not in (None, "") and any(cell not in (None, "") for cell in row[1:7]):
                                                     TreeNonEmptyEntryCounter += 1
-                                                
+
                                                 # Stop if we exceed 200 valid entries
                                                 if TreeNonEmptyEntryCounter > 200:
                                                     break
-                                            
+
                                             if TreeNonEmptyEntryCounter > 200:
                                                 Incorrect_values['Error'] = "Detected more than 200 entries. The Tree can not handle that many GPCRs to be able to visualize them in one plot."
                                             else:
@@ -1398,7 +1129,7 @@ class DataMapperHome(TemplateView):
                                                                         Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
                                                         # ==== TEXT ====
                                                         elif Plot_type == 'Text':
-                                                             
+
                                                             DataValue = row[1].value
                                                             color_fill_cell = row[2] if len(row) > 2 else None
                                                             color_override_cell = row[3] if len(row) > 3 else None
@@ -1448,10 +1179,10 @@ class DataMapperHome(TemplateView):
                                                             break
                                                 else:
                                                     status = 'Failed'
-                                                    
+
                                                 ## Update Plot_parser for GPCRome Wheel
                                                 Plot_parser = status
-                                    
+
                                     ####################
                                     ### Cluster plot ###
                                     ####################
@@ -1464,7 +1195,7 @@ class DataMapperHome(TemplateView):
                                         Incorrect_values['GPCR Value (Column B & C)'] = {}
                                         ClusterSpacialPositionCheck = False
                                         empty_sheet = True  # Initialize the flag
-                                        
+
                                         # Check if the sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) and C (2) is not None or empty
@@ -1476,7 +1207,6 @@ class DataMapperHome(TemplateView):
                                         if empty_sheet:
                                             pass
                                         else:
-                                            
                                             # Iterate over rows starting from row 2
                                             for row in worksheet.iter_rows(min_row=2, values_only=True):
                                                 # Check if both column A (0) and column C (2) have values
@@ -1506,7 +1236,7 @@ class DataMapperHome(TemplateView):
                                                 # Check if data row is in data and/or initialize it
                                                 if receptor not in Data:
                                                     Data[receptor] = {}
-                                                
+
                                                 if ClusterSpacialPositionCheck:
                                                     # Check datatype -> Numeric
                                                     if Plot_type == 'Numeric':
@@ -1554,10 +1284,9 @@ class DataMapperHome(TemplateView):
                                                     break
                                         else:
                                             status = 'Failed'
-                                            
+
                                         ## Update Plot_parser for GPCRome Wheel
                                         Plot_parser = status
-
 
                                     #################
                                     ### List plot ###
@@ -1571,14 +1300,14 @@ class DataMapperHome(TemplateView):
                                         for key in IndexToColumn[1:]:
                                             Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
                                         empty_sheet = True  # Initialize the flag
-                                        
+
                                         # Check if sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) to G (6) is not None or empty
                                             if any(cell not in (None, "") for cell in row[1:7]):  # Slice [1:7] to include columns B-G
                                                 empty_sheet = False
                                                 break
-                                        
+
                                         # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
@@ -1586,7 +1315,7 @@ class DataMapperHome(TemplateView):
                                             # If sheet is not empty then start handling the data
                                             # Iterate through the rows and validate the data
                                             for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-                                                
+
                                                  # Get raw input
                                                 receptor_raw = row[0].value
 
@@ -1679,8 +1408,6 @@ class DataMapperHome(TemplateView):
                                                         Data[receptor]['ColorValue'] = "Black"
                                                 else:
                                                     Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.'
-
-                                                    Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
                                             # Check if any values are incorrect #
                                             status = 'Success'
 
@@ -1695,17 +1422,16 @@ class DataMapperHome(TemplateView):
                                                         break
                                             else:
                                                 status = 'Failed'
-                                                
+
                                             ## Update Plot_parser for GPCRome Wheel
                                             Plot_parser = status
 
-                               
                                     ###############
                                     ### Heatmap ###
                                     ###############
 
                                     elif Plot_name == 'Heatmap':
-                                        
+
                                         ## Initialize Local values ##
                                         Incorrect_values['GPCRs'] = {}
                                         IndexToColumn = ['A','B','C','D','E','F']
@@ -1714,14 +1440,14 @@ class DataMapperHome(TemplateView):
                                             Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
                                         empty_sheet = True  # Initialize the flag
                                         HeatmapNonEmptyEntryCounter = 0
-                                        
+
                                         # Check if sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) to G (6) is not None or empty
                                             if any(cell not in (None, "") for cell in row[1:6]):  # Slice [1:6] to include columns B-F
                                                 empty_sheet = False
                                                 break
-                                        
+
                                         # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
@@ -1731,18 +1457,18 @@ class DataMapperHome(TemplateView):
                                                 # Check if column A has a value AND at least one column in B-G has a value
                                                 if row[0] not in (None, "") and any(cell not in (None, "") for cell in row[1:7]):
                                                     HeatmapNonEmptyEntryCounter += 1
-                                                
+
                                                 # Stop if we exceed 200 valid entries
                                                 if HeatmapNonEmptyEntryCounter > 50:
                                                     break
-                                            
+
                                             if HeatmapNonEmptyEntryCounter > 50:
                                                 Incorrect_values['Error'] = "Detected more than 50 entries. The Heatmap can not handle that many GPCRs to be able to visualize them in one plot."
                                             else:
                                                 # If sheet is not empty then start handling the data
                                                 # Iterate through the rows and validate the data
                                                 for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                                                    
+
                                                      # Get raw input
                                                     receptor_raw = row[0]
 
@@ -1760,7 +1486,7 @@ class DataMapperHome(TemplateView):
 
                                                     if receptor not in Data:
                                                         Data[receptor] = {}
-                                                    
+
                                                     # Check datatype -> Numeric or Text:
                                                     if Plot_type in ('Numeric', 'Text'):
                                                         for i in range(1, 6):
@@ -1790,7 +1516,7 @@ class DataMapperHome(TemplateView):
                                                             break
                                                 else:
                                                     status = 'Failed'
-                                                    
+
                                                 ## Update Plot_parser for GPCRome Wheel
                                                 Plot_parser = status
                             
@@ -1819,13 +1545,11 @@ class DataMapperHome(TemplateView):
                                     context['Incorrect_data_json'] = Incorrect_values
                                 else:
                                     context['Incorrect_data_json'] = "No incorrect data"
-                            
+
                             # Return the rendered results
                             return render(request, f'mapper/DataMapperHome{self.page}.html', context)
-
                     else:
                         return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "Unable to load excel file, might be corrupted or not inline with a template file."})
-
             else:
                 # Return a 405 Method Not Allowed response if not a POST request
                 return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "Not a valid excel file. Please try and use the template excel file."})
@@ -1836,78 +1560,6 @@ class DataMapperHome(TemplateView):
 
 class ExcelUploadForm(forms.Form):
     file = forms.FileField()
-
-class plotrender(TemplateView):
-    template_name = 'mapper/data_mapper_plotrender.html'
-
-    def post(self, request, *args, **kwargs):
-        # Retrieve the sample data from the POST request
-        Plot_name = request.POST.get('Plot')
-        Plot_type_request = request.POST.get('Datatype')
-        Data_json = request.POST.get('Data')
-        # If Plot_evaluation_json is not None, parse it as JSON
-        if Plot_name and Data_json:
-            try:
-                Plot = Plot_name
-                Data = json.loads(Data_json)
-                Plot_type = Plot_type_request
-            except json.JSONDecodeError:
-                # Handle the case when the JSON data is invalid
-                return HttpResponse("Invalid JSON data")
-            # Contruct context
-            context = {'Plot': Plot, 'PlotType': Plot_type}
-            
-            if Plot:
-                 # GPCRome #
-                if Plot == 'GPCRome wheel':
-                    print("GPCRome success")
-                    GPCRome_data = DataMapperHome.generate_GPCRome_data(Data)
-                    context['GPCRome_data'] = json.dumps(GPCRome_data["NameList"])
-                    context['GPCRome_data_variables'] = json.dumps(GPCRome_data['DataPoints'])
-                    context['GPCRome_Label_Conversion'] = json.dumps(GPCRome_data['LabelConversionDict'])
-                    context['GPCRome_MasterDict'] = json.dumps(GPCRome_data['Master_dict'])
-                    context['GPCRome_WheelDict'] = json.dumps(GPCRome_data['GPCRome_dict'])
-                # tree #
-                if Plot == 'Tree':
-                    print("Tree success")
-                    tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(Data)
-                    context['tree'] = json.dumps(tree)
-                    context['tree_options'] = tree_options
-                    context['circles'] = json.dumps(circles)
-                    context['whole_dict'] = json.dumps(receptors)
-
-                # Cluster analysis #
-                if Plot == 'Cluster':
-                    print("Cluster success")
-                    output_seq = DataMapperHome.clustering_test('tsne', Data,'seq')
-                    # output_structure = DataMapperHome.clustering_test('umap', Data['Cluster'],'structure')
-                    context['cluster_data_seq'] = output_seq
-                    # context['cluster_data_structure'] = output_structure
-                    context['plot_type'] = 'Tsne'
-
-                # List plot #
-                if Plot == 'List':
-                    print("List success")
-                    listplot_data = DataMapperHome.generate_list_plot(Data)
-                    context['listplot_data'] = json.dumps(listplot_data["NameList"])
-                    context['listplot_data_variables'] = json.dumps(listplot_data['DataPoints'])
-                    context['Label_Conversion'] = json.dumps(listplot_data['LabelConversionDict'])
-                    # context['listplot_datatypes'] = json.dumps(Data['Datatypes']['Listplot'])
-
-                # Heatmap #
-                if Plot == 'Heatmap':
-                    print("Heatmap success")
-                    label_converter = DataMapperHome.Label_conversion_info(Data)
-                    context['Label_converter'] = json.dumps(label_converter)
-                    context['heatmap_data'] = json.dumps(Data)
-
-            # Return the context dictionary
-            return self.render_to_response(context)
-        else:
-            # Handle the case when Plot_evaluation_json is None
-            # This could happen if the form was submitted without the JSON data
-            return HttpResponse("Missing sample data")
-
 
 class GPCRomeRender(TemplateView):
     template_name = 'mapper/PlotRender_GPCRome.html'  # default fallback

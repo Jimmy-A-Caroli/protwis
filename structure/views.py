@@ -1728,40 +1728,27 @@ class StructureStatistics(TemplateView):
                 # RIGHT NOW THE DATA IS SMALL SO WE CAN GET AWAY WITH THIS
                 result_dict = {k: v[0] for k, v in result_dict.items()}
 
-                proteins = list(Protein.objects.filter(entry_name__in=result_dict.keys()
-                ).values('entry_name', 'name').order_by('entry_name'))
+                # Mapping for Value2
+                status_color_map = {
+                    'ARRB1': 'orange',
+                    'ARRB2': 'purple',
+                    'ARRC': "mediumturquoise",
+                    'ARRS': 'cornflowerblue'
+                }
 
-                names_conversion_dict = {item['entry_name']: item['name'] for item in proteins}
+                # Creating the new dictionary
+                results_updated_dict = {
+                    key: {
+                        'Value1': value,
+                        'Value2': status_color_map.get(value, '#FFFFFF')  # Default to black if key not found
+                    }
+                    for key, value in result_dict.items()
+                }
 
-                names = list(names_conversion_dict.values())
+                gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+                updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], results_updated_dict)
 
-                IUPHAR_to_uniprot_dict = {item['name']: item['entry_name'] for item in proteins}
-
-                families = ProteinFamily.objects.all()
-                datatree = {}
-                conversion = {}
-
-                for item in families:
-                    if len(item.slug) == 3 and item.slug not in datatree.keys():
-                        datatree[item.slug] = {}
-                        conversion[item.slug] = item.name
-                    if len(item.slug) == 7 and item.slug not in datatree[item.slug[:3]].keys():
-                        datatree[item.slug[:3]][item.slug[:7]] = {}
-                        conversion[item.slug] = item.name
-                    if len(item.slug) == 11 and item.slug not in datatree[item.slug[:3]][item.slug[:7]].keys():
-                        datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
-                        conversion[item.slug] = item.name
-                    if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
-                        datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
-
-                datatree2 = DataMapperHome.convert_keys(datatree, conversion)
-                datatree2.pop('Parent family', None)
-                datatree3 = DataMapperHome.filter_dict(datatree2, names)
-                data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in result_dict.items()}
-                data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
-                context['GPCRome_Arrestin_data'] = json.dumps(data_full["NameList"])
-                context['GPCRome_Arrestin_data_variables'] = json.dumps(data_full['DataPoints'])
-                context['GPCRome_Arrestin_Label_Conversion'] = json.dumps(data_full['LabelConversionDict'])
+                context['GPCRome_data'] = json.dumps(updated_data)
 
             else:
                 #Adjust call to exclude odorants

@@ -113,15 +113,9 @@
     .sub { fill: black; }
     text { font-family: sans-serif; }
 </style>
-
 {% endblock %}
 
 {% block content %}
-
-
-<!-- <div class='col-md-12'>
-    <h2 style='text-align:center;margin-top: 20px;margin-bottom: 30px;'>Data Mapper</h2>
-</div> -->
 <div class='col-md-12'>
   <table class="table text-center" style="border-collapse: collapse; width: 100%; text-align: center;">
     <thead>
@@ -190,10 +184,10 @@
           <span class="left-column">Max no. GPCRs</span>
         </th>
         <!-- Other cells: no border, or any style you’d like -->
-        <td ><strong>398</strong></td>
+        <td ><strong>397</strong></td>
         <td ><strong>200</strong></td>
-        <td ><strong>805</strong></td>
-        <td ><strong>805</strong></td>
+        <td ><strong>804</strong></td>
+        <td ><strong>804</strong></td>
         <td ><strong>50</strong></td>
       </tr>
       <tr>
@@ -203,7 +197,7 @@
         </th>
         <!-- Other cells: no border, or any style you’d like -->
         <td ><strong>1</strong></td>
-        <td ><strong>5</strong></td>
+        <td ><strong>6</strong></td>
         <td ><strong>1</strong></td>
         <td ><strong>4</strong></td>
         <td ><strong>5</strong></td>
@@ -257,8 +251,6 @@
         <td><i class="fas fa-minus my-icon-minus"></i></td>
       </tr>
 
-      
-    <!-- Separator row (no borders). Spans all 6 columns. -->
     <!-- Separator row (no borders). Spans all 6 columns. -->
     <tr class="separator-row">
       <td colspan="6" style="height: 30px;"></td>
@@ -290,7 +282,7 @@
       <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Numeric.xlsx' %}" download="Template - List - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
       <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Heatmap - Numeric.xlsx' %}" download="Template - Heatmap - Numeric.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
     </tr>
-    
+
      <!-- Separator row (no borders). Spans all 6 columns. -->
      <tr style="border-bottom: 2px solid white;">
       <td colspan="6" style="border: none; height: 30px;"></td>
@@ -334,8 +326,6 @@
     </tr>
   </tbody>
 </table>
-  
-
 </div>
 
 <!-- ######################## -->
@@ -364,8 +354,6 @@
       </div>
   </div>
 </div>
-
-
 
 <!-- ##################### -->
 <!-- ## Report Success! ## -->
@@ -467,8 +455,6 @@
           {% else %}
             <p>No incorrect data found.</p>
           {% endif %}
-
-
           </div>
           <div class="modal-footer" style="display: flex; justify-content: space-between;">
               <button type="button" class="btn btn-primary" onclick="window.location.href=window.location.href;">Go back and fix</button>
@@ -618,11 +604,7 @@
     </div>
   </div>
 </div>
-
-
 {% endblock %}
-
-
 {% block addon_js %}
 <script src="{% static 'home/js/d3.min.js' %}"></script>
 <script src="{% static 'home/js/nv.d3.min.js' %}"></script>

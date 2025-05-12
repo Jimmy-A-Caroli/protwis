@@ -87,7 +87,7 @@
         <div class="col-md-3">
           Receptor names:
             <div class="btn-group" role="group" id="gtp_plus">
-              <button id="GPCRome_Protein" class="btn btn-info active">GtPdb</button>
+              <button id="GPCRome_Protein" class="btn btn-info active">Protein</button>
                 <button id="GPCRome_Entrez" class="btn btn-info">Gene</button>
                 <button id="GPCRome_Uniprot" class="btn btn-info ">UniProt</button>
             </div>
@@ -142,7 +142,7 @@
         <div class="col-md-3">
           Receptor names:
           <div class="btn-group" role="group" id="gtp_plus">
-            <button id="GPCRome_Complexes_Protein" class="btn btn-info active">GtPdb</button>
+            <button id="GPCRome_Complexes_Protein" class="btn btn-info active">Protein</button>
               <button id="GPCRome_Complexes_Entrez" class="btn btn-info">Gene</button>
               <button id="GPCRome_Complexes_Uniprot" class="btn btn-info ">UniProt</button>
           </div>
@@ -189,7 +189,7 @@
         <div class="col-md-3">
           Receptor names:
           <div class="btn-group" role="group" id="gtp_plus">
-            <button id="GPCRome_Odorant_Protein" class="btn btn-info active">GtPdb</button>
+            <button id="GPCRome_Odorant_Protein" class="btn btn-info active">Protein</button>
               <button id="GPCRome_Odorant_Entrez" class="btn btn-info">Gene</button>
               <button id="GPCRome_Odorant_Uniprot" class="btn btn-info ">UniProt</button>
           </div>
@@ -353,8 +353,9 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
         <div class="col-md-3">
           Receptor names:
             <div class="btn-group" role="group" id="gtp_plus">
-                <button id="GPCRome_Arrestin_UniProtNames" class="btn btn-info ">Gene</button>
-                <button id="GPCRome_Arrestin_IUPHARNames" class="btn btn-info active">Protein</button>
+              <button id="GPCRome_Arrestin_Protein" class="btn btn-info active">Protein</button>
+                <button id="GPCRome_Arrestin_Entrez" class="btn btn-info">Gene</button>
+                <button id="GPCRome_Arrestin_Uniprot" class="btn btn-info ">UniProt</button>
             </div>
         </div>
 
@@ -393,7 +394,7 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
       <br />
       <br />
 
-        <div id="image-container" data-image-url="{% static 'home/images/DataMapper_GPCRome_icon_legend.png' %}"></div>
+        <div id="image-container" data-image-url="{% static 'home/images/DataMapper/DataMapper_GPCRome_icon_legend.png' %}"></div>
         <!-- GPCRome -->
         <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
             <div id="GPCRome_Arrestin_plot" class="text-center"></div>
@@ -1629,65 +1630,51 @@ function updateGPCRome(Data, location, styling) {
 <script src="{% static 'home/js/d3.tip.js' %}"></script>
 <script>
 
-var GPCRome_Arrestin_categories_data = {{ GPCRome_Arrestin_data|safe }};
-var arrestin_fill_data = {{ GPCRome_Arrestin_data_variables|safe }};
-var GPCRome_Arrestin_Label_conversion_dict = {{GPCRome_Arrestin_Label_Conversion|safe}};
 
-// Initialize the conversion dictionary
-GPCRome_Arrestin_Label_conversion_dict = initializeGPCRomeLabelConversionDict(GPCRome_Arrestin_Label_conversion_dict);
+// // Import GPCRome data 
+var GPCRome_stucture_data = {{ GPCRome_data|safe }};
 
+// // == Structure GPCRome ==
 
-function initializeGPCRomeLabelConversionDict(conversionDict) {
-    const updatedDict = {};
-
-    Object.keys(conversionDict).forEach(originalLabel => {
-        let uniProtLabel = conversionDict[originalLabel];
-        uniProtLabel = uniProtLabel.replace(/_human$/, "").toUpperCase(); // Remove "_human" and convert to uppercase
-        updatedDict[originalLabel] = uniProtLabel;
-    });
-
-    return updatedDict;
-}
-
-// # Initialize data styling #
-var arrestin_layout_data = GPCRome_initializeData(GPCRome_Arrestin_categories_data);
-
+// Set styling
 var GPCRomes_styling = {
-  Spacing: true,
-  family: true,
-  datatype: "Arrestin",
-  minValue: 0,
-  median_value: 3,
-  avg_value: 3,
-  maxValue: 6,
-  colorStart: "white",
-  color_median: "blue",
-  colorEnd: "#000000",
-  data_color_complexity: 'Two',
-  showIcon: true  // Add this property to control the icon visibility
+    DataType: "Text",
+    FontStyle: "Arial",
+    FontsizeGlobal: "11px",
+    FontsizeClass: "20px",
+    Datatype: "Text",
+    showIcon: true,
+    LabelType: "Protein",
+    ShowLegend: false
+};
+
+// // Add location and draw the GPCRome plot
+let GPCRome_Arresting_location = "GPCRome_Arrestin_plot";
+DrawGPCRomeWheel(GPCRome_stucture_data, GPCRome_Arresting_location, GPCRomes_styling);
+
+
+function setupLabelButtons(groupIdPrefix, structureData, location, styling) {
+  const labelTypes = ["Protein", "Uniprot", "Entrez"];
+
+  labelTypes.forEach(label => {
+      const buttonId = `${groupIdPrefix}_${label}`;
+      document.getElementById(buttonId).addEventListener("click", () => {
+          styling.LabelType = label;
+          updateGPCRome(structureData, location, styling);
+          setActiveButton(groupIdPrefix, labelTypes, buttonId);
+      });
+  });
 }
 
-// # initial draw
-let GPCRome_Arrestin_location = "GPCRome_Arrestin_plot";
-Draw_GPCRomes(arrestin_layout_data, arrestin_fill_data, GPCRome_Arrestin_location, GPCRomes_styling);
-
-// Global variables for current label type
-let currentLabelType = "IUPHAR"; // Default
-
-// Event listeners for label type buttons
-document.getElementById("GPCRome_Arrestin_UniProtNames").addEventListener("click", () => {
-    switchLabelType("UniProt", GPCRome_Arrestin_location, arrestin_fill_data, GPCRome_Arrestin_Label_conversion_dict, GPCRomes_styling);
-});
-
-document.getElementById("GPCRome_Arrestin_IUPHARNames").addEventListener("click", () => {
-    switchLabelType("IUPHAR", GPCRome_Arrestin_location, arrestin_fill_data, GPCRome_Arrestin_Label_conversion_dict, GPCRomes_styling);
-});
-
-// Function to switch label types
-function switchLabelType(labelType, location, fill, conversion, styling, odorant=false) {
-    currentLabelType = labelType;
-    updateArrestinGPCRome(location, fill, conversion, styling, odorant);
+function setActiveButton(groupIdPrefix, labelTypes, activeId) {
+    labelTypes.forEach(label => {
+        const btnId = `${groupIdPrefix}_${label}`;
+        document.getElementById(btnId).classList.remove("active");
+    });
+    document.getElementById(activeId).classList.add("active");
 }
+
+setupLabelButtons("GPCRome_Arrestin", GPCRome_stucture_data, GPCRome_Arresting_location, GPCRomes_styling);
 
 // Function to toggle the icon visibility and redraw the GPCRomes
 function toggleIcon() {
@@ -1706,67 +1693,20 @@ function toggleIcon() {
     }
 
     // Redraw the GPCRomes with the updated icon state
-    updateArrestinGPCRome(GPCRome_Arrestin_location, arrestin_fill_data, GPCRome_Arrestin_Label_conversion_dict, GPCRomes_styling);
+    updateGPCRome(GPCRome_stucture_data, GPCRome_Arresting_location, GPCRomes_styling);
 }
 
 // Attach event listener to the button
 d3.select("#ToggleIconArrestin").on("click", toggleIcon);
 
-
 // Function to update and redraw GPCRomes
-function updateArrestinGPCRome(location, fill, conversion, styling, odorant=false) {
-    let updatedLayoutData;
-    updatedLayoutData = updateLayoutData(arrestin_layout_data, conversion, currentLabelType);
-    const updatedFillData = updateFillData(fill, conversion, currentLabelType);
+function updateGPCRome(Data, location, styling) {
 
     // Clear the existing SVG content
     d3.select("#" + location).select("svg").remove();
 
     // Redraw the GPCRomes with the updated data
-    Draw_GPCRomes(updatedLayoutData, updatedFillData, location, styling, odorant);
-
-    // Update button active states
-    // updateActiveButtonState(currentLabelType);
-}
-
-// Function to update layout data
-function updateLayoutData(layout_data, conversionDict, labelType) {
-    const updatedData = {};
-
-    Object.keys(layout_data).forEach(GPCRomeKey => {
-        const GPCRome = layout_data[GPCRomeKey];
-        updatedData[GPCRomeKey] = {};
-
-        Object.keys(GPCRome).forEach(ligandType => {
-            const receptors = GPCRome[ligandType];
-            updatedData[GPCRomeKey][ligandType] = receptors.map(receptor => {
-                if (labelType === "UniProt") {
-                    return conversionDict[receptor] || receptor;
-                } else {
-                    return Object.keys(conversionDict).find(key => conversionDict[key] === receptor) || receptor;
-                }
-            });
-        });
-    });
-
-    return updatedData;
-}
-
-// Function to update fill data
-function updateFillData(fill_data, conversionDict, labelType) {
-    const updatedData = {};
-
-    Object.keys(fill_data).forEach(receptor => {
-        let updatedReceptor;
-        if (labelType === "UniProt") {
-            updatedReceptor = conversionDict[receptor] || receptor;
-        } else {
-            updatedReceptor = Object.keys(conversionDict).find(key => conversionDict[key] === receptor) || receptor;
-        }
-        updatedData[updatedReceptor] = fill_data[receptor];
-    });
-
-    return updatedData;
+    DrawGPCRomeWheel(Data, location, styling);
 }
 </script>
 {% endif %}
