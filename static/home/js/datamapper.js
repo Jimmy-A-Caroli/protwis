@@ -3342,13 +3342,13 @@ function Draw_GPCRomes(layout_data, fill_data, location, GPCRome_styling, odoran
             }
         }
 
-        // Initialize the tooltip
-        var tip = d3.tip()
-          .attr('class', 'd3-tip')
-          .offset([0, 0]);
+        // // Initialize the tooltip
+        // var tip = d3.tip()
+        //   .attr('class', 'd3-tip')
+        //   .offset([0, 0]);
 
-        // Attach the tooltip to the SVG
-        svg.call(tip);
+        // // Attach the tooltip to the SVG
+        // svg.call(tip);
 
        // Bind data and append text elements for the specific GPCRome
        svg.selectAll(`.GPCRome-text-${level}`)

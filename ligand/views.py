@@ -2946,12 +2946,14 @@ class LigandInformationView(TemplateView):
             df['Is_Phase_I'] = (df['indication_max_phase'] == 1).astype(int)
             df['Is_Phase_II'] = (df['indication_max_phase'] == 2).astype(int)
             df['Is_Phase_III'] = (df['indication_max_phase'] == 3).astype(int)
+            df['Is_Phase_IV'] = (df['indication_max_phase'] == 4).astype(int)
             df['Is_Approved'] = (df['drug_status'] == 'Approved').astype(int)
 
             phase_counts = df.agg({
                 'Is_Phase_I': 'sum',
                 'Is_Phase_II': 'sum',
                 'Is_Phase_III': 'sum',
+                'Is_Phase_IV': 'sum',
                 'Is_Approved': 'max'
                 }).to_dict()
             
@@ -2961,6 +2963,7 @@ class LigandInformationView(TemplateView):
                 'Phase_I_trials': phase_counts.get('Is_Phase_I', 0),
                 'Phase_II_trials': phase_counts.get('Is_Phase_II', 0),
                 'Phase_III_trials': phase_counts.get('Is_Phase_III', 0),
+                'Phase_IV_trials': phase_counts.get('Is_Phase_IV', 0),
                 'Approved': phase_counts.get('Is_Approved', 'No')
                 })
 
