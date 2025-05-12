@@ -4,7 +4,6 @@ from . import views
 
 urlpatterns = [
     url(r'^DataMapperHome(?P<page>\w+)/$', views.DataMapperHome.as_view(), name='DataMapperHome'),
-    url(r'^plotrender', views.plotrender.as_view(), name='data_mapper_plotrender'),
     url(r'^GPCRome', views.GPCRomeRender.as_view(), name='DataMapperGPCRome'),
     url(r'^Tree', views.TreeRender.as_view(), name='DataMapperTree'),
     url(r'^Cluster', views.ClusterRender.as_view(), name='DataMapperCluster'),
