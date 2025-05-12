@@ -1,23 +1,24 @@
 from django.shortcuts import render
 from django.conf import settings
 from django.views.generic import TemplateView, View
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.db.models import Count, Q, Prefetch, TextField, Avg, Case, When, IntegerField, F, Value, CharField, Subquery, OuterRef, Exists
 from django.db.models.functions import Concat
 from django import forms
 
+from django.core.serializers.json import DjangoJSONEncoder
 from django.shortcuts import redirect
 
 from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from protein.models import ProteinSegment
-from structure.models import Structure, StructureModel, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureModelRMSD, StructureModelpLDDT, StructureAFScores, StructureRFAAScores
+from structure.models import Structure, StructureModel, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureModelRMSD, StructureModelpLDDT, StructureAFScores, StructureRFAAScores, StructureStabilizingAgent
 from structure.functions import CASelector, SelectionParser, GenericNumbersSelector, SubstructureSelector, ModelRotamer
 from structure.assign_generic_numbers_gpcr import GenericNumbering, GenericNumberingFromDB
 from structure.structural_superposition import ProteinSuperpose, FragmentSuperpose, ConvertSuperpose
 from structure.forms import *
 from signprot.models import SignprotComplex, SignprotStructure, SignprotStructureExtraProteins
 from interaction.models import ResidueFragmentInteraction,StructureLigandInteraction
-from protein.models import Protein, ProteinFamily, ProteinCouplings, Gene
+from protein.models import Protein, ProteinFamily, ProteinCouplings, Gene, IdentifiedSites
 from construct.models import Construct
 from construct.functions import convert_ordered_to_disordered_annotation,add_construct
 from common.views import AbsSegmentSelection,AbsReferenceSelection
@@ -46,6 +47,7 @@ import json
 import statistics
 import re
 from math import atan2, cos, sin, pi
+import traceback
 
 from copy import deepcopy
 from io import StringIO, BytesIO
@@ -68,53 +70,247 @@ import signal
 from contextlib import contextmanager
 
 
+
 class_dict = {'001':'A','002':'B1','003':'B2','004':'C','005':'D1','006':'F','007':'O1','008':'O2','009':'T2','010':'O'}
 
 class StructureBrowser(TemplateView):
     """
-    Fetching Structure data for browser
+    Lightweight view that just renders the structure browser template.
+    The actual data is fetched asynchronously from StructureDataJsonView.
     """
     template_name = "structure_browser.html"
 
-    def get_context_data (self, **kwargs):
-
-        context = super(StructureBrowser, self).get_context_data(**kwargs)
-        try:
-            structures = Structure.objects.all().exclude(structure_type__slug__startswith='af-').select_related(
-                "state",
-                "structure_type",
-                "pdb_code__web_resource",
-                "protein_conformation__protein__species",
-                "protein_conformation__protein__source",
-                "protein_conformation__protein__family__parent__parent__parent",
-                "publication__web_link__web_resource").prefetch_related(
-                "stabilizing_agents", "construct__crystallization__crystal_method",
-                "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type",
-                "protein_conformation__site_protein_conformation__site","structure_type",
-                Prefetch("ligands", queryset=StructureLigandInteraction.objects.filter(
-                annotated=True).exclude(structure__structure_type__slug__startswith='af-').prefetch_related('ligand__ligand_type', 'ligand_role','ligand__ids__web_resource')),
-                Prefetch("extra_proteins", queryset=StructureExtraProteins.objects.all().prefetch_related(
-                    'protein_conformation','wt_protein')),
-                Prefetch("signprotcomplex_set", queryset=SignprotComplex.objects.all().prefetch_related('protein')))
-        except Structure.DoesNotExist as e:
-            pass
-
-        residue_counts = Residue.objects.values("protein_conformation").filter(protein_segment__isnull=False).order_by("protein_conformation").annotate(Count=Count("protein_conformation"))
-        structure_residues = {}
-        for pair in residue_counts:
-            if pair['protein_conformation'] not in structure_residues.keys():
-                structure_residues[pair['protein_conformation']] =  pair['Count']
-
-        structs_and_coverage = []
-        for s in structures:
-            # structure_residues = Residue.objects.filter(protein_conformation=s.protein_conformation, protein_segment__isnull=False)
-            residue_num = structure_residues[s.protein_conformation.id]
-            # coverage = round((len(structure_residues) / len(s.protein_conformation.protein.parent.sequence))*100)
-            coverage = round((residue_num / len(s.protein_conformation.protein.parent.sequence))*100)
-            structs_and_coverage.append([s, coverage])
-        context['structures'] = structs_and_coverage
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         return context
+
+class StructureDataJsonView(View):
+    """
+    JSON endpoint for the structure browser – ±8 SQL queries total
+    (main structures query, 5 prefetches, residue-count query,
+    and Django’s session query if you use sessions).
+    """
+
+    # ------------------------------------------------------------------ #
+    # compiled regexes – declare once at class level
+    fusion_pat = re.compile(
+        r".*thase.*|PGS|BRIL|.*Lysozyme|.*b562.*|TrxA|Flavodoxin|Rubredoxin|"
+        r"Sialidase|.*Thioredoxin.*|Endolysin|.*cytochrome.*|.*DARPin.*",
+        re.I
+    )
+    antibody_pat = re.compile(
+        r".*bod.*|.*Ab.*|.*scFv.*|.*Fab.*|.*activity.*|.*RAMP.*|.*GRK.*|"
+        r"Unidentified peptide|.*CD4.*|.*IgG.*|.*NB.*|.*Fv.*",
+        re.I
+    )
+    # ------------------------------------------------------------------ #
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # 1) residue-count map  ------------------------------------------------
+            res_map = {
+                r["protein_conformation"]: r["res_cnt"]
+                for r in (
+                    Residue.objects
+                    .filter(protein_segment__isnull=False)
+                    .values("protein_conformation")
+                    .annotate(res_cnt=Count("id"))
+                )
+            }
+
+            # 2) main structures queryset  ---------------------------------------
+            structures = (
+                Structure.objects
+                .exclude(structure_type__slug__startswith="af-")
+                .select_related(
+                    "state",
+                    "structure_type",
+                    "pdb_code",
+                    "publication__web_link__web_resource",
+                    "protein_conformation__protein__species",
+                    "protein_conformation__protein__source",
+                    "protein_conformation__protein__parent",
+                    "protein_conformation__protein__family__parent__parent__parent",
+                )
+                .prefetch_related(
+                    Prefetch(
+                        "protein_conformation__protein__parent__genes",
+                        queryset=Gene.objects.filter(position=0),
+                        to_attr="filtered_genes",
+                    ),
+                    Prefetch(
+                        "extra_proteins",
+                        queryset=StructureExtraProteins.objects.select_related(
+                            "wt_protein__family__parent"
+                        ),
+                    ),
+                    Prefetch(
+                        "ligands",
+                        queryset=StructureLigandInteraction.objects.select_related(
+                            "ligand", "ligand_role", "ligand__ligand_type"
+                        ),
+                    ),
+                    Prefetch(
+                        "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type"
+                    ),
+                    "stabilizing_agents",
+                    # NEW – prefetch sodium-pocket information once
+                    Prefetch(
+                        "protein_conformation__site_protein_conformation",
+                        queryset=IdentifiedSites.objects.select_related("site"),
+                        to_attr="prefetched_sites",
+                    ),
+                )
+            )
+
+            # 3) build the JSON – _no further DB hits_ ---------------------------
+            out = []
+            for s in structures:
+                p  = s.protein_conformation.protein
+                pp = p.parent
+                pub = s.publication
+
+                # ---- simple scalars -------------------------------------------
+                entry_short = pp.entry_name.split("_")[0].upper()
+                iuphar_name = pp.name
+                genes       = getattr(pp, "filtered_genes", [])
+                gene_name   = genes[0].name if genes else "-"
+                fam_short   = p.family.parent.short()
+                fam_class   = p.family.parent.parent.parent.shorter()
+                method      = s.structure_type.type_short()
+                pdb_code    = s.pdb_code.index if s.pdb_code else "-"
+
+                # ---- sequence coverage ----------------------------------------
+                seq_len  = len(pp.sequence or "")
+                coverage = (
+                    round(res_map.get(s.protein_conformation_id, 0) / seq_len * 100)
+                    if seq_len else 0
+                )
+
+                # ---- arrestin / Gα -------------------------------------------
+                arrestin = next(
+                    (ep for ep in s.extra_proteins.all()
+                     if ep.category in {"G alpha", "Arrestin"}), None
+                )
+                arr_family = (
+                    arrestin.wt_protein.family.parent.name
+                    if arrestin and arrestin.wt_protein else "-"
+                )
+                arr_name = (
+                    f"&alpha;{arrestin.display_name[1:]}"
+                    if arrestin and arrestin.display_name.startswith("G")
+                    else arrestin.display_name if arrestin else "-"
+                )
+                arr_entry = (
+                    arrestin.wt_protein.entry_name if arrestin and arrestin.wt_protein
+                    else "-"
+                )
+                arr_note = arrestin.note or "-" if arrestin else "-"
+                arr_cov  = arrestin.wt_coverage or "-" if arrestin else "-"
+
+                # ---- stabilising agents --------------------------------------
+                fusions = "<br>".join(
+                    a.name for a in s.stabilizing_agents.all()
+                    if self.fusion_pat.match(a.name)
+                ) or "-"
+                antibodies = "<br>".join(
+                    a.name for a in s.stabilizing_agents.all()
+                    if self.antibody_pat.match(a.name)
+                ) or "-"
+
+                # ---- ligands --------------------------------------------------
+                lig_html, lig_types, lig_roles = [], set(), set()
+                for li in s.ligands.all():
+                    if not li.ligand:
+                        continue
+                    if li.ligand.ligand_type:
+                        lig_types.add(li.ligand.ligand_type.name)
+                    if li.ligand_role:
+                        lig_roles.add(li.ligand_role.name)
+                    lig_html.append(
+                        li.ligand.name
+                        if li.ligand.ambiguous_alias else
+                        f'<a class="struct" rel="http://www.ebi.ac.uk/chembl/api/data/image/{li.ligand.id}" '
+                        f'href="/ligand/{li.ligand.id}/info" target="_blank">{li.ligand.name}</a>'
+                    )
+
+                # ---- endogenous ligands --------------------------------------
+                endo_set = getattr(pp, "prefetched_endo", [])
+                endo_html = "<br>".join(
+                    f'<a href="/ligand/{e.ligand.id}/info" target="_blank">{e.ligand.name}</a>'
+                    for e in endo_set if getattr(e, "ligand", None)
+                ) or "-"
+                endo_type = (
+                    endo_set[0].ligand.ligand_type.name
+                    if endo_set and getattr(endo_set[0].ligand, "ligand_type", None)
+                    else "-"
+                )
+
+                # ---- publication link ----------------------------------------
+                if pub and pub.web_link and pub.web_link.web_resource:
+                    pub_ref  = pub.web_link.index
+                    pub_link = pub.web_link.web_resource.url.replace("$index", pub_ref)
+                else:
+                    pub_ref, pub_link = "-", "#"
+
+                # ---- sodium pocket flag (from prefetched_sites) --------------
+                has_sodium_site = any(
+                    spc.site.slug == "sodium_pocket"
+                    for spc in getattr(s.protein_conformation, "prefetched_sites", [])
+                )
+
+                # ---- append record -------------------------------------------
+                out.append({
+                    "id": s.id,
+                    "uniprot_link": f"http://www.uniprot.org/uniprot/{pp.accession}",
+                    "Gene": gene_name,
+                    "entry_short": entry_short,
+                    "iuphar_link": f"/protein/{pp.entry_name}",
+                    "iuphar_name": iuphar_name,
+                    "family": fam_short,
+                    "class": fam_class,
+                    "species": p.species.common_name,
+                    "method": method,
+                    "pdb": pdb_code,
+                    "refined": (
+                        f"refined/{pdb_code.upper()}" if s.refined and pdb_code != "-" else "-"
+                    ),
+                    "resolution": s.resolution,
+                    "preferred_chain": s.preferred_chain,
+                    "state": s.state.name if s.state else "-",
+                    "active_pct": s.gprot_bound_likeness,
+                    "coverage": coverage,
+                    "arrestin_family": arr_family,
+                    "arrestin_name": arr_name,
+                    "arrestin_entry": arr_entry,
+                    "arrestin_note": arr_note,
+                    "arrestin_coverage": arr_cov,
+                    "fusions": fusions,
+                    "antibodies": antibodies,
+                    "ligands": "<br>".join(lig_html) or "-",
+                    "ligand_type": "<br>".join(sorted(lig_types)) or "-",
+                    "ligand_role": "<br>".join(sorted(lig_roles)) or "-",
+                    "endo_ligands": endo_html,
+                    "endo_type": endo_type,
+                    "sodium_site": "Yes" if has_sodium_site else "No",
+                    "sodium": "Yes" if s.sodium else "No",
+                    "authors": pub.authors if pub and pub.authors else "-",
+                    "reference": (
+                        f'<a target="_blank" href="{pub_link}">{pub_ref}</a>'
+                        if pub_ref != "-" else "-"
+                    ),
+                    "pub_date": (
+                        s.publication_date.strftime("%Y-%m-%d")
+                        if s.publication_date else "-"
+                    ),
+                    "annotated": "Yes" if s.annotated else "No",
+                })
+
+            return JsonResponse(out, safe=False, encoder=DjangoJSONEncoder)
+
+        except Exception as exc:       # safety-net: never crash
+            traceback.print_exc()
+            return JsonResponse({"error": str(exc)}, status=500)
 
 
 class EffectorStructureBrowser(TemplateView):
