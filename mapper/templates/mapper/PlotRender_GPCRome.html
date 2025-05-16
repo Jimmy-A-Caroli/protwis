@@ -10,88 +10,140 @@
 {% block content %}
 
 <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
-    <div class="col-md-12" style="margin-bottom: 20px;">
-      <div class="col-md-3" style="padding-top: 5px;">
-        Receptor names:
-          <div class="btn-group" role="group" id="gtp_plus">
-            <button id="GPCRome_Protein" class="btn btn-info active">Protein</button>
-              <button id="GPCRome_Entrez" class="btn btn-info">Gene</button>
-              <button id="GPCRome_Uniprot" class="btn btn-info ">UniProt</button>
-          </div>
+   <div class="col-md-12" style="margin-bottom: 20px;">
+  <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: nowrap;">
+    
+    <!-- Receptor names dropdown -->
+    <div class="dropdown" style="position: relative;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_LabelType_Button"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Receptor names
+      </button>
+      <div class="dropdown-menu p-2"
+           style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-30%);">
+        <button type="button" class="btn btn-outline-primary btn-block mb-1 GPCRome-label-btn" data-value="Protein">Protein</button>
+        <button type="button" class="btn btn-outline-primary btn-block mb-1 GPCRome-label-btn" data-value="Entrez">Gene</button>
+        <button type="button" class="btn btn-outline-primary btn-block GPCRome-label-btn" data-value="Uniprot">UniProt</button>
       </div>
-  
-      <div class="col-md-2" style="padding-top: 5px;">
-        Icon toggle:
-        <button id="ToggleIcon" class="btn btn-info active">On</button>
-      </div>
+    </div>
 
-      <div class="col-md-2" style="padding-top: 5px;">
-        Legend toggle:
-        <button id="ToggleIconLegend" class="btn btn-info active">On</button>
-      </div>
-  
-      <!-- # Download button # -->
-      <div class="col-md-2">
-        <div class="dropdown" style="width: 500px !important;">
-          <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_Color_Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Color styling
-          </button>
-          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="GPCRome_Color_Styling_Menu">
-            <!-- Color complexity Dropdown -->
-            <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
-              <div class="col-md-6" style="width:150px;margin-right: 20px;">
-                <select id="GPCRome_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateGPCRomeColorPickers()">
-                  <option value="One" selected>White - Color</option>
-                  <option value="Two">Color - Color</option>
-                  <option value="Three">Color - White - Color</option>
+     <!-- Color styling dropdown -->
+    <div class="dropdown" style="position: relative;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_Color_Styling_Menu"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Colors
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot"
+          aria-labelledby="GPCRome_Color_Styling_Menu"
+          style="min-width: 410px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-20%);">
+        <!-- Color complexity -->
+        <div class="col-md-12" style="margin: 15px 15px;">
+          <div class="row">
+
+            <!-- Dropdown column -->
+            <div class="col-md-6" style="text-align: center; margin-left: -5px;">
+              <label style="font-weight: bold; font-size: 13px; display: block; margin-bottom: 5px;">
+                Number of colors
+              </label>
+              <div style="width: 80%; margin: 0 auto;">
+                <select id="GPCRome_color_styling" class="form-control"
+                        style="height: 35px; font-size: 14px;"
+                        onchange="UpdateGPCRomeColorPickers()">
+                  <option value="One" selected>One</option>
+                  <option value="Two">Two</option>
+                  <option value="Three">Three</option>
                 </select>
               </div>
-  
-              <!-- Color Selector Dropdown -->
-              <div class="col-md-6" style="height: 15px;width: 200px;">
-                <div class="col-md-3" id="GPCRome_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
-                  <input type="text" id="GPCRome_colorPicker_min" />
-                </div>
-                <div class="col-md-3" id="GPCRome_Color_avg_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
-                  <input type="text" id="GPCRome_colorPicker_avg" />
-                </div>
-                <div class="col-md-3" id="GPCRome_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
-                  <input type="text" id="GPCRome_colorPicker_max"/>
-                </div>
+            </div>
+
+            <!-- Color pickers column -->
+           <div class="col-md-6" style="margin: 0px -15px;">
+
+            <!-- Label row -->
+            <div style="display: flex; gap: 5px; justify-content: start; margin-bottom: 3px; font-size: 12px;">
+              <div id="GPCRome_Color_min_label" style="width: 80px;text-align: center;">Min</div>
+              <div id="GPCRome_Color_avg_label" style="width: 80px;text-align: center;">Mid</div>
+              <div style="width: 80px;text-align: center;">Max</div>
+            </div>
+            <!-- Input row -->
+            <div style="display: flex; gap: 5px; align-items: center;">
+              <div id="GPCRome_Color_min_container" style="width: 80px;">
+                <input type="text" id="GPCRome_colorPicker_min" />
+              </div>
+              <div id="GPCRome_Color_avg_container" style="width: 80px;">
+                <input type="text" id="GPCRome_colorPicker_avg" />
+              </div>
+              <div id="GPCRome_Color_max_container" style="width: 80px;">
+                <input type="text" id="GPCRome_colorPicker_max" />
               </div>
             </div>
-  
-            <!-- Set Colors Buttons -->
-            <div class="text-center" style="margin-bottom: 15px;">
-              <div class="col-md-12" style="margin-bottom: 5px;">
-                <div class="col-md-6"><button id="GPCRome_GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
-                <div class="col-md-6"><button id="GPCRome_GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
-              </div>
-              <div class="col-md-12" style="margin-bottom: 15px;">
-                <div class="col-md-6"><button id="GPCRome_RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
-                <div class="col-md-6"><button id="GPCRome_TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
-              </div>
-            </div>
+
+          </div>
+
           </div>
         </div>
-      </div>
-      <div class="col-md-2"></div>
-      <div class="col-md-3">
-        <div class="text-center">
-          <div class="dropdown">
-            <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
-            </button>
-            <div class="dropdown-menu dropdown-menu-right-middle">
-              <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.svg');">SVG</a></li>
-              <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.png');">PNG</a></li>
-              <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.jpg');">JPG</a></li>
-              <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.tiff');">TIFF</a></li>
-            </div>
+        <!-- Preset color buttons -->
+        <div class="text-center" style="margin-bottom: 15px;">
+          <div class="col-md-12" style="margin-bottom: 5px;">
+            <div class="col-md-6"><button id="GPCRome_GrayScale" type="button" class="btn btn-primary" style="width:150px; font-size: 14px; margin-right: 10px;">Grey scale</button></div>
+            <div class="col-md-6"><button id="GPCRome_GrayBlueScale" type="button" class="btn btn-primary" style="width:150px; font-size: 14px; margin-right: 10px;">Grey-Blue scale</button></div>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 15px;">
+            <div class="col-md-6"><button id="GPCRome_RedBlueScale" type="button" class="btn btn-primary" style="width:150px; font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
+            <div class="col-md-6"><button id="GPCRome_TealMagentaScale" type="button" class="btn btn-primary" style="width:150px; font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Graphical legend dropdown -->
+    <div class="dropdown" style="position: relative;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="GraphicalLegend_Button"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Graphical legend
+      </button>
+      <div class="dropdown-menu p-2"
+           style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-25%);">
+        <button type="button" class="btn btn-outline-primary btn-block mb-1 graphical-legend-option" data-icon="false" data-legend="false">None</button>
+        <button type="button" class="btn btn-outline-primary btn-block mb-1 graphical-legend-option" data-icon="true" data-legend="false">Left</button>
+        <button type="button" class="btn btn-outline-primary btn-block mb-1 graphical-legend-option" data-icon="false" data-legend="true">Right</button>
+        <button type="button" class="btn btn-outline-primary btn-block graphical-legend-option" data-icon="true" data-legend="true">Both</button>
+      </div>
+    </div>
+
+    <!-- Download dropdown -->
+    <div class="dropdown" style="position: relative;">
+      <button type="button" class="btn btn-primary dropdown-toggle"
+            id="DownloadDropdownToggle" style="font-size: 14px;">
+        <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3;"></span>
+        Download <span class="caret"></span>
+      </button>
+
+      <div class="dropdown-menu"
+          style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-25%); display: none;">
+        <button type="button" class="btn btn-primary btn-block"
+                onclick="saveSvgAsJpg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.jpg');">
+          JPG
+        </button>
+         <button type="button" class="btn btn-primary btn-block"
+                onclick="saveSvgAsPng(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.png');">
+          PNG
+        </button>
+        <button type="button" class="btn btn-primary btn-block"
+                onclick="saveSvg(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.svg');">
+          SVG
+        </button>
+        <button type="button" class="btn btn-primary btn-block"
+                onclick="saveSvgAsTiff(document.getElementById('GPCRome_plot_svg'), 'GPCRome_plot.tiff');">
+          TIFF
+        </button>
+      </div>
+    </div>
+
+
+  </div>
+</div>
 
 <div id="image-container" data-image-url="{% static 'home/images/DataMapper/DataMapper_GPCRome_icon_legend.png' %}"></div>
 <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
@@ -180,6 +232,7 @@ if (PlotType === 'Numeric') {
 
 let GPCRome_location = "GPCRome_plot";
 DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling);
+UpdateGPCRomeColorPickers();
 
 // Recursively extract all "Data" values from a nested object
 function extractDataValues(obj) {
@@ -213,77 +266,94 @@ function updateGPCRome() {
     DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling); // ← Use the updated copy
 }
 
+// Attach click handler to dropdown items for receptor names
+document.addEventListener('DOMContentLoaded', function () {
+  const labelButton = document.getElementById('GPCRome_LabelType_Button');
+  const labelButtons = document.querySelectorAll('.GPCRome-label-btn');
 
-document.getElementById("GPCRome_Protein").addEventListener("click", () => {
-    GPCRomes_styling.LabelType = "Protein";
-    updateGPCRome();
-    setActiveButton("GPCRome_Protein");
-});
+  // Set initial button label
+  // labelButton.textContent = GPCRomes_styling.LabelType || 'Protein';
 
-document.getElementById("GPCRome_Uniprot").addEventListener("click", () => {
-    GPCRomes_styling.LabelType = "Uniprot";
-    updateGPCRome();
-    setActiveButton("GPCRome_Uniprot");
-});
-
-document.getElementById("GPCRome_Entrez").addEventListener("click", () => {
-    GPCRomes_styling.LabelType = "Entrez";
-    updateGPCRome();
-    setActiveButton("GPCRome_Entrez");
-});
-
-function setActiveButton(id) {
-    document.getElementById("GPCRome_Protein").classList.remove("active");
-    document.getElementById("GPCRome_Uniprot").classList.remove("active");
-    document.getElementById("GPCRome_Entrez").classList.remove("active");
-    document.getElementById(id).classList.add("active");
-}
-
-// Attach event listener to the button
-d3.select("#ToggleIcon").on("click", toggleIcon);
-
-// Function to toggle the icon visibility and redraw the GPCRomes
-function toggleIcon() {
-    const button = d3.select("#ToggleIcon");
-
-    // Toggle the showIcon property in GPCRomes_styling
-    GPCRomes_styling.showIcon = !GPCRomes_styling.showIcon;
-
-    // Update button text and state
-    if (GPCRomes_styling.showIcon) {
-        button.text("On");
-        button.classed("active", true);
-    } else {
-        button.text("Off");
-        button.classed("active", false);
+  labelButtons.forEach(btn => {
+    // Highlight the active label on load
+    if (btn.getAttribute('data-value') === GPCRomes_styling.LabelType) {
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary');
     }
 
-    // Redraw the GPCRomes with the updated icon state
-    updateGPCRome();
-}
+    btn.addEventListener('click', function () {
+      const selectedValue = this.getAttribute('data-value');
 
-// Attach event listener to the button
-d3.select("#ToggleIconLegend").on("click", toggleIconLegend);
+      // Update GPCRomes_styling
+      GPCRomes_styling.LabelType = selectedValue;
+      updateGPCRome();
 
-// Function to toggle the icon visibility and redraw the GPCRomes
-function toggleIconLegend() {
-    const button = d3.select("#ToggleIconLegend");
+      // Highlight selected button
+      labelButtons.forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+      this.classList.remove('btn-outline-primary');
+      this.classList.add('btn-primary');
+    });
+  });
+});
 
-    // Toggle the showIcon property in GPCRomes_styling
-    GPCRomes_styling.ShowLegend = !GPCRomes_styling.ShowLegend;
 
-    // Update button text and state
-    if (GPCRomes_styling.ShowLegend) {
-        button.text("On");
-        button.classed("active", true);
-    } else {
-        button.text("Off");
-        button.classed("active", false);
+document.addEventListener('DOMContentLoaded', function () {
+  const graphicalLegendOptions = document.querySelectorAll('.graphical-legend-option');
+
+  graphicalLegendOptions.forEach(btn => {
+    const iconValue = btn.getAttribute('data-icon') === 'true';
+    const legendValue = btn.getAttribute('data-legend') === 'true';
+
+    // Highlight the current selected state on load
+    if (iconValue === GPCRomes_styling.showIcon && legendValue === GPCRomes_styling.ShowLegend) {
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary');
     }
 
-    // Redraw the GPCRomes with the updated icon state
-    updateGPCRome();
-}
+    btn.addEventListener('click', function () {
+      // Update styling
+      GPCRomes_styling.showIcon = iconValue;
+      GPCRomes_styling.ShowLegend = legendValue;
+
+      // Redraw the plot
+      updateGPCRome();
+
+      // Update button highlight state
+      graphicalLegendOptions.forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+      this.classList.remove('btn-outline-primary');
+      this.classList.add('btn-primary');
+    });
+  });
+});
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  const downloadBtn = document.querySelector('#DownloadDropdownToggle');
+  const downloadMenu = downloadBtn?.nextElementSibling;
+
+  if (downloadBtn && downloadMenu) {
+    downloadBtn.addEventListener('click', function (e) {
+      e.stopPropagation(); // prevent bubbling
+      downloadMenu.style.display = (downloadMenu.style.display === 'block') ? 'none' : 'block';
+    });
+
+    // Close it when clicking anywhere else
+    document.addEventListener('click', function () {
+      downloadMenu.style.display = 'none';
+    });
+
+    // Prevent menu itself from closing if clicked inside
+    downloadMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  }
+});
 
 // ###################
 // ## Color styling ##
@@ -298,21 +368,29 @@ function UpdateGPCRomeColorPickers() {
   const GPCRome_Color_avg_container = document.getElementById("GPCRome_Color_avg_container");
   const GPCRome_Color_max_container = document.getElementById("GPCRome_Color_max_container");
 
+  const GPCRome_Color_min_Label_container = document.getElementById("GPCRome_Color_min_label");
+  const GPCRome_Color_avg_Label_container = document.getElementById("GPCRome_Color_avg_label");
+
   // Get the selected layer value
   const Color_styling_value = Color_styling.value;
+  
+  GPCRomes_styling.ColorSetup = Color_styling_value;
 
   if (Color_styling_value === 'One') {
-    GPCRome_Color_min_container.style.display = 'None';
-    GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.ColorSetup = "One";
+  GPCRome_Color_min_container.style.visibility = 'hidden';
+  GPCRome_Color_avg_container.style.visibility = 'hidden';
+  GPCRome_Color_min_Label_container.style.visibility = 'hidden';
+  GPCRome_Color_avg_Label_container.style.visibility = 'hidden';
   } else if (Color_styling_value === 'Two') {
-    GPCRome_Color_min_container.style.display = 'Block';
-    GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.ColorSetup = "Two";
+    GPCRome_Color_min_container.style.visibility = 'visible';
+    GPCRome_Color_avg_container.style.visibility = 'hidden';
+    GPCRome_Color_min_Label_container.style.visibility = 'visible';
+    GPCRome_Color_avg_Label_container.style.visibility = 'hidden';
   } else if (Color_styling_value === 'Three') {
-    GPCRome_Color_min_container.style.display = 'Block';
-    GPCRome_Color_avg_container.style.display = 'None';
-    GPCRomes_styling.ColorSetup = "Three";
+    GPCRome_Color_min_container.style.visibility = 'visible';
+    GPCRome_Color_avg_container.style.visibility = 'visible';
+    GPCRome_Color_min_Label_container.style.visibility = 'visible';
+    GPCRome_Color_avg_Label_container.style.visibility = 'visible';
   }
 
   // Set color to current color
@@ -350,6 +428,7 @@ $(document).ready(function() {
   // Initialize color pickers
   initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
   initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.colorAvg);
+  $("#GPCRome_colorPicker_avg").spectrum("disable");
   initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
 });
 

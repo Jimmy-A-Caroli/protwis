@@ -11,23 +11,27 @@
 
 <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
   <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
-    <div class="col-md-3" style="padding-top: 5px;">
-      Receptor names:
-        <div class="btn-group" role="group" id="gtp_plus">
-            <button id="TREE_IUPHARNames" class="btn btn-info active">Protein</button>
-            <button id="TREE_Entrez" class="btn btn-info">Gene</button>
-            <button id="TREE_UniProtNames" class="btn btn-info">UniProt</button>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center;">
+    <!-- Receptor names dropdown -->
+    <div class="dropdown" style="position: relative;">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="Tree_LabelType_Button"
+                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Receptor names
+        </button>
+        <div class="dropdown-menu p-2"
+            style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-50%);">
+            <button type="button" class="btn btn-outline-primary btn-block mb-1 tree-label-btn" data-value="IUPHAR">Protein</button>
+            <button type="button" class="btn btn-outline-primary btn-block mb-1 tree-label-btn" data-value="Gene">Gene</button>
+            <button type="button" class="btn btn-outline-primary btn-block tree-label-btn" data-value="UniProt">UniProt</button>
         </div>
     </div>
-    <!-- ############### -->
-    <!-- ### Label Styling ###  -->
-    <!-- ############### -->
-    <div class="col-md-1" style="margin-left: 10px;margin-right: -10px;">
-      <div class="dropdown" style="width: 400px !important;">
-          <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Label styling
-          </button>
-          <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+   
+     <!-- Label styling -->
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="LabelStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Labels
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot" style="width: 150px;">
 
               <!-- Class Label and Slider -->
               <div id="class_label_group" class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
@@ -66,26 +70,14 @@
               </div>
 
           </div>
-      </div>
     </div>
 
-      <div class="col-md-1">
-        <button id="toggleLegendBtn" class="btn btn-primary" style="width: 120px; font-size: 14px;">
-          Hide legend
-        </button>
-      </div>
-      
-
-    <!-- ################ -->
-    <!-- # Data styling # -->
-    <!-- ################ -->
-
-    <div class="col-md-1">
-      <div class="dropdown" style="width: 400px !important;">
-        <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          Data styling
-        </button>
-        <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
+    <!-- Data styling -->
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="DataStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Circles
+      </button>
+      <div class="dropdown-menu dropdown-menu-listplot" style="width: 400px;">
 
           <!-- Circle Size Slider -->
           <div class="col-md-12" style="text-align: center;">
@@ -97,21 +89,46 @@
               <span id="Tree_circleSizeValue">3</span>
             </div>
           </div>
+
+          <!-- Space Size Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="Tree_circleSpacerSlider" id="Tree_circleSpacerSliderLabel" class="form-label">Circle Spacer</label>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="0" max="2" value="1" id="Tree_circleSpacerSlider">
+            <div style="text-align: center;">
+              <span id="Tree_circleSpacerValue">1</span>
+            </div>
+          </div>
         </div>
-      </div>
     </div>
 
 
-   
+    <!-- Legend Toggle & Label Edit Dropdown -->
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="Legend_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Legend Options
+        </button>
+        <div class="dropdown-menu dropdown-menu-listplot p-3 text-center" style="width: 380px;">
+            
+            <!-- Centered Toggle Button with Padding -->
+            <div style="display: flex; justify-content: center; padding: 20px 0 20px 0;">
+            <button id="legendToggleBtn" class="btn btn-danger" style="min-width: 200px;">
+                Hide Legend
+            </button>
+            </div>
 
+            <!-- Dynamic Label Inputs -->
+            <div id="legendLabelInputsContainer"></div>
 
-    <!-- # Download button # -->
-    <div class="col-md-3">
-      <div class="text-center">
-        <div class="dropdown">
-          <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
-          </button>
+        </div>
+    </div>
+
+    <!-- Download button -->
+    <div class="dropdown">
+      <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3"></span> Download <span class="caret"></span>
+      </button>
           <div class="dropdown-menu dropdown-menu-right-middle">
             <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('tree_plot_svg'), 'Tree.svg');">SVG</a></li>
             <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('tree_plot_svg'), 'Tree.png');">PNG</a></li>
@@ -119,19 +136,12 @@
             <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('tree_plot_svg'), 'Tree.tiff');">TIFF</a></li>
           </div>
         </div>
-      </div>
     </div>
-
     </div>
     <!-- ############# -->
     <!-- # TREE plot # -->
     <!-- ############# -->
 
-
-      <!-- Legend bars -->
-    <!-- <div class="col-md-12" id="legend_bars">
-      <svg width="800" height="75"></svg>
-    </div> -->
     <!-- Tree -->
     <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
         <div id="tree_plot" class="text-center"></div>
@@ -177,10 +187,10 @@ let Tree_label_dicts = {
 
 var ShowLegend = true;
 
-console.log(tree_data)
-console.log(Tree_circles)
-
 const maxLeafNodeLength_scaler = 10
+// ✅ Initial safe defaults (same logic as initdraw)
+let circle_size = 3 + 1 * 3;       // default slider value = 3
+let circle_spacer = circle_size * (2 + 0.5 * 1) + 1;  // default spacer slider = 1
 
 tree_data = update_tree_data(tree_data,tree_options.depth);
 const depth = tree_options.depth;  // Set this value when the page loads
@@ -207,15 +217,8 @@ var Label_dict = {'Inner':'Inner','Outer1':'Outer 1','Outer2':'Outer 2','Outer3'
 
 // Function to change the active button and call changeLeavesLabels with the active value
 function updateLeavesLabels() {
-    let activeLabelType;
-
-    if (document.getElementById("TREE_UniProtNames").classList.contains("active")) {
-        activeLabelType = "UniProt";
-    } else if (document.getElementById("TREE_Entrez").classList.contains("active")) {
-        activeLabelType = "Gene";
-    } else {
-        activeLabelType = "IUPHAR";
-    }
+    let activeButton = document.querySelector(".tree-label-btn.btn-primary");
+    let activeLabelType = activeButton ? activeButton.getAttribute("data-value") : "IUPHAR";
 
     // Get the correct label dictionary
     let activeDict = Tree_label_dicts[activeLabelType];
@@ -242,40 +245,46 @@ function ReDraw_cicles_and_bars() {
 }
 
 // # Change leaves buttons #
-$("#TREE_UniProtNames").click(function(){
-    $("#TREE_UniProtNames").addClass("active");
-    $("#TREE_Entrez").removeClass("active");
-    $("#TREE_IUPHARNames").removeClass("active");
-    ReDraw_Circles_and_Labels();
-});
-$("#TREE_IUPHARNames").click(function() {
-  $("#TREE_UniProtNames").removeClass("active");
-  $("#TREE_Entrez").removeClass("active");
-  $("#TREE_IUPHARNames").addClass("active");
-  ReDraw_Circles_and_Labels();
-});
+function setTreeLabelType(labelType) {
+  // Set visual highlight (if needed)
+  const labelButtons = document.querySelectorAll('.tree-label-btn');
+  labelButtons.forEach(btn => {
+    if (btn.getAttribute('data-value') === labelType) {
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary');
+    } else {
+      btn.classList.add('btn-outline-primary');
+      btn.classList.remove('btn-primary');
+    }
+  });
 
-$("#TREE_Entrez").click(function(){
-    $("#TREE_Entrez").addClass("active");
-    $("#TREE_UniProtNames").removeClass("active");
-    $("#TREE_IUPHARNames").removeClass("active");
-    ReDraw_Circles_and_Labels();
-});
+  // Set which dictionary to use
+  let activeDict = Tree_label_dicts[labelType];
+
+  changeLeavesLabels("tree_plot", labelType, activeDict);
+  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
+}
 
 // # Initialize tree plot #
 document.addEventListener("DOMContentLoaded", function() {
   initdraw();
 });
 
-document.getElementById('toggleLegendBtn').addEventListener('click', function() {
-    // Toggle the ShowLegend variable
-    ShowLegend = !ShowLegend;
+// === Legend Show/Hide Toggle ===
+document.getElementById("legendToggleBtn").addEventListener("click", function () {
+  ShowLegend = !ShowLegend;
 
-    // Update the button text
-    this.textContent = ShowLegend ? "Hide Legend" : "Show Legend";
+  if (ShowLegend) {
+    this.textContent = "Hide Legend";
+    this.classList.remove("btn-success");
+    this.classList.add("btn-danger");
+  } else {
+    this.textContent = "Show Legend";
+    this.classList.remove("btn-danger");
+    this.classList.add("btn-success");
+  }
 
-    // Redraw everything depending on the new ShowLegend value
-    ReDraw_all();
+  ReDraw_all();
 });
 
 // ##########################
@@ -354,17 +363,20 @@ $(document).ready(function () {
     });
 });
 
-// Function to update a label and redraw the legend
-function updateLabel(category) {
-    var inputId = "labelInput_" + category;
-    var newValue = document.getElementById(inputId).value;
 
-    // Update the Label_dict
-    Label_dict[category] = newValue;
+document.addEventListener("DOMContentLoaded", function () {
+  const labelButtons = document.querySelectorAll('.tree-label-btn');
 
-    // Now re-run your createLegendBars with updated labels
-    if (ShowLegend) {CreateTextLegend('tree_plot', Tree_circles);}
-}
+  labelButtons.forEach(btn => {
+    btn.addEventListener('click', function () {
+      const selectedValue = this.getAttribute('data-value');
+      setTreeLabelType(selectedValue);
+    });
+  });
+
+  // Optionally set default on load
+  setTreeLabelType("IUPHAR");  // or "Gene", "UniProt"
+});
 
 // ====================
 // === Data styling ===

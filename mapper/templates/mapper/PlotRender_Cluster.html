@@ -10,129 +10,132 @@
 {% block content %}
 
 <div style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-    <div class="col-md-12" style="padding-top: 5px;">
-        Receptor names:
-          <div class="btn-group" role="group" id="gtp_plus">
-            <button id="Cluster_Receptor" class="btn btn-info active">Protein</button>
-            <button id="Cluster_Gene" class="btn btn-info">Gene</button>
-            <button id="Cluster_UniProt" class="btn btn-info">UniProt</button>
-          </div>
-      </div>
-    <div class="col-md-12" style="padding-top: 20px;">
-      <div class="col-md-1">Color by:</div>
-        <div class="col-md-7">
-          <div class="btn-group" role="group" id="colorOptions">
-            <button id="colorByCluster" class="btn btn-info active">Cluster</button>
-            <button id="colorByGradient" class="btn btn-info">Gradient</button>
-            <button id="colorByClass" class="btn btn-info">Class</button>
-            <button id="colorByLigandType" class="btn btn-info">Ligand Type</button>
-            <button id="colorByReceptorFamily" class="btn btn-info">Receptor Family</button>
-          </div>
-        </div>
-        <div class="col-md-1"></div>
-        <div class="col-md-2">
-          <div class="text-center">
-            <div class="dropdown">
-                <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-right-middle">
-                    <li><a class="dropdown-item" href="javascript:downloadPlot('svg');">SVG</a></li>
-                    <li><a class="dropdown-item" href="javascript:downloadPlot('png');">PNG</a></li>
-                    <li><a class="dropdown-item" href="javascript:downloadPlot('jpg');">JPG</a></li>
-                    <li><a class="dropdown-item" href="javascript:downloadPlot('tiff');">TIFF</a></li>
-                </div>
-            </div>
-        </div>
-        </div>
-    </div>
-    <div class="col-md-12" style="padding-top: 20px;">
-      <div class="col-md-1">Plot labels:</div>
-      <div class="col-md-5">
-        <div class="btn-group" role="group" id="gtp_plus">
-            <button id="show" class="btn btn-info">Show</button>
-            <button id="hide" class="btn btn-info active">Hide</button>
-            <button id="textColorToggleButton" type="button" class="btn btn-info" style="width: 50%; font-weight: bold;">Text Color: Yes</button>
+  <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center;">
+      <!-- Receptor names dropdown -->
+      <div class="dropdown" style="position: relative;">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="Cluster_LabelType_Button"
+                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Receptor names
+        </button>
+        <div class="dropdown-menu p-2"
+             style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-50%);">
+          <button type="button" class="btn btn-primary btn-block mb-1 cluster-label-btn" data-value="IUPHAR">Protein</button>
+          <button type="button" class="btn btn-outline-primary btn-block mb-1 cluster-label-btn" data-value="Entrez">Gene</button>
+          <button type="button" class="btn btn-outline-primary btn-block cluster-label-btn" data-value="UniProt">UniProt</button>
         </div>
       </div>
-      <div class="col-md-6"></div>
-    </div>
-    <div class="col-md-12" style="padding-top: 0x;padding-bottom: 20px">
-        <div class="col-md-1" style="margin-top: 36px;margin-right: 20px;text-align: left;margin-left: -15px">Styling options: </div>
-          <div class="col-md-2" style="margin-left: 10px; margin-right: -10px;margin-top: 30px;" >
-              <div class="dropdown" style="width: 400px !important;">
-                  <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                      Clustering Options
-                  </button>
-                  <div class="dropdown-menu" aria-labelledby="clusteringMenu">
-                      <!-- Number of Clusters Slider -->
-                      <div class="col-md-12" style="text-align: center;">
-                          <label for="clusterSlider" id="clusterSliderLabel" class="form-label">Number of Clusters</label>
-                      </div>
-                      <div class="col-md-12" style="margin-bottom: 10px;">
-                          <input type="range" class="form-range" min="1" max="20" value="5" id="clusterSlider">
-                          <div style="text-align: center;">
-                              <span id="clusterSliderValue">5</span>
-                          </div>
-                      </div>
-                  </div>
-              </div>
+
+      <!-- Clustering Options Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Clustering
+        </button>
+        <div class="dropdown-menu dropdown-menu-listplot p-3" aria-labelledby="clusteringMenu" style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-50%);">
+          <!-- Number of Clusters Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="clusterSlider" id="clusterSliderLabel" class="form-label">Number of Clusters</label>
           </div>
-          <div class="col-md-2" style="margin-left: 10px; margin-right: -10px;margin-top: 30px;">
-            <div class="dropdown" style="width: 400px !important;">
-                <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu_datastyling" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Data Styling
-                </button>
-                <div class="dropdown-menu p-3" aria-labelledby="clusteringMenu_datastyling">
-        
-                    <!-- Label Font Size Slider -->
-                    <div class="col-md-12" style="text-align: center;">
-                      <label for="cluster_labelFontSizeSlider" id="cluster_labelFontSizeLabel" class="form-label">Label Font Size</label>
-                    </div>
-                    <div class="col-md-12" style="margin-bottom: 10px;">
-                      <input type="range" class="form-range" min="5" max="25" value="14" id="cluster_labelFontSizeSlider">
-                      <div style="text-align: center;">
-                          <span id="cluster_labelFontSizeValue">14</span>px
-                      </div>
-                    </div>
-        
-                    <!-- Marker Size Slider -->
-                    <div class="col-md-12" style="text-align: center;">
-                        <label for="cluster_markerSizeSlider" id="cluster_markerSizeLabel" class="form-label">Marker Size</label>
-                    </div>
-                    <div class="col-md-12" style="margin-bottom: 10px;">
-                        <input type="range" class="form-range" min="5" max="20" value="10" id="cluster_markerSizeSlider">
-                        <div style="text-align: center;">
-                            <span id="cluster_markerSizeValue">10</span>px
-                        </div>
-                    </div>
-        
-                  <!-- Stroke Width Slider -->
-                  <div class="col-md-12" style="text-align: center;">
-                    <label for="cluster_strokeWidthSlider" id="cluster_strokeWidthLabel" class="form-label">Stroke Width</label>
-                  </div>
-                  <div class="col-md-12" style="margin-bottom: 10px;">
-                    <input type="range" class="form-range" min="0.1" max="2" value="0.5" step="0.1" id="cluster_strokeWidthSlider">
-                    <div style="text-align: center;">
-                        <span id="cluster_strokeWidthValue">0.5</span>px
-                    </div>
-                  </div>
-        
-                    <!-- Border Toggle Button -->
-                    <div class="col-md-12" style="text-align: center;margin-bottom: 20px;">
-                      <button id="borderToggleButton" type="button" class="btn btn-primary" style="width: 50%; font-weight: bold;">Border: On</button>
-                    </div>
-        
-                </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="1" max="20" value="5" id="clusterSlider">
+            <div style="text-align: center;">
+              <span id="clusterSliderValue">5</span>
             </div>
+          </div>
         </div>
-        
+      </div>
+
+      <!-- Color By Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="ColorBy_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Colors
+        </button>
+        <div class="dropdown-menu p-2 text-center" style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-30%);">
+          <button id="colorByCluster" class="btn btn-primary btn-block mb-1">Cluster</button>
+          <button id="colorByGradient" class="btn btn-outline-primary btn-block mb-1">Gradient</button>
+          <button id="colorByClass" class="btn btn-outline-primary btn-block mb-1">Class</button>
+          <button id="colorByLigandType" class="btn btn-outline-primary btn-block mb-1">Ligand Type</button>
+          <button id="colorByReceptorFamily" class="btn btn-outline-primary btn-block">Receptor Family</button>
+        </div>
+      </div>
+
+      <!-- Data Styling Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu_datastyling" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Labels and data
+        </button>
+            <div class="dropdown-menu p-3" aria-labelledby="clusteringMenu_datastyling" style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-18%);">
+            <!-- Labels Toggle -->
+            <div class="col-md-12" style="text-align: center; padding: 15px 0 10px 0;">
+            <button id="labelVisibilityToggle" class="btn btn-primary" style="width: 80%;">Labels: Show</button>
+            </div>
+            <!-- Labels color -->
+            <div class="col-md-12" style="text-align: center; padding: 5px 0 15px 0;">
+            <button id="textColorToggleButton" type="button" class="btn btn-primary" style="width: 80%;">Text Color: Yes</button>
+            </div>
+            <!-- Label Font Size Slider -->
+            <div class="col-md-12" style="text-align: center;">
+            <label for="cluster_labelFontSizeSlider" id="cluster_labelFontSizeLabel" class="form-label">Label Font Size</label>
+            </div>
+            <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="5" max="25" value="14" id="cluster_labelFontSizeSlider">
+            <div style="text-align: center;">
+                <span id="cluster_labelFontSizeValue">14</span>px
+            </div>
+            </div>
+
+          <!-- Marker Size Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="cluster_markerSizeSlider" id="cluster_markerSizeLabel" class="form-label">Marker Size</label>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="5" max="20" value="10" id="cluster_markerSizeSlider">
+            <div style="text-align: center;">
+              <span id="cluster_markerSizeValue">10</span>px
+            </div>
+          </div>
+
+          <!-- Stroke Width Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="cluster_strokeWidthSlider" id="cluster_strokeWidthLabel" class="form-label">Stroke Width</label>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="0.1" max="2" value="0.5" step="0.1" id="cluster_strokeWidthSlider">
+            <div style="text-align: center;">
+              <span id="cluster_strokeWidthValue">0.5</span>px
+            </div>
+          </div>
+
+          <!-- Border Toggle Button -->
+          <div class="col-md-12" style="text-align: center; padding: 15px 0 15px 0;">
+            <button id="borderToggleButton" type="button" class="btn btn-primary" style="width: 50%; font-weight: bold;">Border: On</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Download Dropdown -->
+      <div class="dropdown" style="position: relative;">
+        <button type="button" class="btn btn-primary dropdown-toggle"
+              id="DownloadDropdownToggle" style="font-size: 14px;">
+          <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3;"></span>
+          Download <span class="caret"></span>
+        </button>
+        <div class="dropdown-menu"
+            style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
+                    margin-left: 5px; position: absolute; transform: translateY(-38%); display: none;">
+          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('svg');">SVG</button>
+          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('png');">PNG</button>
+          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('jpg');">JPG</button>
+          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('tiff');">TIFF</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Container for the Plotly Plot -->
+  <!-- Cluster Plot Container -->
   <div class="col-md-12" style="padding-top: 20px;">
-  <div id="plotContainer_cluster" style="width: 1200px; height: 700px;"></div>
-    </div>
+    <div id="plotContainer_cluster" style="width: 1200px; height: 700px;"></div>
+  </div>
 </div>
 
 {% endblock %}
@@ -170,6 +173,8 @@ var labelDict_Gene = Label_converter.UniProt_to_Gene_converter;
 currentClusterData.forEach(point => {
     point.original_label = point.label;  // Save original UniProt label
 });
+
+let labelsVisible = false;
 
 // Predefined 20-color palette
 const colorPalette = [
@@ -210,43 +215,45 @@ function downloadPlot(format) {
 // Document ready function
 $(document).ready(function() {
 
-// Event listeners for color options
-$("#colorByCluster").on("click", function() {
-    setActiveButton("colorByCluster");
-    updatePlotWithAnnotations(); // Updated function
+// Enhanced Color By button logic with visual toggle
+const colorButtons = document.querySelectorAll('#ColorBy_Menu ~ .dropdown-menu .btn');
+
+colorButtons.forEach(btn => {
+  btn.addEventListener('click', function () {
+    const selectedId = this.id;
+
+    // Reset all buttons
+    colorButtons.forEach(b => {
+      b.classList.remove('active', 'btn-primary');
+      b.classList.add('btn-outline-primary');
+    });
+
+    // Activate the clicked one
+    this.classList.add('active', 'btn-primary');
+    this.classList.remove('btn-outline-primary');
+
+    // Update functionality
+    setActiveButton(selectedId);
+    updatePlotWithAnnotations();
+  });
 });
 
-$("#colorByGradient").on("click", function() {
-    setActiveButton("colorByGradient");
-    updatePlotWithAnnotations(); // Updated function
-});
+const labelToggleBtn = document.getElementById('labelVisibilityToggle');
 
-$("#colorByClass").on("click", function() {
-    setActiveButton("colorByClass");
-    updatePlotWithAnnotations(); // Updated function
-});
+labelToggleBtn.addEventListener('click', () => {
+    labelsVisible = !labelsVisible;
 
-$("#colorByLigandType").on("click", function() {
-    setActiveButton("colorByLigandType");
-    updatePlotWithAnnotations(); // Updated function
-});
+    if (labelsVisible) {
+        labelToggleBtn.textContent = 'Labels: Hide';
+        labelToggleBtn.classList.remove('btn-primary');
+        labelToggleBtn.classList.add('btn-danger');
+    } else {
+        labelToggleBtn.textContent = 'Labels: Show';
+        labelToggleBtn.classList.remove('btn-danger');
+        labelToggleBtn.classList.add('btn-primary');
+    }
 
-$("#colorByReceptorFamily").on("click", function() {
-    setActiveButton("colorByReceptorFamily");
-    updatePlotWithAnnotations(); // Updated function
-});
-
-// Show/hide labels
-document.getElementById("show").addEventListener("click", function() {
-    document.getElementById("show").classList.add("active");
-    document.getElementById("hide").classList.remove("active");
-    updatePlotWithAnnotations(); // Updated function
-});
-
-document.getElementById("hide").addEventListener("click", function() {
-    document.getElementById("show").classList.remove("active");
-    document.getElementById("hide").classList.add("active");
-    updatePlotWithAnnotations(); // Updated function
+    updatePlotWithAnnotations();  // Reflect change
 });
 
 // Clustering options
@@ -338,11 +345,11 @@ $('#cluster_labelFontSizeSlider').on('input', function() {
         // Update the button text and styling based on the state
         if (cluster_DataStyling.textColorEnabled) {
             textColorToggleButton.textContent = 'Text Color: Yes';
-            textColorToggleButton.classList.add('btn-info');  // Use bootstrap class for "Yes" state
+            textColorToggleButton.classList.add('btn-primary');  // Use bootstrap class for "Yes" state
             textColorToggleButton.classList.remove('btn-danger');
         } else {
             textColorToggleButton.textContent = 'Text Color: No';
-            textColorToggleButton.classList.remove('btn-info');
+            textColorToggleButton.classList.remove('btn-primary');
             textColorToggleButton.classList.add('btn-danger');  // Use bootstrap class for "No" state
         }
 
@@ -352,7 +359,7 @@ $('#cluster_labelFontSizeSlider').on('input', function() {
 
     // Set initial button state to "Text Color: Yes" with primary button styling
     textColorToggleButton.textContent = 'Text Color: Yes';
-    textColorToggleButton.classList.add('btn-info');
+    textColorToggleButton.classList.add('btn-primary');
 
   // Initial plot rendering on page load
   renderInitialPlot();
@@ -361,15 +368,26 @@ $('#cluster_labelFontSizeSlider').on('input', function() {
 
 // Function to set the active button and deactivate others
 function setActiveButton(activeButtonId) {
-    const colorOptions = ["colorByCluster", "colorByGradient", "colorByClass", "colorByLigandType", "colorByReceptorFamily"];
+  const colorOptions = [
+    "colorByCluster",
+    "colorByGradient",
+    "colorByClass",
+    "colorByLigandType",
+    "colorByReceptorFamily"
+  ];
 
-    colorOptions.forEach(function(option) {
-        if (option === activeButtonId) {
-            $("#" + option).addClass("active");
-        } else {
-            $("#" + option).removeClass("active");
-        }
-    });
+  colorOptions.forEach(function(option) {
+    const btn = document.getElementById(option);
+    if (btn) {
+      if (option === activeButtonId) {
+        btn.classList.add("active", "btn-primary");
+        btn.classList.remove("btn-outline-primary");
+      } else {
+        btn.classList.remove("active", "btn-primary");
+        btn.classList.add("btn-outline-primary");
+      }
+    }
+  });
 }
 
 // Function to get the active color option
@@ -391,7 +409,6 @@ function getActiveColorOption() {
 // Function to render the initial plot
 function renderInitialPlot() {
     const colorOption = getActiveColorOption(); // Get the initially selected color option
-    const showLabels = document.getElementById('show').classList.contains('active');
 
     performClustering(5); // Perform initial clustering with 5 clusters
 
@@ -433,29 +450,52 @@ function performClustering(numClusters) {
     }
 }
 
-// Label switch buttons
-$("#Cluster_UniProt").click(function(){
-    $(this).addClass("active");
-    $("#Cluster_Gene").removeClass("active");
-    $("#Cluster_Receptor").removeClass("active");
+document.addEventListener('DOMContentLoaded', function () {
+  const downloadBtn = document.querySelector('#DownloadDropdownToggle');
+  const downloadMenu = downloadBtn?.nextElementSibling;
 
-    switchClusterLabels("UniProt");
+  if (downloadBtn && downloadMenu) {
+    downloadBtn.addEventListener('click', function (e) {
+      e.stopPropagation(); // prevent bubbling
+      downloadMenu.style.display = (downloadMenu.style.display === 'block') ? 'none' : 'block';
+    });
+
+    // Close it when clicking anywhere else
+    document.addEventListener('click', function () {
+      downloadMenu.style.display = 'none';
+    });
+
+    // Prevent menu itself from closing if clicked inside
+    downloadMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  }
 });
 
-$("#Cluster_Gene").click(function(){
-    $(this).addClass("active");
-    $("#Cluster_UniProt").removeClass("active");
-    $("#Cluster_Receptor").removeClass("active");
+// Handle label type dropdown logic
+document.addEventListener('DOMContentLoaded', function () {
+  const labelTypeButton = document.getElementById('Cluster_LabelType_Button');
+  const labelButtons = document.querySelectorAll('.cluster-label-btn');
 
-    switchClusterLabels("Entrez");
-});
+  // Optional: Set initial label text on dropdown button (not necessary if fixed label)
+  // labelTypeButton.textContent = 'Receptor names';
 
-$("#Cluster_Receptor").click(function(){
-    $(this).addClass("active");
-    $("#Cluster_UniProt").removeClass("active");
-    $("#Cluster_Gene").removeClass("active");
+  labelButtons.forEach(btn => {
+    btn.addEventListener('click', function () {
+      const selectedValue = this.getAttribute('data-value');
 
-    switchClusterLabels("IUPHAR");
+      // Update plot labels accordingly
+      switchClusterLabels(selectedValue);
+
+      // Update button styles
+      labelButtons.forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+      this.classList.remove('btn-outline-primary');
+      this.classList.add('btn-primary');
+    });
+  });
 });
 
 function switchClusterLabels(labelType) {

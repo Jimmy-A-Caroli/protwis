@@ -9,195 +9,132 @@
 
 {% block content %}
 
-<div style="padding-top: 10px; font-size: 11px; white-space: nowrap;"></div>
-<!-- Receptor label switch -->
-<div class="col-md-12" style="margin-top: 20px;">
-<div>
-    Receptor names:
-    <div class="btn-group" role="group" id="gtp_plus">
-        <button id="Heatmap_IUPHARNames" class="btn btn-info active">Protein</button>
-        <button id="Heatmap_GeneNames" class="btn btn-info">Gene</button>
-        <button id="Heatmap_UniProtNames" class="btn btn-info">UniProt</button>
-    </div>
-</div>
-</div>
-<div class="col-md-12" style="margin-top: 20px;margin-bottom: 30px;">
-<div class="col-md-2">
-<div class="dropdown" style="width: 500px !important;">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    Color styling
-    </button>
-    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
-    <!-- Color complexity Dropdown -->
-    <div class="col-md-12" style="width:400px;height: 50px; margin-top: 20px;margin-bottom: 20px;">
-        <div class="col-md-6" style="width:150px;margin-right: 20px;">
-        <select id="Heatmap_color_styling" class="form-select" style="height: 35px;width: 175px;font-size: 14px;" aria-label="Default select example" onchange="UpdateColorPickers()">
-            <option value="One" selected>White - Color</option>
-            <option value="Two">Color - Color</option>
-            <option value="Three">Color - White - Color</option>
-        </select>
-        </div>
+<!-- Heatmap Controls Row -->
+<div class="container" style="margin-top: 30px;">
+  <div class="row text-center" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
 
-        <!-- Color Selector Dropdown -->
-        <div class="col-md-6" style="height: 15px;width: 200px;">
-            <div class="col-md-3" id="Heatmap_Color_min_container" style="display: none;width: 80px;margin-left: 0px;margin-right: 0px;">
-            <input type="text" id="Heatmap_colorPicker_min" />
-            </div>
-        <!-- Color Selector Dropdown -->
-            <div class="col-md-3" id="Heatmap_Color_max_container" style="width: 80px;margin-left: 0px;margin-right: 0px;">
-            <input type="text" id="Heatmap_colorPicker_max"/>
-            </div>
-        </div>
-    </div>
-    <!-- Set Colors Buttons -->
-    <div class="text-center" style="margin-bottom: 15px;">
-        <div class="col-md-12" style="margin-bottom: 5px;">
-        <div class="col-md-6"><button id="GrayScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Grey scale</button></div>
-        <div class="col-md-6"><button id="GrayBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px;  margin-right: 10px;">Grey-Blue scale</button></div>
-        </div>
-        <div class="col-md-12" style="margin-bottom: 15px;">
-        <div class="col-md-6"><button id="RedBlueScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Red-Blue Scale</button></div>
-        <div class="col-md-6"><button id="TealMagentaScale" type="button" class="btn btn-primary" style="width:150px;font-size: 14px; margin-right: 10px;">Teal-Magenta Scale</button></div>
-        </div>
-    </div>
-    </div>
-</div>
-</div>
-
-<!-- ################# -->
-<!-- # Label Styling  # -->
-<!-- ################# -->
-<div class="col-md-2">
-<div class="dropdown" style="width: 400px !important;">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    Label styling
-    </button>
-    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Styling_Menu">
-
-    <!-- Label Orientation Toggle Button -->
-    <div class="col-md-12" style="margin-top: 20px;margin-bottom: 10px;">
-        <div class="text-center">
-        <button id="toggleLabelOrientation" class="btn btn-primary" style="width:150px;">Vertical</button>
-        </div>
-    </div>
-
-    <!-- Label Position Toggle Button -->
-    <div class="col-md-12" style="margin-top: 10px;margin-bottom: 20px;">
-        <div class="text-center">
-        <button id="toggleLabelPosition" class="btn btn-primary" style="width:150px;">Bottom</button>
-        </div>
-    </div>
-
-    <!-- Label Font Size Slider -->
-    <div class="col-md-12" style="text-align: center;">
-        <label id="Heatmap_fontSizeSliderLabel" class="form-label">Label Font Size: 14px</label>
-    </div>
-    <div class="col-md-12" style="margin-bottom: 30px;">
-        <input type="range" class="form-range" min="10" max="16" id="Heatmap_fontSizeSlider" value="14">
-    </div>
-
-    <!-- Receptor Font Size Slider -->
-    <div class="col-md-12" style="text-align: center;">
-        <label id="Heatmap_receptor_fontSizeSliderLabel" class="form-label">Receptor Font Size: 14px</label>
-    </div>
-    <div class="col-md-12" style="margin-bottom: 30px;">
-        <input type="range" class="form-range" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14">
-    </div>
-
-    </div>
-</div>
-</div>
-<!-- ################### -->
-<!-- # Label modifier  # -->
-<!-- ################### -->
-<div class="col-md-2">
-<!-- Edit labels -->
-<div class="col-md-1" style="margin-left: 10px;margin-right: -40px;">
-    <div class="dropdown" style="width: 400px;">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="Label_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Edit X labels
+    <!-- Receptor Names -->
+    <div class="dropdown" style="position: relative;">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_LabelType_Button" data-toggle="dropdown">
+        Receptor names
       </button>
-      <div class="dropdown-menu dropdown-menu-listplot p-3" aria-labelledby="Label_Menu" style="width: 380px; padding-left: 15px;">
-  
-        <div class="form-group mb-3">
-          <label for="labelInput_Value1" class="form-label" style="text-align: left; width: 20%;">Dataset 1</label>
-          <input type="text" maxlength="25" class="form-control" id="labelInput_Value1" value="Dataset 1" oninput="updateLabel('Value1')">
-        </div>
-  
-        <div class="form-group mb-3">
-          <label for="labelInput_Value2" class="form-label" style="text-align: left; width: 20%;">Dataset 2</label>
-          <input type="text" maxlength="25" class="form-control" id="labelInput_Value2" value="Dataset 2" oninput="updateLabel('Value2')">
-        </div>
-  
-        <div class="form-group mb-3">
-          <label for="labelInput_Value3" class="form-label" style="text-align: left; width: 20%;">Dataset 3</label>
-          <input type="text" maxlength="25" class="form-control" id="labelInput_Value3" value="Dataset 3" oninput="updateLabel('Value3')">
-        </div>
-  
-        <div class="form-group mb-3">
-            <label for="labelInput_Value4" class="form-label" style="text-align: left; width: 20%;">Dataset 4</label>
-            <input type="text" maxlength="25" class="form-control" id="labelInput_Value4" value="Dataset 4" oninput="updateLabel('Value4')">
-        </div>
-
-        <div class="form-group mb-3">
-            <label for="labelInput_Value5" class="form-label" style="text-align: left; width: 20%;">Dataset 5</label>
-            <input type="text" maxlength="25" class="form-control" id="labelInput_Value5" value="Dataset 5" oninput="updateLabel('Value5')">
-        </div>
-  
+      <div class="dropdown-menu p-2 text-center"
+           style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-50%);">
+        <button class="btn btn-primary btn-block Heatmap-label-btn" data-value="IUPHAR">Protein</button>
+        <button class="btn btn-outline-primary btn-block Heatmap-label-btn" data-value="Gene">Gene</button>
+        <button class="btn btn-outline-primary btn-block Heatmap-label-btn" data-value="UniProt">UniProt</button>
       </div>
     </div>
+
+    <!-- Color Styling -->
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_ColorStyling_Menu" data-toggle="dropdown">
+        Colors
+      </button>
+      <div class="dropdown-menu p-3" style="min-width: 400px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-40%);">
+        <div class="row" style="margin-bottom: 10px;">
+            <div class="col-xs-6">
+                <select id="Heatmap_color_styling" style="width:180px" class="form-control" onchange="UpdateColorPickers()">
+                <option value="One">White - Color</option>
+                <option value="Two">Color - Color</option>
+                <option value="Three" selected>Color - White - Color</option>
+                </select>
+            </div>
+            <div class="col-xs-6 text-center">
+                <div style="display: flex; justify-content: center; align-items: center;">
+                    <div style="margin-right: 15px;"><input type="text" id="Heatmap_colorPicker_min" style="width: 90px;" /></div>
+                    <div><input type="text" id="Heatmap_colorPicker_max" style="width: 90px;" /></div>
+                </div>
+            </div>
+        </div>
+        <div class="row text-center">
+          <div class="col-xs-6" style="padding: 5px 15px;"><button id="GrayScale" class="btn btn-primary btn-block">Grey scale</button></div>
+          <div class="col-xs-6" style="padding: 5px 15px;"><button id="GrayBlueScale" class="btn btn-primary btn-block">Grey-Blue scale</button></div>
+          <div class="col-xs-6" style="padding: 5px 15px;"><button id="RedBlueScale" class="btn btn-primary btn-block">Red-Blue Scale</button></div>
+          <div class="col-xs-6" style="padding: 5px 15px;"><button id="TealMagentaScale" class="btn btn-primary btn-block">Teal-Magenta Scale</button></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Layout Dropdown -->
+    <div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_Layout_Menu" data-toggle="dropdown">
+        Layout
+    </button>
+    <div class="dropdown-menu p-3" style="min-width: 320px; padding: 10px 15px; left: 100%; top: 50%;
+                margin-left: 5px; position: absolute; transform: translateY(-15%);">
+
+        <!-- Label Styling Section -->
+        <h5 class="text-center" style="margin-top: 5px; font-weight: bold;">Labels</h5>
+        <div class="text-center" style="margin-bottom: 10px;">
+        <button id="toggleLabelOrientation" class="btn btn-primary btn-sm" style="width: 130px;">Vertical</button>
+        <button id="toggleLabelPosition" class="btn btn-primary btn-sm" style="width: 130px;">Bottom</button>
+        </div>
+        <div class="text-center" style="margin-bottom: 10px;">
+        <label id="Heatmap_fontSizeSliderLabel">Label fontsize: 14px</label>
+        <input type="range" class="form-control" min="10" max="16" id="Heatmap_fontSizeSlider" value="14">
+        </div>
+        <div class="text-center" style="margin-bottom: 20px;">
+        <label id="Heatmap_receptor_fontSizeSliderLabel">Receptor fontsize: 14px</label>
+        <input type="range" class="form-control" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14">
+        </div>
+
+        <!-- Data Styling Section -->
+        <h5 class="text-center" style="font-weight: bold;">Data</h5>
+        <div class="text-center" style="margin-bottom: 10px;">
+        <button id="Heatmap_data_labels" class="btn btn-primary btn-sm" style="width: 150px;">Data Labels: Yes</button>
+        </div>
+        <div class="text-center" style="margin-bottom: 10px;">
+        <button id="Heatmap_Border_Styling" class="btn btn-primary btn-sm" style="width: 150px;">Data Border: Yes</button>
+        </div>
+        <div class="text-center">
+        <label id="Heatmap_data_fontSizeSliderLabel">Data Label Font Size: 12px</label>
+        <input type="range" class="form-control" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12">
+        </div>
+    </div>
+    </div>
+
+    <!-- Edit Labels -->
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_LabelEdit_Menu" data-toggle="dropdown">
+        Labels
+      </button>
+      <div class="dropdown-menu p-3" style="min-width: 300px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-15%);">
+        <div id="Heatmap_LabelInputs">
+          <div class="form-group"><label for="labelInput_Value1">Dataset 1</label><input type="text" class="form-control" id="labelInput_Value1" oninput="updateLabel('Value1')"></div>
+          <div class="form-group"><label for="labelInput_Value2">Dataset 2</label><input type="text" class="form-control" id="labelInput_Value2" oninput="updateLabel('Value2')"></div>
+          <div class="form-group"><label for="labelInput_Value3">Dataset 3</label><input type="text" class="form-control" id="labelInput_Value3" oninput="updateLabel('Value3')"></div>
+          <div class="form-group"><label for="labelInput_Value4">Dataset 4</label><input type="text" class="form-control" id="labelInput_Value4" oninput="updateLabel('Value4')"></div>
+          <div class="form-group"><label for="labelInput_Value5">Dataset 5</label><input type="text" class="form-control" id="labelInput_Value5" oninput="updateLabel('Value5')"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Download Button -->
+    <div class="dropdown" style="position: relative;">
+      <button type="button" class="btn btn-primary dropdown-toggle" id="Heatmap_DownloadDropdownToggle" style="font-size: 14px;">
+        <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3;"></span> Download <span class="caret"></span>
+      </button>
+      <div class="dropdown-menu text-center"
+           style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-35%); display: none;">
+        <button type="button" class="btn btn-primary btn-block" onclick="saveSvg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.svg');">SVG</button>
+        <button type="button" class="btn btn-primary btn-block" onclick="saveSvgAsPng(document.getElementById('Heatmap_plot_svg'), 'Heatmap.png');">PNG</button>
+        <button type="button" class="btn btn-primary btn-block" onclick="saveSvgAsJpg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.jpg');">JPG</button>
+        <button type="button" class="btn btn-primary btn-block" onclick="saveSvgAsTiff(document.getElementById('Heatmap_plot_svg'), 'Heatmap.tiff');">TIFF</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
-<!-- ################# -->
-<!-- # Data Styling  # -->
-<!-- ################# -->
-<div class="col-md-2">
-<div class="dropdown" style="width: 400px !important;">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_DataStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    Data styling
-    </button>
-    <div class="dropdown-menu dropdown-menu-listplot" aria-labelledby="Heatmap_DataStyling_Menu">
+<!-- Heatmap container -->
+<div id="heatmapPlot" class="text-center" style="margin-top: 40px;"></div>
 
-    <!-- Data Labels Toggle Button -->
-    <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;text-align:center;">
-        <button id="Heatmap_data_labels" class="btn btn-primary" style="width:150px;">Data Labels: Yes</button>
-    </div>
-
-    <!-- Data border Toggle Button -->
-    <div class="col-md-12" style="width:300px;margin-bottom: 20px;text-align:center;">
-        <button id="Heatmap_Border_Styling" class="btn btn-primary" style="width:150px;">Data Border: Yes</button>
-    </div>
-
-    <!-- Data Font Size Slider -->
-    <div class="col-md-12" style="text-align: center;">
-        <label id="Heatmap_data_fontSizeSliderLabel" class="form-label">Data Label Font Size: 12px</label>
-    </div>
-    <div class="col-md-12" style="margin-bottom: 30px;">
-        <input type="range" class="form-range" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12">
-    </div>
-
-    </div>
-</div>
-</div>
-
-<div class="col-md-4">
-    <div class="text-center">
-    <div class="dropdown">
-        <button type="button" class="btn btn-primary dropdown-toggle" style="font-size: 14px;" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <span class="glyphicon glyphicon-download" style="vertical-align: top;line-height: 1.3"></span> Download <span class="caret"></span>
-        </button>
-        <div class="dropdown-menu dropdown-menu-right-middle">
-        <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.svg');">SVG</a></li>
-        <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('Heatmap_plot_svg'), 'Heatmap.png');">PNG</a></li>
-        <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('Heatmap_plot_svg'), 'Heatmap.jpg');">JPG</a></li>
-        <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('Heatmap_plot_svg'), 'Heatmap.tiff');">TIFF</a></li>
-        </div>
-    </div>
-    </div>
-</div>
-</div>
-<div id="heatmapPlot" class="text-center" style="margin-left: -150px;"></div>
 
 
 {% endblock %}
@@ -506,29 +443,53 @@ document.addEventListener('DOMContentLoaded', (event) => {
 // ## Label switch ###
 // ###################
 
-$("#Heatmap_UniProtNames").click(function() {
-    $("#Heatmap_UniProtNames").addClass("active");
-    $("#Heatmap_GeneNames").removeClass("active");
-    $("#Heatmap_IUPHARNames").removeClass("active");
-    heatmap_DataStyling.LabelType = 'UniProt';
-    Heatmap_updateVisualization();
+// Receptor name toggle behavior
+document.addEventListener('DOMContentLoaded', function () {
+  const labelButtons = document.querySelectorAll('.Heatmap-label-btn');
+
+  labelButtons.forEach(btn => {
+    // Initialize active button if needed
+    if (btn.getAttribute('data-value') === heatmap_DataStyling.LabelType) {
+      btn.classList.remove('btn-outline-primary');
+      btn.classList.add('btn-primary');
+    }
+
+    btn.addEventListener('click', function () {
+      const selectedValue = this.getAttribute('data-value');
+      heatmap_DataStyling.LabelType = selectedValue;
+      Heatmap_updateVisualization();
+
+      // Update button styling
+      labelButtons.forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+      this.classList.remove('btn-outline-primary');
+      this.classList.add('btn-primary');
+    });
+  });
 });
 
-$("#Heatmap_IUPHARNames").click(function() {
-    $("#Heatmap_UniProtNames").removeClass("active");
-    $("#Heatmap_GeneNames").removeClass("active");
-    $("#Heatmap_IUPHARNames").addClass("active");
-    heatmap_DataStyling.LabelType = 'IUPHAR';
-    Heatmap_updateVisualization();
+document.addEventListener('DOMContentLoaded', function () {
+  const downloadBtn = document.querySelector('#Heatmap_DownloadDropdownToggle');
+  const downloadMenu = downloadBtn?.nextElementSibling;
+
+  if (downloadBtn && downloadMenu) {
+    downloadBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      downloadMenu.style.display = (downloadMenu.style.display === 'block') ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', function () {
+      downloadMenu.style.display = 'none';
+    });
+
+    downloadMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+  }
 });
 
-$("#Heatmap_GeneNames").click(function() {
-    $("#Heatmap_UniProtNames").removeClass("active");
-    $("#Heatmap_IUPHARNames").removeClass("active");
-    $("#Heatmap_GeneNames").addClass("active");
-    heatmap_DataStyling.LabelType = 'Gene';
-    Heatmap_updateVisualization();
-});
 
 </script>
 

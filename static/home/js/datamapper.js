@@ -436,7 +436,7 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
 
     var legendGroup = svg.append("g")
     .attr("class", "legend-group")
-    .attr("transform", `translate(0, -100})`);
+    // .attr("transform", `translate(0, -100})`);
 
     // Clear existing content
     // svg.selectAll("*").remove();
@@ -583,6 +583,17 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
         //     .attr("text-anchor", "middle")
         //     .text(`${midValue}`);
     });
+    // === Centering Logic ===
+    var totalBars = existingCategories.filter(cat => datatype_dict[cat] === "Continuous").length;
+    var totalLegendWidth = totalBars * barWidth + (totalBars - 1) * spacing + barWidth;
+
+    var svgNode = svg.node();
+    var svgWidth = svgNode ? svgNode.getBoundingClientRect().width : 1000; // fallback
+
+    var offsetX = (svgWidth - totalLegendWidth) / 2;
+
+    // Apply transform to center the group
+    legendGroup.attr("transform", `translate(${offsetX}, 0)`);
 }
 
 function CreateTextLegend(location, circle_data) {
@@ -876,7 +887,7 @@ function createAnnotations(filteredData, colorOption, textColorEnabled, colorMap
 // Function to update the plot with markers or labels
 function updatePlotWithAnnotations() {
     const colorOption = getActiveColorOption();  // Get the active color option
-    const showLabels = document.getElementById('show').classList.contains('active');
+    const showLabels = labelsVisible;
     const textColorEnabled = cluster_DataStyling.textColorEnabled;
 
     const plotElement = document.getElementById('plotContainer_cluster');
@@ -959,11 +970,28 @@ function updatePlotWithAnnotations() {
         width: 1200,
         height: 700,
         margin: {
-            l: 50,
-            r: 200,
+            l: 200,
+            r: 0,
             t: 50,
             b: 50
-        }
+        },
+        // 👇 This is the added shape (rectangle border)
+        shapes: [
+            {
+            type: 'rect',
+            xref: 'x',
+            yref: 'y',
+            x0: xRange[0],
+            x1: xRange[1],
+            y0: yRange[0],
+            y1: yRange[1],
+            line: {
+                color: 'black',
+                width: 1
+            },
+            fillcolor: 'rgba(0,0,0,0)'  // transparent fill
+            }
+        ]
     };
 
     Plotly.react('plotContainer_cluster', traces, layout);
