@@ -10,7 +10,7 @@
 
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
-<link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
+<link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.new.min.css' %}" type="text/css"/>
 <link rel="stylesheet" href="{% static 'home/css/button_spinner.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/BusyLoad.css' %}" type="text/css" />
 
@@ -62,6 +62,17 @@
         width: 30px !important;
         text-align: center;
         vertical-align: middle;
+    }
+    
+    table.dataTable th div.dt-column-header {
+        flex-direction: row !important;
+    }
+
+	th div.dt-column-header .dt-column-order {
+        margin-right: -12px;
+    }
+    th div.dt-column-header .dt-column-title {
+        margin-left: 24px;
     }
 
 	table.dataTable.compact thead th.over_header {
@@ -135,19 +146,32 @@
 		border-left: 1px solid #cccccc !important;
 	}
 
-	th .dt-column-order {
-		margin-right: -12px;
-	}
-	th .dt-column-title {
-		margin-left: 24px;
-	}
-
-    th input[type="text"], th select {
-        width: 90%;
-        box-sizing: border-box;
-        font-size: 10px;
+    th div.dt-column-header .dt-column-order {
+        margin-right: -12px;
     }
+    th div.dt-column-header .dt-column-title {
+        margin-left: 24px;
+    }
+
+
 	
+    /* Specific styling for range filter inputs in the third row's <td> */
+    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input.select2[id$="min"],
+    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input.select2[id$="max"],
+    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input.select2[id$="min"],
+    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input.select2[id$="max"] {
+        width: 35px !important; /* Ensure this takes precedence if needed */
+        text-align: center !important;
+    }
+    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input.select2[id$="min"] {
+        margin-top: 5px !important;
+    }
+    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input.select2[id$="min"] {
+        margin-top: 5px !important;
+    }
+    
+    
+
 	.select2-search__field::placeholder{
 		text-align:center;
 	}
@@ -207,20 +231,28 @@
         margin-right: 5px; 
     }
 
+
+
     #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:last-child th,
     #potency_table_wrapper .dt-scroll-headInner > table > thead tr:last-child th {
         text-align: center;
     }
-    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:last-child .select2-container,
-    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:last-child .select2-container,
-    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:last-child input[type="text"],
-    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:last-child input[type="text"],
-    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:last-child select,
-    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:last-child select {
+    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td .select2-container,
+    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td .select2-container {
         margin-left: auto;
         margin-right: auto;
-     }
+    }
 
+    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input[type="text"],
+    #affinity_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td select,
+    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td input[type="text"],
+    #potency_table_wrapper .dt-scroll-headInner > table > thead tr:nth-child(3) td select {
+        width: 90%; /* Or your desired width */
+        box-sizing: border-box;
+        font-size: 10px;
+        margin-left: auto; /* For centering if the cell is wider */
+        margin-right: auto; /* For centering */
+    }
     #affinity_table_wrapper .dt-scroll-headInner > table > thead {
         border-top: 2px solid #ccc;
     }
@@ -228,12 +260,12 @@
         border-top: 2px solid #ccc;
     }
 
-    table.dataTable th.checkbox-cell span.dt-column-title {
-        display: inline-flex !important; 
+    table.dataTable th.checkbox-cell div.dt-column-header span.dt-column-title {
+        display: inline-flex !important;
         align-items: center;
         justify-content: center;
-        width: 100%; 
-        height: 100%; 
+        width: 100%;
+        height: 100%;
         padding: 0 !important;
         margin: 0 !important;
         line-height: normal;
@@ -284,8 +316,8 @@
 
 {% block addon_js %}
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
-<script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
-<script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
+<script src="{% static 'home/js/NewDrugsBrowser_datatables.new.min.js' %}"></script>
+<script src="{% static 'home/js/NorgesDTFilterBuilder.new.js' %}"></script>
 <script src="{% static 'home/js/dataTables.buttons.min.js' %}"></script>
 <script src="{% static 'home/js/selection.js' %}"></script>
 <script src="{% static 'home/js/gpcrdb.js' %}"></script>
@@ -339,38 +371,75 @@
       }
   }
 
-  function reset_all() {
+function reset_all() {
     selectedRowsAffinity.clear();
     selectedRowsPotency.clear();
     for (const tableIdKey in dataTables) {
         if (dataTables.hasOwnProperty(tableIdKey) && $.fn.DataTable.isDataTable(`#${tableIdKey}`)) {
             const table = dataTables[tableIdKey];
             const $tableWrapper = $(`#${tableIdKey}_wrapper`);
-            const $filterCells = $tableWrapper.find('.dt-scroll-headInner table thead tr:last-child').find('th, td');
-            $filterCells.each(function() {
-                const $cell = $(this);
-                const $select2Widgets = $cell.find('select.select2');
-                $select2Widgets.each(function() {
-                    const $select = $(this);
-                    if ($select.data('select2')) { 
-                        const selectId = $select.attr('id');
-                        $select.val(null).trigger('change.select2');
-                    }
+
+            let $filterRow;
+            const $headerContainer = $tableWrapper.find('.dt-scroll-headInner');
+            if ($headerContainer.length) {
+                $filterRow = $headerContainer.find('table thead tr').eq(2);
+            } else {
+                $filterRow = $(table.table().header()).find('tr').eq(2);
+            }
+
+            if ($filterRow && $filterRow.length > 0) {
+                const $filterCells = $filterRow.find('td');
+                $filterCells.each(function() {
+                    const $cell = $(this);
+                    const $select2Widgets = $cell.find('select.select2');
+                    $select2Widgets.each(function() {
+                        const $select = $(this);
+                        if ($select.data('select2')) {
+                            $select.val(null).trigger('change.select2');
+                        }
+                    });
+
+                    const $rangeFloatInputs = $cell.find('input.select2[id$="min"], input.select2[id$="max"]');
+                    $rangeFloatInputs.each(function() {
+                        const $input = $(this);
+                        if (!$input.hasClass('select2-search__field')) {
+                            $input.val('');
+                        }
+                    });
                 });
-                const $rangeFloatInputs = $cell.find('input.select2[id$="min"], input.select2[id$="max"]');
-                $rangeFloatInputs.each(function() {
-                    const $input = $(this);
-                    if (!$input.hasClass('select2-search__field')) { 
-                        const inputId = $input.attr('id');
-                        $input.val('');
-                    }
-                });
+                console.log(`Reset All Filters: UI filter controls cleared for #${tableIdKey}`);
+            } else {
+                console.warn(`Reset All Filters: Filter row not found for #${tableIdKey}`);
+            }
+
+            if (table.search()) {
+                table.search('');
+            }
+            table.columns().every(function() {
+                if (this.search()) {
+                    this.search(''); 
+                }
             });
-            table.columns().search('');
-            table.search('');
-            table.draw(false);
+
+            let customSearchFunctionsRemovedCount = 0;
+            for (let i = $.fn.dataTable.ext.search.length - 1; i >= 0; i--) {
+                const searchFn = $.fn.dataTable.ext.search[i];
+
+                if (searchFn && typeof searchFn.name === 'string' &&
+                    (searchFn.name.startsWith(tableIdKey + '_range_filter_') || 
+                     searchFn.name.startsWith(tableIdKey + '_range_select_filter_'))) {
+                    $.fn.dataTable.ext.search.splice(i, 1);
+                    customSearchFunctionsRemovedCount++;
+                }
+            }
+            if (customSearchFunctionsRemovedCount > 0) {
+                console.log(`Reset All Filters: Removed ${customSearchFunctionsRemovedCount} custom search functions for #${tableIdKey}`);
+            }
+
+            table.draw(false); // 'false' to maintain current pagination
         }
     }
+    console.log("Reset All Filters: Process finished.");
 }
 
   function getExcelColumnName(colIndex) {
@@ -638,8 +707,6 @@
                 } else {
                     console.log("No initially active tab or pane found for immediate adjustment.");
                 }
-                
-                console.log("Hiding loader.");
                 $("#page_loader_placeholder").busyLoad("hide");
                 $("#page_loader_placeholder").hide();
             }, 0); // Small delay to allow text update to render
