@@ -10,6 +10,7 @@ from common.models import WebLink, Publication, WebResource
 from common.tools import fetch_from_web_api
 from string import Template
 from structure.models import Structure
+from protein.models import Protein
 from urllib.request import urlopen, quote
 
 import json
@@ -84,8 +85,15 @@ class LigandFingerprint(models.Model):
             GistIndex(fields=['mfp2']),
         ]
 
+class LigandEffect(models.Model):
+    slug = models.CharField(max_length=100, null=True)
+    name = models.CharField(max_length=100, null=True)
 
-
+class LigandTargetPairing(models.Model):
+    ligand = models.ForeignKey('Ligand', null=True, on_delete=models.CASCADE)
+    target = models.ForeignKey(Protein, null=True, on_delete=models.CASCADE)
+    effect = models.ForeignKey('LigandEffect', null=True, on_delete=models.CASCADE)
+    role = models.ForeignKey('LigandType', null=True, on_delete=models.CASCADE)
 
     # def load_by_gtop_id(self, ligand_name, gtop_id, ligand_type):
     #     logger = logging.getLogger('build')
@@ -383,7 +391,7 @@ class LigandRole(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=100, null=True)
-    effect = models.CharField(max_length=100, null=True)
+    effect = models.ForeignKey('LigandEffect', null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name

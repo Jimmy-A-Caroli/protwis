@@ -2,12 +2,12 @@ from build.management.commands.base_build import Command as BaseBuild
 from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types
 from django.conf import settings
 from django.utils.text import slugify
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 
 from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role
 from common.models import WebLink, WebResource, Publication, PublicationJournal
-from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole
+from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole, LigandEffect, LigandTargetPairing
 from protein.models import Protein, Species
 
 import requests
@@ -148,7 +148,7 @@ class Command(BaseBuild):
             & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
         )
         mask_cid = (
-            helm_cid['helm_notation'].notna()
+            Command.helm_cid['helm_notation'].notna()
         )
 
         # Apply mask
@@ -194,7 +194,6 @@ class Command(BaseBuild):
 
         gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
         gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
-
 
         print('\n\nSaving the ligands in the models')
         self.save_the_ligands_save_the_world(ligand_data_merged, gtp_peptides_merged)
@@ -269,7 +268,7 @@ class Command(BaseBuild):
 
         print("\n\Fixing mismatched LigandType definition")
         n  = apply_canonical_ligand_types()
-        print(f"\n\Updated LigandType on {n} records to their canonical type.")
+        print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
     @staticmethod
     def purge_data():
@@ -829,7 +828,7 @@ class Command(BaseBuild):
             & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
         )
         mask_cid = (
-            helm_cid['helm_notation'].notna()
+            Command.helm_cid['helm_notation'].notna()
         )
         # Apply mask
         helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
@@ -886,6 +885,9 @@ class Command(BaseBuild):
             (pd.isna(filtered_ligands["molecule_type"]))
         ].reset_index()
 
+        #check that we substitute all the 'nan' with actual np.nan values
+        sm_data.replace('nan', np.nan, inplace=True)
+
         lig_entries = len(sm_data)
 
         print(f"\n#3 Building {lig_entries} new small-molecule ChEMBL ligands", datetime.datetime.now())
@@ -906,10 +908,14 @@ class Command(BaseBuild):
                 extra_ids = set(row["other_ids"].split(";"))
                 existing_matches = extra_ids & existing_ids
                 if existing_matches:
-                    match = LigandID.objects.get(index=next(iter(existing_matches)), web_resource=wr_chembl)
-                    LigandID(index=chembl_id, web_resource=wr_chembl, ligand_id=match.ligand_id).save()
-                    print(f"Found existing non-parent ChEMBL {next(iter(existing_matches))} for parent {chembl_id}")
-                    insert = False
+                    try:
+                        match = LigandID.objects.get(index=next(iter(existing_matches)))
+                    except LigandID.MultipleObjectsReturned:
+                        match = LigandID.objects.filter(index=next(iter(existing_matches))).first()
+                    if match and (match.web_resource == wr_pubchem):
+                        LigandID(index=chembl_id, web_resource=wr_chembl, ligand_id=match.ligand_id).save()
+                        print(f"Found existing non-parent ChEMBL {next(iter(existing_matches))} for parent {chembl_id}")
+                        insert = False
                 else:
                     ids.extend(extra_ids)
 
@@ -918,18 +924,25 @@ class Command(BaseBuild):
                 cids = set(row["pubchem_cid"].split(";"))
                 existing_matches = cids & existing_cids
                 if existing_matches:
-                    match = LigandID.objects.get(index=next(iter(existing_matches)), web_resource=wr_pubchem)
-                    LigandID(index=chembl_id, web_resource=wr_chembl, ligand_id=match.ligand_id).save()
-                    insert = False
+                    try:
+                        match = LigandID.objects.get(index=next(iter(existing_matches)))
+                    except LigandID.MultipleObjectsReturned:
+                        match = LigandID.objects.filter(index=next(iter(existing_matches))).first()
+                    if match and (match.web_resource == wr_pubchem):
+                        LigandID(index=chembl_id, web_resource=wr_chembl, ligand_id=match.ligand_id).save()
+                        insert = False
 
             # Check InChIKey
             if insert and row["standard_inchi_key"] in existing_inchis:
-                ligand = Ligand.objects.get(inchikey=row["standard_inchi_key"], parent__isnull=False)
-                LigandID(index=chembl_id, web_resource=wr_chembl, ligand=ligand).save()
-                if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
-                    for cid in row["pubchem_cid"].split(";"):
-                        LigandID(index=cid, web_resource=wr_pubchem, ligand=ligand).save()
-                insert = False
+                try:
+                    ligand = Ligand.objects.get(inchikey=row["standard_inchi_key"], parent__isnull=False)
+                    LigandID(index=chembl_id, web_resource=wr_chembl, ligand=ligand).save()
+                    if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
+                        for cid in row["pubchem_cid"].split(";"):
+                            LigandID(index=cid, web_resource=wr_pubchem, ligand=ligand).save()
+                    insert = False
+                except Ligand.DoesNotExist:
+                    continue
 
             if insert:
                 parent = None
@@ -1042,7 +1055,11 @@ class Command(BaseBuild):
                         pair["link"].ligand = ligands[pair["lig_idx"]]
                     LigandID.objects.bulk_create([pair["link"] for pair in weblinks])
 
-                    print("Inserted", index + 1, "out of", lig_entries, "ligands")
+                    # -- PROGRESS REPORTING ADDED HERE --
+                    completed = index + 1
+                    percent = completed / lig_entries * 100
+                    print(f"Inserted {completed} of {lig_entries} ligands — {percent:.1f}% complete")
+
                     ligands = []
                     weblinks = []
 
@@ -1070,10 +1087,7 @@ class Command(BaseBuild):
                 nonsm_ids["chembl_ligand"] = row['molecule_chembl_id']
 
             # Filter types
-            ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True)
-            ligand.source = "ChEMBL_peptide"
-            ligand.helm = row.get('helm_notation')
-            ligand.save()
+            ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True, "ChEMBL_peptide", row.get('helm_notation'))
             # Add LigandIDs
             if pd.notna(row["other_ids"]):
                 extra_ids = row['other_ids'].split(";")
@@ -1142,6 +1156,10 @@ class Command(BaseBuild):
                     bioacts[-1].document_chembl_id = row["document_chembl_id"]
                     bioacts[-1].source = 'ChEMBL'
 
+                    input_ligand = Ligand.objects.get(id = lig_dict[row["parent_molecule_chembl_id"]])
+                    input_prot = Protein.objects.get(id = prot_dict[row["Entry name"]])
+                    Command.assign_ligand_target_pairing(input_ligand, input_prot, row["assay_description"], row["standard_type"])
+
                     try:
                         doi = chembl_document_data.loc[chembl_document_data['document_chembl_id'] == row["document_chembl_id"], 'doi'].iloc[0]
                     except IndexError:
@@ -1172,6 +1190,13 @@ class Command(BaseBuild):
                             for (experiment, pub_id) in pub_links], ignore_conflicts=True)
                         print("Inserted", index, "out of",
                               bio_entries, "bioactivities")
+
+                        # —— PROGRESS REPORTING ——
+                        completed = index + 1
+                        percent = completed / bio_entries * 100
+                        print(f"Inserted {completed} of {bio_entries} bioactivities — {percent:.1f}% complete")
+
+                        # reset accumulators
                         bioacts = []
                         pub_links = []
                 else:
@@ -1347,36 +1372,41 @@ class Command(BaseBuild):
         lig_df = lig_df.astype(str).replace({'nan': None})
         pep_df = pep_df.astype(str).replace({'nan': None})
 
-        # Iterate over ligands
-        for _, row in lig_df.iterrows():
+        total = len(lig_df)
+        if total == 0:
+            print("No ligands to process.")
+            return
+
+        print(f"Starting processing {total} ligands...")
+        for idx, (_, row) in enumerate(lig_df.iterrows(), start=1):
+            # print progress at start, every 100 rows, and at the end
+            if idx == 1 or idx % 100 == 0 or idx == total:
+                pct = idx / total * 100
+                print(f"Processed {idx}/{total} ({pct:.1f}%)")
+
             # Skip if there's no name
             if not row['name']:
                 continue
 
-            # Build dictionary of IDs based on weblink_keys
+            # Build dictionary of IDs
             ids = {}
             for key, col_name in weblink_keys.items():
                 raw_val = row.get(col_name)
                 if raw_val is not None:
                     raw_val = str(raw_val)
-                    # If numeric float, convert to int string (e.g. "123.0" -> "123")
                     if is_float(raw_val):
                         raw_val = str(int(float(raw_val)))
                     ids[key] = raw_val
 
-            # Determine ligand type (small-molecule, peptide, protein, etc.)
             ligand_type = types_dict.get(row['type'], 'na')
 
-            # If not small molecule, try to fetch sequence/uniprot from pep_df
             if ligand_type != "small-molecule":
-                # Check if this ligand_id + species exist in pep_df
                 mask = (
                     (pep_df["ligand_id"] == row["ligand_id"]) &
                     (pep_df["species"] == row["species"])
                 )
                 if mask.any():
                     peptide_entries = pep_df[mask]
-                    # If multiple peptide rows, handle each
                     if len(peptide_entries) > 1:
                         for _, pep_row in peptide_entries.iterrows():
                             seq = pep_row["single_letter_amino_acid_sequence"]
@@ -1386,17 +1416,13 @@ class Command(BaseBuild):
                             if uniprot:
                                 ids["uniprot"] = uniprot
                             new_name = row['name']
-                            if row['species'] != '':
-                                new_name = row['name'] + ' (' + row['species'] + ')'
-                            ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False)
-                            ligand.source = 'GuideToPharma'
-                            ligand.helm = pep_row['helm_notation']
-                            ligand.save()
+                            if row['species']:
+                                new_name = f"{row['name']} ({row['species']})"
+                            ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', pep_row['helm_notation'])
                             if ligand is None:
                                 print("Issue with", row['name'])
-                                break  # or continue, depending on desired logic
-
-                    # If exactly one entry, handle that directly
+                                print(row)
+                                break
                     else:
                         pep_row = peptide_entries.iloc[0]
                         seq = pep_row["single_letter_amino_acid_sequence"]
@@ -1406,34 +1432,23 @@ class Command(BaseBuild):
                         if uniprot:
                             ids["uniprot"] = uniprot
                         new_name = row['name']
-                        if row['species'] != '':
-                            new_name = row['name'] + ' (' + row['species'] + ')'
-                        ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False)
-                        ligand.source = 'GuideToPharma'
-                        ligand.helm = pep_row['helm_notation']
-                        ligand.save()
+                        if row['species']:
+                            new_name = f"{row['name']} ({row['species']})"
+                        ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', pep_row['helm_notation'])
                         if ligand is None:
                             print("Issue with", row['name'])
+                            print(row)
                 else:
-                    # No matching peptide data; still create the ligand
                     new_name = row['name']
-                    # if row['species'] != '':
-                    #     new_name = row['name'] + ' (' + row['species'] + ')'
-                    ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False)
-                    ligand.source = 'GuideToPharma'
-                    ligand.save()
+                    ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma')
                     if ligand is None:
                         print("Issue with", row['name'])
-
-            # Otherwise, it's a small molecule
+                        print(row)
             else:
-                #we generate the ligand, then compare it to
-                ligand = get_or_create_ligand(row['name'], ids, ligand_type, True, False)
-                ligand.source = 'GuideToPharma'
-                ligand.helm = row['helm_notation']
-                ligand.save()
+                ligand = get_or_create_ligand(row['name'], ids, ligand_type, True, False, 'GuideToPharma', row['helm_notation'])
                 if ligand is None:
                     print("Issue with", row['name'])
+                    print(row)
 
     @staticmethod
     def build_gtp_bioactivities(gtp_biodata):
@@ -1496,6 +1511,8 @@ class Command(BaseBuild):
                         gtp_data.publication.add(publication)
                 except:
                     publication = None
+
+                Command.assign_ligand_target_pairing(ligand, receptor, row['assay_description'], row['affinity_units'])
             else:
                 print("SKIPPING", ligand, row["ligand_id"], "|",
                       receptor, row['target_id'], row['target_species'])
@@ -1625,7 +1642,10 @@ class Command(BaseBuild):
             lr = find_role(query)
             # role_slug = slugify(query)
             # lr, _ = LigandRole.objects.get_or_create(slug=role_slug, defaults={'name': query})
-        return lr
+        if lr:
+            return lr[0]
+        else:
+            return lr
 
     @staticmethod
     def fetch_species(ligand_species, target_species):
@@ -1685,9 +1705,7 @@ class Command(BaseBuild):
             if row['CAS'] != 'None':
                 ids['CAS'] = row['CAS']
             if row[' Ligand Name'] not in ligand_cache.keys():
-                ligand = get_or_create_ligand(row[' Ligand Name'], ids)
-                ligand.source = 'PDSP KiDatabase'
-                ligand.save()
+                ligand = get_or_create_ligand(row[' Ligand Name'], ids, 'PDSP KiDatabase')
                 ligand_cache[row[' Ligand Name']] = ligand
             if label in protein_names.keys():
                 receptor = protein_names[label]
@@ -1711,6 +1729,8 @@ class Command(BaseBuild):
                 print("Inserted", index, "out of",
                       bio_entries, "bioactivities")
                 bioacts = []
+
+            Command.assign_ligand_target_pairing(ligand_cache[row[' Ligand Name']], receptor, None, 'pKi')
 
     @staticmethod
     def build_drugcentral_bioactivities():
@@ -1755,11 +1775,7 @@ class Command(BaseBuild):
             if row['InChIKey'] != 'None':
                 ids['inchikey'] = row['InChIKey']
             if row['DRUG_NAME'] not in ligand_cache.keys():
-                print(f"parsing ligand {row['DRUG_NAME']}")
-                print(ids)
-                ligand = get_or_create_ligand(row['DRUG_NAME'], ids)
-                ligand.source = 'Drug Central'
-                ligand.save()
+                ligand = get_or_create_ligand(row['DRUG_NAME'], ids, source='Drug Central')
                 ligand_cache[row['DRUG_NAME']] = ligand
             if code in accession_numbers.keys():
                 receptor = accession_numbers[code]
@@ -1783,8 +1799,11 @@ class Command(BaseBuild):
                 print("Inserted", index, "out of",
                       bio_entries, "bioactivities")
                 bioacts = []
+            value_type = 'p'+row['ACT_TYPE'] if row['ACT_TYPE'] != 'pA2' else row['ACT_TYPE']
 
-    # @staticmethod
+            Command.assign_ligand_target_pairing(ligand_cache[row['DRUG_NAME']], receptor, row['ACT_COMMENT'], value_type)
+
+    @staticmethod
     def build_drugbank_ligands():
         print("# Collecting Drug Bank data")
         data_link = os.sep.join([settings.DATA_DIR, 'ligand_data', 'assay_data', 'structure_links.csv'])
@@ -1793,26 +1812,41 @@ class Command(BaseBuild):
         ligand_cache = {}
 
         data.fillna('None', inplace=True)
-        #Keep only rows with at least info in one of the relevant columns
-        filtered = data.loc[(data['SMILES'] != 'None') | (data['CAS Number'] != 'None') | (data['InChIKey'] != 'None') | (data['PubChem Compound ID'] != 'None')]
+        # Keep only rows with at least one relevant ID
+        filtered = data.loc[
+            (data['SMILES'] != 'None') |
+            (data['CAS Number'] != 'None') |
+            (data['InChIKey'] != 'None') |
+            (data['PubChem Compound ID'] != 'None')
+        ]
 
-        print("# Parsing Drug Bank data")
-        for index, (_, row) in enumerate(filtered.iterrows()):
+        total = len(filtered)
+        if total == 0:
+            print("No DrugBank ligands to process.")
+            return
+
+        print(f"# Parsing Drug Bank data ({total} ligands)…")
+        for idx, row in enumerate(filtered.itertuples(index=False), start=1):
+            # progress update
+            if idx == 1 or idx % 100 == 0 or idx == total:
+                pct = idx / total * 100
+                print(f"Processed {idx}/{total} ({pct:.1f}%)")
+
             ids = {}
-            if row['SMILES'] != 'None':
-                ids['smiles'] = row['SMILES']
+            if row.SMILES != 'None':
+                ids['smiles'] = row.SMILES
             # if row['CAS Number'] != 'None':
             #     ids['CAS'] = row['CAS Number']
-            if row['InChIKey'] != 'None':
-                ids['inchikey'] = row['InChIKey']
-            if row['PubChem Compound ID'] != 'None':
-                ids['pubchem'] = int(row['PubChem Compound ID'])
-            print(ids)
-            if row['Name'] not in ligand_cache.keys():
-                ligand = get_or_create_ligand(row['Name'], ids)
-                ligand.source = 'DrugBank'
-                ligand.save()
-                ligand_cache[row['Name']] = ligand
+            if row.InChIKey != 'None':
+                ids['inchikey'] = row.InChIKey
+            #PubChem ID
+            if row._10 != 'None':
+                ids['pubchem'] = int(row._10)
+
+            name = row.Name
+            if name not in ligand_cache:
+                ligand = get_or_create_ligand(name, ids, source='DrugBank')
+                ligand_cache[name] = ligand
 
     @staticmethod
     def calculate_potency_and_affinity():
@@ -1974,3 +2008,47 @@ class Command(BaseBuild):
                 if species:
                     lig.name = lig.name + ' (' + species + ')'
                     lig.save()
+
+
+    @staticmethod
+    def assign_ligand_target_pairing(ligand, receptor, assay_description, unit):
+        """
+        Create a LigandTargetPairing linking `ligand` and `receptor` with:
+          - effect determined by `unit` (and, for AC50, by keywords in `assay_description`)
+          - role determined by `assay_type` slug lookup in LigandType
+        """
+        # 1. Determine effect slug
+        effect_slug = None
+        if unit in ['EC50', 'pEC50']:
+            effect_slug = 'stimulatory'
+        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50']:
+            effect_slug = 'inhibitory'
+        elif unit == 'AC50':
+            desc = assay_description.lower()
+            # stimulatory if “agonist” but not part of “antagonist”
+            if 'agonist' in desc and 'antagonist' not in desc:
+                effect_slug = 'stimulatory'
+            # inhibitory if either “antagonist” or “inhibitor”
+            elif 'antagonist' in desc or 'inhibitor' in desc:
+                effect_slug = 'inhibitory'
+        elif unit in ['pKi', 'pKd', 'Ki', 'Kd']:
+            effect_slug = 'binding'
+        else:
+            print(f"This value was not in the selection: {unit}")
+        # 2. Lookup or fall back
+        effect = None
+        if effect_slug:
+            try:
+                effect = LigandEffect.objects.get(slug=effect_slug)
+            except LigandEffect.DoesNotExist:
+                logger.warning("No LigandEffect with slug=%r found; leaving effect NULL", effect_slug)
+        # 3. Create + save
+        with transaction.atomic():
+            pairing = LigandTargetPairing(
+                ligand=ligand,
+                target=receptor,
+                effect=effect,
+            )
+            pairing.save()
+
+        return pairing

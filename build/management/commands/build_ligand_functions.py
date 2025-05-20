@@ -16,15 +16,19 @@ import requests
 import xmltodict
 
 import datamol as dm
+import pubchempy as pcp
+from pubchempy import BadRequestError
 from rdkit import RDLogger
 from rdkit import Chem
 from chembl_structure_pipeline import standardizer
+from typing import Dict, Any, Optional
 
 # Disable the RDkit verbosity
 RDLogger.DisableLog('rdApp.*')
 
 external_sources = ["pubchem", "gtoplig", "chembl_ligand", "drugbank", "drug_central"]
-def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = False, extended_matching = True):
+
+def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = False, extended_matching = True, source = None, helm = None):
     """ This function tries to obtain a small molecule Ligand object.
 
         If the ligand already exists it will return the corresponding object. If
@@ -115,15 +119,21 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         parent = try_get_parent({"sequence":ids["sequence"], "parent__isnull":True})
 
     # Attempt using name if still not found (here need to add an exception)
-    if not parent:
-        if ("smiles" in ids) and ("inchikey" in ids):
-            std_smiles = standardize_smiles(ids["smiles"])
-            head_inchi = ids["inchikey"].split('-')[0]
+    if not parent and "smiles" in ids and "inchikey" in ids:
+        std_smiles = standardize_smiles(ids["smiles"])
+        head_inchi = ids["inchikey"].split('-')[0]
+
+        if std_smiles:
             new_name = check_name(std_smiles, head_inchi, name)
             if name != new_name:
+                # only change the name and skip parent lookup this round
                 name = new_name
-            else:
-                parent = try_get_parent({"name":name, "parent__isnull": True})
+                # (you can `continue` here if this is in a loop)
+                # or just return/exit this branch
+                return
+
+        # either std_smiles was falsy, or it was truthy but name==new_name
+        parent = try_get_parent({"name": name, "parent__isnull": True})
 
     # Finally, generate a parent if none was found
     if not parent:
@@ -160,6 +170,10 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 ligand.ambiguous_alias = True
                 if parent and (ligand.pk is None or ligand.pk != parent.pk):
                     ligand.parent = parent
+                if source:
+                    ligand.source = source
+                if helm:
+                    ligand.helm = helm
                 ligand.save()
                 return ligand
     else:
@@ -179,20 +193,21 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
             if ligand is None:
                 ligand = get_ligand_by_inchikey(get_cleaned_inchikey(ids["smiles"]))
 
+        #DEPRECATING UNICHEM SINCE URL HAS CHANGED (FORCING THE INCHI CHECK SINCE THAT STILL WORKS)
         # Tried direct ID matching options => no ligand found => try UniChem IDs before creating new ligand
         if extended_matching and ligand is None:
             external_ids = list(set.intersection(set(ids.keys()), set(external_sources)))
             current_ids = list(ids.values())
-            for type in external_ids:
-                if ligand is None and type in ids:
-                    unichem_ids = match_id_via_unichem(type, ids[type])
-                    for row in unichem_ids:
-                        if row["id"] not in current_ids:
-                            ligand = get_ligand_by_id(row["type"], row["id"])
-                            current_ids.append(row["id"])
-                            if ligand is not None:
-                                print("MATCHING", type, ids[type], "via UniChem")
-                                break
+            fetch_type = "inchikey"
+            if ligand is None and fetch_type in ids:
+                unichem_ids = match_id_via_unichem(fetch_type, ids[fetch_type])
+                for row in unichem_ids:
+                    if row["id"] not in current_ids:
+                        ligand = get_ligand_by_id(row["type"], row["id"])
+                        current_ids.append(row["id"])
+                        if ligand is not None:
+                            print("MATCHING", fetch_type, ids[fetch_type], "via UniChem")
+                            break
 
         # Peptide or protein entry Sequence - filter gtoplig as those entries are standalone and should not be merged
         if ligand is None and "sequence" in ids and len(ids["sequence"]) > 3 and "gtoplig" not in ids:
@@ -220,6 +235,9 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
             # Creation of peptides and proteins
             if lig_type != "small-molecule" and "sequence" in ids:
                 ligand = create_ligand_from_id(name, "sequence", ids["sequence"], lig_type)
+                if (ligand is not None) and helm:
+                    ligand.helm = helm
+
 
             # Creation of small molecules and others without sequence/UniProt
             if ligand is None:
@@ -253,6 +271,8 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     ligand = create_ligand_from_id(name, "", "", lig_type)
                     if parent and (ligand.pk is None or ligand.pk != parent.pk):
                         ligand.parent = parent
+                    if helm:
+                        ligand.helm = helm
                     ligand.ambiguous_alias = True
 
         # Add missing IDs via (web)links to the ligand object
@@ -274,6 +294,10 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 ligand.inchikey = ids["inchikey"]
             if parent and (ligand.pk is None or ligand.pk != parent.pk):
                 ligand.parent = parent
+            if source:
+                ligand.source = source
+            if helm:
+                ligand.helm = helm
             ligand.save()
 
             # Create list of existing weblinks
@@ -289,19 +313,6 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     #ligand.ids.add(wl)
                     current_ids.append(str(ids[type_id]))
 
-            # Match the GtP Identifier to other sources via UniChem
-            if unichem and "gtoplig" in ids:
-                unichem_ids = match_id_via_unichem("gtoplig", ids["gtoplig"])
-                for row in unichem_ids:
-                    if row["id"] not in current_ids:
-                        if row["type"] == "pdb":
-                            if ligand.pdbe is None:
-                                ligand.pdbe = row["id"]
-                                ligand.save()
-                        else:
-                            wr = WebResource.objects.get(slug=row["type"])
-                            wl = LigandID.objects.get_or_create(ligand=ligand, index=row["id"], web_resource=wr)[0]
-                            #ligand.ids.add(wl)
     return ligand
 
 unichem_src_types = {"1": "chembl_ligand", "2": "drugbank", "3": "pdb", "4": "gtoplig", "22": "pubchem", "34": "drug_central"}
@@ -614,12 +625,12 @@ def check_name(smiles, inchi, name):
             # Calculate RDkit properties
             mol_weight = dm.descriptors.mw(input_mol)
         #we need to check that every variable is different a part from name
-        if parent_obj.smiles != smiles & parent_obj.inchikey != inchi & parent_obj.mw != mol_weight:
+        if ((parent_obj.smiles != smiles) and (parent_obj.inchikey != inchi) and (parent_obj.mw != mol_weight)):
             new_name = compound[0].iupac_name
             return new_name
         else:
             return name
-    except Ligand.DoesNotExist:
+    except (Ligand.DoesNotExist, BadRequestError) as e:
         return name
 
 #### Block for fixing mismatched LigandType assignment in Ligand model
