@@ -204,18 +204,30 @@ This page shows the number of biased ligands with a bias factor &ge; 5 (subtype)
     </thead>
     <tbody>
         <tr>
+            {% if render == "bias" %}
             <td>No. biased ligands</td>
+            {% else %}
+            <td>No. ligands</td>
+            {% endif %}
             {% for data in ligands_by_class %}
             <td align="center" style="vertical-align:middle !important">{{ data.num_ligands|floatformat:0|intcomma }}</td>
             {% endfor %}
+            {% if render == "bias" %}
             <td align="center" style="vertical-align:middle !important">{{ bal_ligands_total.num_ligands|floatformat:0|intcomma }}</td>
+            {% else %}
+            <td align="center" style="vertical-align:middle !important">{{ ligands_total.num_ligands|floatformat:0|intcomma }}</td>
+            {% endif %}
         </tr>
         <tr>
             <td nowrap>No. GPCRs with ligand</td>
             {% for data in ligands_by_class %}
             <td align="center" style="vertical-align:middle !important">{{ data.target_count|floatformat:0 }}</td>
             {% endfor %}
+            {% if render == "bias" %}
             <td align="center" style="vertical-align:middle !important; white-space: nowrap; overflow: hidden;"> {{ bal_ligands_total.target_count|floatformat:0 }}</td>
+            {% else %}
+            <td align="center" style="vertical-align:middle !important; white-space: nowrap; overflow: hidden;"> {{ ligands_total.target_count|floatformat:0 }}</td>
+            {% endif %}
         </tr>
     </tbody>
 
