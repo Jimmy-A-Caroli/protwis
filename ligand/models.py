@@ -348,12 +348,15 @@ class LigandTargetPairing(models.Model):
 
 # Dedicated WebLink-like model to relieve pressure of the WL model and be more creative
 class LigandID(models.Model):
-    ligand = models.ForeignKey(Ligand, related_name='ids', on_delete = models.CASCADE)
-    index = models.TextField(null = False)
-    web_resource = models.ForeignKey(WebResource, on_delete = models.CASCADE, blank=True, null=True)
+    ligand = models.ForeignKey(Ligand, related_name='ids', on_delete=models.CASCADE)
+    index = models.TextField(null=False)
+    web_resource = models.ForeignKey(WebResource, on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):
         return Template(str(self.web_resource)).substitute(index=self.index)
+
+    class Meta:
+        unique_together = ('ligand', 'index', 'web_resource')
 
 class LigandImage(models.Model):
     ligand = models.ForeignKey(Ligand, related_name='image', on_delete = models.CASCADE)

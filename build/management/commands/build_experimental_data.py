@@ -266,7 +266,7 @@ class Command(BaseBuild):
         self.calculate_potency_and_affinity()
         print("Potency and affinity indexes have been added to the model")
 
-        print("\n\Fixing mismatched LigandType definition")
+        print("\n\nFixing mismatched LigandType definition")
         n  = apply_canonical_ligand_types()
         print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
@@ -277,6 +277,7 @@ class Command(BaseBuild):
         endo_data = Endogenous_GTP.objects.all()
         endo_data.delete()
         Ligand.objects.all().delete()
+        LigandID.objects.all().delete()
 
     @staticmethod
     def data_preparation(endogenous_data, interactions, iuphar_ids):
@@ -912,9 +913,20 @@ class Command(BaseBuild):
                         match = LigandID.objects.get(index=next(iter(existing_matches)))
                     except LigandID.MultipleObjectsReturned:
                         match = LigandID.objects.filter(index=next(iter(existing_matches))).first()
+
                     if match and (match.web_resource == wr_pubchem):
-                        LigandID(index=chembl_id, web_resource=wr_chembl, ligand_id=match.ligand_id).save()
-                        print(f"Found existing non-parent ChEMBL {next(iter(existing_matches))} for parent {chembl_id}")
+                        # Before saving, only save if it does not already exist:
+                        if not LigandID.objects.filter(
+                                ligand_id=match.ligand_id,
+                                index=chembl_id,
+                                web_resource=wr_chembl
+                        ).exists():
+                            LigandID(
+                                index=chembl_id,
+                                web_resource=wr_chembl,
+                                ligand_id=match.ligand_id
+                            ).save()
+                            print(f"Found existing non-parent ChEMBL {next(iter(existing_matches))} for parent {chembl_id}")
                         insert = False
                 else:
                     ids.extend(extra_ids)
@@ -928,21 +940,59 @@ class Command(BaseBuild):
                         match = LigandID.objects.get(index=next(iter(existing_matches)))
                     except LigandID.MultipleObjectsReturned:
                         match = LigandID.objects.filter(index=next(iter(existing_matches))).first()
+
                     if match and (match.web_resource == wr_pubchem):
-                        LigandID(index=chembl_id, web_resource=wr_chembl, ligand_id=match.ligand_id).save()
+                        # Only create if not already in place:
+                        if not LigandID.objects.filter(
+                                ligand_id=match.ligand_id,
+                                index=chembl_id,
+                                web_resource=wr_chembl
+                        ).exists():
+                            LigandID(
+                                index=chembl_id,
+                                web_resource=wr_chembl,
+                                ligand_id=match.ligand_id
+                            ).save()
                         insert = False
 
             # Check InChIKey
             if insert and row["standard_inchi_key"] in existing_inchis:
                 try:
-                    ligand = Ligand.objects.get(inchikey=row["standard_inchi_key"], parent__isnull=False)
-                    LigandID(index=chembl_id, web_resource=wr_chembl, ligand=ligand).save()
-                    if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
-                        for cid in row["pubchem_cid"].split(";"):
-                            LigandID(index=cid, web_resource=wr_pubchem, ligand=ligand).save()
-                    insert = False
+                    ligand = Ligand.objects.get(
+                        inchikey=row["standard_inchi_key"],
+                        parent__isnull=False
+                    )
                 except Ligand.DoesNotExist:
+                    # If no matching Ligand, skip to next row
                     continue
+
+                # Before saving the new LigandID for the ChEMBL ID:
+                if not LigandID.objects.filter(
+                        ligand=ligand,
+                        index=chembl_id,
+                        web_resource=wr_chembl
+                    ).exists():
+                    LigandID(
+                        index=chembl_id,
+                        web_resource=wr_chembl,
+                        ligand=ligand
+                    ).save()
+
+                # Then link any PubChem CIDs, but only if they don’t already exist:
+                if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
+                    for cid in row["pubchem_cid"].split(";"):
+                        if not LigandID.objects.filter(
+                                ligand=ligand,
+                                index=cid,
+                                web_resource=wr_pubchem
+                        ).exists():
+                            LigandID(
+                                index=cid,
+                                web_resource=wr_pubchem,
+                                ligand=ligand
+                            ).save()
+
+                insert = False
 
             if insert:
                 parent = None
@@ -1048,18 +1098,54 @@ class Command(BaseBuild):
 
                 # Bulk insert every X entries or on the last row
                 if len(ligands) == Command.bulk_size or (index == lig_entries - 1):
+                    # 1) Insert all pending Ligand objects
                     Ligand.objects.bulk_create(ligands)
 
-                    # Once the ligands are inserted, assign LigandIDs to them and bulk insert those.
+                    # 2) Now assign each weblink to its newly‐saved Ligand and check "exists"
+                    to_create = []
+                    seen_keys = set()  # will hold (ligand_id, index, web_resource_id) tuples
+
                     for pair in weblinks:
-                        pair["link"].ligand = ligands[pair["lig_idx"]]
-                    LigandID.objects.bulk_create([pair["link"] for pair in weblinks])
+                        # pair["lig_idx"] points into `ligands` list. Because we just bulk‐created,
+                        # each `ligands[...]` now has a primary key.
+                        ligand_instance = ligands[pair["lig_idx"]]
+                        link_obj = pair["link"]
+
+                        # build a “deduplication key” based on the FK IDs and index
+                        key = (
+                            ligand_instance.id,
+                            link_obj.index,
+                            # if web_resource is a FK, use its .id; otherwise, use link_obj.web_resource
+                            getattr(link_obj.web_resource, "id", link_obj.web_resource),
+                        )
+
+                        # Skip immediately if we’ve already queued this exact combination
+                        if key in seen_keys:
+                            continue
+
+                        # Check if a record with (ligand, index, web_resource) already exists in the DB:
+                        already_exists = LigandID.objects.filter(
+                            ligand=ligand_instance,
+                            index=link_obj.index,
+                            web_resource=link_obj.web_resource,
+                        ).exists()
+
+                        if not already_exists:
+                            # Assign the real Ligand instance and queue for bulk_create
+                            link_obj.ligand = ligand_instance
+                            to_create.append(link_obj)
+                            seen_keys.add(key)
+
+                    # 3) Bulk‐insert only those new (and now‐deduplicated) links
+                    if to_create:
+                        LigandID.objects.bulk_create(to_create)
 
                     # -- PROGRESS REPORTING ADDED HERE --
                     completed = index + 1
                     percent = completed / lig_entries * 100
                     print(f"Inserted {completed} of {lig_entries} ligands — {percent:.1f}% complete")
 
+                    # 4) Clear the lists for the next batch
                     ligands = []
                     weblinks = []
 
@@ -1090,14 +1176,37 @@ class Command(BaseBuild):
             ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True, "ChEMBL_peptide", row.get('helm_notation'))
             # Add LigandIDs
             if pd.notna(row["other_ids"]):
-                extra_ids = row['other_ids'].split(";")
-                existing = list(set.intersection(set(extra_ids), set(existing_ids)))
+                # 1) Strip and dedupe
+                raw_ids = [s.strip() for s in row["other_ids"].split(";")]
+                extra_ids = set(raw_ids)
+                # 2) Skip if any of these already match existing_ids
+                if extra_ids & existing_ids:
+                    continue
+                # 3) For each trimmed, deduped extra_id, only queue it if
+                #    a) Not already in DB
+                #    b) Not already in our weblinks list
+                for link_index in extra_ids:
+                    wr = wr_chembl
+                    already_in_db = LigandID.objects.filter(
+                        ligand=ligand,
+                        index=link_index,
+                        web_resource=wr
+                    ).exists()
+                    already_queued = any(
+                        (w.ligand_id == ligand.id and
+                         w.index == link_index and
+                         w.web_resource_id == wr.id)
+                        for w in weblinks
+                    )
+                    if not (already_in_db or already_queued):
+                        weblinks.append(
+                            LigandID(
+                                ligand=ligand,
+                                index=link_index,
+                                web_resource=wr
+                            )
+                        )
 
-                if len(existing) > 0:
-                    continue  # skip rest of creation
-                else:
-                    for extra_id in extra_ids:
-                        weblinks.append(LigandID(ligand=ligand, index=extra_id, web_resource=wr_chembl))
         # Bulk insert all new ligandIDs
         LigandID.objects.bulk_create(weblinks)
 
@@ -2021,8 +2130,10 @@ class Command(BaseBuild):
         effect_slug = None
         if unit in ['EC50', 'pEC50']:
             effect_slug = 'stimulatory'
-        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50']:
+        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50', 'pKb']:
             effect_slug = 'inhibitory'
+        elif unit in ['pKi', 'pKd', 'Ki', 'Kd']:
+            effect_slug = 'binding'
         elif unit == 'AC50':
             desc = assay_description.lower()
             # stimulatory if “agonist” but not part of “antagonist”
@@ -2031,8 +2142,6 @@ class Command(BaseBuild):
             # inhibitory if either “antagonist” or “inhibitor”
             elif 'antagonist' in desc or 'inhibitor' in desc:
                 effect_slug = 'inhibitory'
-        elif unit in ['pKi', 'pKd', 'Ki', 'Kd']:
-            effect_slug = 'binding'
         else:
             print(f"This value was not in the selection: {unit}")
         # 2. Lookup or fall back

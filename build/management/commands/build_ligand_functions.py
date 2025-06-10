@@ -17,7 +17,7 @@ import xmltodict
 
 import datamol as dm
 import pubchempy as pcp
-from pubchempy import BadRequestError
+from pubchempy import BadRequestError, PubChemHTTPError
 from rdkit import RDLogger
 from rdkit import Chem
 from chembl_structure_pipeline import standardizer
@@ -351,7 +351,7 @@ def get_ligand_by_id(type, id, uniprot = None):
 
     if result.count() > 0:
         # For drugs we allow multiple entries because of stereochemistry if drug is racemic
-        if result.count() > 1 and type not in ["drugbank", "drug_central"]:
+        if result.count() > 1 and type not in ["drugbank", "drug_central", "pubchem"]:
             print("Multiple entries for the same ID - This should never happen - error", type, id)
         return result.first()
     else:
@@ -616,22 +616,60 @@ def try_get_parent(query_params):
     except Ligand.DoesNotExist:
         return None
 
-def check_name(smiles, inchi, name):
+
+def check_name(smiles: str,
+               inchi: str,
+               name: str,
+               retries: int = 5,
+               backoff_factor: float = 1.0):
+    """
+    Look up the IUPAC name for `smiles` on PubChem if any of
+    (smiles, inchi, mol_weight) differs from the stored parent.
+    Retries on PUGREST.ServerBusy with exponential backoff.
+
+    Returns the new name if found, otherwise the original `name`.
+    """
+    # 1) Fetch parent object or bail
     try:
-        compound = pcp.get_compounds(smiles, "smiles")
-        parent_obj = Ligand.objects.get(name=name, parent__isnull=True)
-        input_mol = dm.to_mol(smiles, sanitize=True)
-        if input_mol:
-            # Calculate RDkit properties
-            mol_weight = dm.descriptors.mw(input_mol)
-        #we need to check that every variable is different a part from name
-        if ((parent_obj.smiles != smiles) and (parent_obj.inchikey != inchi) and (parent_obj.mw != mol_weight)):
-            new_name = compound[0].iupac_name
-            return new_name
-        else:
-            return name
-    except (Ligand.DoesNotExist, BadRequestError) as e:
+        parent = Ligand.objects.get(name=name, parent__isnull=True)
+    except Ligand.DoesNotExist:
         return name
+
+    # 2) Compute RDKit molecular weight (or bail)
+    try:
+        mol = dm.to_mol(smiles, sanitize=True)
+        if mol is None:
+            return name
+        mol_weight = dm.descriptors.mw(mol)
+    except Exception:
+        return name
+
+    # 3) If nothing has changed, return early
+    if (parent.smiles == smiles and
+        parent.inchikey == inchi and
+        abs(parent.mw - mol_weight) < 1e-6):
+        return name
+
+    # 4) Otherwise, fetch IUPAC name with retries
+    for attempt in range(retries):
+        try:
+            compounds = pcp.get_compounds(smiles, namespace='smiles')
+            if not compounds:
+                return name
+            new_name = compounds[0].iupac_name
+            return new_name or name
+        except PubChemHTTPError as e:
+            if 'PUGREST.ServerBusy' in str(e):
+                wait = backoff_factor * (2 ** attempt)
+                time.sleep(wait)
+                continue
+            # any other HTTP error: give up
+            return name
+        except BadRequestError:
+            return name
+
+    # 5) All retries failed
+    return name
 
 #### Block for fixing mismatched LigandType assignment in Ligand model
 
