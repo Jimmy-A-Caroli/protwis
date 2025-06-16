@@ -598,9 +598,17 @@ function reset_all() {
             dtButtons.push({ text: 'Get vendors', className: 'btn btn-primary', action: function (e, dt, node, config) { window.location.href = '/ligand/targets_purchasable'; } });
         }
         
+        let defaultOrderConfig = [];
+        if (mode === 'compact' && ligandSimilarity) {
+            // If compact mode and similarity is present, sort by Similarity (index 1 after checkbox) descending
+            defaultOrderConfig = [[1, "desc"]];
+        } else {
+            // Default to Common Name (index 1 after checkbox for extended, or index 1 if no similarity in compact) ascending
+            defaultOrderConfig = [[1, "asc"]];
+        }
+
         var table = $(tableId).DataTable({
-            data: data, columns: columns, columnDefs: columnDefs, deferRender: true, paging: true, pageLength: 20,
-            order: [[(mode === 'compact' && ligandSimilarity) ? 2 : 1, "asc"]],
+            data: data, columns: columns, columnDefs: columnDefs, order: defaultOrderConfig, deferRender: true, paging: true, pageLength: 20,
             lengthMenu: [[10, 20, 30, 40, 50, -1], [10, 20, 30, 40, 50, "All"]],
             autoWidth: false, scrollX: true, scrollCollapse: true,
             dom: "<'row'<'col-sm-12 col-md-6'B><'col-sm-12 col-md-6'f>>" + "<'row'<'col-sm-12'tr>>" + "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
