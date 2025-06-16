@@ -5,6 +5,20 @@
 <link rel="stylesheet" href="{% static 'home/css/nv.d3.min.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
+
+<style>
+    #ListPlot {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* Or center if you want vertical centering too */
+      width: 100%;
+    }
+
+    #ListPlot svg {
+      display: block;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -57,7 +71,7 @@
         <!-- Row 3: Dropdown and numeric input -->
         <div class="d-flex justify-content-center align-items-center gap-2" style="padding: 0px 15px 10px;">
           <select id="Layout_Max_Label" class="form-select" style="width: 120px;padding: 5px;">
-            <option selected>Auto</option>
+            <option value="Auto" selected>Auto</option>
             <option value="Custom">Custom</option>
           </select>
           <input type="number" id="List_Layout_Max_Label_input"
@@ -67,7 +81,7 @@
         </div>
         <!-- Row 4: -->
         <div class="mb-2" style="padding: 10px 15px;">
-          <label for="Layout_Max_Label">Visible labels:</label>
+          <label>Visible labels:</label>
         </div>
         <div class="form-check mb-2" style="padding: 0px 15px;margin-top:-10px">
           <input class="form-check-input" type="checkbox" id="toggle-layer-1" checked>
@@ -90,7 +104,7 @@
       <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown">
         Labels
       </button>
-      <div class="dropdown-menu p-3" style="min-width: 325px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-10%);">
+      <div class="dropdown-menu p-3" style="min-width: 325px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-9%);">
         <!-- Class Section -->
         <div class="mb-4" style="margin-bottom: 20px;">
           <label style="font-weight: bold; display: block; margin-bottom: 8px;">Class</label>
@@ -99,7 +113,7 @@
             <!-- Color Picker -->
             <input type="text" id="colorPicker_Class" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
             <!-- Bold -->
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
               <label style="margin-bottom: 0;">
                 <input type="checkbox" id="boldCheckbox_Class"> Bold
               </label>
@@ -117,20 +131,27 @@
               </label>
             </div>
           </div>
-          <!-- Row 2: Font size label -->
+          <!-- Label above slider -->
           <div class="text-center" style="margin-top: 10px;">
-            <label id="fontSizeSliderLabel_Class" class="form-label">Font Size: 20px</label>
+            <label class="form-label">Font size</label>
           </div>
-          <!-- Row 3: Slider -->
+
+          <!-- Slider -->
           <input type="range" class="form-control" min="8" max="32" id="fontSizeSlider_Class" style="width: 100%;">
+
+          <!-- Value under slider -->
+          <div class="text-center" style="margin-top: -5px;">
+            <span id="fontSizeSliderLabel_Class">20 px</span>
+          </div>
         </div>
         <!-- Ligand Type Section -->
         <div class="mb-4" style="margin-bottom: 20px;">
+          <hr>
           <label style="font-weight: bold; display: block; margin-bottom: 8px;">Ligand type</label>
           <!-- Row 1: Color picker + checkboxes -->
           <div style="white-space: nowrap;">
             <input type="text" id="colorPicker_LigandType" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
               <label style="margin-bottom: 0;">
                 <input type="checkbox" id="boldCheckbox_LigandType"> Bold
               </label>
@@ -146,19 +167,26 @@
               </label>
             </div>
           </div>
-          <!-- Row 2: Font size label -->
+          <!-- Label above slider -->
           <div class="text-center" style="margin-top: 10px;">
-            <label id="fontSizeSliderLabel_LigandType" class="form-label">Font Size: 18px</label>
+            <label class="form-label">Font size</label>
           </div>
-          <!-- Row 3: Slider -->
+
+          <!-- Slider -->
           <input type="range" class="form-control" min="8" max="28" id="fontSizeSlider_LigandType" style="width: 100%;">
+
+          <!-- Value under slider -->
+          <div class="text-center" style="margin-top: -5px;">
+            <span id="fontSizeSliderLabel_LigandType">18 px</span>
+          </div>
         </div>
         <!-- Receptor Family Section -->
         <div class="mb-4" style="margin-bottom: 20px;">
+          <hr>
           <label style="font-weight: bold; display: block; margin-bottom: 8px;">Receptor family</label>
           <div style="white-space: nowrap;">
             <input type="text" id="colorPicker_ReceptorFamily" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
               <label style="margin-bottom: 0;">
                 <input type="checkbox" id="boldCheckbox_ReceptorFamily"> Bold
               </label>
@@ -174,17 +202,27 @@
               </label>
             </div>
           </div>
+          <!-- Label above slider -->
           <div class="text-center" style="margin-top: 10px;">
-            <label id="fontSizeSliderLabel_ReceptorFamily" class="form-label">Font Size: 16px</label>
+            <label class="form-label">Font size</label>
           </div>
+
+          <!-- Slider -->
           <input type="range" class="form-control" min="8" max="28" id="fontSizeSlider_ReceptorFamily" style="width: 100%;">
+
+          <!-- Value under slider -->
+          <div class="text-center" style="margin-top: -5px;">
+            <span id="fontSizeSliderLabel_ReceptorFamily">16 px</span>
+          </div>
+
         </div>
         <!-- Receptor Section -->
         <div class="mb-2" style="margin-bottom: 20px;">
+          <hr>
           <label style="font-weight: bold; display: block; margin-bottom: 8px;">Receptor</label>
           <div style="white-space: nowrap;">
             <input type="text" id="colorPicker_Receptor" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
               <label style="margin-bottom: 0;">
                 <input type="checkbox" id="boldCheckbox_Receptor"> Bold
               </label>
@@ -200,22 +238,44 @@
               </label>
             </div>
           </div>
+          <!-- Label above slider -->
           <div class="text-center" style="margin-top: 10px;">
-            <label id="fontSizeSliderLabel_Receptor" class="form-label">Font Size: 14px</label>
+            <label class="form-label">Font size</label>
           </div>
+
+          <!-- Slider -->
           <input type="range" class="form-control" min="8" max="26" id="fontSizeSlider_Receptor" style="width: 100%;">
+
+          <!-- Value under slider -->
+          <div class="text-center" style="margin-top: -5px;">
+            <span id="fontSizeSliderLabel_Receptor">14 px</span>
+          </div>
+
         </div>
       </div>
     </div>
 
-    <!-- Merged Legend Dropdown -->
+    
+    <!-- Color Styling Dropdown -->
     <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="Legend_Menu" data-toggle="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown">
+        Colors
+      </button>
+      <div class="dropdown-menu p-3" style="min-width: 525px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-25%);">
+        <div id="colorStylingContainer"></div>
+      </div>
+    </div>
+
+
+    <!-- Legend Labels Dropdown -->
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="LegendLabelMenu" data-toggle="dropdown">
         Legend
       </button>
-      <div class="dropdown-menu p-3" style="min-width: 400px; padding: 20px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-15%);">
-        <!-- Container where merged content will be appended -->
-        <div id="ListPlot_LegendContainer"></div>
+      <div class="dropdown-menu p-3"
+          style="min-width: 400px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-25%);">
+        <div id="legendLabelContainer"></div>
       </div>
     </div>
 
@@ -231,26 +291,14 @@
           style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
                   margin-left: 5px; position: absolute; transform: translateY(-40%);
                   display: none; z-index: 999;">
-        
         <button type="button" class="btn btn-primary btn-block mb-1"
-                onclick="saveSvg(document.getElementById('ListPlot_visualization'), 'Listplot.svg');">
-          SVG
-        </button>
-        
+                onclick="saveSvgAsJpg(document.getElementById('ListPlot_visualization'), 'Listplot.jpg');">JPG</button>
         <button type="button" class="btn btn-primary btn-block mb-1"
-                onclick="saveSvgAsPng(document.getElementById('ListPlot_visualization'), 'Listplot.png');">
-          PNG
-        </button>
-        
+                onclick="saveSvgAsPng(document.getElementById('ListPlot_visualization'), 'Listplot.png');">PNG</button>
         <button type="button" class="btn btn-primary btn-block mb-1"
-                onclick="saveSvgAsJpg(document.getElementById('ListPlot_visualization'), 'Listplot.jpg');">
-          JPG
-        </button>
-        
+                onclick="saveSvg(document.getElementById('ListPlot_visualization'), 'Listplot.svg');">SVG</button>
         <button type="button" class="btn btn-primary btn-block"
-                onclick="saveSvgAsTiff(document.getElementById('ListPlot_visualization'), 'Listplot.tiff');">
-          TIFF
-        </button>
+                onclick="saveSvgAsTiff(document.getElementById('ListPlot_visualization'), 'Listplot.tiff');">TIFF</button>
       </div>
     </div>
 
@@ -269,7 +317,7 @@
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/datamapper.js' %}"></script>
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
-
+<script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 
 <!-- Universal scripts -->
 <script>
@@ -354,7 +402,6 @@ function initializeStyling() {
     document.getElementById('italicCheckbox_Class').checked = Styling_Option_dict.Class.Italic;
     document.getElementById('underlineCheckbox_Class').checked = Styling_Option_dict.Class.Underline;
     document.getElementById('fontSizeSlider_Class').value = parseInt(Styling_Option_dict.Class.Fontsize);
-    document.getElementById('fontSizeSliderLabel_Class').textContent = `Font Size: ${Styling_Option_dict.Class.Fontsize}`;
     document.getElementById('colorPicker_Class').value = Styling_Option_dict.Class.Color;
 
     // LigandType
@@ -362,7 +409,6 @@ function initializeStyling() {
     document.getElementById('italicCheckbox_LigandType').checked = Styling_Option_dict.LigandType.Italic;
     document.getElementById('underlineCheckbox_LigandType').checked = Styling_Option_dict.LigandType.Underline;
     document.getElementById('fontSizeSlider_LigandType').value = parseInt(Styling_Option_dict.LigandType.Fontsize);
-    document.getElementById('fontSizeSliderLabel_LigandType').textContent = `Font Size: ${Styling_Option_dict.LigandType.Fontsize}`;
     document.getElementById('colorPicker_LigandType').value = Styling_Option_dict.LigandType.Color;
 
     // ReceptorFamily
@@ -370,7 +416,6 @@ function initializeStyling() {
     document.getElementById('italicCheckbox_ReceptorFamily').checked = Styling_Option_dict.ReceptorFamily.Italic;
     document.getElementById('underlineCheckbox_ReceptorFamily').checked = Styling_Option_dict.ReceptorFamily.Underline;
     document.getElementById('fontSizeSlider_ReceptorFamily').value = parseInt(Styling_Option_dict.ReceptorFamily.Fontsize);
-    document.getElementById('fontSizeSliderLabel_ReceptorFamily').textContent = `Font Size: ${Styling_Option_dict.ReceptorFamily.Fontsize}`;
     document.getElementById('colorPicker_ReceptorFamily').value = Styling_Option_dict.ReceptorFamily.Color;
 
     // Receptor
@@ -378,7 +423,6 @@ function initializeStyling() {
     document.getElementById('italicCheckbox_Receptor').checked = Styling_Option_dict.Receptor.Italic;
     document.getElementById('underlineCheckbox_Receptor').checked = Styling_Option_dict.Receptor.Underline;
     document.getElementById('fontSizeSlider_Receptor').value = parseInt(Styling_Option_dict.Receptor.Fontsize);
-    document.getElementById('fontSizeSliderLabel_Receptor').textContent = `Font Size: ${Styling_Option_dict.Receptor.Fontsize}`;
     document.getElementById('colorPicker_Receptor').value = Styling_Option_dict.Receptor.Color;
 }
 
@@ -388,6 +432,8 @@ var Barlabels = {'Col1':"Dataset 1",'Col2':"Dataset 2",'Col3':"Dataset 3",'Col4'
 
 // # Initialize data styling #
 var Data_styling = initializeDataStyling(list_data_wow, data_types_list);
+console.log(Data_styling)
+console.log(list_data_wow)
 const List_Data_result = Data_resorter(modded_list_data);
 var Data_array = List_Data_result.final_array;
 var Data_Category_array = List_Data_result.category_array;
@@ -429,7 +475,7 @@ function Recalculate_data_and_update() {
   Data_Category_array = List_Data_result.category_array;
 
   // Call the function to update the visualization
-  updateVisualization_list();
+  UpdateLayout();
 }
 
 // Function to update the visualization
@@ -458,6 +504,7 @@ const Max_label_number = parseInt(document.querySelector("#List_Layout_Max_Label
 // Handle Max label number
 if (Max_label_selector === 'Auto') {
     Layout_dict.col_max_label = 'Auto';
+    Layout_dict.Col_break_number = Math.ceil(Data_array.length / Cols);
 } else if (Max_label_selector === 'Custom') {
     Layout_dict.col_max_label = 'Custom';
     Layout_dict.Col_break_number = Max_label_number;
@@ -533,7 +580,7 @@ function addEventListeners() {
 
     // Add event listener for font size slider
     document.getElementById(`fontSizeSlider_${layer}`).addEventListener("input", function() {
-    document.getElementById(`fontSizeSliderLabel_${layer}`).textContent = `Font Size: ${this.value}px`;
+    document.getElementById(`fontSizeSliderLabel_${layer}`).textContent = `${this.value} px`;
     updateLayerStyling(layer);
     });
 });
@@ -550,154 +597,267 @@ document.addEventListener("DOMContentLoaded", initializeStylingOptions);
 // ###################
 // ## Data styling ##
 // ###################
-function populateLegendMerged() {
-  var container = document.getElementById('ListPlot_LegendContainer');
-  container.innerHTML = '';
 
+function populateLegendLabelInputs(containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  // Header row
+  const headerRow = document.createElement("div");
+  headerRow.className = "row";
+  headerRow.innerHTML = `
+    <div class="col-md-3 text-left" style="margin-left: 10px;"><strong>Dataset</strong></div>
+    <div class="col-md-8 text-left" style="margin-left: 10px; margin-bottom: 10px;"><strong>Gradient bar text</strong></div>
+  `;
+  container.appendChild(headerRow);
+
+  // Add editable rows
   Object.keys(Data_styling).forEach(function (column) {
     if (Data_styling[column].Data === "Yes" && Data_styling[column].Datatype === 'Continuous') {
-      const index = column.substr(3); // Extract index (e.g., 'Col1' -> '1')
+      const index = column.substr(3); // E.g., Col1 → 1
 
-      // Main section container
-      const section = document.createElement('div');
-      section.className = 'mb-4';
-      section.style = 'margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;';
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.marginBottom = "10px";
 
-      // 1. Label input
-      const labelGroup = document.createElement('div');
-      labelGroup.className = 'form-group';
-      labelGroup.innerHTML = `
-        <label for="labelInput_${column}" style="font-weight: bold;">Dataset ${index}</label>
-        <input type="text" class="form-control" id="labelInput_${column}" value="Dataset ${index}" oninput="updateLabel('${column}')">
+      row.innerHTML = `
+        <div><hr style="margin: 0px 0px 10px 0px"></div>
+        <div class="col-md-3 text-left" style="padding-top: 6px; margin-left: 10px;">
+          Dataset ${index}
+        </div>
+        <div class="col-md-8" style="margin-left: 10px;">
+          <input type="text" maxlength="25" class="form-control input-sm"
+                 id="labelInput_${column}" value="${Barlabels[column]}"
+                 oninput="updateLabel('${column}')">
+        </div>
       `;
-      section.appendChild(labelGroup);
 
-      // 2. Row: Style dropdown + color pickers
-      const row = document.createElement('div');
-      row.style = 'display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;';
-
-      // Dropdown
-      const styleDropdown = document.createElement('select');
-      styleDropdown.id = `${column}_Style`;
-      styleDropdown.className = 'form-control';
-      styleDropdown.style = 'width: 160px;';
-      styleDropdown.innerHTML = `
-        <option value="White-Color">White-Color</option>
-        <option value="Color-Color">Color-Color</option>
-        <option value="Color-White-Color">Color-White-Color</option>
-      `;
-      row.appendChild(styleDropdown);
-
-      // Min color picker
-      const minColorPicker = document.createElement('input');
-      minColorPicker.type = 'text';
-      minColorPicker.id = `${column}_ColorPicker_min`;
-      minColorPicker.placeholder = 'Min';
-      minColorPicker.style = 'width: 80px;';
-      row.appendChild(minColorPicker);
-
-      // Mid color picker
-      const middleColorPicker = document.createElement('input');
-      middleColorPicker.type = 'text';
-      middleColorPicker.id = `${column}_ColorPicker_middle`;
-      middleColorPicker.placeholder = 'Mid';
-      middleColorPicker.style = 'width: 80px;';
-      row.appendChild(middleColorPicker);
-
-      // Max color picker
-      const maxColorPicker = document.createElement('input');
-      maxColorPicker.type = 'text';
-      maxColorPicker.id = `${column}_ColorPicker_max`;
-      maxColorPicker.placeholder = 'Max';
-      maxColorPicker.style = 'width: 80px;';
-      row.appendChild(maxColorPicker);
-
-      // Add row to section
-      section.appendChild(row);
-      container.appendChild(section);
-
-      // Initialize color pickers and behavior
-      initialize_ListPlot_ColorPicker(`${column}_ColorPicker_min`, Data_styling[column].Data_color1, column, 'min');
-      initialize_ListPlot_ColorPicker(`${column}_ColorPicker_middle`, '#FFFFFF', column, 'middle');
-      initialize_ListPlot_ColorPicker(`${column}_ColorPicker_max`, Data_styling[column].Data_color2, column, 'max');
-
-      handleColorPickerState(`${column}_ColorPicker_middle`, 'disable');
-      handleListPlotDropdownChanges(column);
+      container.appendChild(row);
     }
   });
 }
 
+function enhanceListPlotDropdownsWithSelect2(activeColumns) {
+  const colorPresets = {
+    One: { setup: "One", colorStart: "#ffffff", colorAvg: "#ffffff", colorEnd: "#707070" },
+    Two: { setup: "Two", colorStart: "#97a6c4", colorAvg: "#ffffff", colorEnd: "#384860" },
+    Three_RWB: { setup: "Three", colorStart: "#a00000", colorAvg: "#ffffff", colorEnd: "#1a80bb" },
+    Three_TWM: { setup: "Three", colorStart: "#298c8c", colorAvg: "#ffffff", colorEnd: "#800074" }
+  };
+
+  activeColumns.forEach(column => {
+    $(`#${column}_Style`).select2({
+      templateResult: formatColorScheme,
+      templateSelection: formatColorScheme,
+      width: 'resolve'
+    }).on('change', function () {
+      const selected = this.value;
+      const preset = colorPresets[selected];
+      if (!preset) return;
+
+      Data_styling[column].Data_color1 = preset.colorStart;
+      Data_styling[column].Data_color2 = preset.colorEnd;
+      Data_styling[column].data_color_complexity = preset.setup;
+
+      const min = document.getElementById(`${column}_ColorPicker_min`).parentElement;
+      const mid = document.getElementById(`${column}_ColorPicker_middle`).parentElement;
+      const max = document.getElementById(`${column}_ColorPicker_max`).parentElement;
+
+      min.style.visibility = preset.setup !== "One" ? "visible" : "hidden";
+      mid.style.visibility = preset.setup === "Three" ? "visible" : "hidden";
+      max.style.visibility = "visible";
+
+      $(`#${column}_ColorPicker_min`).spectrum("set", preset.colorStart);
+      $(`#${column}_ColorPicker_max`).spectrum("set", preset.colorEnd);
+
+      updateVisualization_list();
+    });
+  });
+}
+
+function formatColorScheme(option) {
+  if (!option.id) return option.text;
+  const colorMap = {
+    One: [null, null, "#707070"],
+    Two: ["#97a6c4", null, "#384860"],
+    Three_RWB: ["#a00000", "#ffffff", "#1a80bb"],
+    Three_TWM: ["#298c8c", "#ffffff", "#800074"]
+  };
+  const colors = colorMap[option.id];
+  if (!colors) return option.text;
+
+  return $(`
+    <span style="display: flex; align-items: center;">
+      <span style="min-width: 50px; text-align: center; margin-right: 5px;">${option.text}</span>
+      ${colors.map(c => `<span style="display:inline-block;width:12px;height:12px;margin-left:4px;border:1px solid #ccc;border-radius:2px;background:${c || 'transparent'};${c ? '' : 'opacity:0'}"></span>`).join('')}
+    </span>
+  `);
+}
+
+function populateLegendColorInputs(containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = "";
+
+  // Header row
+  const headerRow = `
+    <div class="row" style="margin: 20px 0px 10px 0px;">
+      <div class="col-md-2 text-center"><strong>Dataset</strong></div>
+      <div class="col-md-4 text-center"><strong>Number of colors</strong></div>
+      <div class="col-md-2 text-center"><strong>Min</strong></div>
+      <div class="col-md-2 text-center"><strong>Mid</strong></div>
+      <div class="col-md-2 text-center"><strong>Max</strong></div>
+    </div>
+    <div style="margin: -10px 0px -10px 0px;"><hr></div>
+  `;
+  container.insertAdjacentHTML("beforeend", headerRow);
+
+  const activeColumns = [];
+
+  Object.keys(Data_styling).forEach(function (column) {
+    if (Data_styling[column].Data === "Yes" && Data_styling[column].Datatype === 'Continuous') {
+      activeColumns.push(column);
+      const index = column.substr(3);
+
+      const currentStyle = Data_styling[column].data_color_complexity || "One";
+
+      const rowHTML = `
+        <div class="row" style="margin: 20px 0px 10px 0px;"">
+          <div class="col-md-2 text-center">Dataset ${index}</div>
+          <div class="col-md-4">
+            <select id="${column}_Style" class="form-control input-sm">
+              <option value="One">One</option>
+              <option value="Two">Two</option>
+              <option value="Three_RWB">Three</option>
+              <option value="Three_TWM">Three</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <input type="text" id="${column}_ColorPicker_min" class="form-control input-sm" placeholder="Min" />
+          </div>
+          <div class="col-md-2">
+            <input type="text" id="${column}_ColorPicker_middle" class="form-control input-sm" placeholder="Mid" />
+          </div>
+          <div class="col-md-2">
+            <input type="text" id="${column}_ColorPicker_max" class="form-control input-sm" placeholder="Max" />
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML("beforeend", rowHTML);
+
+      // Initialize pickers
+      initialize_ListPlot_ColorPicker(`${column}_ColorPicker_min`, Data_styling[column].Data_color1, column, 'min');
+      initialize_ListPlot_ColorPicker(`${column}_ColorPicker_middle`, "#FFFFFF", column, 'middle');
+      $(`#${column}_ColorPicker_middle`).spectrum("disable"); // ← disables mid picker
+      initialize_ListPlot_ColorPicker(`${column}_ColorPicker_max`, Data_styling[column].Data_color2, column, 'max');
+
+      // Initial visibility logic
+      const minContainer = document.getElementById(`${column}_ColorPicker_min`).parentElement;
+      const midContainer = document.getElementById(`${column}_ColorPicker_middle`).parentElement;
+      const maxContainer = document.getElementById(`${column}_ColorPicker_max`).parentElement;
+
+      if (currentStyle === "One") {
+        minContainer.style.visibility = "hidden";
+        midContainer.style.visibility = "hidden";
+        maxContainer.style.visibility = "visible";
+      } else if (currentStyle === "Two") {
+        minContainer.style.visibility = "visible";
+        midContainer.style.visibility = "hidden";
+        maxContainer.style.visibility = "visible";
+      } else {
+        // Three_RWB or Three_TWM
+        minContainer.style.visibility = "visible";
+        midContainer.style.visibility = "visible";
+        maxContainer.style.visibility = "visible";
+      }
+    }
+  });
+
+  // Apply enhanced dropdowns after the DOM is built
+  enhanceListPlotDropdownsWithSelect2(activeColumns);
+
+  // Apply all current dropdown selections as presets and trigger one render
+  applyInitialColorPresetsAndRender(activeColumns);
+}
+
+function applyInitialColorPresetsAndRender(activeColumns) {
+  const colorPresets = {
+    One: { setup: "One", colorStart: "#ffffff", colorAvg: "#ffffff", colorEnd: "#707070" },
+    Two: { setup: "Two", colorStart: "#97a6c4", colorAvg: "#ffffff", colorEnd: "#384860" },
+    Three_RWB: { setup: "Three", colorStart: "#a00000", colorAvg: "#ffffff", colorEnd: "#1a80bb" },
+    Three_TWM: { setup: "Three", colorStart: "#298c8c", colorAvg: "#ffffff", colorEnd: "#800074" }
+  };
+
+  activeColumns.forEach(column => {
+    const styleDropdown = document.getElementById(`${column}_Style`);
+    const selectedValue = styleDropdown?.value;
+    const preset = colorPresets[selectedValue];
+    if (!preset) return;
+
+    // Store into Data_styling object
+    Data_styling[column].Data_color1 = preset.colorStart;
+    Data_styling[column].Data_color2 = preset.colorEnd;
+    Data_styling[column].data_color_complexity = preset.setup;
+
+    // DOM containers
+    const minContainer = document.getElementById(`${column}_ColorPicker_min`).parentElement;
+    const midContainer = document.getElementById(`${column}_ColorPicker_middle`).parentElement;
+    const maxContainer = document.getElementById(`${column}_ColorPicker_max`).parentElement;
+
+    // Set visibility
+    minContainer.style.visibility = preset.setup !== 'One' ? 'visible' : 'hidden';
+    midContainer.style.visibility = preset.setup === 'Three' ? 'visible' : 'hidden';
+    maxContainer.style.visibility = 'visible';
+
+    // Set spectrum values
+    $(`#${column}_ColorPicker_min`).spectrum("set", preset.colorStart);
+    $(`#${column}_ColorPicker_max`).spectrum("set", preset.colorEnd);
+  });
+
+  // 🔁 Final update after all presets are applied
+  updateVisualization_list();
+}
+
+
 // Function to initialize Spectrum color pickers for list plot
 function initialize_ListPlot_ColorPicker(elementId, start_color, column, type) {
-$("#" + elementId).spectrum({
-    color: start_color,
-    showPalette: true,
-    showInput: true,
-    preferredFormat: "hex",
-    palette: [
-    ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
-    ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
-    ["#800000", "#808000", "#008000", "#800080", "#008080"],
-    ["#000080"]
-    ],
-    change: function(color) {
-    // Store the color in Data_styling for this column and type
-    if (type === 'min') {
-        Data_styling[column].Data_color1 = color.toHexString();
-    } else if (type === 'max') {
-        Data_styling[column].Data_color2 = color.toHexString();
-    }
-    updateVisualization_list();  // Call function to update the visualization
-    },
-    move: function(color) {
-    // Store the color in Data_styling for this column and type
-    if (type === 'min') {
-        Data_styling[column].Data_color1 = color.toHexString();
-    } else if (type === 'max') {
-        Data_styling[column].Data_color2 = color.toHexString();
-    }
-    updateVisualization_list();  // Call function to update the visualization
-    }
-});
-}
-
-// Function to handle dropdown changes for data_color_complexity
-function handleListPlotDropdownChanges(column) {
-var dropdown = document.getElementById(`${column}_Style`);
-
-dropdown.addEventListener('change', function() {
-    var selectedOption = this.value;
-
-    if (selectedOption === "White-Color") {
-    // Set data_color_complexity to "One"
-    Data_styling[column].data_color_complexity = 'One';
-    handleColorPickerState(`${column}_ColorPicker_min`, 'disable');
-    } else if (selectedOption === "Color-Color") {
-    // Set data_color_complexity to "Two"
-    Data_styling[column].data_color_complexity = 'Two';
-    handleColorPickerState(`${column}_ColorPicker_min`, 'enable');
-    } else if (selectedOption === "Color-White-Color") {
-    // Set data_color_complexity to "Three"
-    Data_styling[column].data_color_complexity = 'Three';
-    handleColorPickerState(`${column}_ColorPicker_min`, 'enable');
-    }
-
-    updateVisualization_list();  // Call function to update the visualization
-});
-}
-
-// Function to disable or enable color pickers
-function handleColorPickerState(elementId, action) {
-if (action === 'disable') {
-    $("#" + elementId).spectrum("disable");
-} else if (action === 'enable') {
-    $("#" + elementId).spectrum("enable");
-}
+  $("#" + elementId).spectrum({
+      color: start_color,
+      showPalette: true,
+      showInput: true,
+      preferredFormat: "hex",
+      palette: [
+      ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+      ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
+      ["#800000", "#808000", "#008000", "#800080", "#008080"],
+      ["#000080"]
+      ],
+      change: function(color) {
+      // Store the color in Data_styling for this column and type
+      if (type === 'min') {
+          Data_styling[column].Data_color1 = color.toHexString();
+      } else if (type === 'max') {
+          Data_styling[column].Data_color2 = color.toHexString();
+      }
+      updateVisualization_list();  // Call function to update the visualization
+      },
+      move: function(color) {
+      // Store the color in Data_styling for this column and type
+      if (type === 'min') {
+          Data_styling[column].Data_color1 = color.toHexString();
+      } else if (type === 'max') {
+          Data_styling[column].Data_color2 = color.toHexString();
+      }
+      updateVisualization_list();  // Call function to update the visualization
+      }
+  });
 }
 
 
 // Call this function to populate options for continuous data columns
-document.addEventListener("DOMContentLoaded", populateLegendMerged);
+document.addEventListener("DOMContentLoaded", function () {
+  populateLegendLabelInputs("legendLabelContainer");
+  populateLegendColorInputs("colorStylingContainer");
+});
 
 document.addEventListener('DOMContentLoaded', function () {
   const downloadBtn = document.querySelector('#DownloadDropdownToggle');

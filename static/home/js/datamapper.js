@@ -34,7 +34,7 @@ function update_tree_data(data,depth) {
 }
 
 // Draw the Tree
-function draw_tree(data, options,circle_size, showLegend = false) {
+function draw_tree(data, options) {
 
     // Remove existing SVG if present
     d3.select('#' + options.anchor + "_svg").remove();
@@ -250,31 +250,23 @@ function draw_tree(data, options,circle_size, showLegend = false) {
         });
     }
     // === Centering Logic ===
-    var scaleFactor = 0.8;  // Adjust this as needed
+    // Calculate the actual bounding box of the content
+    var extraPadding = 40
 
-    // Calculate the extra padding needed based on circle size and spacer
-    var extraPadding = (circle_size) + (circle_spacer*2) + parseInt(options.fontSize.receptor,10)*4;  // Adjust the multiplier based on how much padding is needed
+    var contentWidth = diameter + extraPadding;
+    var contentHeight = diameter + extraPadding;
 
-    var legendMarginTop = showLegend ? 100 : 0;  // 🛠 only add margin if ShowLegend is true!
-    // Calculate new dimensions
-    var newWidth = diameter + extraPadding;  // Add padding to both sides
-    var newHeight = diameter + extraPadding + legendMarginTop;  // Add padding to both sides
+    // Set up SVG with viewBox instead of fixed width/height
+    svg.attr('width', '100%')
+    .attr('height', '100%')
+    .attr('viewBox', `0 0 ${contentWidth} ${contentHeight}`);
 
-    // Set new width and height for the SVG
-    svg.attr('width', newWidth)
-       .attr('height', newHeight);
+    // Center the tree in the available space
+    var cx = contentWidth / 2;
+    var cy = contentHeight / 2;
 
-    // Calculate the center point
-    var cx = newWidth / 2;
-    var cy = newHeight / 2;
-
-    // Adjust the translation to keep the tree centered after scaling
-    var translateX = cx;
-    var translateY = cy + (legendMarginTop / 2);
-
-    // Apply the transform to the 'g' element to scale and center it
     svg.select('g')
-        .attr('transform', `translate(${translateX},${translateY}) scale(${scaleFactor},${scaleFactor})`);
+    .attr('transform', `translate(${cx},${cy})`);
 }
 
 // replaces labels derived from view
@@ -296,9 +288,10 @@ function formatTextWithHTML(text) {
 }
 
 // Change the labels
-function changeLeavesLabels(location, value, dict) {
+function changeLeavesLabels(location, value, dict, styling_dict) {
     // Initialize leaf node length
-    maxLeafNodeLength = 0;
+    styling_dict.starter = 0;
+
 
     // Select all leaf nodes
     let gNodes = d3.select('#' + location).selectAll('g');
@@ -324,8 +317,8 @@ function changeLeavesLabels(location, value, dict) {
                     node_label.innerHTML = labelName;
 
                     let labelSize = node_label.getBBox().width;
-                    if (labelSize > maxLeafNodeLength) {
-                        maxLeafNodeLength = labelSize;
+                    if (labelSize > styling_dict.starter) {
+                        styling_dict.starter = labelSize ;
                     }
                 });
             }
@@ -335,7 +328,15 @@ function changeLeavesLabels(location, value, dict) {
 
 // Draw the circles (data) of the tree plot
 
-function DrawCircles(location, data, starter, dict, clean = true, gradient = true, circle_styling_dict = {}, circle_spacer = 10, circle_size = 5, mode = "Numeric") {
+function DrawCircles(location, data, Tree_colors, circles_styling, circle_styling_dict = {}) {
+
+    const starter = circles_styling.starter || 1;
+    const clean = circles_styling.clean || true;
+    const gradient = circles_styling.gradient || true;
+    const circle_spacer = circles_styling.circle_spacer || 10;
+    const circle_size = circles_styling.circle_size || 5;
+    const mode = circles_styling.mode ||"Numeric";
+
     var svg = d3.select('#' + location);
     var node = svg.selectAll(".node");
 
@@ -343,7 +344,6 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
         node.selectAll("circle.outerCircle, circle.innerCircle").remove();
     }
 
-    var spacer = circle_spacer;
     var minMaxValues = {};
 
     // Compute min/max values only for Numeric mode
@@ -381,12 +381,12 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
 
             var transform = isInner
                 ? "translate(0,0)"
-                : "translate(" + (Math.ceil(starter) + (Object.keys(dict).indexOf(unit) + 1) * spacer) + ",0)";
+                : "translate(" + (Math.ceil(starter) + (Object.keys(Tree_colors).indexOf(unit) + 1) * circle_spacer) + ",0)";
 
             var fillColor = "#FFFFFF"; // Default color
 
             if (mode === "Numeric") {
-                if (dict[unit]) {
+                if (Tree_colors[unit]) {
                     var value = data[x][unit];
                     var minValue = minMaxValues[unit].min;
                     var maxValue = minMaxValues[unit].max;
@@ -396,18 +396,18 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
                     if (styling === "One") {
                         colorScale = d3.scale.linear()
                             .domain([minValue, maxValue])
-                            .range(["#FFFFFF", dict[unit][1]]);
+                            .range(["#FFFFFF", Tree_colors[unit][1]]);
                     } else if (styling === "Three") {
                         colorScale = d3.scale.linear()
                             .domain([minValue, (minValue + maxValue) / 2, maxValue])
-                            .range([dict[unit][0], "#FFFFFF", dict[unit][1]]);
+                            .range([Tree_colors[unit][0], "#FFFFFF", Tree_colors[unit][1]]);
                     } else {
                         colorScale = d3.scale.linear()
                             .domain([minValue, maxValue])
-                            .range(dict[unit]);
+                            .range(Tree_colors[unit]);
                     }
 
-                    fillColor = gradient ? colorScale(value) : dict[unit][0];
+                    fillColor = gradient ? colorScale(value) : Tree_colors[unit][0];
                 }
             } else if (mode === "Text") {
                 if (data[x] && "ColorValue" in data[x]) {
@@ -424,131 +424,109 @@ function DrawCircles(location, data, starter, dict, clean = true, gradient = tru
                 .attr("transform", transform);
         }
     }
+    // === Adjust viewBox after adding outer rings ===
+    if (mode === "Numeric") {
+        const elSVG = svg.select('svg');
+        const g = elSVG.select('g');
+
+        if (!g.empty()) {
+            const bbox = g.node().getBBox();
+            const match = g.attr("transform")?.match(/translate\(([^,]+),([^)]+)\)/);
+
+            if (match) {
+                const tx = parseFloat(match[1]);
+                const ty = parseFloat(match[2]);
+                const padding = 20;
+
+                const viewBoxX = tx - bbox.width / 2 - padding;
+                const viewBoxY = ty - bbox.height / 2 - padding;
+                const viewBoxWidth = bbox.width + padding * 2;
+                const viewBoxHeight = bbox.height + padding * 2;
+
+                elSVG
+                    .attr("viewBox", `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`)
+                    .attr("preserveAspectRatio", "xMidYMid meet");
+            }
+        }
+    }
 }
 
 // Create the bar legends
-function createLegendBars(location, data, conversion, circle_styling_dict, datatype_dict, label_dict = {}) {
-
-    var svg = d3.select('#' + location + ' svg');
-
-    // First: Remove any existing legend group
+function createLegendBars(location, data, conversion, circle_styling_dict, datatype_dict, label_dict = {}, TreeLegendPosition = "bottom") {
+    const svg = d3.select('#' + location + ' svg');
     svg.selectAll(".legend-group").remove();
 
-    var legendGroup = svg.append("g")
-    .attr("class", "legend-group")
-    // .attr("transform", `translate(0, -100})`);
+    const legendGroup = svg.append("g").attr("class", "legend-group");
 
-    // Clear existing content
-    // svg.selectAll("*").remove();
+    const margin = { top: 50, right: 20, bottom: 30, left: 60 };
+    const barWidth = 100;
+    const barHeight = 15;
+    const spacing = 50;
 
-    var margin = { top: 50, right: 20, bottom: 30, left: 60 };
+    const categoryMax = {};
 
-    // Flatten data to get categories and their max values
-    var categoryMax = {};
-
+    // Collect min/max values
     Object.values(data).forEach(item => {
         Object.entries(item).forEach(([category, value]) => {
             if (category in conversion) {
                 if (!categoryMax[category]) {
                     categoryMax[category] = { min: value, max: value };
                 } else {
-                    if (value > categoryMax[category].max) {
-                        categoryMax[category].max = value;
-                    }
-                    if (value < categoryMax[category].min) {
-                        categoryMax[category].min = value;
-                    }
+                    categoryMax[category].min = Math.min(categoryMax[category].min, value);
+                    categoryMax[category].max = Math.max(categoryMax[category].max, value);
                 }
             }
         });
     });
 
-    var existingCategories = Object.keys(categoryMax).filter(cat => categoryMax[cat].max > 0);
+    const existingCategories = Object.keys(categoryMax);
+    
+    const colorScales = {};
+    let skippedDiscreteCount = 0;
 
-    // Create a color scale function for each category
-    var colorScales = {};
+    // Create color gradients
     existingCategories.forEach(category => {
-        // Check the datatype in the datatype_dict
-        if (datatype_dict[category] === "Discrete") {
-            return; // Skip this category if its datatype is Discrete
-        }
+        if (datatype_dict[category] === "Discrete") return;
 
-        var colors = conversion[category];
-        var gradientId = `gradient-${category}`;
-
-        var gradient = legendGroup.append("defs")
+        const colors = conversion[category];
+        const gradientId = `gradient-${category}`;
+        const gradient = legendGroup.append("defs")
             .append("linearGradient")
             .attr("id", gradientId)
-            .attr("x1", "0%")
-            .attr("x2", "100%")
-            .attr("y1", "0%")
-            .attr("y2", "0%");
+            .attr("x1", "0%").attr("x2", "100%")
+            .attr("y1", "0%").attr("y2", "0%");
 
-        var styling = circle_styling_dict[category] || "Two";
-
+        const styling = circle_styling_dict[category] || "Two";
         if (styling === "Three") {
-            gradient.append("stop")
-                .attr("offset", "0%")
-                .attr("stop-color", colors[0]);
-            gradient.append("stop")
-                .attr("offset", "50%")
-                .attr("stop-color", "#FFFFFF");
-            gradient.append("stop")
-                .attr("offset", "100%")
-                .attr("stop-color", colors[1]);
+            gradient.append("stop").attr("offset", "0%").attr("stop-color", colors[0]);
+            gradient.append("stop").attr("offset", "50%").attr("stop-color", "#FFFFFF");
+            gradient.append("stop").attr("offset", "100%").attr("stop-color", colors[1]);
         } else if (styling === "One") {
-            gradient.append("stop")
-                .attr("offset", "0%")
-                .attr("stop-color", "#FFFFFF");
-            gradient.append("stop")
-                .attr("offset", "100%")
-                .attr("stop-color", colors[1]);
+            gradient.append("stop").attr("offset", "0%").attr("stop-color", "#FFFFFF");
+            gradient.append("stop").attr("offset", "100%").attr("stop-color", colors[1]);
         } else {
-            gradient.append("stop")
-                .attr("offset", "0%")
-                .attr("stop-color", colors[0]);
-            gradient.append("stop")
-                .attr("offset", "100%")
-                .attr("stop-color", colors[1]);
+            gradient.append("stop").attr("offset", "0%").attr("stop-color", colors[0]);
+            gradient.append("stop").attr("offset", "100%").attr("stop-color", colors[1]);
         }
 
         colorScales[category] = gradientId;
     });
 
-    var barWidth = 100;
-    var barHeight = 15;
-    var spacing = 50; // Horizontal spacing between bars
-
-    // Adjust SVG width if needed
-    // var totalWidth = 1200;
-    // svg.attr("width", totalWidth);
-
-    var skippedDiscreteCount = 0;  // Track how many discrete bars have been skipped
-
+    // Draw bars
     existingCategories.forEach((category, index) => {
-        // Check if datatype is "Continuous" before drawing the legend
         if (datatype_dict[category] !== "Continuous") {
-            skippedDiscreteCount++; // Increment the count of skipped discrete bars
-            return; // Skip this category if it's Discrete
+            skippedDiscreteCount++;
+            return;
         }
-        var BarText = (label_dict && label_dict[category]) 
-        ? label_dict[category] 
-        : category.replace(/([a-zA-Z]+)(\d+)/, '$1 $2');
 
-        var gradientId = colorScales[category];
-        var minValue = categoryMax[category].min;
-        var maxValue = categoryMax[category].max;
-        // var midValue = (minValue + maxValue) / 2;
-        minValue = parseFloat(minValue.toFixed(2));
-        maxValue = parseFloat(maxValue.toFixed(2));
-        // midValue = parseFloat(midValue.toFixed(2));
+        const BarText = label_dict[category] || category.replace(/([a-zA-Z]+)(\d+)/, '$1 $2');
+        const gradientId = colorScales[category];
+        const min = parseFloat(categoryMax[category].min.toFixed(2));
+        const max = parseFloat(categoryMax[category].max.toFixed(2));
+        const x = (index - skippedDiscreteCount) * (barWidth + spacing);
 
-        // Adjust the x position based on how many "Discrete" bars were skipped
-        var xPosition = margin.left + (index - skippedDiscreteCount) * (barWidth + spacing);
-
-        // Add a rectangle to represent the gradient
         legendGroup.append("rect")
-            .attr("x", xPosition)
+            .attr("x", x)
             .attr("y", margin.top)
             .attr("width", barWidth)
             .attr("height", barHeight)
@@ -556,69 +534,96 @@ function createLegendBars(location, data, conversion, circle_styling_dict, datat
             .style("stroke", "black")
             .style("stroke-width", "1px");
 
-        // Add a label for the gradient bar
         legendGroup.append("text")
-            .attr("x", xPosition + barWidth / 2)
+            .attr("x", x + barWidth / 2)
             .attr("y", margin.top - 10)
             .attr("text-anchor", "middle")
             .text(BarText);
 
-        // Add min and max value labels
         legendGroup.append("text")
-            .attr("x", xPosition)
+            .attr("x", x)
             .attr("y", margin.top + barHeight + 15)
             .attr("text-anchor", "start")
-            .text(`${minValue}`);
+            .text(`${min}`);
 
         legendGroup.append("text")
-            .attr("x", xPosition + barWidth)
+            .attr("x", x + barWidth)
             .attr("y", margin.top + barHeight + 15)
             .attr("text-anchor", "end")
-            .text(`${maxValue}`);
-
-        // Add mid value label
-        // legendGroup.append("text")
-        //     .attr("x", xPosition + barWidth / 2)
-        //     .attr("y", margin.top + barHeight + 15)
-        //     .attr("text-anchor", "middle")
-        //     .text(`${midValue}`);
+            .text(`${max}`);
     });
-    // === Centering Logic ===
-    var totalBars = existingCategories.filter(cat => datatype_dict[cat] === "Continuous").length;
-    var totalLegendWidth = totalBars * barWidth + (totalBars - 1) * spacing + barWidth;
 
-    var svgNode = svg.node();
-    var svgWidth = svgNode ? svgNode.getBoundingClientRect().width : 1000; // fallback
+    const legendBBox = legendGroup.node()?.getBBox();
+    if (legendBBox) {
+    const svgNode = svg.node();
+    const vb = svg.attr("viewBox").split(" ").map(Number);
+    let [viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight] = vb;
 
-    var offsetX = (svgWidth - totalLegendWidth) / 2;
+    const treeGroup = svg.select('g');
+    const treeBBox = treeGroup.node().getBBox();
 
-    // Apply transform to center the group
-    legendGroup.attr("transform", `translate(${offsetX}, 0)`);
+    // Get tree's transform
+    const transform = treeGroup.attr("transform");
+    let translateX = 0, translateY = 0;
+    const match = transform?.match(/translate\(([^,]+),\s*([^)]+)\)/);
+    if (match) {
+        translateX = parseFloat(match[1]);
+        translateY = parseFloat(match[2]);
+    }
+
+    const padding = 40;
+    const legendTotalHeight = legendBBox.height + padding;
+    const centerX = viewBoxX + viewBoxWidth / 2;
+
+    let yOffset;
+    if (TreeLegendPosition.toLowerCase() === "top") {
+        viewBoxY -= legendTotalHeight;
+        viewBoxHeight += legendTotalHeight;
+
+        // Move tree down
+        treeGroup.attr("transform", `translate(${translateX}, ${translateY})`);
+
+        // Place legend above original tree position
+        const originalTreeTop = treeBBox.y + translateY;
+        yOffset = originalTreeTop - legendBBox.height - padding*1.5;
+    } else {
+        // Just increase viewBox height
+        viewBoxHeight += legendTotalHeight;
+
+        const treeBottom = treeBBox.y + treeBBox.height + translateY;
+        yOffset = treeBottom;
+    }
+
+    // Set adjusted viewBox
+    svg.attr("viewBox", `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
+
+    // Center the legend
+    const centerOffsetX = centerX - (legendBBox.x + legendBBox.width / 2);
+    legendGroup.attr("transform", `translate(${centerOffsetX}, ${yOffset})`);
+
+    }
 }
 
-function CreateTextLegend(location, circle_data) {
-    const svg = d3.select('#' + location + ' svg');
 
-    // Remove any existing legend group
-    svg.selectAll(".legend-group").remove();
+// Updated CreateTextLegend for Tree Plot with layout/sorting logic and centering
+function CreateTextLegend(location, circle_data, Layout) {
+    const layoutMode = Layout.layoutMode || "row";
+    const columns = Layout.columns || 2;
+    const sortDirection = Layout.sortDirection || "Vertically";
+    const TreeLegendPosition = Layout.TreeLegendPosition || "bottom";
+    const LegendFontSize = Layout.Fontsize || "11px";
 
-    const legendGroup = svg.append("g")
-        .attr("class", "legend-group")
-        .attr("transform", `translate(0, 0)`); // You can adjust if needed
+    const svg = d3.select(`#${location} svg`);
+    svg.selectAll(".legend-text-categories").remove();
 
-    const spacingY = 25;
-    const padding = 10;
-    const startX = 50;
-    const startY = 40;
-    let x = startX;
-    let y = startY;
+    const legendGroup = svg.append("g").attr("class", "legend-text-categories");
 
     const LegendFontStyle = "Arial";
-    const LegendFontSize = "11px";
+    const spacingY = 25;
+    const padding = 10;
 
     const legendItems = new Set();
 
-    // Extract unique (color, label) pairs
     Object.entries(circle_data).forEach(([key, value]) => {
         if (value.Inner && value.ColorValue) {
             const pairKey = `${value.ColorValue}|||${value.Inner}`;
@@ -632,71 +637,179 @@ function CreateTextLegend(location, circle_data) {
             return !(color === "#FFFFFF" && label === "Empty");
         })
         .sort((a, b) => {
-            const labelA = a.split("|||")[1];
-            const labelB = b.split("|||")[1];
+            const labelA = (a.split("|||")[1] || "");
+            const labelB = (b.split("|||")[1] || "");
             return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
         });
 
-    // Create a temp text element to measure label width
     const tempText = svg.append("text")
-        .attr("x", -9999)
-        .attr("y", -9999)
-        .style("font-size", LegendFontSize)
-        .style("font-family", LegendFontStyle);
+        .attr("x", -9999).attr("y", -9999)
+        .style("font-size", LegendFontSize).style("font-family", LegendFontStyle);
 
     const svgNode = svg.node();
-    const svgWidth = svgNode ? svgNode.getBoundingClientRect().width : 800; // fallback to 800 if undetectable
-    const maxItemWidth = svgWidth - 100;
+    let svgWidth = 800;
+    let vb = svg.attr("viewBox");
+    if (vb) {
+        const [, , w] = vb.split(" ").map(Number);
+        svgWidth = w;
+    }
 
-    sortedItems.forEach(pairKey => {
-        let [color, label] = pairKey.split("|||");
+    let x = 50, y = 40;
 
-        tempText.text(label);
-        const labelWidth = tempText.node().getComputedTextLength();
-        const totalWidth = 6 * 2 + padding + labelWidth + 20;
+    if (layoutMode === "row") {
+        const maxItemWidth = svgWidth - 100;
 
-        // If label is too wide, truncate
-        if (totalWidth > maxItemWidth) {
-            label = "⚠ Too long label";
+        sortedItems.forEach(pairKey => {
+            let [color, label] = pairKey.split("|||");
+            label = label || "";
+
             tempText.text(label);
+            const labelWidth = tempText.node()?.getComputedTextLength() || 0;
+            const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+            if (totalWidth > maxItemWidth) {
+                label = "⚠ Too long label";
+                tempText.text(label);
+            }
+
+            const fixedWidth = 6 * 2 + padding + (tempText.node()?.getComputedTextLength() || 0) + 20;
+
+            if (x + fixedWidth > svgWidth - 50) {
+                x = 50;
+                y += spacingY;
+            }
+
+            const fontSizeNumber = parseFloat(LegendFontSize) || 11;
+            const circleRadius = Math.round(fontSizeNumber * 0.4); // e.g. 5px for 12px font
+
+            const centerY = y + fontSizeNumber * 0.35; // 0.35 gives a good vertical centering empirically
+
+            legendGroup.append("circle")
+                .attr("cx", x)
+                .attr("cy", centerY)
+                .attr("r", circleRadius)
+                .style("fill", color)
+                .style("stroke", "black");
+
+            legendGroup.append("text")
+                .attr("x", x + circleRadius + 6)
+                .attr("y", centerY)
+                .attr("dy", "0.35em") // shift baseline to middle consistently
+                .style("font-size", LegendFontSize)
+                .style("font-family", LegendFontStyle)
+                .text(label);
+
+            x += fixedWidth;
+        });
+
+    } else if (layoutMode === "columns") {
+        const numCols = columns;
+        let colData = [];
+
+        if (sortDirection === "Horizontally") {
+            colData = Array.from({ length: numCols }, () => []);
+            sortedItems.forEach((item, index) => {
+                const colIndex = index % numCols;
+                colData[colIndex].push(item);
+            });
+        } else {
+            const perCol = Math.floor(sortedItems.length / numCols);
+            const remainder = sortedItems.length % numCols;
+            let index = 0;
+            for (let i = 0; i < numCols; i++) {
+                const count = perCol + (i < remainder ? 1 : 0);
+                colData.push(sortedItems.slice(index, index + count));
+                index += count;
+            }
         }
 
-        const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+        const colWidths = colData.map(col => {
+            let maxWidth = 0;
+            col.forEach(pair => {
+                const label = pair.split("|||")[1] || "";
+                tempText.text(label);
+                const width = tempText.node()?.getComputedTextLength() || 0;
+                maxWidth = Math.max(maxWidth, width);
+            });
+            return maxWidth + 40;
+        });
 
-        if (x + fixedWidth > svgWidth - 50) {
-            x = startX;
-            y += spacingY;
-        }
+        let startX = 50;
+        let startY = 40;
 
-        legendGroup.append("circle")
-            .attr("cx", x)
-            .attr("cy", y)
-            .attr("r", 6)
-            .style("fill", color)
-            .style("stroke", "black");
+        colData.forEach((col, colIndex) => {
+            let x = startX;
+            let y = startY;
 
-        legendGroup.append("text")
-            .attr("x", x + 10)
-            .attr("y", y + 4)
-            .attr("text-anchor", "start")
-            .style("font-size", LegendFontSize)
-            .style("font-family", LegendFontStyle)
-            .text(label);
+            col.forEach(pair => {
+                const [color, labelRaw] = pair.split("|||");
+                const label = labelRaw || "";
 
-        x += fixedWidth;
-    });
+                const fontSizeNumber = parseFloat(LegendFontSize) || 11;
+                const circleRadius = Math.round(fontSizeNumber * 0.4); // e.g. 5px for 12px font
+
+                const centerY = y + fontSizeNumber * 0.35; // 0.35 gives a good vertical centering empirically
+
+                legendGroup.append("circle")
+                    .attr("cx", x)
+                    .attr("cy", centerY)
+                    .attr("r", circleRadius)
+                    .style("fill", color)
+                    .style("stroke", "black");
+
+                legendGroup.append("text")
+                    .attr("x", x + circleRadius + 6)
+                    .attr("y", centerY)
+                    .attr("dy", "0.35em") // shift baseline to middle consistently
+                    .style("font-size", LegendFontSize)
+                    .style("font-family", LegendFontStyle)
+                    .text(label);
+
+                y += spacingY;
+            });
+
+            startX += colWidths[colIndex];
+        });
+    }
 
     tempText.remove();
 
-    // Optionally adjust SVG height dynamically if needed
-    const requiredHeight = y + spacingY;
-    if (svgNode && svg.attr("height")) {
-        const currentHeight = parseInt(svg.attr("height"));
-        if (requiredHeight > currentHeight) {
-            svg.attr("height", requiredHeight + 20);
+    const legendBBox = legendGroup.node()?.getBBox();
+    if (legendBBox) {
+        const centerOffsetX = (svgWidth - legendBBox.width) / 2 - legendBBox.x;
+        let yOffset = 0;
+
+        const paddingBelowLegend = 40;
+        const extraHeight = legendBBox.height + paddingBelowLegend;
+
+        if (vb) {
+            const parts = vb.split(" ").map(Number);
+
+            // Always increase viewBox height
+            parts[3] += extraHeight;
+            svg.attr("viewBox", parts.join(" "));
+
+            if (TreeLegendPosition === "Bottom") {
+                yOffset = parts[3] - extraHeight; // Push legend to bottom
+            } else {
+                // Push the tree group down instead, so legend appears at top
+                const treeGroup = svg.select('g');
+                const currentTransform = treeGroup.attr("transform");
+                const match = currentTransform?.match(/translate\(([^,]+),([^)]+)\)/);
+                if (match) {
+                    const currentX = parseFloat(match[1]);
+                    const currentY = parseFloat(match[2]);
+                    treeGroup.attr("transform", `translate(${currentX},${currentY + extraHeight})`);
+                }
+
+                yOffset = 0;
+            }
         }
+
+        legendGroup.attr("transform", `translate(${centerOffsetX}, ${yOffset})`);
     }
 }
+
 
 
 // #################
@@ -1011,10 +1124,10 @@ function initializeDataStyling(list_data_wow, data_types_list) {
     }
 
     // Define the keys to check for each column
-    var col1Keys = ["Value5", "Value1"];
-    var col2Keys = ["Value6", "Value2"];
-    var col3Keys = ["Value7", "Value3"];
-    var col4Keys = ["Value8", "Value4"];
+    var col1Keys = ["Value1"];
+    var col2Keys = ["Value2"];
+    var col3Keys = ["Value3"];
+    var col4Keys = ["Value4"];
 
 
     var Data_styling = {
@@ -1113,13 +1226,13 @@ function Initialize_Data(data) {
       });
     });
 
-    // 3. Remove "Olfactory receptors" from Layer2
-    Object.keys(data).forEach(layer1Key => {
-      const layer2Data = data[layer1Key];
-      if (layer2Data["Olfactory receptors"]) {
-        delete layer2Data["Olfactory receptors"];
-      }
-    });
+    // // 3. Remove "Olfactory receptors" from Layer2
+    // Object.keys(data).forEach(layer1Key => {
+    //   const layer2Data = data[layer1Key];
+    //   if (layer2Data["Olfactory receptors"]) {
+    //     delete layer2Data["Olfactory receptors"];
+    //   }
+    // });
 
     return data;  // Return the modified data
   }
@@ -1365,12 +1478,36 @@ function Data_resorter(data) {
     return { final_array, category_array };
 }
 
+// === Calculate position of data and receptor labels ====
+function computeDynamicOffsets(data_styling, shape_spacing = 20) {
+    const offsetMap = {};
+    let currentOffset = 0;
+
+    // Get only active columns, in original order
+    const activeCols = ['Col1', 'Col2', 'Col3', 'Col4'].filter(col => data_styling[col]?.Data === 'Yes');
+
+    activeCols.forEach(col => {
+        offsetMap[col] = currentOffset;
+        currentOffset += shape_spacing;
+    });
+
+    const labelOffset = currentOffset;
+
+    return {
+        offsetMap,      // e.g. { Col3: 0 }
+        labelOffset,    // e.g. 20
+        activeCols
+    };
+}
+
+
 // Calculate the dimensions of the plot
 function Calculate_dimension(data, Category_data, Col_break_number, columns, label_conversion_dicts, label_names, styling_option) {
 
     // Define the column tracking variables
     let temp_col_state = 1; // Current column
     let label_dim_counter = 0; // Counter for how many labels processed in the current column
+    const { labelOffset } = computeDynamicOffsets(Data_styling);
 
     // Initialize label max width tracking for up to 4 columns
     let label_max_dict = {
@@ -1471,7 +1608,7 @@ function Calculate_dimension(data, Category_data, Col_break_number, columns, lab
                 let estimatedLength = bbox.width * 0.8 + 20;
 
                 if (category === 'Receptor') {
-                    estimatedLength += 80; // Additional margin for Receptors
+                    estimatedLength += labelOffset; // Additional margin for Receptors
                 }
 
                 // Remove the dummy text element
@@ -1502,6 +1639,7 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
 
     // Determine Col_break_number (automatic or custom)
     let Col_break_number = col_max_label === "Auto" ? Math.ceil(total_count / columns) : Layout_dict.Col_break_number;
+
 
     // ##################
     // ## Dimensions   ##
@@ -1542,10 +1680,14 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
         .attr("height", initial_height + margin.top + margin.bottom)  // Start with initial height
         .attr("id", "ListPlot_visualization");
 
+    // Adding correct group for appending
+    const plotGroup = svg.append("g").attr("class", "main-plot-group");
+
     // Set initial X & Y positions
     let yOffset = margin.top + 5 + 80;
     let yOffset_max = yOffset; // Track the maximum yOffset
     let xOffset = 0;
+    const { labelOffset } = computeDynamicOffsets(Data_styling);
 
     // ######################
     // ## Label Handling   ##
@@ -1577,8 +1719,8 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
 
 
                 // Create text element for IUPHAR receptor
-                const textElement = svg.append('text')
-                    .attr('x', margin.left + xOffset + 80)
+                const textElement = plotGroup.append('text')
+                    .attr('x', margin.left + xOffset + labelOffset)
                     .attr('y', yOffset)
                     .attr('class', category)
                     .style('dominant-baseline', 'middle') // Set vertical alignment
@@ -1617,8 +1759,8 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
             } else if (label_names === 'UniProt') {
                 // Handle UniProt receptor labels
                 label = label_conversion_dicts.IUPHAR_to_UniProt_converter[label_key]?.replace(/_human/g, '').toUpperCase() || label_key;
-                svg.append('text')
-                    .attr('x', margin.left + xOffset + 80)
+                plotGroup.append('text')
+                    .attr('x', margin.left + xOffset + labelOffset)
                     .attr('y', yOffset)
                     .attr('class', category)
                     .attr('dy', '-0.3em') // Adjust this value to move the text higher
@@ -1632,8 +1774,8 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
             } else if (label_names === 'Gene') {
                 // Handle UniProt receptor labels
                 label = label_conversion_dicts.IUPHAR_to_Gene_converter[label_key] || label_key;
-                svg.append('text')
-                    .attr('x', margin.left + xOffset + 80)
+                plotGroup.append('text')
+                    .attr('x', margin.left + xOffset + labelOffset)
                     .attr('y', yOffset)
                     .attr('class', category)
                     .attr('dy', '-0.3em') // Adjust this value to move the text higher
@@ -1651,7 +1793,7 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
             label = label_key.replace(/( receptors|neuropeptide )/g, '').split(" (")[0];
 
             // Create text element for ReceptorFamily
-            const textElement = svg.append('text')
+            const textElement = plotGroup.append('text')
                 .attr('x', margin.left + xOffset)
                 .attr('y', yOffset)
                 .attr('class', category)
@@ -1694,7 +1836,7 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
             }
 
             // Render text for non-receptor categories
-            svg.append('text')
+            plotGroup.append('text')
                 .attr('x', margin.left + xOffset)
                 .attr('y', yOffset)
                 .attr('class', category)
@@ -1770,6 +1912,9 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     // Get the SVG container
     const svg = d3.select(`#${location} svg`);
 
+    // select correct group for appending
+    const plotGroup = svg.select(".main-plot-group");
+
     // Track the current column and Y-offsets
     let current_col = 1;
     let label_counter = 1;
@@ -1779,7 +1924,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     function addShape(shapeType, x, y, size, fillColor) {
         switch (shapeType) {
             case 'circle':
-                svg.append('circle')
+                plotGroup.append('circle')
                     .attr('cx', x)
                     .attr('cy', y)
                     .attr('r', size)
@@ -1789,7 +1934,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     .style('fill', fillColor);
                 break;
             case 'rect':
-                svg.append('rect')
+                plotGroup.append('rect')
                     .attr('x', x - size)
                     .attr('y', y - size)
                     .attr('width', size * 2)
@@ -1800,7 +1945,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     .style('fill', fillColor);
                 break;
             case 'triangle':
-                svg.append('path')
+                plotGroup.append('path')
                     .attr('d', `M ${x} ${y - size} L ${x - size} ${y + size} L ${x + size} ${y + size} Z`)
                     .style('stroke', 'black')
                     .style('dominant-baseline', 'middle') // Set vertical alignment
@@ -1808,7 +1953,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     .style('fill', fillColor);
                 break;
             case 'diamond':
-                svg.append('path')
+                plotGroup.append('path')
                     .attr('d', `M ${x} ${y - size} L ${x - size} ${y} L ${x} ${y + size} L ${x + size} ${y} Z`)
                     .style('stroke', 'black')
                     .style('dominant-baseline', 'middle') // Set vertical alignment
@@ -1828,7 +1973,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     starPath += i === 0 ? `M ${xPoint} ${yPoint}` : `L ${xPoint} ${yPoint}`;
                 }
                 starPath += 'Z';
-                svg.append('path')
+                plotGroup.append('path')
                     .attr('d', starPath)
                     .style('stroke', 'black')
                     .style('dominant-baseline', 'middle') // Set vertical alignment
@@ -1917,35 +2062,36 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                 const Col4_data = receptorData.hasOwnProperty('Value4') ? receptorData.Value4 : false;
 
                 // Shapes and data rendering for each column
-                const col1_XoffSet = 0;
-                const col2_XoffSet = 20;
-                const col3_XoffSet = 40;
-                const col4_XoffSet = 60;
+                const { offsetMap } = computeDynamicOffsets(data_styling);
+                // const col1_XoffSet = 0;
+                // const col2_XoffSet = 20;
+                // const col3_XoffSet = 40;
+                // const col4_XoffSet = 60;
 
                 const Shape_list = ['circle', 'rect', 'triangle', 'star', 'diamond'];
 
                 // ### Column 1 ###
-                if (Col1_data_checker && (Col1_shape || Col1_data)) {
+                if (Col1_data_checker && (Col1_shape || Col1_data) && offsetMap['Col1'] !== undefined) {
                     const shape_color = getShapeColor('Col1', Col1_data, receptorData);
-                    addShape(Shape_list.includes(Col1_shape) ? Col1_shape : 'circle', margin.left + xOffset + col1_XoffSet, yOffset - 10, data_size, shape_color);
+                    addShape(Shape_list.includes(Col1_shape) ? Col1_shape : 'circle', margin.left + xOffset + offsetMap['Col1'], yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 2 ###
-                if (Col2_data_checker && (Col2_shape || Col2_data)) {
+                if (Col2_data_checker && (Col2_shape || Col2_data)  && offsetMap['Col2'] !== undefined) {
                     const shape_color = getShapeColor('Col2', Col2_data, receptorData);
-                    addShape(Shape_list.includes(Col2_shape) ? Col2_shape : 'circle', margin.left + xOffset + col2_XoffSet, yOffset - 10, data_size, shape_color);
+                    addShape(Shape_list.includes(Col2_shape) ? Col2_shape : 'circle', margin.left + xOffset + offsetMap['Col2'], yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 3 ###
-                if (Col3_data_checker && (Col3_shape || Col3_data)) {
+                if (Col3_data_checker && (Col3_shape || Col3_data)  && offsetMap['Col3'] !== undefined) {
                     const shape_color = getShapeColor('Col3', Col3_data, receptorData);
-                    addShape(Shape_list.includes(Col3_shape) ? Col3_shape : 'circle', margin.left + xOffset + col3_XoffSet, yOffset - 10, data_size, shape_color);
+                    addShape(Shape_list.includes(Col3_shape) ? Col3_shape : 'circle', margin.left + xOffset + offsetMap['Col3'], yOffset - 10, data_size, shape_color);
                 }
 
                 // ### Column 4 ###
-                if (Col4_data_checker && (Col4_shape || Col4_data)) {
+                if (Col4_data_checker && (Col4_shape || Col4_data)  && offsetMap['Col4'] !== undefined) {
                     const shape_color = getShapeColor('Col4', Col4_data, receptorData);
-                    addShape(Shape_list.includes(Col4_shape) ? Col4_shape : 'circle', margin.left + xOffset + col4_XoffSet, yOffset - 10, data_size, shape_color);
+                    addShape(Shape_list.includes(Col4_shape) ? Col4_shape : 'circle', margin.left + xOffset + offsetMap['Col4'], yOffset - 10, data_size, shape_color);
                 }
             }
 
@@ -2097,30 +2243,49 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     });
 }
 
+function CreateTextLegend_list(location, data, Layout) {
+    const layoutMode = Layout?.layoutMode || "row";
+    const columns = Layout?.columns || 2;
+    const sortDirection = Layout?.sortDirection || "Vertically";
+    const TreeLegendPosition = Layout?.TreeLegendPosition || "Top";
+    const LegendFontSize = Layout?.Fontsize || "11px";
+    const LegendFontStyle = "Arial";
+    const spacingY = 25;
+    const padding = 10;
 
-function CreateTextLegend_list(location, data) {
     const svg = d3.select('#' + location + ' svg');
 
-    // Remove any existing legend group
+    // Remove existing legend
     svg.selectAll(".legend-group").remove();
 
     const legendGroup = svg.append("g")
-        .attr("class", "legend-group")
-        .attr("transform", `translate(0, 0)`); // You can adjust if needed
+        .attr("class", "legend-group");
 
-    const spacingY = 25;
-    const padding = 10;
-    const startX = 50;
-    const startY = 40;
-    let x = startX;
-    let y = startY;
+    const tempText = svg.append("text")
+        .attr("x", -9999)
+        .attr("y", -9999)
+        .style("font-size", LegendFontSize)
+        .style("font-family", LegendFontStyle);
 
-    const LegendFontStyle = "Arial";
-    const LegendFontSize = "11px";
+    const svgNode = svg.node();
+    let svgWidth = 800;
+    let svgHeight = 800;
+
+    if (svgNode) {
+        const vb = svg.attr("viewBox");
+        if (vb) {
+            const [, , w, h] = vb.split(" ").map(Number);
+            svgWidth = w;
+            svgHeight = h;
+        } else {
+            const box = svgNode.getBoundingClientRect();
+            svgWidth = box.width;
+            svgHeight = box.height;
+        }
+    }
 
     const legendItems = new Set();
 
-    // Extract unique (color, label) pairs
     Object.entries(data).forEach(([key, value]) => {
         if (value.Value1 && value.ColorValue) {
             const pairKey = `${value.ColorValue}|||${value.Value1}`;
@@ -2139,66 +2304,147 @@ function CreateTextLegend_list(location, data) {
             return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
         });
 
-    // Create a temp text element to measure label width
-    const tempText = svg.append("text")
-        .attr("x", -9999)
-        .attr("y", -9999)
-        .style("font-size", LegendFontSize)
-        .style("font-family", LegendFontStyle);
+    const fontSizeNum = parseFloat(LegendFontSize) || 11;
+    const circleRadius = Math.round(fontSizeNum * 0.4);
 
-    const svgNode = svg.node();
-    const svgWidth = svgNode ? svgNode.getBoundingClientRect().width : 800; // fallback to 800 if undetectable
-    const maxItemWidth = svgWidth - 100;
+    let legendElements = [];
 
-    sortedItems.forEach(pairKey => {
-        let [color, label] = pairKey.split("|||");
+    if (layoutMode === "row") {
+        const startX = 50;
+        let x = startX;
+        let y = 40;
+        const maxItemWidth = svgWidth - 100;
 
-        tempText.text(label);
-        const labelWidth = tempText.node().getComputedTextLength();
-        const totalWidth = 6 * 2 + padding + labelWidth + 20;
+        sortedItems.forEach(pairKey => {
+            let [color, label] = pairKey.split("|||");
 
-        // If label is too wide, truncate
-        if (totalWidth > maxItemWidth) {
-            label = "⚠ Too long label";
             tempText.text(label);
+            const labelWidth = tempText.node().getComputedTextLength();
+            const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+            if (totalWidth > maxItemWidth) {
+                label = "⚠ Too long label";
+                tempText.text(label);
+            }
+
+            const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+            if (x + fixedWidth > svgWidth - 50) {
+                x = startX;
+                y += spacingY;
+            }
+
+            const centerY = y + fontSizeNum * 0.35;
+
+            legendElements.push({
+                x, y: centerY, color, label,
+                labelX: x + circleRadius + 6,
+                labelY: centerY + 0.35 * fontSizeNum
+            });
+
+            x += fixedWidth;
+        });
+    } else if (layoutMode === "columns") {
+        const colData = Array.from({ length: columns }, () => []);
+
+        if (sortDirection === "Horizontally") {
+            sortedItems.forEach((item, i) => colData[i % columns].push(item));
+        } else {
+            const perCol = Math.floor(sortedItems.length / columns);
+            const remainder = sortedItems.length % columns;
+            let index = 0;
+            for (let i = 0; i < columns; i++) {
+                const count = perCol + (i < remainder ? 1 : 0);
+                colData[i] = sortedItems.slice(index, index + count);
+                index += count;
+            }
         }
 
-        const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+        const colWidths = colData.map(col => {
+            let maxWidth = 0;
+            col.forEach(pair => {
+                const label = pair.split("|||")[1];
+                tempText.text(label);
+                maxWidth = Math.max(maxWidth, tempText.node().getComputedTextLength());
+            });
+            return maxWidth + 40;
+        });
 
-        if (x + fixedWidth > svgWidth - 50) {
-            x = startX;
-            y += spacingY;
-        }
+        let x = 50;
+        colData.forEach((col, colIndex) => {
+            let y = 40;
+            col.forEach(pairKey => {
+                const [color, label] = pairKey.split("|||");
+                const centerY = y + fontSizeNum * 0.35;
 
-        legendGroup.append("circle")
-            .attr("cx", x)
-            .attr("cy", y)
-            .attr("r", 6)
-            .style("fill", color)
-            .style("stroke", "black");
+                legendElements.push({
+                    x, y: centerY, color, label,
+                    labelX: x + circleRadius + 6,
+                    labelY: centerY + 0.35 * fontSizeNum
+                });
 
-        legendGroup.append("text")
-            .attr("x", x + 10)
-            .attr("y", y + 4)
-            .attr("text-anchor", "start")
-            .style("font-size", LegendFontSize)
-            .style("font-family", LegendFontStyle)
-            .text(label);
-
-        x += fixedWidth;
-    });
+                y += spacingY;
+            });
+            x += colWidths[colIndex];
+        });
+    }
 
     tempText.remove();
 
-    // Optionally adjust SVG height dynamically if needed
-    const requiredHeight = y + spacingY;
-    if (svgNode && svg.attr("height")) {
-        const currentHeight = parseInt(svg.attr("height"));
-        if (requiredHeight > currentHeight) {
-            svg.attr("height", requiredHeight + 20);
+    legendElements.forEach(d => {
+        legendGroup.append("circle")
+            .attr("cx", d.x)
+            .attr("cy", d.y)
+            .attr("r", circleRadius)
+            .style("fill", d.color)
+            .style("stroke", "black");
+
+        legendGroup.append("text")
+            .attr("x", d.labelX)
+            .attr("y", d.labelY)
+            .attr("text-anchor", "start")
+            .style("font-size", LegendFontSize)
+            .style("font-family", LegendFontStyle)
+            .text(d.label);
+    });
+
+    // === Positioning + Offsetting ===
+    const legendBBox = legendGroup.node()?.getBBox();
+
+    if (legendBBox) {
+        // Center horizontally
+        const centerOffsetX = (svgWidth - legendBBox.width) / 2 - legendBBox.x;
+
+        let yOffset = 0;
+        const paddingBelowLegend = 40;
+        const visualHeight = d3.max(legendElements.map(d => d.labelY)) - d3.min(legendElements.map(d => d.y));
+        const extraHeight = visualHeight + paddingBelowLegend;
+
+        // Adjust height or move plot based on legend position
+        if (TreeLegendPosition === "Bottom") {
+            const currentHeight = +svg.attr("height") || 0;
+            const newHeight = Math.max(currentHeight, svgHeight + extraHeight);
+            svg.attr("height", newHeight);
+            yOffset = newHeight - legendBBox.height - paddingBelowLegend*3;
+        } else {
+            // Shift main plot group down
+            const plotGroup = svg.select(".main-plot-group");
+            const currentTransform = plotGroup.attr("transform");
+            const match = currentTransform?.match(/translate\(([^,]+),([^)]+)\)/);
+            if (match) {
+                const currentX = parseFloat(match[1]);
+                const currentY = parseFloat(match[2]);
+                plotGroup.attr("transform", `translate(${currentX}, ${currentY + extraHeight})`);
+            } else {
+                plotGroup.attr("transform", `translate(0, ${extraHeight-paddingBelowLegend})`);
+            }
         }
+
+        // Position legend
+        legendGroup.attr("transform", `translate(${centerOffsetX-20}, ${yOffset})`);
     }
 }
+
 
 // #################
 // ###  HEATMAP  ###
@@ -2675,7 +2921,9 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
     const ColorAvg = "#FFFFFF";
     const ShowLegend = GPCRome_styling.ShowLegend || false;
     const LegendLabel = GPCRome_styling.LegendLabel || "";
-
+    const LegendMode = GPCRome_styling.LegendLayout?.mode || "row";
+    const LegendCols = GPCRome_styling.LegendLayout?.columns || "1";
+    const Legendsorting = GPCRome_styling.LegendLayout?.sorted || "Vertically";
 
     const svg = d3v4.select("#" + location)
     .append("svg")
@@ -3376,107 +3624,228 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             }
 
         } else {
-            const legendGroup = svg.append("g").attr("class", "legend-text-categories");
+            if (LegendMode === "row") {
+                const legendGroup = svg.append("g").attr("class", "legend-text-categories");
 
-            const spacingY = 25;
-            const padding = 10;
-            const startX = 50;
-            const startY = dimensions.height + 40;
-            let x = startX;
-            let y = startY;
+                const spacingY = 25;
+                const padding = 10;
+                const startX = 50;
+                const startY = dimensions.height + 40;
+                let x = startX;
+                let y = startY;
 
-            const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
-            const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+                const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
+                const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
 
-            const legendItems = new Set();
+                const legendItems = new Set();
 
-            function extractColorData(obj) {
-                if (typeof obj !== "object" || obj === null) return;
-                if ("Color" in obj && "Data" in obj) {
-                    const pairKey = `${obj.Color}|||${obj.Data}`;
-                    legendItems.add(pairKey);
+                function extractColorData(obj) {
+                    if (typeof obj !== "object" || obj === null) return;
+                    if ("Color" in obj && "Data" in obj) {
+                        const pairKey = `${obj.Color}|||${obj.Data}`;
+                        legendItems.add(pairKey);
+                    }
+                    for (const key in obj) {
+                        extractColorData(obj[key]);
+                    }
                 }
-                for (const key in obj) {
-                    extractColorData(obj[key]);
-                }
-            }
 
-            Object.values(Data).forEach(circleData => {
-                extractColorData(circleData);
-            });
-
-            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-            const sortedItems = Array.from(legendItems)
-                .filter(pair => {
-                    const [color, label] = pair.split("|||");
-                    return !(color === "#FFFFFF" && label === "Empty");
-                })
-                .sort((a, b) => {
-                    const labelA = a.split("|||")[1];
-                    const labelB = b.split("|||")[1];
-                    return collator.compare(labelA, labelB);
+                Object.values(Data).forEach(circleData => {
+                    extractColorData(circleData);
                 });
 
-            const tempText = svg.append("text")
-                .attr("x", -9999)
-                .attr("y", -9999)
-                .style("font-size", LegendFontSize)
-                .style("font-family", LegendFontStyle);
+                const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+                const sortedItems = Array.from(legendItems)
+                    .filter(pair => {
+                        const [color, label] = pair.split("|||");
+                        return !(color === "#FFFFFF" && label === "Empty");
+                    })
+                    .sort((a, b) => {
+                        const labelA = a.split("|||")[1];
+                        const labelB = b.split("|||")[1];
+                        return collator.compare(labelA, labelB);
+                    });
 
-            const maxItemWidth = dimensions.width - 100;
-
-            sortedItems.forEach(pairKey => {
-                let [color, label] = pairKey.split("|||");
-
-                tempText.text(label);
-                const labelWidth = tempText.node().getComputedTextLength();
-                const totalWidth = 6 * 2 + padding + labelWidth + 20;
-
-                // Check if item itself is too wide even on a new line
-                if (totalWidth > maxItemWidth) {
-                    label = "⚠ Too long label";
-                    tempText.text(label);
-                }
-
-                const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
-
-                if (x + fixedWidth > dimensions.width - 50) {
-                    x = startX;
-                    y += spacingY;
-                }
-
-                legendGroup.append("circle")
-                    .attr("cx", x)
-                    .attr("cy", y)
-                    .attr("r", 6)
-                    .style("fill", color)
-                    .style("stroke", "black");
-
-                legendGroup.append("text")
-                    .attr("x", x + 10)
-                    .attr("y", y + 4)
-                    .attr("text-anchor", "start")
+                const tempText = svg.append("text")
+                    .attr("x", -9999)
+                    .attr("y", -9999)
                     .style("font-size", LegendFontSize)
-                    .style("font-family", LegendFontStyle)
-                    .text(label);
+                    .style("font-family", LegendFontStyle);
 
-                x += fixedWidth;
-            });
-            // Clean up measuring element
-            tempText.remove();
-            // 
-            AddBottomHeight = 150;
+                const maxItemWidth = dimensions.width - 100;
+
+                sortedItems.forEach(pairKey => {
+                    let [color, label] = pairKey.split("|||");
+
+                    tempText.text(label);
+                    const labelWidth = tempText.node().getComputedTextLength();
+                    const totalWidth = 6 * 2 + padding + labelWidth + 20;
+
+                    // Check if item itself is too wide even on a new line
+                    if (totalWidth > maxItemWidth) {
+                        label = "⚠ Too long label";
+                        tempText.text(label);
+                    }
+
+                    const fixedWidth = 6 * 2 + padding + tempText.node().getComputedTextLength() + 20;
+
+                    if (x + fixedWidth > dimensions.width - 50) {
+                        x = startX;
+                        y += spacingY;
+                    }
+
+                    legendGroup.append("circle")
+                        .attr("cx", x)
+                        .attr("cy", y)
+                        .attr("r", 6)
+                        .style("fill", color)
+                        .style("stroke", "black");
+
+                    legendGroup.append("text")
+                        .attr("x", x + 10)
+                        .attr("y", y + 4)
+                        .attr("text-anchor", "start")
+                        .style("font-size", LegendFontSize)
+                        .style("font-family", LegendFontStyle)
+                        .text(label);
+
+                    x += fixedWidth;
+                });
+                // Clean up measuring element
+                tempText.remove();
+                // 
+                const legendBBox = svg.select(".legend-text-categories").node()?.getBBox();
+                if (legendBBox) {
+                    const centerOffsetX = (dimensions.width - legendBBox.width) / 2 - legendBBox.x;
+                    svg.select(".legend-text-categories")
+                        .attr("transform", `translate(${centerOffsetX}, 0)`);
+
+                    AddBottomHeight = legendBBox.y + legendBBox.height - dimensions.height + 40;
+                }
+           } else if (LegendMode === "columns") {
+
+                const legendGroup = svg.append("g").attr("class", "legend-text-categories");
+
+                const legendItems = new Set();
+                const numCols = LegendCols;
+                const LegendFontStyle = GPCRome_styling.FontStyle || "Arial";
+                const LegendFontSize = GPCRome_styling.LegendbarFontsize || "11px";
+
+                function extractColorData(obj) {
+                    if (typeof obj !== "object" || obj === null) return;
+                    if ("Color" in obj && "Data" in obj) {
+                        const pairKey = `${obj.Color}|||${obj.Data}`;
+                        legendItems.add(pairKey);
+                    }
+                    for (const key in obj) {
+                        extractColorData(obj[key]);
+                    }
+                }
+
+                Object.values(Data).forEach(circleData => {
+                    extractColorData(circleData);
+                });
+
+                const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+                const sortedItems = Array.from(legendItems)
+                    .filter(pair => {
+                        const [color, label] = pair.split("|||");
+                        return !(color === "#FFFFFF" && label === "Empty");
+                    })
+                    .sort((a, b) => {
+                        const labelA = a.split("|||")[1];
+                        const labelB = b.split("|||")[1];
+                        return collator.compare(labelA, labelB);
+                    });
+
+                // Distribute into columns
+                let columns = [];
+
+                if (Legendsorting === "Horizontally") {
+                    // Row-wise distribution (across columns first)
+                    columns = Array.from({ length: numCols }, () => []);
+                    sortedItems.forEach((item, index) => {
+                        const colIndex = index % numCols;
+                        columns[colIndex].push(item);
+                    });
+                } else {
+                    // Default: Column-wise distribution (down each column)
+                    const perColumn = Math.floor(sortedItems.length / numCols);
+                    const remainder = sortedItems.length % numCols;
+
+                    let index = 0;
+                    for (let i = 0; i < numCols; i++) {
+                        let count = perColumn + (i < remainder ? 1 : 0);
+                        columns.push(sortedItems.slice(index, index + count));
+                        index += count;
+                    }
+                }
+
+                // Compute column widths
+                const tempText = legendGroup.append("text")
+                    .attr("x", -9999).attr("y", -9999)
+                    .style("font-size", LegendFontSize)
+                    .style("font-family", LegendFontStyle);
+
+                const colWidths = columns.map(col => {
+                    let maxWidth = 0;
+                    col.forEach(pair => {
+                        const label = pair.split("|||")[1];
+                        tempText.text(label);
+                        const width = tempText.node().getComputedTextLength();
+                        maxWidth = Math.max(maxWidth, width);
+                    });
+                    return maxWidth + 40; // Add buffer for circle and spacing
+                });
+
+                tempText.remove();
+
+                let startX = 50;
+                let startY = dimensions.height + 40;
+
+                // Render each column
+                columns.forEach((column, colIndex) => {
+                    let x = startX;
+                    let y = startY;
+
+                    column.forEach(pair => {
+                        const [color, label] = pair.split("|||");
+
+                        legendGroup.append("circle")
+                            .attr("cx", x).attr("cy", y).attr("r", 6)
+                            .style("fill", color).style("stroke", "black");
+
+                        legendGroup.append("text")
+                            .attr("x", x + 10)
+                            .attr("y", y + 4)
+                            .style("font-size", LegendFontSize)
+                            .style("font-family", LegendFontStyle)
+                            .text(label);
+
+                        y += 25; // Line height
+                    });
+
+                    startX += colWidths[colIndex];
+                });
+
+                // Center the legend
+                const legendBBox = svg.select(".legend-text-categories").node()?.getBBox();
+                if (legendBBox) {
+                    const centerOffsetX = (dimensions.width + 50 - legendBBox.width) / 2 - legendBBox.x;
+                    svg.select(".legend-text-categories")
+                        .attr("transform", `translate(${centerOffsetX}, 0)`);
+
+                    AddBottomHeight = legendBBox.y + legendBBox.height - dimensions.height + 40;
+                }
+            }
         }
     }
     
-    // Add padding and scale
-    const padding = 10;  // Adjust padding value as needed (50px for this example)
-    const originalWidth = +svg.attr("width");
-    const originalHeight = +svg.attr("height");
+    // Add padding and update height to match content
+    const padding = 10;
+    const newHeight = dimensions.height + AddBottomHeight;
 
-    // Adjust the viewBox to add padding
-    svg.attr("viewBox", `-${padding} -${padding} ${originalWidth + 2 * padding} ${originalHeight + 2 * padding + AddBottomHeight}`);
-    // Apply scaling to the content (e.g., 95% of the original size)
-    svg.attr("transform", "scale(0.95)")
-    .attr("transform-origin", "center");
+    svg
+    .attr("height", newHeight)  // Increase the actual height of the SVG
+    .attr("viewBox", `-${padding} -${padding} ${dimensions.width + 2 * padding} ${newHeight + 2 * padding}`);  // ViewBox matches new size
 }

@@ -79,7 +79,8 @@ class DataMapperHome(TemplateView):
                     return None
             else:
                 # If the name is in the keep list, update the 'value' field
-                data_copy['value'] = names_to_keep[name]['Inner']
+                if 'Inner' in names_to_keep[name]:
+                    data_copy['value'] = names_to_keep[name]['Inner']
                 # Process children if present
                 if 'children' in data_copy:
                     data_copy['children'] = DataMapperHome.keep_by_names(data_copy['children'], names_to_keep)
@@ -324,7 +325,6 @@ class DataMapperHome(TemplateView):
 
                 # Move "Class A Orphans" into Circle_2 **only if not processed already**
                 if "Orphan receptors" in ligand_types and "Class A orphans" in ligand_types["Orphan receptors"]:
-                    print("bob")
                     GPCRome_dict["Circle_2"].setdefault(Class, {}).setdefault("Orphan receptors", {})["Class A orphans"] = ligand_types["Orphan receptors"]["Class A orphans"]
 
             # Handle Circle 3: Class B1 (Secretin) and Class B2 (Adhesion)
@@ -1327,11 +1327,11 @@ class DataMapperHome(TemplateView):
 
                                     elif Plot_name == 'Tree':
                                         
-                                        Incorrect_values['GPCRs'] = {}
+                                        # Incorrect_values['GPCRs'] = {}
                                         IndexToColumn = ['A','B','C','D','E','F','G']
-                                        # Initialize the inccorect column values
-                                        for key in IndexToColumn[1:]:
-                                            Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
+                                        # # Initialize the inccorect column values
+                                        # for key in IndexToColumn[1:]:
+                                        #     Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
                                         empty_sheet = True  # Initialize the flag
                                         TreeNonEmptyEntryCounter = 0
                                         
@@ -1341,7 +1341,6 @@ class DataMapperHome(TemplateView):
                                             if any(cell not in (None, "") for cell in row[1:7]):  # Slice [1:7] to include columns B-G
                                                 empty_sheet = False
                                                 break
-                                        
                                         # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
@@ -1395,7 +1394,8 @@ class DataMapperHome(TemplateView):
                                                                         else:
                                                                             Data[receptor]['Outer{}'.format(i-1)] = float_value
                                                                     except ValueError:
-                                                                        Incorrect_values['GPCR Value (Column {})'.format(IndexToColumn[i])][index] = 'Non-numeric Value'
+                                                                        column_key = 'GPCR Value (Column {})'.format(IndexToColumn[i])
+                                                                        Incorrect_values.setdefault(column_key, {})[index] = 'Non-numeric Value'
                                                         # ==== TEXT ====
                                                         elif Plot_type == 'Text':
                                                              
@@ -1434,23 +1434,23 @@ class DataMapperHome(TemplateView):
                                                                 Data[receptor]['ColorValue'] = "Black"
                                                         else:
                                                             Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
-                                                # Check if any values are incorrect #
-                                                status = 'Success'
+                                        # Check if any values are incorrect #
+                                        status = 'Success'
 
-                                                if empty_sheet:
-                                                    status = 'Empty sheet'
-                                                elif Data:
-                                                    for Error_entries in Incorrect_values:
-                                                        # Check if there are any assigned index values for this col_idx
-                                                        if any(Incorrect_values[Error_entries].values()):
-                                                            # If any index is assigned, set status to 'Partially_success' and break out of the loop
-                                                            status = 'Failed'
-                                                            break
-                                                else:
+                                        if empty_sheet:
+                                            status = 'Empty sheet'
+                                        elif Data:
+                                            for Error_entries in Incorrect_values:
+                                                # Check if there are any assigned index values for this col_idx
+                                                if any(Incorrect_values[Error_entries].values()):
+                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
                                                     status = 'Failed'
-                                                    
-                                                ## Update Plot_parser for GPCRome Wheel
-                                                Plot_parser = status
+                                                    break
+                                        else:
+                                            status = 'Failed'
+                                            
+                                        ## Update Plot_parser for T
+                                        Plot_parser = status
                                     
                                     ####################
                                     ### Cluster plot ###
@@ -1458,10 +1458,6 @@ class DataMapperHome(TemplateView):
 
                                     elif Plot_name == 'Cluster':
 
-                                        Incorrect_values['GPCRs'] = {}
-                                        Incorrect_values['GPCR Value (Column B)'] = {}
-                                        Incorrect_values['GPCR Spacial position (Column C)'] = {}
-                                        Incorrect_values['GPCR Value (Column B & C)'] = {}
                                         ClusterSpacialPositionCheck = False
                                         empty_sheet = True  # Initialize the flag
                                         
@@ -1500,7 +1496,8 @@ class DataMapperHome(TemplateView):
 
                                                 # Validate receptor
                                                 if receptor not in all_proteins:
-                                                    Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Cluster plot.'.format(row[0])
+                                                    # Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Cluster plot.'.format(row[0])
+                                                    Incorrect_values.setdefault('GPCRs', {})[index] = '"{}" is a invalid entry for the Cluster plot.'.format(row[0])
                                                     continue
 
                                                 # Check if data row is in data and/or initialize it
@@ -1515,17 +1512,17 @@ class DataMapperHome(TemplateView):
                                                                 float_value = float(row[1])
                                                                 Data[receptor]['Value1'] = float_value
                                                             except ValueError:
-                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
-                                                            try:
-                                                                float_value = float(row[2])
-                                                                Data[receptor]['Value2'] = float_value
-                                                            except ValueError:
-                                                                Incorrect_values['GPCR Spacial position (Column C)'][index] = 'Non-numeric Value.'
+                                                                Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Non-numeric Value.'
+                                                            
+                                                            if row[2] not in (None, ""):
+                                                                try:
+                                                                    float_value = float(row[2])
+                                                                    Data[receptor]['Value2'] = float_value
+                                                                except ValueError:
+                                                                    Incorrect_values.setdefault('GPCR Value (Column C)', {})[index] = 'Non-numeric Value.'
                                                         else:
                                                             if row[2] not in (None, ""):
-                                                                Incorrect_values['GPCR Value (Column B & C)'][index] = 'You have Spacial position (Column C) without a value assign (Column B), Please assign a value to this row in Column B.'
-                                                            else:
-                                                                pass
+                                                                Incorrect_values.setdefault('GPCR Value (Column B & C)', {})[index] = 'You have Spacial position (Column C) without a value assign (Column B), Please assign a value to this row in Column B.'
                                                     else:
                                                         Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
                                                 else:
@@ -1536,7 +1533,7 @@ class DataMapperHome(TemplateView):
                                                                 float_value = float(row[1])
                                                                 Data[receptor]['Value1'] = float_value
                                                             except ValueError:
-                                                                Incorrect_values['GPCR Value (Column B)'][index] = 'Non-numeric Value.'
+                                                                Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Non-numeric Value.'
                                                     else:
                                                         Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
 
@@ -1549,13 +1546,13 @@ class DataMapperHome(TemplateView):
                                             for Error_entries in Incorrect_values:
                                                 # Check if there are any assigned index values for this col_idx
                                                 if any(Incorrect_values[Error_entries].values()):
-                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                                    # If any index is assigned, set status to 'Failed' and break out of the loop
                                                     status = 'Failed'
                                                     break
                                         else:
                                             status = 'Failed'
                                             
-                                        ## Update Plot_parser for GPCRome Wheel
+                                        ## Update Plot_parser for Cluster
                                         Plot_parser = status
 
 
@@ -1565,11 +1562,8 @@ class DataMapperHome(TemplateView):
 
                                     elif Plot_name == 'List':
 
-                                        Incorrect_values['GPCRs'] = {}
                                         IndexToColumn = ['A','B','C','D','E','F','G',"H","I"]
-                                        # Initialize the inccorect column values
-                                        for key in IndexToColumn[1:]:
-                                            Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
+                                        # # Initialize the inccorect column values
                                         empty_sheet = True  # Initialize the flag
                                         
                                         # Check if sheet is empty
@@ -1681,23 +1675,23 @@ class DataMapperHome(TemplateView):
                                                     Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.'
 
                                                     Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
-                                            # Check if any values are incorrect #
-                                            status = 'Success'
+                                        # Check if any values are incorrect #
+                                        status = 'Success'
 
-                                            if empty_sheet:
-                                                status = 'Empty sheet'
-                                            elif Data:
-                                                for Error_entries in Incorrect_values:
-                                                    # Check if there are any assigned index values for this col_idx
-                                                    if any(Incorrect_values[Error_entries].values()):
-                                                        # If any index is assigned, set status to 'Partially_success' and break out of the loop
-                                                        status = 'Failed'
-                                                        break
-                                            else:
-                                                status = 'Failed'
-                                                
-                                            ## Update Plot_parser for GPCRome Wheel
-                                            Plot_parser = status
+                                        if empty_sheet:
+                                            status = 'Empty sheet'
+                                        elif Data:
+                                            for Error_entries in Incorrect_values:
+                                                # Check if there are any assigned index values for this col_idx
+                                                if any(Incorrect_values[Error_entries].values()):
+                                                    # If any index is assigned, set status to 'Partially_success' and break out of the loop
+                                                    status = 'Failed'
+                                                    break
+                                        else:
+                                            status = 'Failed'
+                                            
+                                        ## Update Plot_parser for GPCRome Wheel
+                                        Plot_parser = status
 
                                
                                     ###############
@@ -1707,11 +1701,8 @@ class DataMapperHome(TemplateView):
                                     elif Plot_name == 'Heatmap':
                                         
                                         ## Initialize Local values ##
-                                        Incorrect_values['GPCRs'] = {}
                                         IndexToColumn = ['A','B','C','D','E','F']
                                         # Initialize the inccorect column values
-                                        for key in IndexToColumn[1:]:
-                                            Incorrect_values['GPCR Value (Column {})'.format(key)] = {}
                                         empty_sheet = True  # Initialize the flag
                                         HeatmapNonEmptyEntryCounter = 0
                                         
@@ -1800,8 +1791,7 @@ class DataMapperHome(TemplateView):
 
                             plot_data_json = json.dumps(Data) if Data else "No Data"
 
-                            prot = Protein.objects.prefetch_related('genes').get(entry_name='5ht1a_human')
-                            print(prot.genes.all())
+                            # prot = Protein.objects.prefetch_related('genes').get(entry_name='5ht1a_human')
 
                             if Plot_parser in ('Success','Empty sheet'):
                                 context = {'upload_status': 'Success',
@@ -1836,78 +1826,6 @@ class DataMapperHome(TemplateView):
 
 class ExcelUploadForm(forms.Form):
     file = forms.FileField()
-
-class plotrender(TemplateView):
-    template_name = 'mapper/data_mapper_plotrender.html'
-
-    def post(self, request, *args, **kwargs):
-        # Retrieve the sample data from the POST request
-        Plot_name = request.POST.get('Plot')
-        Plot_type_request = request.POST.get('Datatype')
-        Data_json = request.POST.get('Data')
-        # If Plot_evaluation_json is not None, parse it as JSON
-        if Plot_name and Data_json:
-            try:
-                Plot = Plot_name
-                Data = json.loads(Data_json)
-                Plot_type = Plot_type_request
-            except json.JSONDecodeError:
-                # Handle the case when the JSON data is invalid
-                return HttpResponse("Invalid JSON data")
-            # Contruct context
-            context = {'Plot': Plot, 'PlotType': Plot_type}
-            
-            if Plot:
-                 # GPCRome #
-                if Plot == 'GPCRome wheel':
-                    print("GPCRome success")
-                    GPCRome_data = DataMapperHome.generate_GPCRome_data(Data)
-                    context['GPCRome_data'] = json.dumps(GPCRome_data["NameList"])
-                    context['GPCRome_data_variables'] = json.dumps(GPCRome_data['DataPoints'])
-                    context['GPCRome_Label_Conversion'] = json.dumps(GPCRome_data['LabelConversionDict'])
-                    context['GPCRome_MasterDict'] = json.dumps(GPCRome_data['Master_dict'])
-                    context['GPCRome_WheelDict'] = json.dumps(GPCRome_data['GPCRome_dict'])
-                # tree #
-                if Plot == 'Tree':
-                    print("Tree success")
-                    tree, tree_options, circles, receptors = DataMapperHome.generate_tree_plot(Data)
-                    context['tree'] = json.dumps(tree)
-                    context['tree_options'] = tree_options
-                    context['circles'] = json.dumps(circles)
-                    context['whole_dict'] = json.dumps(receptors)
-
-                # Cluster analysis #
-                if Plot == 'Cluster':
-                    print("Cluster success")
-                    output_seq = DataMapperHome.clustering_test('tsne', Data,'seq')
-                    # output_structure = DataMapperHome.clustering_test('umap', Data['Cluster'],'structure')
-                    context['cluster_data_seq'] = output_seq
-                    # context['cluster_data_structure'] = output_structure
-                    context['plot_type'] = 'Tsne'
-
-                # List plot #
-                if Plot == 'List':
-                    print("List success")
-                    listplot_data = DataMapperHome.generate_list_plot(Data)
-                    context['listplot_data'] = json.dumps(listplot_data["NameList"])
-                    context['listplot_data_variables'] = json.dumps(listplot_data['DataPoints'])
-                    context['Label_Conversion'] = json.dumps(listplot_data['LabelConversionDict'])
-                    # context['listplot_datatypes'] = json.dumps(Data['Datatypes']['Listplot'])
-
-                # Heatmap #
-                if Plot == 'Heatmap':
-                    print("Heatmap success")
-                    label_converter = DataMapperHome.Label_conversion_info(Data)
-                    context['Label_converter'] = json.dumps(label_converter)
-                    context['heatmap_data'] = json.dumps(Data)
-
-            # Return the context dictionary
-            return self.render_to_response(context)
-        else:
-            # Handle the case when Plot_evaluation_json is None
-            # This could happen if the form was submitted without the JSON data
-            return HttpResponse("Missing sample data")
-
 
 class GPCRomeRender(TemplateView):
     template_name = 'mapper/PlotRender_GPCRome.html'  # default fallback

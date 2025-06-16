@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{% static 'home/css/nv.d3.min.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 {% endblock %}
 
 {% block content %}
@@ -31,45 +32,61 @@
       <button class="btn btn-primary dropdown-toggle" type="button" id="LabelStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Labels
       </button>
-      <div class="dropdown-menu dropdown-menu-listplot" style="width: 150px;">
+      <div class="dropdown-menu p-3"
+          style="min-width: 200px; max-width: 300px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-9%);">
 
-              <!-- Class Label and Slider -->
-              <div id="class_label_group" class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                      <label for="classFontSizeSlider" class="form-label">Class Font Size</label>
-                      <input type="range" class="form-range" min="8" max="20" value="16" id="classFontSizeSlider">
-                      <span id="classFontSizeValue">16</span>px
-                  </div>
-              </div>
-
-              <!-- Ligand Type Label and Slider -->
-              <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                      <label for="ligandTypeFontSizeSlider" class="form-label">Ligand Type Font Size</label>
-                      <input type="range" class="form-range" min="8" max="20" value="16" id="ligandTypeFontSizeSlider">
-                      <span id="ligandTypeFontSizeValue">16</span>px
-                  </div>
-              </div>
-
-              <!-- Receptor Family Label and Slider -->
-              <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                      <label for="receptorFamilyFontSizeSlider" class="form-label">Receptor Family Font Size</label>
-                      <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFamilyFontSizeSlider">
-                      <span id="receptorFamilyFontSizeValue">16</span>px
-                  </div>
-              </div>
-
-              <!-- Receptor Label and Slider -->
-              <div class="col-md-12" style="width:300px;margin-top: 20px;margin-bottom: 20px;">
-                  <div class="col-md-6" style="padding-left:0;padding-right:0;">
-                      <label for="receptorFontSizeSlider" class="form-label">Receptor Font Size</label>
-                      <input type="range" class="form-range" min="8" max="20" value="16" id="receptorFontSizeSlider">
-                      <span id="receptorFontSizeValue">16</span>px
-                  </div>
-              </div>
-
+        <!-- Class -->
+        <div class="form-group text-center">
+          <div style="margin: 10px 0px -10px 0px;">
+            <label for="classFontSizeSlider">Font sizes</label>
           </div>
+          <hr>
+          <div style="margin-top: -10px;">
+            <label for="classFontSizeSlider">Class</label>
+          </div>
+          <input type="range" class="form-control" style="width:80%" min="11" max="20" value="16" id="classFontSizeSlider">
+          <div style="text-align: center;margin: -5px 0px -10px 0px;">
+            <span id="classFontSizeValue">16</span> px
+          </div>
+          <hr>
+        </div>
+
+        <!-- Ligand Type -->
+        <div class="form-group text-center">
+          <div style="margin-top: -10px;">
+            <label for="ligandTypeFontSizeSlider">Ligand type</label>
+          </div>
+          <input type="range" class="form-control" style="width:80%" min="11" max="20" value="16" id="ligandTypeFontSizeSlider">
+          <div style="text-align: center;margin: -5px 0px -10px 0px;">
+            <span id="ligandTypeFontSizeValue">16</span> px
+          </div>
+          <hr>
+        </div>
+
+        <!-- Receptor Family -->
+        <div class="form-group text-center">
+          <div style="margin-top: -10px;">
+            <label for="receptorFamilyFontSizeSlider">Receptor family</label>
+          </div>
+          <input type="range" class="form-control" style="width:80%" min="11" max="20" value="16" id="receptorFamilyFontSizeSlider">
+          <div style="text-align: center;margin: -5px 0px -10px 0px;">
+            <span id="receptorFamilyFontSizeValue">16</span> px
+          </div>
+          <hr>
+        </div>
+
+        <!-- Receptor -->
+        <div class="form-group text-center">
+          <div style="margin-top: -10px;">
+            <label for="receptorFontSizeSlider">Receptor</label>
+          </div>
+          <input type="range" class="form-control" style="width:80%" min="11" max="20" value="16" id="receptorFontSizeSlider">
+          <div style="text-align: center;margin: -5px 0px -15px 0px;">
+            <span id="receptorFontSizeValue">16</span> px
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <!-- Data styling -->
@@ -77,28 +94,18 @@
       <button class="btn btn-primary dropdown-toggle" type="button" id="DataStyling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Circles
       </button>
-      <div class="dropdown-menu dropdown-menu-listplot" style="width: 400px;">
+      <div class="dropdown-menu dropdown-menu-listplot" style="min-width: 200px; max-width: 300px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-25%);">
 
           <!-- Circle Size Slider -->
           <div class="col-md-12" style="text-align: center;">
-            <label for="Tree_circleSizeSlider" id="Tree_circleSizeSliderLabel" class="form-label">Circle Size</label>
+            <label for="Tree_circleSizeSlider" id="Tree_circleSizeSliderLabel" class="form-label">Size</label>
           </div>
-          <div class="col-md-12" style="margin-bottom: 10px;">
+          <div class="col-md-12" style="margin-bottom: 0px;">
             <input type="range" class="form-range" min="1" max="6" value="3" id="Tree_circleSizeSlider">
             <div style="text-align: center;">
               <span id="Tree_circleSizeValue">3</span>
             </div>
-          </div>
-
-          <!-- Space Size Slider -->
-          <div class="col-md-12" style="text-align: center;">
-            <label for="Tree_circleSpacerSlider" id="Tree_circleSpacerSliderLabel" class="form-label">Circle Spacer</label>
-          </div>
-          <div class="col-md-12" style="margin-bottom: 10px;">
-            <input type="range" class="form-range" min="0" max="2" value="1" id="Tree_circleSpacerSlider">
-            <div style="text-align: center;">
-              <span id="Tree_circleSpacerValue">1</span>
-            </div>
+          <!-- <hr style="margin: 5px 0px 5px 0px;"> -->
           </div>
         </div>
     </div>
@@ -107,21 +114,79 @@
     <!-- Legend Toggle & Label Edit Dropdown -->
     <div class="dropdown">
         <button class="btn btn-primary dropdown-toggle" type="button" id="Legend_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Legend Options
+            Legend
         </button>
-        <div class="dropdown-menu dropdown-menu-listplot p-3 text-center" style="width: 380px;">
+        <div class="dropdown-menu dropdown-menu-listplot p-3 text-center" style="min-width: 380px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-7%);">
             
             <!-- Centered Toggle Button with Padding -->
-            <div style="display: flex; justify-content: center; padding: 20px 0 20px 0;">
-            <button id="legendToggleBtn" class="btn btn-danger" style="min-width: 200px;">
-                Hide Legend
-            </button>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px 0;">
+              <label for="legendToggleBtn" style="margin: 0; font-size: 18px;">Legend:</label>
+              <button id="legendToggleBtn" class="btn btn-success" style="min-width: 60px;">Shown</button>
             </div>
+            <div style="margin: -25px 0px 5px 0px;"><hr></div>
 
-            <!-- Dynamic Label Inputs -->
-            <div id="legendLabelInputsContainer"></div>
+        
+
+        <!-- Legend layout and sorting controls -->
+        <div class="text-left mt-3" style="margin-top: 20px;">
+
+          <!-- Layout -->
+          <div style="display: flex; align-items: center; margin: 15px 0px 25px 0px;">
+            <div style="flex: 0 0 30%; text-align: left; padding-left: 10px;">
+              <label for="legend-layout-select" style="margin: 0; font-weight: bold; font-size: 15px;">Layout:</label>
+            </div>
+            <div style="flex: 0 0 70%; display: flex; justify-content: center;">
+              <select id="legend-layout-select" style="width: 90%;">
+                <option value="row">Continous text</option>
+                <option value="columns-1">1 column</option>
+                <option value="columns-2">2 columns</option>
+                <option value="columns-3">3 columns</option>
+                <option value="columns-4">4 columns</option>
+              </select>
+            </div>
+          </div>
+
+          <hr style="margin: 0px auto 10px auto; width: 80%; border-top: 1px solid #ddd;">
+
+          <!-- Sorting -->
+          <div style="display: flex; align-items: center; margin: 20px 0px 15px 0px;">
+            <div style="flex: 0 0 30%; text-align: left; padding-left: 10px;">
+              <label for="toggleLegendSorting" style="margin: 0; font-size: 15px;">Sorting:</label>
+            </div>
+            <div style="flex: 0 0 70%; display: flex; justify-content: center;">
+              <button id="toggleLegendSorting" class="btn btn-primary" style="width: 90%;">Vertically</button>
+            </div>
+          </div>
+
+           <hr style="margin: 0px auto 10px auto; width: 80%; border-top: 1px solid #ddd;">
+
+          <!-- Position -->
+          <div style="display: flex; align-items: center; margin: 20px 0px 15px 0px;">
+            <div style="flex: 0 0 30%; text-align: left; padding-left: 10px;">
+              <label for="toggleLegendPosition" style="margin: 0; font-size: 15px;">Position:</label>
+            </div>
+            <div style="flex: 0 0 70%; display: flex; justify-content: center;">
+              <button id="toggleLegendPosition" class="btn btn-primary" style="width: 90%;">Top</button>
+            </div>
+          </div>
+
+          <hr style="margin: 0px auto 15px auto; width: 80%; border-top: 1px solid #ddd;">
+
+          <!-- Legend Font Size -->
+          <div class="form-group text-center">
+            <div style="margin-top: 5px;">
+              <label for="legendFontSizeSlider" style="font-size: 15px;">Legend font size</label>
+            </div>
+            <input type="range" class="form-control" style="width:80%" min="11" max="20" value="16" id="legendFontSizeSlider">
+            <div style="text-align: center;margin: -5px 0px -10px 0px;">
+              <span id="legendFontSizeValue">16</span> px
+            </div>
+          </div>
+
 
         </div>
+    </div>
     </div>
 
     <!-- Download button -->
@@ -159,6 +224,7 @@
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/datamapper.js' %}"></script>
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
+<script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 
 
 <!-- Universal scripts -->
@@ -192,6 +258,15 @@ const maxLeafNodeLength_scaler = 10
 let circle_size = 3 + 1 * 3;       // default slider value = 3
 let circle_spacer = circle_size * (2 + 0.5 * 1) + 1;  // default spacer slider = 1
 
+var styling_circles = {
+  starter: 1,
+  clean: true, 
+  gradient: true, 
+  circle_spacer: circle_spacer, 
+  circle_size: circle_size, 
+  mode: "Text"
+}
+
 tree_data = update_tree_data(tree_data,tree_options.depth);
 const depth = tree_options.depth;  // Set this value when the page loads
 
@@ -213,6 +288,14 @@ Tree_colors = {"Inner":["#FFFFFF","#000000"],
               "Outer4":["#FFFFFF","#008000"],
               "Outer5":["#FFFFFF","#FFA500"]};
 
+Tree_textlegend_styling = {
+  layoutMode: "row",
+  columns: 2,
+  sortDirection: "Vertically",
+  TreeLegendPosition: "Top",
+  Fontsize: "14px"
+}
+
 var Label_dict = {'Inner':'Inner','Outer1':'Outer 1','Outer2':'Outer 2','Outer3':'Outer 3','Outer4':'Outer 4','Outer5':'Outer 5'}
 
 // Function to change the active button and call changeLeavesLabels with the active value
@@ -227,22 +310,21 @@ function updateLeavesLabels() {
 }
 
 function ReDraw_all() {
-  draw_tree(tree_data, tree_options,circle_size, ShowLegend);
+  // Step 1: Draw the tree structure
+  draw_tree(tree_data, tree_options);
+
+  // Step 2: Apply the correct labels
   updateLeavesLabels();
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size,'Text');
-  if (ShowLegend) {CreateTextLegend('tree_plot', Tree_circles);}
+
+  // Step 3: Draw the circles on top of the tree
+  DrawCircles('tree_plot', Tree_circles, Tree_colors, styling_circles, Tree_circle_styling_dict);
+
+  // Step 4: Draw the legend LAST and let it adjust the SVG height & position
+  if (ShowLegend) {
+    CreateTextLegend('tree_plot', Tree_circles, Tree_textlegend_styling);
+  }
 }
 
-function ReDraw_Circles_and_Labels() {
-  updateLeavesLabels();
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size,'Text');
-  
-}
-
-function ReDraw_cicles_and_bars() {
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size,'Text');
-  if (ShowLegend) {CreateTextLegend('tree_plot', Tree_circles);}
-}
 
 // # Change leaves buttons #
 function setTreeLabelType(labelType) {
@@ -262,7 +344,7 @@ function setTreeLabelType(labelType) {
   let activeDict = Tree_label_dicts[labelType];
 
   changeLeavesLabels("tree_plot", labelType, activeDict);
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
+  DrawCircles('tree_plot', Tree_circles, Tree_colors, styling_circles, Tree_circle_styling_dict);
 }
 
 // # Initialize tree plot #
@@ -275,21 +357,17 @@ document.getElementById("legendToggleBtn").addEventListener("click", function ()
   ShowLegend = !ShowLegend;
 
   if (ShowLegend) {
-    this.textContent = "Hide Legend";
-    this.classList.remove("btn-success");
-    this.classList.add("btn-danger");
-  } else {
-    this.textContent = "Show Legend";
+    this.textContent = "Shown";
     this.classList.remove("btn-danger");
     this.classList.add("btn-success");
+  } else {
+    this.textContent = "Hidden";
+    this.classList.remove("btn-success");
+    this.classList.add("btn-danger");
   }
 
   ReDraw_all();
 });
-
-// ##########################
-  // ## DATA styling buttons ##
-  // ##########################
 
 // #################
 // # Label styling #
@@ -325,9 +403,9 @@ function applyLabelStyling() {
 
     // Recalculate max leaf node length based on the selected depth
     if (tree_options.depth === 4) {
-        maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+        styling_circles.starter = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
     } else if (tree_options.depth === 3) {
-        maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+        styling_circles.starter = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
     }
 
     // Redraw the tree and circles with updated font sizes
@@ -391,8 +469,8 @@ function updateTreePlot() {
   const Tree_Slider_circleSpacer_value = 1;
 
   // Recalculate circle size and spacer
-  circle_size = 3 + 1 * Tree_Slider_circleSize_value;
-  circle_spacer = circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+  styling_circles.circle_size = 3 + 1 * Tree_Slider_circleSize_value;
+  styling_circles.circle_spacer = styling_circles.circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
 
   // Render tree with new values
   ReDraw_all();
@@ -412,8 +490,8 @@ function initdraw() {
   const Tree_Slider_circleSpacer_value = 1;
 
   // Recalculate circle size and spacer
-  circle_size = 3 + 1 * Tree_Slider_circleSize_value;
-  circle_spacer = circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+  styling_circles.circle_size = 3 + 1 * Tree_Slider_circleSize_value;
+  styling_circles.circle_spacer = styling_circles.circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
 
   const classFontSize = $("#classFontSizeSlider").val();
   const ligandTypeFontSize = $("#ligandTypeFontSizeSlider").val();
@@ -426,12 +504,114 @@ function initdraw() {
   tree_options.fontSize.receptorfamily = `${receptorFamilyFontSize}px`;
   tree_options.fontSize.receptor = `${receptorFontSize}px`;
 
+  const legendFontSizeSlider = document.getElementById("legendFontSizeSlider");
+  Tree_textlegend_styling.Fontsize = `${legendFontSizeSlider.value}px`;
+  document.getElementById("legendFontSizeValue").textContent = legendFontSizeSlider.value;
+
   // Recalculate max leaf node length based on the selected depth
-  maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+  styling_circles.starter = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
 
   // Redraw the tree and circles with updated font sizes
   ReDraw_all();
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+  const layoutSelect = $('#legend-layout-select');
+  const sortButton = document.getElementById("toggleLegendSorting");
+
+  // Initialize Select2
+  layoutSelect.select2({
+    minimumResultsForSearch: Infinity,
+    dropdownAutoWidth: true
+  });
+
+  // Set default based on Tree_textlegend_styling
+  if (Tree_textlegend_styling.layoutMode === 'row') {
+    layoutSelect.val('row').trigger('change');
+  } else {
+    layoutSelect.val(`columns-${Tree_textlegend_styling.columns}`).trigger('change');
+  }
+
+  if (Tree_textlegend_styling.layoutMode === 'row' || Tree_textlegend_styling.columns <= 1) {
+    sortButton.disabled = true;
+  } else {
+    sortButton.disabled = false;
+  }
+
+  // Set initial state of sort button
+  function updateSortButton(value) {
+    sortButton.textContent = value;
+  }
+
+  updateSortButton(Tree_textlegend_styling.sortDirection);
+
+  // Handle layout selection
+  layoutSelect.on('change', function () {
+    const val = this.value;
+
+    if (val === 'row') {
+      Tree_textlegend_styling.layoutMode = 'row';
+      Tree_textlegend_styling.columns = 1;
+
+      // Disable sorting for row mode
+      sortButton.disabled = true;
+    } else {
+      const colNum = parseInt(val.split('-')[1]);
+      Tree_textlegend_styling.layoutMode = 'columns';
+      Tree_textlegend_styling.columns = colNum;
+
+      // Enable sorting for columns > 1
+      sortButton.disabled = (colNum <= 1);
+      Tree_textlegend_styling.sortDirection = 'Vertically';
+      updateSortButton('Vertically');
+    }
+
+    ReDraw_all();
+  });
+
+
+  // Handle sort toggle
+  sortButton.addEventListener("click", function () {
+    const current = Tree_textlegend_styling.sortDirection;
+    const next = current === 'Vertically' ? 'Horizontally' : 'Vertically';
+    Tree_textlegend_styling.sortDirection = next;
+    updateSortButton(next);
+    ReDraw_all();
+  });
+});
+
+// === Legend Position Toggle ===
+const positionButton = document.getElementById("toggleLegendPosition");
+
+// Set initial state
+function updatePositionButton(value) {
+  positionButton.textContent = value;
+}
+
+updatePositionButton(Tree_textlegend_styling.TreeLegendPosition);
+
+// Handle position toggle
+positionButton.addEventListener("click", function () {
+  const current = Tree_textlegend_styling.TreeLegendPosition;
+  const next = current === "Top" ? "Bottom" : "Top";
+  Tree_textlegend_styling.TreeLegendPosition = next;
+
+  updatePositionButton(next);
+  ReDraw_all();  // Redraw with updated position
+});
+
+
+// === Legend Font Size Slider ===
+document.getElementById("legendFontSizeSlider").addEventListener("input", function () {
+  const fontSize = this.value;
+  document.getElementById("legendFontSizeValue").textContent = fontSize;
+
+  Tree_textlegend_styling.Fontsize = `${fontSize}px`;
+  ReDraw_all();  // Redraw with updated font size
+});
+
+
+
 
 </script>
 

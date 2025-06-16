@@ -12,17 +12,75 @@
 <div style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
   <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center;">
+      
+      <!-- Labels Toggle -->
+      <div style="width: 180px; text-align: center; flex-shrink: 0;">
+          <button id="labelVisibilityToggle" class="btn btn-primary" style="width: 100%;">Plot type: Dot</button>
+      </div>
       <!-- Receptor names dropdown -->
-      <div class="dropdown" style="position: relative;">
+      <div class="dropdown" style="position: relative; display: none;">
         <button class="btn btn-primary dropdown-toggle" type="button" id="Cluster_LabelType_Button"
                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
           Receptor names
         </button>
         <div class="dropdown-menu p-2"
-             style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-50%);">
+             style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-45%);">
           <button type="button" class="btn btn-primary btn-block mb-1 cluster-label-btn" data-value="IUPHAR">Protein</button>
           <button type="button" class="btn btn-outline-primary btn-block mb-1 cluster-label-btn" data-value="Entrez">Gene</button>
           <button type="button" class="btn btn-outline-primary btn-block cluster-label-btn" data-value="UniProt">UniProt</button>
+        </div>
+      </div>
+
+      <!-- Data Styling Dropdown -->
+      <div class="dropdown" style="display: none;">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu_datastyling_labels" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Labels
+        </button>
+            <div class="dropdown-menu p-3" aria-labelledby="clusteringMenu_datastyling" style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-30%);">
+            
+            <!-- Labels color -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 5px 0px;margin-top: 15px;">
+              <label for="textColorToggleButton" style="margin: 0; font-size: 14px;font-weight: normal;">Text color:</label>
+              <button id="textColorToggleButton" class="btn btn-success" style="min-width: 60px;">Shown</button>
+            </div>
+            <hr>
+            <div class="text-center" style="margin-bottom: 20px;">
+              <label for="cluster_labelFontSizeSlider" style="font-size: 14px;font-weight: normal;">Label font size</label>
+              <input type="range" class="form-range" min="5" max="25" value="14" id="cluster_labelFontSizeSlider">
+              <div style="margin-top: 5px;"><span id="cluster_labelFontSizeValue">14</span> px</div>
+            </div>
+        </div>
+      </div>
+
+      <!-- Data Styling Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu_datastyling" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Dots
+        </button>
+            <div class="dropdown-menu p-3" aria-labelledby="clusteringMenu_datastyling" style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-40%);">
+
+          <!-- Marker Size Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="cluster_markerSizeSlider" id="cluster_markerSizeLabel" class="form-label">Size</label>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="5" max="20" value="10" id="cluster_markerSizeSlider">
+            <div style="text-align: center;">
+              <span id="cluster_markerSizeValue">10</span>px
+            </div>
+          </div>
+
+          <!-- Stroke Width Slider -->
+          <div class="col-md-12" style="text-align: center;">
+            <label for="cluster_strokeWidthSlider" id="cluster_strokeWidthLabel" class="form-label">Stroke width</label>
+          </div>
+          <div class="col-md-12" style="margin-bottom: 10px;">
+            <input type="range" class="form-range" min="0" max="2" value="0.5" step="0.1" id="cluster_strokeWidthSlider">
+            <div style="text-align: center;">
+              <span id="cluster_strokeWidthValue">0.5</span>px
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -34,7 +92,7 @@
         <div class="dropdown-menu dropdown-menu-listplot p-3" aria-labelledby="clusteringMenu" style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-50%);">
           <!-- Number of Clusters Slider -->
           <div class="col-md-12" style="text-align: center;">
-            <label for="clusterSlider" id="clusterSliderLabel" class="form-label">Number of Clusters</label>
+            <label for="clusterSlider" id="clusterSliderLabel" class="form-label">Number of clusters</label>
           </div>
           <div class="col-md-12" style="margin-bottom: 10px;">
             <input type="range" class="form-range" min="1" max="20" value="5" id="clusterSlider">
@@ -54,62 +112,8 @@
           <button id="colorByCluster" class="btn btn-primary btn-block mb-1">Cluster</button>
           <button id="colorByGradient" class="btn btn-outline-primary btn-block mb-1">Gradient</button>
           <button id="colorByClass" class="btn btn-outline-primary btn-block mb-1">Class</button>
-          <button id="colorByLigandType" class="btn btn-outline-primary btn-block mb-1">Ligand Type</button>
-          <button id="colorByReceptorFamily" class="btn btn-outline-primary btn-block">Receptor Family</button>
-        </div>
-      </div>
-
-      <!-- Data Styling Dropdown -->
-      <div class="dropdown">
-        <button class="btn btn-primary dropdown-toggle" type="button" id="clusteringMenu_datastyling" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          Labels and data
-        </button>
-            <div class="dropdown-menu p-3" aria-labelledby="clusteringMenu_datastyling" style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-18%);">
-            <!-- Labels Toggle -->
-            <div class="col-md-12" style="text-align: center; padding: 15px 0 10px 0;">
-            <button id="labelVisibilityToggle" class="btn btn-primary" style="width: 80%;">Labels: Show</button>
-            </div>
-            <!-- Labels color -->
-            <div class="col-md-12" style="text-align: center; padding: 5px 0 15px 0;">
-            <button id="textColorToggleButton" type="button" class="btn btn-primary" style="width: 80%;">Text Color: Yes</button>
-            </div>
-            <!-- Label Font Size Slider -->
-            <div class="col-md-12" style="text-align: center;">
-            <label for="cluster_labelFontSizeSlider" id="cluster_labelFontSizeLabel" class="form-label">Label Font Size</label>
-            </div>
-            <div class="col-md-12" style="margin-bottom: 10px;">
-            <input type="range" class="form-range" min="5" max="25" value="14" id="cluster_labelFontSizeSlider">
-            <div style="text-align: center;">
-                <span id="cluster_labelFontSizeValue">14</span>px
-            </div>
-            </div>
-
-          <!-- Marker Size Slider -->
-          <div class="col-md-12" style="text-align: center;">
-            <label for="cluster_markerSizeSlider" id="cluster_markerSizeLabel" class="form-label">Marker Size</label>
-          </div>
-          <div class="col-md-12" style="margin-bottom: 10px;">
-            <input type="range" class="form-range" min="5" max="20" value="10" id="cluster_markerSizeSlider">
-            <div style="text-align: center;">
-              <span id="cluster_markerSizeValue">10</span>px
-            </div>
-          </div>
-
-          <!-- Stroke Width Slider -->
-          <div class="col-md-12" style="text-align: center;">
-            <label for="cluster_strokeWidthSlider" id="cluster_strokeWidthLabel" class="form-label">Stroke Width</label>
-          </div>
-          <div class="col-md-12" style="margin-bottom: 10px;">
-            <input type="range" class="form-range" min="0.1" max="2" value="0.5" step="0.1" id="cluster_strokeWidthSlider">
-            <div style="text-align: center;">
-              <span id="cluster_strokeWidthValue">0.5</span>px
-            </div>
-          </div>
-
-          <!-- Border Toggle Button -->
-          <div class="col-md-12" style="text-align: center; padding: 15px 0 15px 0;">
-            <button id="borderToggleButton" type="button" class="btn btn-primary" style="width: 50%; font-weight: bold;">Border: On</button>
-          </div>
+          <button id="colorByLigandType" class="btn btn-outline-primary btn-block mb-1">Ligand type</button>
+          <button id="colorByReceptorFamily" class="btn btn-outline-primary btn-block">Receptor family</button>
         </div>
       </div>
 
@@ -123,9 +127,9 @@
         <div class="dropdown-menu"
             style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
                     margin-left: 5px; position: absolute; transform: translateY(-38%); display: none;">
-          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('svg');">SVG</button>
-          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('png');">PNG</button>
           <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('jpg');">JPG</button>
+          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('png');">PNG</button>
+          <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('svg');">SVG</button>
           <button type="button" class="btn btn-primary btn-block" onclick="downloadPlot('tiff');">TIFF</button>
         </div>
       </div>
@@ -243,14 +247,23 @@ const labelToggleBtn = document.getElementById('labelVisibilityToggle');
 labelToggleBtn.addEventListener('click', () => {
     labelsVisible = !labelsVisible;
 
+    // Show/hide UI controls depending on plot type
+    const labelMenu = document.getElementById('clusteringMenu_datastyling_labels'); // Labels menu
+    const markerMenu = document.getElementById('clusteringMenu_datastyling');       // Markers menu
+    const receptorDropdown = document.getElementById('Cluster_LabelType_Button');   // Receptor name dropdown button
+
     if (labelsVisible) {
-        labelToggleBtn.textContent = 'Labels: Hide';
-        labelToggleBtn.classList.remove('btn-primary');
-        labelToggleBtn.classList.add('btn-danger');
+        labelToggleBtn.textContent = 'Plot type: Text';
+        // Show label-related controls
+        if (labelMenu) labelMenu.parentElement.style.display = '';
+        if (receptorDropdown) receptorDropdown.parentElement.style.display = '';
+        if (markerMenu) markerMenu.parentElement.style.display = 'none';
     } else {
-        labelToggleBtn.textContent = 'Labels: Show';
-        labelToggleBtn.classList.remove('btn-danger');
-        labelToggleBtn.classList.add('btn-primary');
+        labelToggleBtn.textContent = 'Plot type: Dot';
+        // Show marker-related controls
+        if (labelMenu) labelMenu.parentElement.style.display = 'none';
+        if (receptorDropdown) receptorDropdown.parentElement.style.display = 'none';
+        if (markerMenu) markerMenu.parentElement.style.display = '';
     }
 
     updatePlotWithAnnotations();  // Reflect change
@@ -304,32 +317,6 @@ $('#cluster_labelFontSizeSlider').on('input', function() {
     // Initial state for border toggle
     cluster_DataStyling.borderOn = true;  // Default to true (border on)
 
-    // Get the button element for border toggle
-    const borderToggleButton = document.getElementById('borderToggleButton');
-
-    // Add click event listener to the button
-    borderToggleButton.addEventListener('click', () => {
-        // Toggle the borderOn state
-        cluster_DataStyling.borderOn = !cluster_DataStyling.borderOn;
-
-        // Update the button text and styling based on the state
-        if (cluster_DataStyling.borderOn) {
-            borderToggleButton.textContent = 'Border: On';
-            borderToggleButton.classList.add('btn-primary');  // Use Bootstrap's "info" class for the "On" state
-            borderToggleButton.classList.remove('btn-danger');
-        } else {
-            borderToggleButton.textContent = 'Border: Off';
-            borderToggleButton.classList.remove('btn-primary');
-            borderToggleButton.classList.add('btn-danger');  // Use Bootstrap's "danger" class for the "Off" state
-        }
-
-        // Update the plot with the new border setting
-        updatePlotWithAnnotations();  // Call the function to re-render the plot
-    });
-
-    // Set initial button state to "Border: On" with info button styling
-    borderToggleButton.textContent = 'Border: On';
-    borderToggleButton.classList.add('btn-primary');
 
     // Initial state for text color
     cluster_DataStyling.textColorEnabled = true;  // Default to true (text color on)
@@ -344,13 +331,13 @@ $('#cluster_labelFontSizeSlider').on('input', function() {
 
         // Update the button text and styling based on the state
         if (cluster_DataStyling.textColorEnabled) {
-            textColorToggleButton.textContent = 'Text Color: Yes';
-            textColorToggleButton.classList.add('btn-primary');  // Use bootstrap class for "Yes" state
+            textColorToggleButton.textContent = 'Shown';
+            textColorToggleButton.classList.add('btn-primary');
             textColorToggleButton.classList.remove('btn-danger');
         } else {
-            textColorToggleButton.textContent = 'Text Color: No';
+            textColorToggleButton.textContent = 'Hidden';
             textColorToggleButton.classList.remove('btn-primary');
-            textColorToggleButton.classList.add('btn-danger');  // Use bootstrap class for "No" state
+            textColorToggleButton.classList.add('btn-danger');
         }
 
         // Update the plot with the new text color setting
@@ -358,7 +345,7 @@ $('#cluster_labelFontSizeSlider').on('input', function() {
     });
 
     // Set initial button state to "Text Color: Yes" with primary button styling
-    textColorToggleButton.textContent = 'Text Color: Yes';
+    textColorToggleButton.textContent = 'Shown';
     textColorToggleButton.classList.add('btn-primary');
 
   // Initial plot rendering on page load

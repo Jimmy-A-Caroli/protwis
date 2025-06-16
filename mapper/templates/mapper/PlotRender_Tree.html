@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{% static 'home/css/nv.d3.min.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 {% endblock %}
 
 {% block content %}
@@ -77,7 +78,7 @@
         <!-- Receptor -->
         <div class="form-group text-center">
           <div style="margin-top: -10px;">
-            <label for="receptorFontSizeSlider">Receptor font size</label>
+            <label for="receptorFontSizeSlider">Receptor</label>
           </div>
           <input type="range" class="form-control" style="width:80%" min="11" max="20" value="16" id="receptorFontSizeSlider">
           <div style="text-align: center;margin: -5px 0px -15px 0px;">
@@ -86,6 +87,16 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- Color styling -->
+    <div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Colors
+    </button>
+    <div class="dropdown-menu dropdown-menu-listplot" style="width: 500px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-12%);">
+        <div id="colorStylingContainer"></div>
+    </div>
     </div>
 
     <!-- Data styling -->
@@ -120,57 +131,43 @@
         </div>
     </div>
 
-    <!-- Color styling -->
-    <div class="dropdown">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Colors
-    </button>
-    <div class="dropdown-menu dropdown-menu-listplot" style="width: 500px;">
-        <div id="colorStylingContainer"></div>
-    </div>
-    </div>
-
     <!-- Legend Toggle & Label Edit Dropdown -->
     <div class="dropdown">
         <button class="btn btn-primary dropdown-toggle" type="button" id="Legend_Menu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Legend Options
+            Legend
         </button>
-        <div class="dropdown-menu dropdown-menu-listplot p-3 text-center" style="width: 380px;">
+        <div class="dropdown-menu dropdown-menu-listplot p-3 text-center" style="min-width: 380px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-7%);">
             
             <!-- Centered Toggle Button with Padding -->
-            <div style="display: flex; justify-content: center; padding: 20px 0 20px 0;">
-            <button id="legendToggleBtn" class="btn btn-danger" style="min-width: 200px;">
-                Hide Legend
-            </button>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px 0;">
+              <label for="legendToggleBtn" style="margin: 0; font-size: 18px;">Legend:</label>
+              <button id="legendToggleBtn" class="btn btn-success" style="min-width: 60px;">Shown</button>
             </div>
+
+            <hr style="margin: 0px auto 10px auto; width: 80%; border-top: 1px solid #ddd;">
+
+            <!-- Position Toggle -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 20px 0;">
+              <label for="toggleLegendPosition" style="margin: 0; font-size: 18px;">Position:</label>
+              <button id="toggleLegendPosition" class="btn btn-primary" style="min-width: 80px;">Top</button>
+            </div>
+
+            <div><hr style="margin: 0px auto 15px auto; width: 80%; border-top: 1px solid #ddd;"></div>
 
             <!-- Dynamic Label Inputs -->
             <div id="legendLabelInputsContainer"></div>
 
         </div>
     </div>
-
-    <!-- Download button -->
-    <div class="dropdown">
-      <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3"></span> Download <span class="caret"></span>
-      </button>
-          <div class="dropdown-menu dropdown-menu-right-middle">
-            <li><a class="dropdown-item" href="javascript:saveSvg(document.getElementById('tree_plot_svg'), 'Tree.svg');">SVG</a></li>
-            <li><a class="dropdown-item" href="javascript:saveSvgAsPng(document.getElementById('tree_plot_svg'), 'Tree.png');">PNG</a></li>
-            <li><a class="dropdown-item" href="javascript:saveSvgAsJpg(document.getElementById('tree_plot_svg'), 'Tree.jpg');">JPG</a></li>
-            <li><a class="dropdown-item" href="javascript:saveSvgAsTiff(document.getElementById('tree_plot_svg'), 'Tree.tiff');">TIFF</a></li>
-          </div>
-        </div>
     
-        <!-- Download dropdown -->
+    <!-- Download dropdown -->
     <div class="dropdown" style="position: relative;">
       <button type="button" class="btn btn-primary dropdown-toggle"
             id="DownloadDropdownToggle" style="font-size: 14px;">
         <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3;"></span>
         Download <span class="caret"></span>
       </button>
-
       <div class="dropdown-menu"
           style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
                   margin-left: 5px; position: absolute; transform: translateY(-25%); display: none;">
@@ -216,6 +213,7 @@
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/datamapper.js' %}"></script>
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
+<script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 
 
 <!-- Universal scripts -->
@@ -254,6 +252,17 @@ let circle_spacer = circle_size * (2 + 0.5 * 1) + 1;  // default spacer slider =
 tree_data = update_tree_data(tree_data,tree_options.depth);
 const depth = tree_options.depth;  // Set this value when the page loads
 
+var TreeLegendPosition = "Top"
+
+var styling_circles = {
+  starter: 1,
+  clean: true, 
+  gradient: true, 
+  circle_spacer: circle_spacer, 
+  circle_size: circle_size, 
+  mode: "Numeric"
+}
+
 var Tree_circle_styling_dict = {
   "Inner":'One',
   "Outer1":"One",
@@ -282,27 +291,15 @@ function updateLeavesLabels() {
     // Get the correct label dictionary
     let activeDict = Tree_label_dicts[activeLabelType];
 
-    changeLeavesLabels("tree_plot", activeLabelType, activeDict);
+    changeLeavesLabels("tree_plot", activeLabelType, activeDict,styling_circles);
 }
 
 function ReDraw_all() {
-  draw_tree(tree_data, tree_options,circle_size, ShowLegend);
+  draw_tree(tree_data, tree_options,circle_size);
   updateLeavesLabels();
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-  if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict,Label_dict);}
+  DrawCircles('tree_plot', Tree_circles, Tree_colors, styling_circles, Tree_circle_styling_dict);
+  if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict, Label_dict, TreeLegendPosition);}
 }
-
-function ReDraw_Circles_and_Labels() {
-  updateLeavesLabels();
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-  
-}
-
-function ReDraw_cicles_and_bars() {
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true,Tree_circle_styling_dict,circle_spacer,circle_size);
-  if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict,Label_dict);}
-}
-
 
 function setTreeLabelType(labelType) {
   // Set visual highlight (if needed)
@@ -320,8 +317,7 @@ function setTreeLabelType(labelType) {
   // Set which dictionary to use
   let activeDict = Tree_label_dicts[labelType];
 
-  changeLeavesLabels("tree_plot", labelType, activeDict);
-  DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
+  ReDraw_all();
 }
 
 // === Legend Show/Hide Toggle ===
@@ -329,13 +325,13 @@ document.getElementById("legendToggleBtn").addEventListener("click", function ()
   ShowLegend = !ShowLegend;
 
   if (ShowLegend) {
-    this.textContent = "Hide Legend";
-    this.classList.remove("btn-success");
-    this.classList.add("btn-danger");
-  } else {
-    this.textContent = "Show Legend";
+    this.textContent = "Shown";
     this.classList.remove("btn-danger");
     this.classList.add("btn-success");
+  } else {
+    this.textContent = "Hidden";
+    this.classList.remove("btn-success");
+    this.classList.add("btn-danger");
   }
 
   ReDraw_all();
@@ -360,22 +356,41 @@ function getAvailableLegendKeys(data) {
 // === Populate legend label inputs ===
 function populateLegendLabelInputs(containerId, labelDict, activeKeys) {
   const container = document.getElementById(containerId);
-  container.innerHTML = ""; // clear existing
+  container.innerHTML = ""; // Clear existing
 
+  // Add header row
+  const headerRow = document.createElement("div");
+  headerRow.className = "row";
+  headerRow.innerHTML = `
+    <div class="col-md-2 text-left" style="margin-left: 15px;"><strong>Ring</strong></div>
+    <div class="col-md-8 text-left" style="margin-left: 10px;margin-bottom: 10px"><strong>Gradient bar text</strong></div>
+  `;
+  container.appendChild(headerRow);
+
+  // Add input rows
   for (const key of Object.keys(labelDict)) {
     if (activeKeys[key]) {
-        const formGroup = document.createElement("div");
-        formGroup.className = "form-group mb-3";
-        formGroup.style.paddingLeft = "15px"; // ← adds left padding
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.marginBottom = "10px";
 
-        formGroup.innerHTML = `
-        <label for="labelInput_${key}" class="form-label" style="text-align: left; width: 15%;">${labelDict[key]}:</label>
-        <input type="text" maxlength="25" class="form-control" id="labelInput_${key}" value="${labelDict[key]}" oninput="updateLabel('${key}')">
-        `;
-        container.appendChild(formGroup);
+      row.innerHTML = `
+        <div><hr style="margin: 0px auto 15px auto; width: 90%; border-top: 1px solid #ddd;"></div>
+        <div class="col-md-2 text-left" style="padding-top: 6px; margin-left: 15px;">
+          ${labelDict[key]}
+        </div>
+        <div class="col-md-8" style="margin-left: 10px;">
+          <input type="text" maxlength="18" class="form-control input-sm"
+                 id="labelInput_${key}" value="${labelDict[key]}"
+                 oninput="updateLabel('${key}')">
+        </div>
+      `;
+
+      container.appendChild(row);
     }
   }
 }
+
 
 document.addEventListener("DOMContentLoaded", function () {
   const labelButtons = document.querySelectorAll('.tree-label-btn');
@@ -386,60 +401,63 @@ document.addEventListener("DOMContentLoaded", function () {
       setTreeLabelType(selectedValue);
     });
   });
-
-  // Optionally set default on load
-  setTreeLabelType("IUPHAR");  // or "Gene", "UniProt"
 });
 
 
 // # Initialize tree plot #
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     populateLegendLabelInputs("legendLabelInputsContainer", Label_dict, activeLegendKeys);
     populateColorStylingInputs("colorStylingContainer", activeLegendKeys);
-    setupColorPickersAndHandlers(activeLegendKeys);
+    
+    // First initialize the tree, then the pickers
     initdraw();
+    
+    // Now it's safe to run color pickers
+    setupColorPickersAndHandlers(activeLegendKeys);
 });
 
 // === Color ===
-
-
 const headerRow = `
-  <div class="row" style="margin-bottom: 5px; width: 550px; padding-left: 10px;">
-    <div class="col text-center" style="width: 50px;"><strong>Ring</strong></div>
-    <div class="col text-center" style="width: 120px;"><strong>Number of colors</strong></div>
-    <div class="col text-center" style="width: 100px;"><strong>Min</strong></div>
-    <div class="col text-center" style="width: 100px;"><strong>Mid</strong></div>
-    <div class="col text-center" style="width: 100px;"><strong>Max</strong></div>
+  <div class="row align-items-center mb-2">
+    <div class="col-md-2 text-center"><strong>Ring</strong></div>
+    <div class="col-md-4 text-center"><strong>Number of colors</strong></div>
+    <div class="col-md-2 text-center"><strong>Min</strong></div>
+    <div class="col-md-2 text-center"><strong>Mid</strong></div>
+    <div class="col-md-2 text-center"><strong>Max</strong></div>
   </div>
+  
 `;
 
 const blockTemplate = (key, label) => `
-  <div class="row" style="margin-top: 10px; width: 550px; padding-left: 10px;">
-    <div class="col text-center" style="width: 50px;">
-        <span>${label}</span>
-    </div>
-    <div class="col text-center" style="width: 120px;">
-        <select id="${key}_Style" class="form-control form-control-sm" style="height: 30px;">
-            <option value="One">One</option>
-            <option value="Two">Two</option>
-            <option value="Three">Three</option>
-        </select>
-    </div>
-    <div class="col text-center" style="width: 100px;">
-        <input type="text" id="Tree_colorPicker_min_${key}" placeholder="Min" />
-    </div>
-    <div class="col text-center" style="width: 100px;">
-        <input type="text" id="Tree_colorPicker_middle_${key}" placeholder="Mid" />
-    </div>
-    <div class="col text-center" style="width: 100px;">
-        <input type="text" id="Tree_colorPicker_max_${key}" placeholder="Max" />
-    </div>
-  </div>`;
+  <hr style="margin: 10px 0px 10px 0px;">
+  <div class="row align-items-center mb-2">
+    <div class="col-md-2 text-center" style="font-size: 14px;">${label}</div>
 
+    <div class="col-md-4 text-center">
+      <select id="${key}_Style"
+              class="form-control form-control-sm tree-style-select w-75 mx-auto">
+        <option value="One">One</option>
+        <option value="Two">Two</option>
+        <option value="Three_RWB">Three</option>
+        <option value="Three_TWM">Three</option>
+      </select>
+    </div>
+
+    <div class="col-md-2 text-center">
+      <input type="text" id="Tree_colorPicker_min_${key}" class="form-control form-control-sm text-center" placeholder="Min">
+    </div>
+    <div class="col-md-2 text-center">
+      <input type="text" id="Tree_colorPicker_middle_${key}" class="form-control form-control-sm text-center" placeholder="Mid">
+    </div>
+    <div class="col-md-2 text-center">
+      <input type="text" id="Tree_colorPicker_max_${key}" class="form-control form-control-sm text-center" placeholder="Max">
+    </div>
+  </div>
+`;
 
 function populateColorStylingInputs(containerId, activeKeys) {
   const container = document.getElementById(containerId);
-  container.innerHTML = ""; // clear previous
+  container.innerHTML = ""; // Clear any previous content
 
   container.insertAdjacentHTML("beforeend", headerRow);
 
@@ -450,61 +468,109 @@ function populateColorStylingInputs(containerId, activeKeys) {
 }
 
 function setupColorPickersAndHandlers(activeKeys) {
+  const colorPresets = {
+    One: {
+      setup: "One",
+      colorStart: "#ffffff",
+      colorAvg: "#ffffff",
+      colorEnd: "#707070"
+    },
+    Two: {
+      setup: "Two",
+      colorStart: "#97a6c4",
+      colorAvg: "#ffffff",
+      colorEnd: "#384860"
+    },
+    Three_RWB: {
+      setup: "Three",
+      colorStart: "#a00000",
+      colorAvg: "#ffffff",
+      colorEnd: "#1a80bb"
+    },
+    Three_TWM: {
+      setup: "Three",
+      colorStart: "#298c8c",
+      colorAvg: "#ffffff",
+      colorEnd: "#800074"
+    }
+  };
+
   for (const key in activeKeys) {
-    // Init pickers
+    // Initialize color pickers
     initialize_Tree_ColorPicker(`Tree_colorPicker_min_${key}`, Tree_colors[key][0], Tree_colors, key, 0, true);
     initialize_Tree_StaticColorBox(`Tree_colorPicker_middle_${key}`, "#FFFFFF");
     initialize_Tree_ColorPicker(`Tree_colorPicker_max_${key}`, Tree_colors[key][1], Tree_colors, key, 1);
 
-    // Get parent containers to show/hide
-    const minContainer = document.getElementById(`Tree_colorPicker_min_${key}`).parentElement;
-    const midContainer = document.getElementById(`Tree_colorPicker_middle_${key}`).parentElement;
-    const maxContainer = document.getElementById(`Tree_colorPicker_max_${key}`).parentElement;
-
-    const styleDropdown = document.getElementById(`${key}_Style`);
-    styleDropdown.value = Tree_circle_styling_dict[key] || "One";
-
-    function updateVisibility(value) {
-      if (value === "One") {
-        Tree_handleColorPickerState(`Tree_colorPicker_min_${key}`, 'disable');
-        Tree_handleColorPickerState(`Tree_colorPicker_middle_${key}`, 'disable');
-        Tree_handleColorPickerState(`Tree_colorPicker_max_${key}`, 'enable');
-
-        minContainer.style.visibility = "hidden";
-        midContainer.style.visibility = "hidden";
-        maxContainer.style.visibility = "visible";
-      } else if (value === "Two") {
-        Tree_handleColorPickerState(`Tree_colorPicker_min_${key}`, 'enable');
-        Tree_handleColorPickerState(`Tree_colorPicker_middle_${key}`, 'disable');
-        Tree_handleColorPickerState(`Tree_colorPicker_max_${key}`, 'enable');
-
-        minContainer.style.visibility = "visible";
-        midContainer.style.visibility = "hidden";
-        maxContainer.style.visibility = "visible";
-      } else if (value === "Three") {
-        Tree_handleColorPickerState(`Tree_colorPicker_min_${key}`, 'enable');
-        Tree_handleColorPickerState(`Tree_colorPicker_middle_${key}`, 'disable'); // always disabled
-        Tree_handleColorPickerState(`Tree_colorPicker_max_${key}`, 'enable');
-
-        minContainer.style.visibility = "visible";
-        midContainer.style.visibility = "visible";
-        maxContainer.style.visibility = "visible";
-      }
-
-      Tree_circle_styling_dict[key] = value;
-      ReDraw_cicles_and_bars();
-    }
-
-    // Initial update
-    updateVisibility(styleDropdown.value);
-
-    // On change
-    styleDropdown.addEventListener("change", () => {
-      updateVisibility(styleDropdown.value);
+    // Enhance the select with Select2
+    $(`#${key}_Style`).select2({
+      templateResult: formatColorScheme,
+      templateSelection: formatColorScheme,
+      width: 'resolve'
+    }).on('change', function () {
+      updateFromSelectedOptionForKey(key, colorPresets);
     });
+
+    // Fire once initially
+    updateFromSelectedOptionForKey(key, colorPresets, true);
+  }
+  // ✅ Redraw once after all are initialized
+  ReDraw_all();
+}
+
+function updateFromSelectedOptionForKey(key, colorPresets, suppressRedraw = false) {
+  const styleDropdown = document.getElementById(`${key}_Style`);
+  const selectedValue = styleDropdown.value;
+  const preset = colorPresets[selectedValue];
+  if (!preset) return;
+
+  Tree_colors[key][0] = preset.colorStart;
+  Tree_colors[key][1] = preset.colorEnd;
+  Tree_circle_styling_dict[key] = preset.setup;
+
+  const minContainer = document.getElementById(`Tree_colorPicker_min_${key}`).parentElement;
+  const midContainer = document.getElementById(`Tree_colorPicker_middle_${key}`).parentElement;
+  const maxContainer = document.getElementById(`Tree_colorPicker_max_${key}`).parentElement;
+
+  Tree_handleColorPickerState(`Tree_colorPicker_min_${key}`, preset.setup !== 'One' ? 'enable' : 'disable');
+  Tree_handleColorPickerState(`Tree_colorPicker_middle_${key}`, preset.setup === 'Three' ? 'diable' : 'disable');
+  Tree_handleColorPickerState(`Tree_colorPicker_max_${key}`, 'enable');
+
+  minContainer.style.visibility = preset.setup !== 'One' ? 'visible' : 'hidden';
+  midContainer.style.visibility = preset.setup === 'Three' ? 'visible' : 'hidden';
+  maxContainer.style.visibility = 'visible';
+
+  $(`#Tree_colorPicker_min_${key}`).spectrum("set", preset.colorStart);
+  $(`#Tree_colorPicker_max_${key}`).spectrum("set", preset.colorEnd);
+
+  // 🔥 Only redraw if NOT suppressing
+  if (!suppressRedraw) {
+    ReDraw_all();
   }
 }
 
+
+
+// 3. Format function to show styled color chips
+function formatColorScheme(option) {
+  if (!option.id) return option.text;
+
+  const colorMap = {
+    One: [null, null, "#707070"],
+    Two: ["#97a6c4", null, "#384860"],
+    Three_RWB: ["#a00000", "#ffffff", "#1a80bb"],
+    Three_TWM: ["#298c8c", "#ffffff", "#800074"]
+  };
+
+  const colors = colorMap[option.id];
+  if (!colors) return option.text;
+
+  return $(
+    `<span style="display: flex; align-items: center;">
+      <span style="min-width: 50px; text-align: center; margin-right: 5px;">${option.text}</span>
+      ${colors.map(c => `<span style="display:inline-block;width:12px;height:12px;margin-left:4px;border:1px solid #ccc;border-radius:2px;background:${c || 'transparent'};${c ? '' : 'opacity:0'}"></span>`).join('')}
+    </span>`
+  );
+}
 
 // #################
 // # Label styling #
@@ -540,9 +606,9 @@ function applyLabelStyling() {
 
     // Recalculate max leaf node length based on the selected depth
     if (tree_options.depth === 4) {
-        maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+        styling_circles.starter = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
     } else if (tree_options.depth === 3) {
-        maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+        styling_circles.starter = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
     }
 
     // Redraw the tree and circles with updated font sizes
@@ -587,7 +653,7 @@ function updateLabel(category) {
     Label_dict[category] = newValue;
 
     // Now re-run your createLegendBars with updated labels
-    if (ShowLegend) {createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict, Label_dict);}
+    ReDraw_all();
 }
 
 // ====================
@@ -604,8 +670,9 @@ function updateTreePlot() {
   const Tree_Slider_circleSpacer_value = Tree_Slider_circleSpacer.value;
 
   // Recalculate circle size and spacer
-  circle_size = 3 + 1 * Tree_Slider_circleSize_value;
-  circle_spacer = circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+  styling_circles.circle_size = 3 + 1 * Tree_Slider_circleSize_value;
+  styling_circles.circle_spacer = styling_circles.circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+  
 
   // Render tree with new values
   ReDraw_all();
@@ -630,8 +697,8 @@ function initdraw() {
   const Tree_Slider_circleSpacer_value = Tree_Slider_circleSpacer.value;
 
   // Recalculate circle size and spacer
-  circle_size = 3 + 1 * Tree_Slider_circleSize_value;
-  circle_spacer = circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
+  styling_circles.circle_size = 3 + 1 * Tree_Slider_circleSize_value;
+  styling_circles.circle_spacer = styling_circles.circle_size * (2 + 0.5 * Tree_Slider_circleSpacer_value) + 1;
 
   const classFontSize = $("#classFontSizeSlider").val();
   const ligandTypeFontSize = $("#ligandTypeFontSizeSlider").val();
@@ -645,7 +712,10 @@ function initdraw() {
   tree_options.fontSize.receptor = `${receptorFontSize}px`;
 
   // Recalculate max leaf node length based on the selected depth
-  maxLeafNodeLength = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+  styling_circles.starter = maxLeafNodeLength_scaler * parseInt(tree_options.fontSize.receptor);
+
+  // Optionally set default on load
+  setTreeLabelType("IUPHAR");  // ✅ This becomes the ONE label setup on load
 
   // Redraw the tree and circles with updated font sizes
   ReDraw_all();
@@ -665,13 +735,11 @@ function initialize_Tree_ColorPicker(elementId, start_color, updateTreeColors, k
         ],
         move: function(color) {
             Tree_colors[key][index] = color.toHexString();
-            DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
-            if (ShowLegend) createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict, Label_dict);
+            ReDraw_all();
         },
         change: function(color) {
             Tree_colors[key][index] = color.toHexString();
-            DrawCircles('tree_plot', Tree_circles, maxLeafNodeLength, Tree_colors, true, true, Tree_circle_styling_dict, circle_spacer, circle_size);
-            if (ShowLegend) createLegendBars('tree_plot', Tree_circles, Tree_colors, Tree_circle_styling_dict, Tree_datatypes_dict, Label_dict);
+            ReDraw_all();
         },
         disabled: disabled
     });
@@ -716,6 +784,26 @@ document.addEventListener('DOMContentLoaded', function () {
       e.stopPropagation();
     });
   }
+});
+
+// === Legend Position Toggle ===
+const positionButton = document.getElementById("toggleLegendPosition");
+
+// Set initial state
+function updatePositionButton(value) {
+  positionButton.textContent = value;
+}
+
+updatePositionButton(TreeLegendPosition);
+
+// Handle position toggle
+positionButton.addEventListener("click", function () {
+  const current = TreeLegendPosition;
+  const next = current === "Top" ? "Bottom" : "Top";
+  TreeLegendPosition = next;
+
+  updatePositionButton(next);
+  ReDraw_all();  // Redraw with updated position
 });
 
 </script>
