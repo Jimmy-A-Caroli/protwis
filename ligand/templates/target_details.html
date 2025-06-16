@@ -64,15 +64,36 @@
         vertical-align: middle;
     }
     
+    /* General header div styling */
     table.dataTable th div.dt-column-header {
         flex-direction: row !important;
+        align-items: center; /* Good for vertical alignment of items within the header div */
     }
 
-	th div.dt-column-header .dt-column-order {
-        margin-right: -12px;
+    /* Specific styling for headers of data columns (not checkbox column) */
+    table.dataTable th:not(.checkbox-cell) div.dt-column-header {
+        position: relative;   /* Establishes a positioning context for the absolute sort icon */
+        justify-content: center; /* Centers the .dt-column-title span if it doesn't fill 100% width */
+        width: 100%;          /* Ensures the header div uses the full width of the th cell */
+        padding-right: 0px;  /* Reduced: Creates space on the right for the sort icon. Adjust this value as needed. */
+        box-sizing: border-box; /* Ensures padding is included within the width */
     }
-    th div.dt-column-header .dt-column-title {
-        margin-left: 24px;
+
+    /* Header title text styling for non-checkbox headers */
+    table.dataTable th:not(.checkbox-cell) div.dt-column-header .dt-column-title {
+        text-align: center;    /* Centers the text within the title span */
+        width: 100%;           /* Allows the title span to use the available width (respecting parent's padding) */
+        line-height: 1.3em;    /* Provides consistent line spacing for multi-line titles (e.g., with <br>) */
+        white-space: normal;   /* Allows text to wrap naturally if needed, and respects <br> tags */
+        margin: 0;             /* Removes any default margins from the span */
+    }
+
+    /* Sort icon positioning for non-checkbox headers */
+	table.dataTable th:not(.checkbox-cell) div.dt-column-header .dt-column-order {
+        position: absolute;    /* Takes the icon out of the normal document flow */
+        right: 3px;            /* Positions the icon near the right edge of the dt-column-header. Adjust as needed. */
+        top: 50%;              /* Aligns the top of the icon to the vertical midpoint of the header div */
+        transform: translateY(-50%); /* Shifts the icon up by half its height for true vertical centering */
     }
 
 	table.dataTable.compact thead th.over_header {
@@ -145,14 +166,6 @@
 	.border-left {
 		border-left: 1px solid #cccccc !important;
 	}
-
-    th div.dt-column-header .dt-column-order {
-        margin-right: -12px;
-    }
-    th div.dt-column-header .dt-column-title {
-        margin-left: 24px;
-    }
-
 
 	
     /* Specific styling for range filter inputs in the third row's <td> */
