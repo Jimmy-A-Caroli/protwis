@@ -407,7 +407,7 @@ function reset_all() {
                         }
                     });
                 });
-                console.log(`Reset All Filters: UI filter controls cleared for #${tableIdKey}`);
+                // console.log(`Reset All Filters: UI filter controls cleared for #${tableIdKey}`);
             } else {
                 console.warn(`Reset All Filters: Filter row not found for #${tableIdKey}`);
             }
@@ -432,14 +432,14 @@ function reset_all() {
                     customSearchFunctionsRemovedCount++;
                 }
             }
-            if (customSearchFunctionsRemovedCount > 0) {
-                console.log(`Reset All Filters: Removed ${customSearchFunctionsRemovedCount} custom search functions for #${tableIdKey}`);
-            }
+            // if (customSearchFunctionsRemovedCount > 0) {
+            //     console.log(`Reset All Filters: Removed ${customSearchFunctionsRemovedCount} custom search functions for #${tableIdKey}`);
+            // }
 
             table.draw(false); // 'false' to maintain current pagination
         }
     }
-    console.log("Reset All Filters: Process finished.");
+    // console.log("Reset All Filters: Process finished.");
 }
 
   function getExcelColumnName(colIndex) {
@@ -702,10 +702,10 @@ function reset_all() {
                     if ($tableInActivePane.length && $.fn.DataTable.isDataTable($tableInActivePane)) {
                         $tableInActivePane.DataTable().columns.adjust().draw(false);
                     } else {
-                         console.log("No DataTable found in active pane for immediate adjustment:", activePaneSelector);
+                         // console.log("No DataTable found in active pane for immediate adjustment:", activePaneSelector);
                     }
                 } else {
-                    console.log("No initially active tab or pane found for immediate adjustment.");
+                    // console.log("No initially active tab or pane found for immediate adjustment.");
                 }
                 $("#page_loader_placeholder").busyLoad("hide");
                 $("#page_loader_placeholder").hide();
@@ -771,10 +771,10 @@ function reset_all() {
             if ($tableInSwitchedTab.length && $.fn.DataTable.isDataTable($tableInSwitchedTab)) {
                 $tableInSwitchedTab.DataTable().columns.adjust().draw(false);
             } else {
-                console.log("No main DataTable found in switched tab:", activeTabSelector);
+                // console.log("No main DataTable found in switched tab:", activeTabSelector);
             }
         });
-        console.log("Document ready processing finished.");
+        // console.log("Document ready processing finished.");
     });
     </script>
     {% endblock %}

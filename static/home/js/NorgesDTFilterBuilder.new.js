@@ -262,7 +262,7 @@ function createDropdownFilters(api,column_filters) {
                         var tempDiv_multi = document.createElement("div");
                         tempDiv_multi.innerHTML = renderedValue_multi;
                         var textContent_multi = tempDiv_multi.textContent || tempDiv_multi.innerText || "";
-                        console.log(`Col ${currentColIndex_for_multi} - Original Data (d):`, d_multi, `Rendered for Display:`, renderedValue_multi, `Text Content for Option:`, textContent_multi);
+                        // console.log(`Col ${currentColIndex_for_multi} - Original Data (d):`, d_multi, `Rendered for Display:`, renderedValue_multi, `Text Content for Option:`, textContent_multi);
                         $('#' + Table_id + '_Filter' + currentColIndex_for_multi).append($('<option>' + textContent_multi + '</option>'));
                     });
 

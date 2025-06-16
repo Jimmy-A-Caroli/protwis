@@ -2,27 +2,27 @@
 {# Expects 'ligand_query' and 'ligand_similarity' context variables #}
 <thead>
     <tr class="header-spans" style="font-size: 14px; white-space: nowrap;">
-      <th style="text-align:center" colspan="1"></th>
+      <th style="text-align:center" colspan="1" data-dt-order="disable"></th>
 
       {# Ligands Colspan #}
       {% if ligand_similarity %}
-          <th style="text-align:center" colspan="6">Ligands</th>
+          <th style="text-align:center" colspan="6" data-dt-order="disable">Ligands</th>
       {% else %}
-          <th style="text-align:center" colspan="5">Ligands</th>
+          <th style="text-align:center" colspan="5" data-dt-order="disable">Ligands</th>
       {% endif %}
   
       {# Receptor Colspan #}
       {% if ligand_query %}
-          <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="5">Receptor</th>
+          <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="5" data-dt-order="disable">Receptor</th>
       {% else %}
-          <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="1">Receptor</th>
+          <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="1" data-dt-order="disable">Receptor</th>
       {% endif %}
   
       {# Activity Colspan (Fixed) #}
-      <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="9">Activity</th>
+      <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="9" data-dt-order="disable">Activity</th>
   
       {# Chemical Info Colspan (Fixed) #}
-      <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="6">Chemical information</th>
+      <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="6" data-dt-order="disable">Chemical information</th>
     </tr>
   
     {# Main Header Row #}
