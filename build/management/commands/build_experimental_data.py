@@ -1814,7 +1814,7 @@ class Command(BaseBuild):
             if row['CAS'] != 'None':
                 ids['CAS'] = row['CAS']
             if row[' Ligand Name'] not in ligand_cache.keys():
-                ligand = get_or_create_ligand(row[' Ligand Name'], ids, 'PDSP KiDatabase')
+                ligand = get_or_create_ligand(row[' Ligand Name'], ids, source='PDSP KiDatabase')
                 ligand_cache[row[' Ligand Name']] = ligand
             if label in protein_names.keys():
                 receptor = protein_names[label]
