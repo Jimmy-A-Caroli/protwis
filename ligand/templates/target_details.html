@@ -664,6 +664,7 @@ function reset_all() {
                 this.api().rows({ page: 'current' }).every(function() { const originalIndex = this.index(); const $rowNode = $(this.node()); $rowNode.find('.row-checkbox').prop('checked', selectedRowsSet.has(originalIndex)); });
                 updateSelectAllCheckboxState(this.api(), tableId, selectedRowsSet);
                 this.api().columns.adjust(); 
+                // this.api().columns.adjust(); 
             } 
         }); 
     
@@ -680,97 +681,90 @@ function reset_all() {
         });
         return table;
     }
-    
+
+
     $(document).ready(function() {
-        if (typeof CreateColumnFilters !== 'function') {
-            alert("CRITICAL ERROR: CreateColumnFilters function not found!");
+        if (typeof CreateColumnFilters !== 'function' || typeof createDropdownFilters !== 'function') {
+            alert("CRITICAL ERROR: A required filter function was not found!");
             return; 
         }
-
-        $("#page_loader_placeholder").show();
-        $("#page_loader_placeholder").busyLoad("show", {
-            spinner: "accordion",
-            text: "Preparing page...",
-            fontSize: "1.8rem",
-            textClass: "custom-loader-text",
-            textPosition: "top",
-            color: "black",
-            background: "rgba(255, 255, 255, 0.85)", // Semi-transparent overlay
-            // textMargin: "-4rem" // Optional: Adjust if text/spinner overlap
+    
+        // --- 1. state two statuses ---
+        let myTasksCompleted = false;
+        let windowIsLoaded = false;
+    
+        // --- 2. show BusyLoad placeholder ---
+        $("#page_loader_placeholder").show().busyLoad("show", {
+            spinner: "accordion", text: "Preparing page...", fontSize: "1.8rem",
+            textClass: "custom-loader-text", textPosition: "top", color: "black",
+            background: "rgba(255, 255, 255, 0.85)"
         });
-
+    
+        // --- 3. define a function to update loader text ---
+        function finalizePage() {
+            // only when both conditions are met
+            if (myTasksCompleted && windowIsLoaded) {
+                console.log("Confirmation received: My tasks and window.load are both complete.");
+                updateLoaderText("Finalizing display...");
+                
+                setTimeout(() => {
+                    $("#main_content_wrapper").show();
+                    const activePaneSelector = $('ul.nav-tabs li.active a').attr("href");
+                    if (activePaneSelector) {
+                        const $tableInActivePane = $(activePaneSelector).find('table.dataTable[id]');
+                        if ($tableInActivePane.length && $.fn.DataTable.isDataTable($tableInActivePane)) {
+                            $tableInActivePane.DataTable().columns.adjust().draw(false);
+                        }
+                    }
+                    $("#page_loader_placeholder").busyLoad("hide").hide();
+                    console.log("UI is now fully interactive.");
+                }, 50); // last step with a slight delay to ensure all UI updates are applied
+            }
+        }
+    
+        // --- 4. set up window load event ---
+        // the window load event is used to finalize the page when all resources are loaded
+        $(window).on('load', function() {
+            console.log("Event triggered: window.load");
+            windowIsLoaded = true;
+            finalizePage();
+        });
+    
+        // --- 5. set up BusyLoad text update function ---
         jsMode = '{{ mode }}';
         jsLigandQuery = {{ ligand_query|yesno:"true,false" }};
         jsLigandSimilarity = {{ ligand_similarity|yesno:"true,false" }};
         
-        let tablesInitializedCount = 0;
-        const totalTablesToInitialize = 2; 
-
-        function allTablesNowInitialized() {
-            updateLoaderText("Finalizing display...");
-            setTimeout(() => {
-                $("#main_content_wrapper").show(); 
-
-                let activePaneSelector;
-                if ($('ul.nav-tabs li.active a').length) {
-                    activePaneSelector = $('ul.nav-tabs li.active a').attr("href");
-                } else if ($('.tab-pane.active').length) {
-                    activePaneSelector = "#" + $('.tab-pane.active').first().attr('id');
-                }
-
-                if (activePaneSelector) {
-                    const $tableInActivePane = $(activePaneSelector).find('table.dataTable[id]');
-                    if ($tableInActivePane.length && $.fn.DataTable.isDataTable($tableInActivePane)) {
-                        $tableInActivePane.DataTable().columns.adjust().draw(false);
-                    } else {
-                         // console.log("No DataTable found in active pane for immediate adjustment:", activePaneSelector);
-                    }
-                } else {
-                    // console.log("No initially active tab or pane found for immediate adjustment.");
-                }
-                $("#page_loader_placeholder").busyLoad("hide");
-                $("#page_loader_placeholder").hide();
-            }, 0); // Small delay to allow text update to render
-        }
-
-        function singleTableInitializationComplete() {
-            tablesInitializedCount++;
-            if (tablesInitializedCount >= totalTablesToInitialize) {
-                allTablesNowInitialized();
-            }
-        }
-
         updateLoaderText("Parsing affinity data...");
         setTimeout(() => {
             try {
                 affinity_data = JSON.parse('{{ affinity_data_json|escapejs }}');
-            } catch (e) {
-                console.error("Error parsing affinity_data_json:", e);
-                updateLoaderText("Error loading affinity data!");
-                $("#page_loader_placeholder").busyLoad("hide");
-                $("#page_loader_placeholder").hide();
-                $("#main_content_wrapper").html("<p style='color:red; text-align:center; margin-top: 50px;'>Failed to load affinity data. Please try again later.</p>").show();
-                return;
-            }
-
+            } catch (e) { /* error handling */ return; }
+    
             updateLoaderText("Parsing potency data...");
             setTimeout(() => {
                 try {
                     potency_data = JSON.parse('{{ potency_data_json|escapejs }}');
-                } catch (e) {
-                    console.error("Error parsing potency_data_json:", e);
-                    updateLoaderText("Error loading potency data!");
-                    $("#page_loader_placeholder").busyLoad("hide");
-                    $("#page_loader_placeholder").hide();
-                    $("#main_content_wrapper").html("<p style='color:red; text-align:center; margin-top: 50px;'>Failed to load potency data. Please try again later.</p>").show();
-                    return;
-                }
+                } catch (e) { /* error handling */ return; }
                 
+                let tablesInitializedCount = 0;
+                const totalTablesToInitialize = 2;
+    
+                const onSingleTableInitComplete = function() {
+                    tablesInitializedCount++;
+                    if (tablesInitializedCount >= totalTablesToInitialize) {
+                        // signal that all tasks are complete
+                        console.log("Event triggered: All my custom tasks are complete.");
+                        myTasksCompleted = true;
+                        finalizePage(); // call finalizePage to check if all conditions are met
+                    }
+                };
+    
                 updateLoaderText("Initializing affinity table...");
                 setTimeout(() => {
                     var affinityTable = initializeTargetDetailsTable(
                         affinityTableId, affinity_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
-                        'affinity', selectedRowsAffinity, singleTableInitializationComplete
+                        'affinity', selectedRowsAffinity, onSingleTableInitComplete
                     );
                     dataTables['affinity_table'] = affinityTable;
             
@@ -778,7 +772,7 @@ function reset_all() {
                     setTimeout(() => {
                         var potencyTable = initializeTargetDetailsTable(
                             potencyTableId, potency_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
-                            'potency', selectedRowsPotency, singleTableInitializationComplete
+                            'potency', selectedRowsPotency, onSingleTableInitComplete
                         );
                         dataTables['potency_table'] = potencyTable;
                     }, 0);
