@@ -716,7 +716,6 @@ function reset_all() {
                 if (typeof compoundPreview === 'function') { compoundPreview(tooltipSelectorDraw); }
                 this.api().rows({ page: 'current' }).every(function() { const originalIndex = this.index(); const $rowNode = $(this.node()); $rowNode.find('.row-checkbox').prop('checked', selectedRowsSet.has(originalIndex)); });
                 updateSelectAllCheckboxState(this.api(), tableId, selectedRowsSet);
-                this.api().columns.adjust(); 
                 // this.api().columns.adjust(); 
             } 
         }); 
