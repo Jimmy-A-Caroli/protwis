@@ -292,6 +292,8 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 ligand.sequence = ids["sequence"]
             if "inchikey" in ids and ligand.inchikey is None:
                 ligand.inchikey = ids["inchikey"]
+            if "smiles" in ids and ligand.smiles is None:
+                ligand.smiles = ids["smiles"]
             if parent and (ligand.pk is None or ligand.pk != parent.pk):
                 ligand.parent = parent
             if source:
