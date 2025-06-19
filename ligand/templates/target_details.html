@@ -338,6 +338,7 @@
 <script src="{% static 'home/js/buttons.html5.min.js' %}"></script> <!-- For CSV -->
 <script src="{% static 'home/js/jszip.min.js' %}"></script> <!-- For Excel -->
 <script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- For rendering image from SMILES -->
+<script src="{% static 'home/js/PeptideLayoutEngine.js' %}"></script> <!-- For rendering peptide structures -->
 <script src="{% static 'home/js/compoundPreviewTooltip.js' %}"></script>
 <script src="{% static 'home/js/BusyLoad.js' %}"></script>
 
@@ -535,11 +536,60 @@ function reset_all() {
             },
             orderable: false, searchable: false, className: 'dt-body-center dt-head-center checkbox-cell', width: "30px"
         };
+        const renderLigandName = function(data, type, row, meta) {
+            if (type === 'display' && row) {
+                try {
+                    const ligId = (mode === 'extended') ? row.ligand__id : row.lig_id;
+                    const displayName = data || 'N/A';
+                    const tableSpecificClass = 'struct';
+                    const ligandType = (mode === 'extended') ? row.ligand_type : row.ligand_type;
+                    const sequence = (mode === 'extended') ? row.ligand__sequence : row.sequence;
+                    if (meta.row < 5) {
+                        console.log(`[Render Detail] Row ${meta.row} (Mode: ${mode}) - Ligand Type:`, ligandType, "- Sequence:", sequence ? "Exists" : "Missing");
+                    }
 
+                    if (ligandType === 'Peptide' && sequence) {
+
+                        return `<a class="${tableSpecificClass}" 
+                                href="/ligand/${ligId}/info" 
+                                target="_blank"
+                                data-ligand-type="peptide"
+                                data-sequence="${sequence}">
+                                ${displayName}
+                                </a>`;
+                    } else {
+
+                        const smiles = (mode === 'extended') 
+                                    ? (row.smiles_for_image || row.canonical_smiles || row.ligand__smiles || '') 
+                                    : (row.smiles_for_image || row.smiles || '');
+                        const pictureRel = row.picture || 'Not_available';
+                        return `<a class="${tableSpecificClass}" 
+                                rel="${pictureRel}" 
+                                data-smiles="${smiles}"
+                                data-ligand-type="smiles"
+                                href="/ligand/${ligId}/info" 
+                                target="_blank">
+                                ${displayName}
+                                </a>`;
+                    }
+                } catch (e) { 
+                    console.error(`Error in ${mode} render:`, e, "Row:", row); 
+                    return data || 'Error'; 
+                }
+            }
+            return data;
+        };
+        
+        
         let originalColumns = [];
         if (mode === 'extended') {
             originalColumns = [
-                { data: "ligand__name", name: "common_name", width: commonColumnWidths.common_name, render: function(data, type, row){ if (type === 'display' && row) { try { let ligId = row.ligand__id; let smiles = row.smiles_for_image || row.canonical_smiles || row.ligand__smiles || ''; let pictureRel = row.picture || ''; let tableSpecificClass = 'struct'; let displayName = data || 'N/A'; if (!ligId) { return displayName; } return `<a class="${tableSpecificClass}" rel="${pictureRel}" data-smiles="${smiles}" href="/ligand/${ligId}/info" target="_blank">${displayName}</a>`; } catch (e) { console.error("Error during render (extended display):", e, "Row:", row, "Data:", data); return data || 'Error'; } } return data; }},
+                { 
+                    data: "ligand__name", 
+                    name: "common_name", 
+                    width: commonColumnWidths.common_name, 
+                    render: renderLigandName 
+                },
                 { data: "ligand__id", name: "gpcrdb_id", width: commonColumnWidths.gpcrdb_id, render: function(data) { return data ? data : "-"; } },
                 { data: "reference_ligand", name: "reference_ligand", width: commonColumnWidths.reference_ligand, render: function(data) { return data ? data : "None"; } },
                 { data: "purchasability", name: "vendors", width: commonColumnWidths.vendors, render: function(data) { return data ? data : "0"; } },
@@ -564,7 +614,12 @@ function reset_all() {
             columns = [checkboxColumnDef, ...originalColumns];
         } else { // mode === 'compact'
             if (ligandSimilarity) { originalColumns.push({ data: "similarity_score", name: "similarity", width: commonColumnWidths.similarity, defaultContent: "-", render: function ( data, type, row ){ if (type === 'display' && data !== null && data !== undefined && !isNaN(parseFloat(data))) { return parseFloat(data).toFixed(2); } return data; }}); }
-            originalColumns.push({ data: "ligand_name", name: "common_name", width: commonColumnWidths.common_name, defaultContent: "-", render: function(data, type, row){ if (type === 'display' && row) { try { let ligId = row.lig_id; let smiles = row.smiles_for_image || row.smiles || ''; let pictureRel = row.picture || ''; let tableSpecificClass = 'struct'; let displayName = data || 'N/A'; return `<a class="${tableSpecificClass}" rel="${pictureRel}" data-smiles="${smiles}" href="/ligand/${ligId}/info" target="_blank">${displayName}</a>`; } catch (e) { console.error("Error during render (display):", e, "Row:", row, "Data:", data); return data || 'Error'; } } return data; }});
+            
+            originalColumns.push({ 
+                data: "ligand_name", name: "common_name", width: commonColumnWidths.common_name, defaultContent: "-", 
+                render: renderLigandName 
+            });
+
             originalColumns.push({ data: "lig_id", name: "gpcrdb_id", width: commonColumnWidths.gpcrdb_id, defaultContent: "-" });
             originalColumns.push({ data: "ligand_type", name: "ligand_type", width: commonColumnWidths.ligand_type_compact, defaultContent: "-" });
             originalColumns.push({ data: "reference", name: "reference_ligand", width: commonColumnWidths.reference_ligand, defaultContent: "None" });
@@ -600,23 +655,21 @@ function reset_all() {
         } else { // mode === 'compact'
             columnDefs = [ { targets: "_all", className: "dt-head-center dt-body-center" }, { targets: (ligandSimilarity ? 7 : 6), className: 'border-left' }, { targets: (ligandSimilarity ? 7 : 6) + (ligandQuery ? 5 : 1), className: 'border-left' }, { targets: (ligandSimilarity ? 7 : 6) + (ligandQuery ? 5 : 1) + 9, className: 'border-left' }, ];
         }
-    
+
         let dtButtons = [
             { extend: 'pageLength', className: 'btn btn-info' },
             { text: 'Reset All Filters', className: 'btn btn-primary', action: function () { reset_all(); } },
             { extend: 'excelHtml5', text: 'Export to Excel', className: 'btn btn-success', exportOptions: { columns: ':visible:not(.checkbox-cell)', format: { header: function (data, columnIdx) { return data.replace(/<br\s*\/?>/ig, " ").replace(/<\/?[^>]+(>|$)/g, "").trim(); }}}, action: function (e, dt, node, config) { if (selectedRowsSet.size > 0) { config.exportOptions.rows = function (idx, data, Pnode) { const originalRowIndex = dt.row(Pnode).index(); return selectedRowsSet.has(originalRowIndex); }; } else { config.exportOptions.rows = null; } $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, node, config); }, customize: function (xlsx) { customizeExcelExport(xlsx, jsMode, jsLigandQuery, jsLigandSimilarity); }}
         ];
-    
+
         if (!ligandQuery) { 
             dtButtons.push({ text: 'Get vendors', className: 'btn btn-primary', action: function (e, dt, node, config) { window.location.href = '/ligand/targets_purchasable'; } });
         }
         
         let defaultOrderConfig = [];
         if (mode === 'compact' && ligandSimilarity) {
-            // If compact mode and similarity is present, sort by Similarity (index 1 after checkbox) descending
             defaultOrderConfig = [[1, "desc"]];
         } else {
-            // Default to Common Name (index 1 after checkbox for extended, or index 1 if no similarity in compact) ascending
             defaultOrderConfig = [[1, "asc"]];
         }
 

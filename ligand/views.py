@@ -1147,6 +1147,7 @@ def build_ligand_record(
             if ligand_obj.ligand_type
             else ""
         ),
+        "sequence": ligand_obj.sequence,
         "source": source,
         "smiles": canonical_smiles,
         "mw": ligand_obj.mw,
@@ -1285,6 +1286,8 @@ def get_extended_ligand_details(
         "source",
         "ligand__id",
         "ligand__name",
+        "ligand__ligand_type__name",
+        "ligand__sequence", 
         "ligand__mw",
         "ligand__logp",
         "ligand__rotatable_bonds",
@@ -1325,7 +1328,12 @@ def get_extended_ligand_details(
         processed_exp_data["smiles_for_image"] = smiles_for_image
         processed_exp_data["picture"] = picture_flag
         # --- END SMILES STANDARDIZATION ---
-
+        ligand_type_name = processed_exp_data.get('ligand__ligand_type__name')
+        if ligand_type_name:
+            processed_exp_data['ligand_type'] = ligand_type_name.replace("-", " ").capitalize()
+        else:
+            processed_exp_data['ligand_type'] = "" # or 'N/A'
+        processed_exp_data['sequence'] = processed_exp_data.get('ligand__sequence')
         # Use the annotated purchasability
         processed_exp_data["purchasability"] = processed_exp_data[
             "purchasability_annotated"
