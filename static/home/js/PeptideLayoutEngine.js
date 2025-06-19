@@ -137,7 +137,7 @@ class PeptideLayoutEngine {
     
     _calculateLayout(numToLayout, residuesPerRow) {
         if (numToLayout <= 0) return [];
-        const EPSILON = 1e-9;
+        const EPSILON = 0.000000001;
         
         let d = "M 0 0";
         let x = 0, y = 0, direction = 1;
