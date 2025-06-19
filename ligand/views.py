@@ -3538,6 +3538,7 @@ class LigandInformationView(TemplateView):
                 'Phase_I_trials': 0,
                 'Phase_II_trials': 0,
                 'Phase_III_trials': 0,
+                'Phase_IV_trials': 0,
                 'Approved': 'No',
                 'Full_data_drug_table': None,
                 'Full_data_drug_table_exists': 'no'
