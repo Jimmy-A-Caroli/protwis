@@ -137,6 +137,7 @@ class PeptideLayoutEngine {
     
     _calculateLayout(numToLayout, residuesPerRow) {
         if (numToLayout <= 0) return [];
+        const EPSILON = 1e-9;
         
         let d = "M 0 0";
         let x = 0, y = 0, direction = 1;
@@ -170,7 +171,7 @@ class PeptideLayoutEngine {
         const pathLength = path.getTotalLength();
         
         const centers = [];
-        const numPointsToSample = pathLength > 0 ? Math.floor(pathLength / this.stepDistance + 1e-9) + 1 : numToLayout;
+        const numPointsToSample = pathLength > 0 ? Math.floor(pathLength / this.stepDistance + EPSILON) + 1 : numToLayout;
         const finalNumPoints = Math.min(numToLayout, numPointsToSample);
 
         for (let i = 0; i < finalNumPoints; i++) {
