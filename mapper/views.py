@@ -425,9 +425,7 @@ class DataMapperHome(TemplateView):
         odorant_full = {"NameList": odoranttree4, "DataPoints": odorant_data, "LabelConversionDict":odorant_conversion_dict}
 
         return odorant_full
-    
-    
-    
+
     @staticmethod
     def GenerateGPCRomeDataStructure(type: str = "Classic"):
 
@@ -764,6 +762,7 @@ class DataMapperHome(TemplateView):
         class_c_data = tree.get_tree_data(ProteinFamily.objects.get(name__startswith='Class C (Glutamate)'))
         class_f_data = tree.get_tree_data(ProteinFamily.objects.get(name__startswith='Class F (Frizzled)'))
         class_t2_data = tree.get_tree_data(ProteinFamily.objects.get(name__startswith='Class T2 (Taste 2)'))
+        class_cl_data = tree.get_tree_data(ProteinFamily.objects.get(name__startswith='Other GPCRs'))
         ### GETTING NODES
         data_a = class_a_data.get_nodes_dict(None)
         data_b1 = class_b1_data.get_nodes_dict(None)
@@ -771,6 +770,7 @@ class DataMapperHome(TemplateView):
         data_c = class_c_data.get_nodes_dict(None)
         data_f = class_f_data.get_nodes_dict(None)
         data_t2 = class_t2_data.get_nodes_dict(None)
+        data_cl = class_cl_data.get_nodes_dict(None)
         #Collating everything into a single tree
         general_options = {'depth': 4,
                            'branch_length': {1: 'Class A (Rhodopsin)',
@@ -815,6 +815,10 @@ class DataMapperHome(TemplateView):
                                   ('value', 0),
                                   ('color', 'Orange'),
                                   ('children',data_t2['children'])])
+        class_cl_dict = OrderedDict([('name', 'Classless'),
+                                  ('value', 0),
+                                  ('color', 'Gold'),
+                                  ('children',data_cl['children'])])
         ### APPENDING TO MASTER DICT
         master_dict['children'].append(class_a_dict)
         master_dict['children'].append(class_b1_dict)
@@ -822,6 +826,7 @@ class DataMapperHome(TemplateView):
         master_dict['children'].append(class_c_dict)
         master_dict['children'].append(class_f_dict)
         master_dict['children'].append(class_t2_dict)
+        master_dict['children'].append(class_cl_dict)
 
         updated_data = {key.replace('_human', ''): value for key, value in input_data.items()}
         circles = {key.replace('_human', '').upper(): {k: v for k, v in value.items()} for key, value in input_data.items()}
@@ -1160,7 +1165,7 @@ class DataMapperHome(TemplateView):
                             # Add addition for the different sheets.
                             return render(request, f'mapper/DataMapperHome{self.page}.html', {'upload_status': 'Failed','Error_message': "The excel file is not structured as the template file. There are incorrect sheet names and data setup."})
                         else:
-                            
+
                             ### Initialize Global values ###
                             # Data passed #
                             Data = {}
@@ -1176,7 +1181,7 @@ class DataMapperHome(TemplateView):
                                 # Check if it's a named color
                                 if color.lower() in mcolors.CSS4_COLORS:
                                     return True
-                                
+
                                 # Check if it's a valid hex color
                                 hex_pattern = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
                                 return bool(re.match(hex_pattern, color))
@@ -1214,7 +1219,7 @@ class DataMapperHome(TemplateView):
                                     plot_type_global = Plot_type
                                     # Initialize worksheet #
                                     worksheet = workbook[sheet_name]
-                                    
+
                                     ##########################
                                     ### GPCRome wheel Plot ###
                                     ##########################
@@ -1232,7 +1237,7 @@ class DataMapperHome(TemplateView):
                                             pass #If sheet is empty pass the checking and report the findings
                                         else:
                                             for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-                                                
+
                                                 # Get raw input
                                                 receptor_raw = row[0].value
 
@@ -1361,7 +1366,7 @@ class DataMapperHome(TemplateView):
                                                 # Stop if we exceed 200 valid entries
                                                 if TreeNonEmptyEntryCounter > 200:
                                                     break
-                                            
+
                                             if TreeNonEmptyEntryCounter > 200:
                                                 Incorrect_values['Error'] = "Detected more than 200 entries. The Tree can not handle that many GPCRs to be able to visualize them in one plot."
                                             else:
@@ -1467,10 +1472,10 @@ class DataMapperHome(TemplateView):
                                                     break
                                         else:
                                             status = 'Failed'
-                                            
+
                                         ## Update Plot_parser for T
                                         Plot_parser = status
-                                    
+
                                     ####################
                                     ### Cluster plot ###
                                     ####################
@@ -1479,7 +1484,7 @@ class DataMapperHome(TemplateView):
 
                                         ClusterSpacialPositionCheck = False
                                         empty_sheet = True  # Initialize the flag
-                                        
+
                                         # Check if the sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) and C (2) is not None or empty
@@ -1491,7 +1496,6 @@ class DataMapperHome(TemplateView):
                                         if empty_sheet:
                                             pass
                                         else:
-                                            
                                             # Iterate over rows starting from row 2
                                             for row in worksheet.iter_rows(min_row=2, values_only=True):
                                                 # Check if both column A (0) and column C (2) have values
@@ -1522,7 +1526,7 @@ class DataMapperHome(TemplateView):
                                                 # Check if data row is in data and/or initialize it
                                                 if receptor not in Data:
                                                     Data[receptor] = {}
-                                                
+
                                                 if ClusterSpacialPositionCheck:
                                                     # Check datatype -> Numeric
                                                     if Plot_type == 'Numeric':
@@ -1591,7 +1595,7 @@ class DataMapperHome(TemplateView):
                                             if any(cell not in (None, "") for cell in row[1:7]):  # Slice [1:7] to include columns B-G
                                                 empty_sheet = False
                                                 break
-                                        
+
                                         # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
@@ -1599,7 +1603,7 @@ class DataMapperHome(TemplateView):
                                             # If sheet is not empty then start handling the data
                                             # Iterate through the rows and validate the data
                                             for index, row in enumerate(worksheet.iter_rows(min_row=2), start=2):
-                                                
+
                                                  # Get raw input
                                                 receptor_raw = row[0].value
 
@@ -1657,27 +1661,39 @@ class DataMapperHome(TemplateView):
                                                                 Data.setdefault(receptor, {})['Value{}'.format(i)] = 'Circle'
                                                 # ==== TEXT ====
                                                 elif Plot_type == 'Text':
-                                                    DataValue = row[1].value
+                                                    DataValue = row[1].value if hasattr(row[1], 'value') else row[1]
                                                     color_fill_cell = row[2] if len(row) > 2 else None
                                                     color_override_cell = row[3] if len(row) > 3 else None
+
                                                     if DataValue not in (None, ""):
                                                         try:
-                                                            Data[receptor]['Value1'] = str(DataValue)
-                                                        except ValueError:
+                                                            Data[receptor]['Inner'] = str(DataValue)
+                                                        except Exception:
                                                             Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Corrupted Value, not a string'
 
                                                     # Handle optional fill and override color
                                                     color_fill = None
                                                     color_override = None
 
-                                                    if color_fill_cell and color_fill_cell.fill:
-                                                        fgColor = color_fill_cell.fill.fgColor
-                                                        if fgColor and fgColor.type == 'rgb' and fgColor.rgb:
-                                                            argb = fgColor.rgb
-                                                            if len(argb) >= 6:
-                                                                color_fill = f"#{argb[-6:]}"  # Use RRGGBB
+                                                    if color_fill_cell and hasattr(color_fill_cell, 'fill'):
+                                                        fill = color_fill_cell.fill
+                                                        start_color = getattr(fill, 'start_color', None)
 
-                                                    if color_override_cell and color_override_cell.value not in (None, ""):
+                                                        if start_color:
+                                                            # Case 1: Normal RGB fill (ARGB or RGB)
+                                                            if start_color.type == 'rgb' and start_color.rgb:
+                                                                argb = start_color.rgb
+                                                                if len(argb) == 8:  # e.g. 'FF112233'
+                                                                    color_fill = f"#{argb[-6:]}"
+                                                                elif len(argb) == 6:  # e.g. '112233'
+                                                                    color_fill = f"#{argb}"
+                                                            # Case 2: Theme-based fill
+                                                            elif start_color.type == 'theme':
+                                                                Incorrect_values.setdefault('GPCR Value (Column C)', {})[index] = (
+                                                                    'Theme-based cell color detected. Please use standard RGB fill (not theme colors - or use "Optional: Assign hex codes" only).'
+                                                                )
+
+                                                    if color_override_cell and getattr(color_override_cell, 'value', None) not in (None, ""):
                                                         color_override = str(color_override_cell.value).strip()
 
                                                     if color_override:
@@ -1693,7 +1709,6 @@ class DataMapperHome(TemplateView):
                                                 else:
                                                     Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.'
 
-                                                    Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
                                         # Check if any values are incorrect #
                                         status = 'Success'
 
@@ -1708,30 +1723,28 @@ class DataMapperHome(TemplateView):
                                                     break
                                         else:
                                             status = 'Failed'
-                                            
+
                                         ## Update Plot_parser for GPCRome Wheel
                                         Plot_parser = status
 
-                               
                                     ###############
                                     ### Heatmap ###
                                     ###############
 
                                     elif Plot_name == 'Heatmap':
-                                        
                                         ## Initialize Local values ##
                                         IndexToColumn = ['A','B','C','D','E','F']
                                         # Initialize the inccorect column values
                                         empty_sheet = True  # Initialize the flag
                                         HeatmapNonEmptyEntryCounter = 0
-                                        
+
                                         # Check if sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) to G (6) is not None or empty
                                             if any(cell not in (None, "") for cell in row[1:6]):  # Slice [1:6] to include columns B-F
                                                 empty_sheet = False
                                                 break
-                                        
+
                                         # If sheet is empty continue and report
                                         if empty_sheet:
                                             pass
@@ -1741,18 +1754,18 @@ class DataMapperHome(TemplateView):
                                                 # Check if column A has a value AND at least one column in B-G has a value
                                                 if row[0] not in (None, "") and any(cell not in (None, "") for cell in row[1:7]):
                                                     HeatmapNonEmptyEntryCounter += 1
-                                                
+
                                                 # Stop if we exceed 200 valid entries
                                                 if HeatmapNonEmptyEntryCounter > 50:
                                                     break
-                                            
+
                                             if HeatmapNonEmptyEntryCounter > 50:
                                                 Incorrect_values['Error'] = "Detected more than 50 entries. The Heatmap can not handle that many GPCRs to be able to visualize them in one plot."
                                             else:
                                                 # If sheet is not empty then start handling the data
                                                 # Iterate through the rows and validate the data
                                                 for index, row in enumerate(worksheet.iter_rows(min_row=2, values_only=True), start=2):
-                                                    
+
                                                      # Get raw input
                                                     receptor_raw = row[0]
 
@@ -1800,17 +1813,15 @@ class DataMapperHome(TemplateView):
                                                             break
                                                 else:
                                                     status = 'Failed'
-                                                    
+
                                                 ## Update Plot_parser for GPCRome Wheel
                                                 Plot_parser = status
-                            
+
                             #######################################################
                             ## Evaluate the uploaded data and pass on the report ##
                             #######################################################
 
                             plot_data_json = json.dumps(Data) if Data else "No Data"
-
-                            # prot = Protein.objects.prefetch_related('genes').get(entry_name='5ht1a_human')
 
                             if Plot_parser in ('Success','Empty sheet'):
                                 context = {'upload_status': 'Success',
@@ -1828,7 +1839,7 @@ class DataMapperHome(TemplateView):
                                     context['Incorrect_data_json'] = Incorrect_values
                                 else:
                                     context['Incorrect_data_json'] = "No incorrect data"
-                            
+
                             # Return the rendered results
                             return render(request, f'mapper/DataMapperHome{self.page}.html', context)
 
