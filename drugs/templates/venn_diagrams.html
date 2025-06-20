@@ -772,6 +772,9 @@ $(document).ready(function () {
               $('.row-count-info').html(`<span class="row-count">${rowCountText}</span>`);
               // create compound preview
               compoundPreview("a.struct");
+          },
+          drawCallback: function(settings) {
+            compoundPreview("a.struct");
           }
       });
     }
