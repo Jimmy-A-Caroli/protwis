@@ -719,9 +719,6 @@ class DataMapperHome(TemplateView):
                 "Data": GPCRome_dict
             }
 
-
-
-
     @staticmethod
     def update_nested_GPCRome_data(structure_dict, raw_data):
         def normalize_key(raw_key):
@@ -757,8 +754,6 @@ class DataMapperHome(TemplateView):
         recursive_update(structure_dict)
         return structure_dict
 
-
-    
     @staticmethod
     def generate_tree_plot(input_data): #ADD AN INPUT FILTER DICTIONARY
         ### TREE SECTION
@@ -1270,6 +1265,7 @@ class DataMapperHome(TemplateView):
                                                     DataValue = row[1].value
                                                     color_fill_cell = row[2] if len(row) > 2 else None
                                                     color_override_cell = row[3] if len(row) > 3 else None
+
                                                     if DataValue not in (None, ""):
                                                         try:
                                                             Data[receptor]['Value1'] = str(DataValue)
@@ -1281,11 +1277,23 @@ class DataMapperHome(TemplateView):
                                                     color_override = None
 
                                                     if color_fill_cell and color_fill_cell.fill:
-                                                        fgColor = color_fill_cell.fill.fgColor
-                                                        if fgColor and fgColor.type == 'rgb' and fgColor.rgb:
-                                                            argb = fgColor.rgb
-                                                            if len(argb) >= 6:
-                                                                color_fill = f"#{argb[-6:]}"  # Use RRGGBB
+                                                        fill = color_fill_cell.fill
+                                                        start_color = fill.start_color
+
+                                                        if start_color:
+                                                            # Case 1: Normal RGB fill (ARGB or RGB)
+                                                            if start_color.type == 'rgb' and start_color.rgb:
+                                                                argb = start_color.rgb
+                                                                if len(argb) == 8:
+                                                                    color_fill = f"#{argb[-6:]}"  # Strip alpha
+                                                                elif len(argb) == 6:
+                                                                    color_fill = f"#{argb}"
+
+                                                            # Case 2: Theme fill – warn user
+                                                            elif start_color.type == 'theme':
+                                                                Incorrect_values.setdefault('GPCR Value (Column C)', {})[index] = (
+                                                                    'Theme-based cell color detected. Please use standard RGB fill (not theme colors - or use "Optional: Assign hex codes" only).'
+                                                                )
 
                                                     if color_override_cell and color_override_cell.value not in (None, ""):
                                                         color_override = str(color_override_cell.value).strip()
@@ -1300,7 +1308,6 @@ class DataMapperHome(TemplateView):
                                                         Data[receptor]['Value2'] = color_fill
                                                     else:
                                                         Data[receptor]['Value2'] = "Black"
-
                                                 else:
                                                     Incorrect_values.setdefault('Errors', {})[index] = (
                                                         'Incorrect datatype: Unable to determine if Numeric or Text. Excel sheet may not match template.'
@@ -1398,10 +1405,10 @@ class DataMapperHome(TemplateView):
                                                                         Incorrect_values.setdefault(column_key, {})[index] = 'Non-numeric Value'
                                                         # ==== TEXT ====
                                                         elif Plot_type == 'Text':
-                                                             
                                                             DataValue = row[1].value
                                                             color_fill_cell = row[2] if len(row) > 2 else None
                                                             color_override_cell = row[3] if len(row) > 3 else None
+
                                                             if DataValue not in (None, ""):
                                                                 try:
                                                                     Data[receptor]['Inner'] = str(DataValue)
@@ -1413,11 +1420,23 @@ class DataMapperHome(TemplateView):
                                                             color_override = None
 
                                                             if color_fill_cell and color_fill_cell.fill:
-                                                                fgColor = color_fill_cell.fill.fgColor
-                                                                if fgColor and fgColor.type == 'rgb' and fgColor.rgb:
-                                                                    argb = fgColor.rgb
-                                                                    if len(argb) >= 6:
-                                                                        color_fill = f"#{argb[-6:]}"  # Use RRGGBB
+                                                                fill = color_fill_cell.fill
+                                                                start_color = fill.start_color
+
+                                                                if start_color:
+                                                                    # Case 1: Normal RGB fill (ARGB or RGB)
+                                                                    if start_color.type == 'rgb' and start_color.rgb:
+                                                                        argb = start_color.rgb
+                                                                        if len(argb) == 8:
+                                                                            color_fill = f"#{argb[-6:]}"  # Strip alpha
+                                                                        elif len(argb) == 6:
+                                                                            color_fill = f"#{argb}"
+
+                                                                    # Case 2: Theme-based fill – show warning
+                                                                    elif start_color.type == 'theme':
+                                                                        Incorrect_values.setdefault('GPCR Value (Column C)', {})[index] = (
+                                                                            'Theme-based cell color detected. Please use standard RGB fill (not theme colors - or use "Optional: Assign hex codes" only).'
+                                                                        )
 
                                                             if color_override_cell and color_override_cell.value not in (None, ""):
                                                                 color_override = str(color_override_cell.value).strip()

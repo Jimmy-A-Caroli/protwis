@@ -6,15 +6,13 @@
 <link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/Spectrum_1_8_1.css' %}" type="text/css" />
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
-
 {% endblock %}
 
 {% block content %}
-
 <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
    <div class="col-md-12" style="margin-bottom: 20px;">
   <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: nowrap;">
-    
+
     <!-- Receptor names dropdown -->
     <div class="dropdown" style="position: relative;">
       <button class="btn btn-primary dropdown-toggle" type="button" id="GPCRome_LabelType_Button"
@@ -85,7 +83,6 @@
       </div>
     </div>
 
-
     <!-- Graphical legend dropdown -->
     <div class="dropdown" style="position: relative;">
       <button class="btn btn-primary dropdown-toggle" type="button" id="GraphicalLegend_Button"
@@ -130,15 +127,13 @@
         </button>
       </div>
     </div>
-
-
   </div>
 </div>
 
 <div id="image-container" data-image-url="{% static 'home/images/DataMapper/DataMapper_GPCRome_icon_legend.png' %}"></div>
-<div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
-    <div id="GPCRome_plot" class="text-center"></div>
-</div>
+  <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
+      <div id="GPCRome_plot" class="text-center"></div>
+  </div>
 </div>
 {% endblock %}
 
@@ -151,7 +146,6 @@
 <script src="{% static 'home/js/datamapper.js' %}"></script>
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
-
 
 <!-- Universal scripts -->
 <script>
@@ -222,276 +216,270 @@ if (PlotType === 'Numeric') {
       LegendLayout: { "mode": "row", "columns": "1" }
   };
 
-let GPCRome_location = "GPCRome_plot";
-DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling);
-UpdateGPCRomeColorPickers();
+  let GPCRome_location = "GPCRome_plot";
+  DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling);
+  UpdateGPCRomeColorPickers();
 
-// Recursively extract all "Data" values from a nested object
-function extractDataValues(obj) {
-    let values = [];
+  // Recursively extract all "Data" values from a nested object
+  function extractDataValues(obj) {
+      let values = [];
 
-    function findData(node) {
-        if (typeof node === "object" && node !== null) {
-            for (const key in node) {
-                const value = node[key];
+      function findData(node) {
+          if (typeof node === "object" && node !== null) {
+              for (const key in node) {
+                  const value = node[key];
 
-                if (value && typeof value === "object" && "Data" in value) {
-                    const dataValue = Number(value.Data);
-                    if (!isNaN(dataValue)) {
-                        values.push(dataValue);
-                    }
-                } else {
-                    findData(value); // keep digging
-                }
-            }
-        }
-    }
-
-    findData(obj);
-    return values;
-}
-
-function updateGPCRome() {
-    // Remove current
-    d3.select("#" + GPCRome_location).select("svg").remove();
-    // Redraw the GPCRome wheel plot
-    DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling); // ← Use the updated copy
-}
-
-// Attach click handler to dropdown items for receptor names
-document.addEventListener('DOMContentLoaded', function () {
-  const labelButton = document.getElementById('GPCRome_LabelType_Button');
-  const labelButtons = document.querySelectorAll('.GPCRome-label-btn');
-
-  // Set initial button label
-  // labelButton.textContent = GPCRomes_styling.LabelType || 'Protein';
-
-  labelButtons.forEach(btn => {
-    // Highlight the active label on load
-    if (btn.getAttribute('data-value') === GPCRomes_styling.LabelType) {
-      btn.classList.remove('btn-outline-primary');
-      btn.classList.add('btn-primary');
-    }
-
-    btn.addEventListener('click', function () {
-      const selectedValue = this.getAttribute('data-value');
-
-      // Update GPCRomes_styling
-      GPCRomes_styling.LabelType = selectedValue;
-      updateGPCRome();
-
-      // Highlight selected button
-      labelButtons.forEach(b => {
-        b.classList.remove('btn-primary');
-        b.classList.add('btn-outline-primary');
-      });
-      this.classList.remove('btn-outline-primary');
-      this.classList.add('btn-primary');
-    });
-  });
-});
-
-
-document.addEventListener('DOMContentLoaded', function () {
-  const graphicalLegendOptions = document.querySelectorAll('.graphical-legend-option');
-
-  graphicalLegendOptions.forEach(btn => {
-    const iconValue = btn.getAttribute('data-icon') === 'true';
-    const legendValue = btn.getAttribute('data-legend') === 'true';
-
-    // Highlight the current selected state on load
-    if (iconValue === GPCRomes_styling.showIcon && legendValue === GPCRomes_styling.ShowLegend) {
-      btn.classList.remove('btn-outline-primary');
-      btn.classList.add('btn-primary');
-    }
-
-    btn.addEventListener('click', function () {
-      // Update styling
-      GPCRomes_styling.showIcon = iconValue;
-      GPCRomes_styling.ShowLegend = legendValue;
-
-      // Redraw the plot
-      updateGPCRome();
-
-      // Update button highlight state
-      graphicalLegendOptions.forEach(b => {
-        b.classList.remove('btn-primary');
-        b.classList.add('btn-outline-primary');
-      });
-      this.classList.remove('btn-outline-primary');
-      this.classList.add('btn-primary');
-    });
-  });
-});
-
-
-document.addEventListener('DOMContentLoaded', function () {
-  const downloadBtn = document.querySelector('#DownloadDropdownToggle');
-  const downloadMenu = downloadBtn?.nextElementSibling;
-
-  if (downloadBtn && downloadMenu) {
-    downloadBtn.addEventListener('click', function (e) {
-      e.stopPropagation(); // prevent bubbling
-      downloadMenu.style.display = (downloadMenu.style.display === 'block') ? 'none' : 'block';
-    });
-
-    // Close it when clicking anywhere else
-    document.addEventListener('click', function () {
-      downloadMenu.style.display = 'none';
-    });
-
-    // Prevent menu itself from closing if clicked inside
-    downloadMenu.addEventListener('click', function (e) {
-      e.stopPropagation();
-    });
-  }
-});
-
-// ###################
-// ## Color styling ##
-// ###################
-function UpdateGPCRomeColorPickers() {
-  const selectedValue = $('#GPCRome_color_styling').val();
-
-  const colorPresets = {
-    "One": {
-      setup: "One",
-      colorStart: "#ffffff",
-      colorAvg: "#ffffff",
-      colorEnd: "#707070"
-    },
-    "Two": {
-      setup: "Two",
-      colorStart: "#97a6c4",
-      colorAvg: "#ffffff",
-      colorEnd: "#384860"
-    },
-    "Three_RWB": {
-      setup: "Three",
-      colorStart: "#a00000",
-      colorAvg: "#ffffff",
-      colorEnd: "#1a80bb"
-    },
-    "Three_TWM": {
-      setup: "Three",
-      colorStart: "#298c8c",
-      colorAvg: "#ffffff",
-      colorEnd: "#800074"
-    }
-  };
-
-  const preset = colorPresets[selectedValue];
-
-  if (preset) {
-    GPCRomes_styling.ColorSetup = preset.setup;
-    GPCRomes_styling.colorStart = preset.colorStart;
-    GPCRomes_styling.colorAvg = preset.colorAvg;
-    GPCRomes_styling.colorEnd = preset.colorEnd;
-
-    $("#GPCRome_colorPicker_min").spectrum("set", preset.colorStart);
-    $("#GPCRome_colorPicker_avg").spectrum("set", preset.colorAvg);
-    $("#GPCRome_colorPicker_max").spectrum("set", preset.colorEnd);
-  }
-
-  const showMin = GPCRomes_styling.ColorSetup !== 'One';
-  const showAvg = GPCRomes_styling.ColorSetup === 'Three';
-
-  document.getElementById("GPCRome_Color_min_container").style.visibility = showMin ? 'visible' : 'hidden';
-  document.getElementById("GPCRome_Color_avg_container").style.visibility = showAvg ? 'visible' : 'hidden';
-  document.getElementById("GPCRome_Color_max_container").style.visibility = 'visible';
-
-  document.getElementById("GPCRome_Color_min_label").style.visibility = showMin ? 'visible' : 'hidden';
-  document.getElementById("GPCRome_Color_avg_label").style.visibility = showAvg ? 'visible' : 'hidden';
-
-  updateGPCRome();
-}
-
-
-function updateGPCRomeVisualization() {
-  const colorMin = $("#GPCRome_colorPicker_min").spectrum("get").toHexString();
-  const colorAvg = $("#GPCRome_colorPicker_avg").spectrum("get").toHexString();
-  const colorMax = $("#GPCRome_colorPicker_max").spectrum("get").toHexString();
-
-  GPCRomes_styling.colorStart = colorMin;
-  GPCRomes_styling.colorAvg = colorAvg;
-  GPCRomes_styling.colorEnd = colorMax;
-
-  // Dynamically update the plot
-  updateGPCRome();
-}
-
-// Initialize all color pickers for GPCRomeWheel
-$(document).ready(function() {
-  function initializeGPCRomeColorPicker(elementId, start_color) {
-    $("#" + elementId).spectrum({
-      color: start_color,
-      showPalette: true,
-      showInput: true,
-      preferredFormat: "hex",
-      palette: [
-        ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
-        ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
-        ["#800000", "#808000", "#008000", "#800080", "#008080"],
-        ["#000080"]
-      ],
-      change: function(color) {
-        updateGPCRomeVisualization();
-      },
-      move: function(color) {
-        updateGPCRomeVisualization();
+                  if (value && typeof value === "object" && "Data" in value) {
+                      const dataValue = Number(value.Data);
+                      if (!isNaN(dataValue)) {
+                          values.push(dataValue);
+                      }
+                  } else {
+                      findData(value); // keep digging
+                  }
+              }
+          }
       }
-    });
+      findData(obj);
+      return values;
   }
 
-  // Initialize color pickers
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.colorAvg);
-  $("#GPCRome_colorPicker_avg").spectrum("disable");
-  initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
-});
+  function updateGPCRome() {
+      // Remove current
+      d3.select("#" + GPCRome_location).select("svg").remove();
+      // Redraw the GPCRome wheel plot
+      DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling); // ← Use the updated copy
+  }
 
+  // Attach click handler to dropdown items for receptor names
+  document.addEventListener('DOMContentLoaded', function () {
+    const labelButton = document.getElementById('GPCRome_LabelType_Button');
+    const labelButtons = document.querySelectorAll('.GPCRome-label-btn');
 
-$(document).ready(function () {
-  function formatColorScheme(option) {
-    if (!option.id) return option.text;
+    // Set initial button label
+    // labelButton.textContent = GPCRomes_styling.LabelType || 'Protein';
 
-    const colorSlots = {
-      "One": [null, null, "#707070"], // Only Max
-      "Two": ["#97a6c4", null, "#384860"], // Min, (empty), Max
-      "Three_RWB": ["#a00000", "#ffffff", "#1a80bb"],
-      "Three_TWM": ["#298c8c", "#ffffff", "#800074"]
+    labelButtons.forEach(btn => {
+      // Highlight the active label on load
+      if (btn.getAttribute('data-value') === GPCRomes_styling.LabelType) {
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary');
+      }
+
+      btn.addEventListener('click', function () {
+        const selectedValue = this.getAttribute('data-value');
+
+        // Update GPCRomes_styling
+        GPCRomes_styling.LabelType = selectedValue;
+        updateGPCRome();
+
+        // Highlight selected button
+        labelButtons.forEach(b => {
+          b.classList.remove('btn-primary');
+          b.classList.add('btn-outline-primary');
+        });
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary');
+      });
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const graphicalLegendOptions = document.querySelectorAll('.graphical-legend-option');
+
+    graphicalLegendOptions.forEach(btn => {
+      const iconValue = btn.getAttribute('data-icon') === 'true';
+      const legendValue = btn.getAttribute('data-legend') === 'true';
+
+      // Highlight the current selected state on load
+      if (iconValue === GPCRomes_styling.showIcon && legendValue === GPCRomes_styling.ShowLegend) {
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary');
+      }
+
+      btn.addEventListener('click', function () {
+        // Update styling
+        GPCRomes_styling.showIcon = iconValue;
+        GPCRomes_styling.ShowLegend = legendValue;
+
+        // Redraw the plot
+        updateGPCRome();
+
+        // Update button highlight state
+        graphicalLegendOptions.forEach(b => {
+          b.classList.remove('btn-primary');
+          b.classList.add('btn-outline-primary');
+        });
+        this.classList.remove('btn-outline-primary');
+        this.classList.add('btn-primary');
+      });
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const downloadBtn = document.querySelector('#DownloadDropdownToggle');
+    const downloadMenu = downloadBtn?.nextElementSibling;
+
+    if (downloadBtn && downloadMenu) {
+      downloadBtn.addEventListener('click', function (e) {
+        e.stopPropagation(); // prevent bubbling
+        downloadMenu.style.display = (downloadMenu.style.display === 'block') ? 'none' : 'block';
+      });
+
+      // Close it when clicking anywhere else
+      document.addEventListener('click', function () {
+        downloadMenu.style.display = 'none';
+      });
+
+      // Prevent menu itself from closing if clicked inside
+      downloadMenu.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+    }
+  });
+
+  // ###################
+  // ## Color styling ##
+  // ###################
+  function UpdateGPCRomeColorPickers() {
+    const selectedValue = $('#GPCRome_color_styling').val();
+
+    const colorPresets = {
+      "One": {
+        setup: "One",
+        colorStart: "#ffffff",
+        colorAvg: "#ffffff",
+        colorEnd: "#707070"
+      },
+      "Two": {
+        setup: "Two",
+        colorStart: "#97a6c4",
+        colorAvg: "#ffffff",
+        colorEnd: "#384860"
+      },
+      "Three_RWB": {
+        setup: "Three",
+        colorStart: "#a00000",
+        colorAvg: "#ffffff",
+        colorEnd: "#1a80bb"
+      },
+      "Three_TWM": {
+        setup: "Three",
+        colorStart: "#298c8c",
+        colorAvg: "#ffffff",
+        colorEnd: "#800074"
+      }
     };
 
-    const colors = colorSlots[option.id];
-    if (colors) {
-      const $option = $(`
-        <span style="display:flex; align-items:center;">
-          <span style="min-width: 50px; display:inline-block;text-align: center; padding-right: 5px;">${option.text}</span>
-          ${colors.map(color => {
-            const bg = color || 'transparent';
-            const opacity = color ? '' : 'opacity:0;';
-            return `<span style="display:inline-block;width:14px;height:14px;margin-left:5px;border:1px solid #ccc;border-radius:2px;background:${bg};${opacity}"></span>`;
-          }).join('')}
-        </span>
-      `);
-      return $option;
+    const preset = colorPresets[selectedValue];
+
+    if (preset) {
+      GPCRomes_styling.ColorSetup = preset.setup;
+      GPCRomes_styling.colorStart = preset.colorStart;
+      GPCRomes_styling.colorAvg = preset.colorAvg;
+      GPCRomes_styling.colorEnd = preset.colorEnd;
+
+      $("#GPCRome_colorPicker_min").spectrum("set", preset.colorStart);
+      $("#GPCRome_colorPicker_avg").spectrum("set", preset.colorAvg);
+      $("#GPCRome_colorPicker_max").spectrum("set", preset.colorEnd);
     }
 
-    return option.text;
+    const showMin = GPCRomes_styling.ColorSetup !== 'One';
+    const showAvg = GPCRomes_styling.ColorSetup === 'Three';
+
+    document.getElementById("GPCRome_Color_min_container").style.visibility = showMin ? 'visible' : 'hidden';
+    document.getElementById("GPCRome_Color_avg_container").style.visibility = showAvg ? 'visible' : 'hidden';
+    document.getElementById("GPCRome_Color_max_container").style.visibility = 'visible';
+
+    document.getElementById("GPCRome_Color_min_label").style.visibility = showMin ? 'visible' : 'hidden';
+    document.getElementById("GPCRome_Color_avg_label").style.visibility = showAvg ? 'visible' : 'hidden';
+
+    updateGPCRome();
   }
 
-  $('#GPCRome_color_styling').select2({
-    templateResult: formatColorScheme,
-    templateSelection: formatColorScheme,
-    width: 'resolve'
+  function updateGPCRomeVisualization() {
+    const colorMin = $("#GPCRome_colorPicker_min").spectrum("get").toHexString();
+    const colorAvg = $("#GPCRome_colorPicker_avg").spectrum("get").toHexString();
+    const colorMax = $("#GPCRome_colorPicker_max").spectrum("get").toHexString();
+
+    GPCRomes_styling.colorStart = colorMin;
+    GPCRomes_styling.colorAvg = colorAvg;
+    GPCRomes_styling.colorEnd = colorMax;
+
+    // Dynamically update the plot
+    updateGPCRome();
+  }
+
+  // Initialize all color pickers for GPCRomeWheel
+  $(document).ready(function() {
+    function initializeGPCRomeColorPicker(elementId, start_color) {
+      $("#" + elementId).spectrum({
+        color: start_color,
+        showPalette: true,
+        showInput: true,
+        preferredFormat: "hex",
+        palette: [
+          ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+          ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
+          ["#800000", "#808000", "#008000", "#800080", "#008080"],
+          ["#000080"]
+        ],
+        change: function(color) {
+          updateGPCRomeVisualization();
+        },
+        move: function(color) {
+          updateGPCRomeVisualization();
+        }
+      });
+    }
+
+    // Initialize color pickers
+    initializeGPCRomeColorPicker("GPCRome_colorPicker_min", GPCRomes_styling.colorStart);
+    initializeGPCRomeColorPicker("GPCRome_colorPicker_avg", GPCRomes_styling.colorAvg);
+    $("#GPCRome_colorPicker_avg").spectrum("disable");
+    initializeGPCRomeColorPicker("GPCRome_colorPicker_max", GPCRomes_styling.colorEnd);
   });
 
-  // Attach change handler after initializing Select2
-  $('#GPCRome_color_styling').on('change', function () {
-    UpdateGPCRomeColorPickers();
+  $(document).ready(function () {
+    function formatColorScheme(option) {
+      if (!option.id) return option.text;
+
+      const colorSlots = {
+        "One": [null, null, "#707070"], // Only Max
+        "Two": ["#97a6c4", null, "#384860"], // Min, (empty), Max
+        "Three_RWB": ["#a00000", "#ffffff", "#1a80bb"],
+        "Three_TWM": ["#298c8c", "#ffffff", "#800074"]
+      };
+
+      const colors = colorSlots[option.id];
+      if (colors) {
+        const $option = $(`
+          <span style="display:flex; align-items:center;">
+            <span style="min-width: 50px; display:inline-block;text-align: center; padding-right: 5px;">${option.text}</span>
+            ${colors.map(color => {
+              const bg = color || 'transparent';
+              const opacity = color ? '' : 'opacity:0;';
+              return `<span style="display:inline-block;width:14px;height:14px;margin-left:5px;border:1px solid #ccc;border-radius:2px;background:${bg};${opacity}"></span>`;
+            }).join('')}
+          </span>
+        `);
+        return $option;
+      }
+
+      return option.text;
+    }
+
+    $('#GPCRome_color_styling').select2({
+      templateResult: formatColorScheme,
+      templateSelection: formatColorScheme,
+      width: 'resolve'
+    });
+
+    // Attach change handler after initializing Select2
+    $('#GPCRome_color_styling').on('change', function () {
+      UpdateGPCRomeColorPickers();
+    });
   });
-});
 }
 </script>
-
 {% endblock %}

@@ -1933,7 +1933,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     .style('stroke-width', 1)
                     .style('fill', fillColor);
                 break;
-            case 'rect':
+            case 'rectangle':
                 plotGroup.append('rect')
                     .attr('x', x - size)
                     .attr('y', y - size)
@@ -2068,7 +2068,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                 // const col3_XoffSet = 40;
                 // const col4_XoffSet = 60;
 
-                const Shape_list = ['circle', 'rect', 'triangle', 'star', 'diamond'];
+                const Shape_list = ['circle', 'rectangle', 'triangle', 'star', 'diamond'];
 
                 // ### Column 1 ###
                 if (Col1_data_checker && (Col1_shape || Col1_data) && offsetMap['Col1'] !== undefined) {
@@ -3094,7 +3094,6 @@ function DrawGPCRomeWheel(Data, location, GPCRome_styling) {
             // Check if the text value is in the Header_list
             const isInHeaderList = CircleHeaders.includes(text_value)  && text_value !== "Classless";
             const FirstHeader = CircleHeaders[0];
-            // console.log(FirstHeader)
 
             // Check if the text value is in the Family_list
             const isInFamilyList = CircleSubHeaders.includes(text_value);

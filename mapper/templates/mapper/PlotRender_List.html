@@ -22,290 +22,285 @@
 {% endblock %}
 
 {% block content %}
-
 <div style="padding-top: 10px; font-size: 11px; white-space: nowrap;">
+  <div class="col-md-12" style="margin-top: 30px;">
+    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center;">
 
-<div class="col-md-12" style="margin-top: 30px;">
-  <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center;">
-    
-    <!-- Receptor names dropdown -->
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="receptorLabelDropdown" data-toggle="dropdown">
-        Receptor names
-      </button>
-      <div class="dropdown-menu p-2 text-center"
-          style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
-                  margin-left: 5px; position: absolute; transform: translateY(-50%);">
+      <!-- Receptor names dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="receptorLabelDropdown" data-toggle="dropdown">
+          Receptor names
+        </button>
+        <div class="dropdown-menu p-2 text-center"
+            style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
+                    margin-left: 5px; position: absolute; transform: translateY(-50%);">
 
-        <button class="btn btn-primary btn-block mb-1 receptor-label-btn" data-value="Protein" id="List_IUPHARNames">Protein</button>
-        <button class="btn btn-outline-primary btn-block mb-1 receptor-label-btn" data-value="Gene" id="List_GeneNames">Gene</button>
-        <button class="btn btn-outline-primary btn-block receptor-label-btn" data-value="UniProt" id="List_UniProtNames">UniProt</button>
+          <button class="btn btn-primary btn-block mb-1 receptor-label-btn" data-value="Protein" id="List_IUPHARNames">Protein</button>
+          <button class="btn btn-outline-primary btn-block mb-1 receptor-label-btn" data-value="Gene" id="List_GeneNames">Gene</button>
+          <button class="btn btn-outline-primary btn-block receptor-label-btn" data-value="UniProt" id="List_UniProtNames">UniProt</button>
+        </div>
       </div>
-    </div>
 
-    <!-- Layout Dropdown -->
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="layoutDropdown" data-toggle="dropdown">
-        Layout
-      </button>
-      <div class="dropdown-menu p-3 text-center"
-          style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%;
-                  margin-left: 5px; position: absolute; transform: translateY(-25%);">
+      <!-- Layout Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="layoutDropdown" data-toggle="dropdown">
+          Layout
+        </button>
+        <div class="dropdown-menu p-3 text-center"
+            style="min-width: 250px; padding: 10px 15px; left: 100%; top: 50%;
+                    margin-left: 5px; position: absolute; transform: translateY(-25%);">
 
-        <!-- Row 1: Layout selection -->
-        <div class="mb-3" style="padding: 10px 15px;">
-          <label for="List_Layout_Column_Selector" style="padding: 5px 0px;">Layout:</label>
-          <select id="List_Layout_Column_Selector" class="form-select" style="width:125px;text-align: center; padding: 5px;">
-            <option value="1">1 column</option>
-            <option value="2" selected>2 columns</option>
-            <option value="3">3 columns</option>
-            <option value="4">4 columns</option>
-          </select>
-        </div>
-
-        <!-- Row 2: Label max count label -->
-        <div class="mb-2" style="padding: 5px 15px;">
-          <label for="Layout_Max_Label">Max label number per column:</label>
-        </div>
-
-        <!-- Row 3: Dropdown and numeric input -->
-        <div class="d-flex justify-content-center align-items-center gap-2" style="padding: 0px 15px 10px;">
-          <select id="Layout_Max_Label" class="form-select" style="width: 120px;padding: 5px;">
-            <option value="Auto" selected>Auto</option>
-            <option value="Custom">Custom</option>
-          </select>
-          <input type="number" id="List_Layout_Max_Label_input"
-                class="form-control"
-                style="width: 80px;"
-                min="1">
-        </div>
-        <!-- Row 4: -->
-        <div class="mb-2" style="padding: 10px 15px;">
-          <label>Visible labels:</label>
-        </div>
-        <div class="form-check mb-2" style="padding: 0px 15px;margin-top:-10px">
-          <input class="form-check-input" type="checkbox" id="toggle-layer-1" checked>
-          <label class="form-check-label" for="toggle-layer-1">Display class</label>
-        </div>
-        <div class="form-check mb-2" style="padding: 0px 15px;">
-          <input class="form-check-input" type="checkbox" id="toggle-layer-2" checked>
-          <label class="form-check-label" for="toggle-layer-2">Display ligand type</label>
-        </div>
-        <div class="form-check mb-2" style="padding: 0px 15px;">
-          <input class="form-check-input" type="checkbox" id="toggle-layer-3" checked>
-          <label class="form-check-label" for="toggle-layer-3">Display receptor family</label>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Label Styling Dropdown -->
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown">
-        Labels
-      </button>
-      <div class="dropdown-menu p-3" style="min-width: 325px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-9%);">
-        <!-- Class Section -->
-        <div class="mb-4" style="margin-bottom: 20px;">
-          <label style="font-weight: bold; display: block; margin-bottom: 8px;">Class</label>
-          <!-- Row 1: Color picker + checkboxes -->
-          <div style="white-space: nowrap;">
-            <!-- Color Picker -->
-            <input type="text" id="colorPicker_Class" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <!-- Bold -->
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="boldCheckbox_Class"> Bold
-              </label>
-            </div>
-            <!-- Italic -->
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="italicCheckbox_Class"> Italic
-              </label>
-            </div>
-            <!-- Underline -->
-            <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="underlineCheckbox_Class"> Underline
-              </label>
-            </div>
-          </div>
-          <!-- Label above slider -->
-          <div class="text-center" style="margin-top: 10px;">
-            <label class="form-label">Font size</label>
+          <!-- Row 1: Layout selection -->
+          <div class="mb-3" style="padding: 10px 15px;">
+            <label for="List_Layout_Column_Selector" style="padding: 5px 0px;">Layout:</label>
+            <select id="List_Layout_Column_Selector" class="form-select" style="width:125px;text-align: center; padding: 5px;">
+              <option value="1">1 column</option>
+              <option value="2" selected>2 columns</option>
+              <option value="3">3 columns</option>
+              <option value="4">4 columns</option>
+            </select>
           </div>
 
-          <!-- Slider -->
-          <input type="range" class="form-control" min="8" max="32" id="fontSizeSlider_Class" style="width: 100%;">
-
-          <!-- Value under slider -->
-          <div class="text-center" style="margin-top: -5px;">
-            <span id="fontSizeSliderLabel_Class">20 px</span>
-          </div>
-        </div>
-        <!-- Ligand Type Section -->
-        <div class="mb-4" style="margin-bottom: 20px;">
-          <hr>
-          <label style="font-weight: bold; display: block; margin-bottom: 8px;">Ligand type</label>
-          <!-- Row 1: Color picker + checkboxes -->
-          <div style="white-space: nowrap;">
-            <input type="text" id="colorPicker_LigandType" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="boldCheckbox_LigandType"> Bold
-              </label>
-            </div>
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="italicCheckbox_LigandType"> Italic
-              </label>
-            </div>
-            <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="underlineCheckbox_LigandType"> Underline
-              </label>
-            </div>
-          </div>
-          <!-- Label above slider -->
-          <div class="text-center" style="margin-top: 10px;">
-            <label class="form-label">Font size</label>
+          <!-- Row 2: Label max count label -->
+          <div class="mb-2" style="padding: 5px 15px;">
+            <label for="Layout_Max_Label">Max label number per column:</label>
           </div>
 
-          <!-- Slider -->
-          <input type="range" class="form-control" min="8" max="28" id="fontSizeSlider_LigandType" style="width: 100%;">
-
-          <!-- Value under slider -->
-          <div class="text-center" style="margin-top: -5px;">
-            <span id="fontSizeSliderLabel_LigandType">18 px</span>
+          <!-- Row 3: Dropdown and numeric input -->
+          <div class="d-flex justify-content-center align-items-center gap-2" style="padding: 0px 15px 10px;">
+            <select id="Layout_Max_Label" class="form-select" style="width: 120px;padding: 5px;">
+              <option value="Auto" selected>Auto</option>
+              <option value="Custom">Custom</option>
+            </select>
+            <input type="number" id="List_Layout_Max_Label_input"
+                  class="form-control"
+                  style="width: 80px;"
+                  min="1">
           </div>
-        </div>
-        <!-- Receptor Family Section -->
-        <div class="mb-4" style="margin-bottom: 20px;">
-          <hr>
-          <label style="font-weight: bold; display: block; margin-bottom: 8px;">Receptor family</label>
-          <div style="white-space: nowrap;">
-            <input type="text" id="colorPicker_ReceptorFamily" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="boldCheckbox_ReceptorFamily"> Bold
-              </label>
-            </div>
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="italicCheckbox_ReceptorFamily"> Italic
-              </label>
-            </div>
-            <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="underlineCheckbox_ReceptorFamily"> Underline
-              </label>
-            </div>
+          <!-- Row 4: -->
+          <div class="mb-2" style="padding: 10px 15px;">
+            <label>Visible labels:</label>
           </div>
-          <!-- Label above slider -->
-          <div class="text-center" style="margin-top: 10px;">
-            <label class="form-label">Font size</label>
+          <div class="form-check mb-2" style="padding: 0px 15px;margin-top:-10px">
+            <input class="form-check-input" type="checkbox" id="toggle-layer-1" checked>
+            <label class="form-check-label" for="toggle-layer-1">Display class</label>
           </div>
-
-          <!-- Slider -->
-          <input type="range" class="form-control" min="8" max="28" id="fontSizeSlider_ReceptorFamily" style="width: 100%;">
-
-          <!-- Value under slider -->
-          <div class="text-center" style="margin-top: -5px;">
-            <span id="fontSizeSliderLabel_ReceptorFamily">16 px</span>
+          <div class="form-check mb-2" style="padding: 0px 15px;">
+            <input class="form-check-input" type="checkbox" id="toggle-layer-2" checked>
+            <label class="form-check-label" for="toggle-layer-2">Display ligand type</label>
           </div>
-
-        </div>
-        <!-- Receptor Section -->
-        <div class="mb-2" style="margin-bottom: 20px;">
-          <hr>
-          <label style="font-weight: bold; display: block; margin-bottom: 8px;">Receptor</label>
-          <div style="white-space: nowrap;">
-            <input type="text" id="colorPicker_Receptor" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="boldCheckbox_Receptor"> Bold
-              </label>
-            </div>
-            <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="italicCheckbox_Receptor"> Italic
-              </label>
-            </div>
-            <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
-              <label style="margin-bottom: 0;">
-                <input type="checkbox" id="underlineCheckbox_Receptor"> Underline
-              </label>
-            </div>
-          </div>
-          <!-- Label above slider -->
-          <div class="text-center" style="margin-top: 10px;">
-            <label class="form-label">Font size</label>
-          </div>
-
-          <!-- Slider -->
-          <input type="range" class="form-control" min="8" max="26" id="fontSizeSlider_Receptor" style="width: 100%;">
-
-          <!-- Value under slider -->
-          <div class="text-center" style="margin-top: -5px;">
-            <span id="fontSizeSliderLabel_Receptor">14 px</span>
+          <div class="form-check mb-2" style="padding: 0px 15px;">
+            <input class="form-check-input" type="checkbox" id="toggle-layer-3" checked>
+            <label class="form-check-label" for="toggle-layer-3">Display receptor family</label>
           </div>
 
         </div>
       </div>
-    </div>
 
-    
-    <!-- Color Styling Dropdown -->
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown">
-        Colors
-      </button>
-      <div class="dropdown-menu p-3" style="min-width: 525px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-25%);">
-        <div id="colorStylingContainer"></div>
+      <!-- Label Styling Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown">
+          Labels
+        </button>
+        <div class="dropdown-menu p-3" style="min-width: 325px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-9%);">
+          <!-- Class Section -->
+          <div class="mb-4" style="margin-bottom: 20px;">
+            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Class</label>
+            <!-- Row 1: Color picker + checkboxes -->
+            <div style="white-space: nowrap;">
+              <!-- Color Picker -->
+              <input type="text" id="colorPicker_Class" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
+              <!-- Bold -->
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="boldCheckbox_Class"> Bold
+                </label>
+              </div>
+              <!-- Italic -->
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="italicCheckbox_Class"> Italic
+                </label>
+              </div>
+              <!-- Underline -->
+              <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="underlineCheckbox_Class"> Underline
+                </label>
+              </div>
+            </div>
+            <!-- Label above slider -->
+            <div class="text-center" style="margin-top: 10px;">
+              <label class="form-label">Font size</label>
+            </div>
+
+            <!-- Slider -->
+            <input type="range" class="form-control" min="8" max="32" id="fontSizeSlider_Class" style="width: 100%;">
+
+            <!-- Value under slider -->
+            <div class="text-center" style="margin-top: -5px;">
+              <span id="fontSizeSliderLabel_Class">20 px</span>
+            </div>
+          </div>
+          <!-- Ligand Type Section -->
+          <div class="mb-4" style="margin-bottom: 20px;">
+            <hr>
+            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Ligand type</label>
+            <!-- Row 1: Color picker + checkboxes -->
+            <div style="white-space: nowrap;">
+              <input type="text" id="colorPicker_LigandType" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="boldCheckbox_LigandType"> Bold
+                </label>
+              </div>
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="italicCheckbox_LigandType"> Italic
+                </label>
+              </div>
+              <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="underlineCheckbox_LigandType"> Underline
+                </label>
+              </div>
+            </div>
+            <!-- Label above slider -->
+            <div class="text-center" style="margin-top: 10px;">
+              <label class="form-label">Font size</label>
+            </div>
+
+            <!-- Slider -->
+            <input type="range" class="form-control" min="8" max="28" id="fontSizeSlider_LigandType" style="width: 100%;">
+
+            <!-- Value under slider -->
+            <div class="text-center" style="margin-top: -5px;">
+              <span id="fontSizeSliderLabel_LigandType">18 px</span>
+            </div>
+          </div>
+          <!-- Receptor Family Section -->
+          <div class="mb-4" style="margin-bottom: 20px;">
+            <hr>
+            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Receptor family</label>
+            <div style="white-space: nowrap;">
+              <input type="text" id="colorPicker_ReceptorFamily" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="boldCheckbox_ReceptorFamily"> Bold
+                </label>
+              </div>
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="italicCheckbox_ReceptorFamily"> Italic
+                </label>
+              </div>
+              <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="underlineCheckbox_ReceptorFamily"> Underline
+                </label>
+              </div>
+            </div>
+            <!-- Label above slider -->
+            <div class="text-center" style="margin-top: 10px;">
+              <label class="form-label">Font size</label>
+            </div>
+
+            <!-- Slider -->
+            <input type="range" class="form-control" min="8" max="28" id="fontSizeSlider_ReceptorFamily" style="width: 100%;">
+
+            <!-- Value under slider -->
+            <div class="text-center" style="margin-top: -5px;">
+              <span id="fontSizeSliderLabel_ReceptorFamily">16 px</span>
+            </div>
+
+          </div>
+          <!-- Receptor Section -->
+          <div class="mb-2" style="margin-bottom: 20px;">
+            <hr>
+            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Receptor</label>
+            <div style="white-space: nowrap;">
+              <input type="text" id="colorPicker_Receptor" style="display: inline-block; width: 90px; vertical-align: middle; margin-right: 15px;" />
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0; margin-left: 10px;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="boldCheckbox_Receptor"> Bold
+                </label>
+              </div>
+              <div class="checkbox" style="display: inline-block; margin-right: 15px; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="italicCheckbox_Receptor"> Italic
+                </label>
+              </div>
+              <div class="checkbox" style="display: inline-block; margin-bottom: 0;">
+                <label style="margin-bottom: 0;">
+                  <input type="checkbox" id="underlineCheckbox_Receptor"> Underline
+                </label>
+              </div>
+            </div>
+            <!-- Label above slider -->
+            <div class="text-center" style="margin-top: 10px;">
+              <label class="form-label">Font size</label>
+            </div>
+
+            <!-- Slider -->
+            <input type="range" class="form-control" min="8" max="26" id="fontSizeSlider_Receptor" style="width: 100%;">
+
+            <!-- Value under slider -->
+            <div class="text-center" style="margin-top: -5px;">
+              <span id="fontSizeSliderLabel_Receptor">14 px</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Styling Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="Styling_Menu" data-toggle="dropdown">
+          Colors
+        </button>
+        <div class="dropdown-menu p-3" style="min-width: 525px; padding: 10px 15px; left: 100%; top: 50%; margin-left: 5px; position: absolute; transform: translateY(-25%);">
+          <div id="colorStylingContainer"></div>
+        </div>
+      </div>
+
+      <!-- Legend Labels Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="LegendLabelMenu" data-toggle="dropdown">
+          Legend
+        </button>
+        <div class="dropdown-menu p-3"
+            style="min-width: 400px; padding: 10px 15px; left: 100%; top: 50%;
+                    margin-left: 5px; position: absolute; transform: translateY(-25%);">
+          <div id="legendLabelContainer"></div>
+        </div>
+      </div>
+
+      <!-- Download Dropdown -->
+      <div class="dropdown" style="position: relative;">
+        <button type="button" class="btn btn-primary dropdown-toggle"
+                id="DownloadDropdownToggle" style="font-size: 14px;">
+          <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3;"></span>
+          Download <span class="caret"></span>
+        </button>
+
+        <div class="dropdown-menu text-center"
+            style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
+                    margin-left: 5px; position: absolute; transform: translateY(-40%);
+                    display: none; z-index: 999;">
+          <button type="button" class="btn btn-primary btn-block mb-1"
+                  onclick="saveSvgAsJpg(document.getElementById('ListPlot_visualization'), 'Listplot.jpg');">JPG</button>
+          <button type="button" class="btn btn-primary btn-block mb-1"
+                  onclick="saveSvgAsPng(document.getElementById('ListPlot_visualization'), 'Listplot.png');">PNG</button>
+          <button type="button" class="btn btn-primary btn-block mb-1"
+                  onclick="saveSvg(document.getElementById('ListPlot_visualization'), 'Listplot.svg');">SVG</button>
+          <button type="button" class="btn btn-primary btn-block"
+                  onclick="saveSvgAsTiff(document.getElementById('ListPlot_visualization'), 'Listplot.tiff');">TIFF</button>
+        </div>
       </div>
     </div>
-
-
-    <!-- Legend Labels Dropdown -->
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="LegendLabelMenu" data-toggle="dropdown">
-        Legend
-      </button>
-      <div class="dropdown-menu p-3"
-          style="min-width: 400px; padding: 10px 15px; left: 100%; top: 50%;
-                  margin-left: 5px; position: absolute; transform: translateY(-25%);">
-        <div id="legendLabelContainer"></div>
-      </div>
-    </div>
-
-    <!-- Download Dropdown -->
-    <div class="dropdown" style="position: relative;">
-      <button type="button" class="btn btn-primary dropdown-toggle"
-              id="DownloadDropdownToggle" style="font-size: 14px;">
-        <span class="glyphicon glyphicon-download" style="vertical-align: top; line-height: 1.3;"></span>
-        Download <span class="caret"></span>
-      </button>
-
-      <div class="dropdown-menu text-center"
-          style="min-width: 160px; padding: 10px 15px; left: 100%; top: 50%;
-                  margin-left: 5px; position: absolute; transform: translateY(-40%);
-                  display: none; z-index: 999;">
-        <button type="button" class="btn btn-primary btn-block mb-1"
-                onclick="saveSvgAsJpg(document.getElementById('ListPlot_visualization'), 'Listplot.jpg');">JPG</button>
-        <button type="button" class="btn btn-primary btn-block mb-1"
-                onclick="saveSvgAsPng(document.getElementById('ListPlot_visualization'), 'Listplot.png');">PNG</button>
-        <button type="button" class="btn btn-primary btn-block mb-1"
-                onclick="saveSvg(document.getElementById('ListPlot_visualization'), 'Listplot.svg');">SVG</button>
-        <button type="button" class="btn btn-primary btn-block"
-                onclick="saveSvgAsTiff(document.getElementById('ListPlot_visualization'), 'Listplot.tiff');">TIFF</button>
-      </div>
-    </div>
-
   </div>
-</div>
-
-<div id="ListPlot" class="text-left" style="margin-top: 120px; margin-left: 150px;"></div>
+  <!-- === List plot container === -->
+  <div id="ListPlot" class="text-left" style="margin-top: 120px; margin-left: 150px;"></div>
 </div>
 {% endblock %}
 
@@ -324,46 +319,40 @@
 $('.dropdown-menu').on('click', function(event){
     event.stopPropagation();
 });
-
 </script>
-
-
 <script>
 $(document).ready(function() {
+  // Function to initialize Spectrum color picker
+  function initialize_List_Styling_ColorPicker(elementId, start_color, layer) {
+      $("#" + elementId).spectrum({
+          color: start_color,
+          showPalette: true,
+          showInput: true,
+          preferredFormat: "hex",
+          palette: [
+              ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
+              ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
+              ["#800000", "#808000", "#008000", "#800080", "#008080"],
+              ["#000080"]
+          ],
+          change: function(color) {
+              Styling_Option_dict[layer].Color = color.toHexString();
+              updateVisualization_list();  // Re-render after final color selection
+          },
+          move: function(color) {
+              Styling_Option_dict[layer].Color = color.toHexString();
+              updateVisualization_list();  // Re-render after final color selection
+          }
+      });
+  }
 
-    // Function to initialize Spectrum color picker
-    function initialize_List_Styling_ColorPicker(elementId, start_color, layer) {
-        $("#" + elementId).spectrum({
-            color: start_color,
-            showPalette: true,
-            showInput: true,
-            preferredFormat: "hex",
-            palette: [
-                ["#000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00"],
-                ["#FF00FF", "#00FFFF", "#FFFFFF", "#C0C0C0", "#808080"],
-                ["#800000", "#808000", "#008000", "#800080", "#008080"],
-                ["#000080"]
-            ],
-            change: function(color) {
-                Styling_Option_dict[layer].Color = color.toHexString();
-                updateVisualization_list();  // Re-render after final color selection
-            },
-            move: function(color) {
-                Styling_Option_dict[layer].Color = color.toHexString();
-                updateVisualization_list();  // Re-render after final color selection
-            }
-        });
-    }
-
-    // Initialize all color pickers
-    initialize_List_Styling_ColorPicker('colorPicker_Class', Styling_Option_dict.Class.Color, 'Class');
-    initialize_List_Styling_ColorPicker('colorPicker_LigandType', Styling_Option_dict.LigandType.Color, 'LigandType');
-    initialize_List_Styling_ColorPicker('colorPicker_ReceptorFamily', Styling_Option_dict.ReceptorFamily.Color, 'ReceptorFamily');
-    initialize_List_Styling_ColorPicker('colorPicker_Receptor', Styling_Option_dict.Receptor.Color, 'Receptor');
+  // Initialize all color pickers
+  initialize_List_Styling_ColorPicker('colorPicker_Class', Styling_Option_dict.Class.Color, 'Class');
+  initialize_List_Styling_ColorPicker('colorPicker_LigandType', Styling_Option_dict.LigandType.Color, 'LigandType');
+  initialize_List_Styling_ColorPicker('colorPicker_ReceptorFamily', Styling_Option_dict.ReceptorFamily.Color, 'ReceptorFamily');
+  initialize_List_Styling_ColorPicker('colorPicker_Receptor', Styling_Option_dict.Receptor.Color, 'Receptor');
 });
 </script>
-
-
 <script>
 
 // #####################
@@ -373,16 +362,12 @@ $(document).ready(function() {
 var listdata = {{ listplot_data|safe }};
 var list_data_wow = {{ listplot_data_variables|safe }};
 var Label_conversion_dicts = {{Label_Conversion|safe}};
-
 var modded_list_data = Initialize_Data(listdata);
-
-
 data_types_list = {'Col1':'Continuous', 'Col2':'Continuous', 'Col3':'Continuous', 'Col4':'Continuous'}
 
 // #################################
 // ## Initialize global variables ##
 // #################################
-
 
 // # Initialize layout #
 var Layout_dict = {columns: 2, col_breaker: 'Custom', col_max_label: 'Auto', indentation: 'Yes'};
@@ -393,7 +378,6 @@ var Styling_Option_dict = {
     LigandType: {Bold: false, Italic: false, Underline: false, Fontsize: "18px", Color: "#000"},
     ReceptorFamily: {Bold: false, Italic: false, Underline: false, Fontsize: "16px", Color: "#000"},
     Receptor: {Bold: false, Italic: false, Underline: false, Fontsize: "14px", Color: "#000"}};
-
 
 // Initialize each section to match Styling_Option_dict
 function initializeStyling() {
@@ -432,8 +416,6 @@ var Barlabels = {'Col1':"Dataset 1",'Col2':"Dataset 2",'Col3':"Dataset 3",'Col4'
 
 // # Initialize data styling #
 var Data_styling = initializeDataStyling(list_data_wow, data_types_list);
-console.log(Data_styling)
-console.log(list_data_wow)
 const List_Data_result = Data_resorter(modded_list_data);
 var Data_array = List_Data_result.final_array;
 var Data_Category_array = List_Data_result.category_array;
@@ -456,14 +438,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // Function to update a label and redraw the legend
 function updateLabel(category) {
-    var inputId = "labelInput_" + category;
-    var newValue = document.getElementById(inputId).value;
+  var inputId = "labelInput_" + category;
+  var newValue = document.getElementById(inputId).value;
 
-    // Update the Label_dict
-    Barlabels[category] = newValue;
+  // Update the Label_dict
+  Barlabels[category] = newValue;
 
-    // Now re-run your createLegendBars with updated labels
-    updateVisualization_list();
+  // Now re-run your createLegendBars with updated labels
+  updateVisualization_list();
 }
 
 function Recalculate_data_and_update() {
@@ -489,32 +471,31 @@ function updateVisualization_list() {
 // Add event listeners to checkboxes
 d3.selectAll('input[type="checkbox"]').on("change", Recalculate_data_and_update);
 
-
 // #####################
 // ## Layout options  ##
 // #####################
 
 // Function to update the layout dynamically
 function UpdateLayout() {
-// Get values from dropdowns and input
-const Cols = parseInt(document.querySelector("#List_Layout_Column_Selector").value);
-const Max_label_selector = document.querySelector("#Layout_Max_Label").value;
-const Max_label_number = parseInt(document.querySelector("#List_Layout_Max_Label_input").value) || 1;
+  // Get values from dropdowns and input
+  const Cols = parseInt(document.querySelector("#List_Layout_Column_Selector").value);
+  const Max_label_selector = document.querySelector("#Layout_Max_Label").value;
+  const Max_label_number = parseInt(document.querySelector("#List_Layout_Max_Label_input").value) || 1;
 
-// Handle Max label number
-if (Max_label_selector === 'Auto') {
-    Layout_dict.col_max_label = 'Auto';
-    Layout_dict.Col_break_number = Math.ceil(Data_array.length / Cols);
-} else if (Max_label_selector === 'Custom') {
-    Layout_dict.col_max_label = 'Custom';
-    Layout_dict.Col_break_number = Max_label_number;
-}
+  // Handle Max label number
+  if (Max_label_selector === 'Auto') {
+      Layout_dict.col_max_label = 'Auto';
+      Layout_dict.Col_break_number = Math.ceil(Data_array.length / Cols);
+  } else if (Max_label_selector === 'Custom') {
+      Layout_dict.col_max_label = 'Custom';
+      Layout_dict.Col_break_number = Max_label_number;
+  }
 
-// Update columns value
-Layout_dict.columns = Cols;
+  // Update columns value
+  Layout_dict.columns = Cols;
 
-// Update visualization dynamically
-updateVisualization_list();
+  // Update visualization dynamically
+  updateVisualization_list();
 }
 
 // Event listeners for dropdown and input changes
@@ -537,58 +518,55 @@ if (document.querySelector("#Layout_Max_Label").value === 'Auto') {
 document.querySelector("#List_Layout_Max_Label_input").disabled = true;
 }
 
-
 // #####################
 // ## Styling options ##
 // #####################
+
 // Function to update the styles for each section dynamically
 function updateLayerStyling(layer) {
-// Get the selected values for the current layer
-const boldCheckbox = document.getElementById(`boldCheckbox_${layer}`).checked;
-const italicCheckbox = document.getElementById(`italicCheckbox_${layer}`).checked;
-const underlineCheckbox = document.getElementById(`underlineCheckbox_${layer}`).checked;
-const fontSize = `${document.getElementById(`fontSizeSlider_${layer}`).value}px`;
+  // Get the selected values for the current layer
+  const boldCheckbox = document.getElementById(`boldCheckbox_${layer}`).checked;
+  const italicCheckbox = document.getElementById(`italicCheckbox_${layer}`).checked;
+  const underlineCheckbox = document.getElementById(`underlineCheckbox_${layer}`).checked;
+  const fontSize = `${document.getElementById(`fontSizeSlider_${layer}`).value}px`;
 
-// Update the Styling_Option_dict with the selected values
-Styling_Option_dict[layer].Bold = boldCheckbox;
-Styling_Option_dict[layer].Italic = italicCheckbox;
-Styling_Option_dict[layer].Underline = underlineCheckbox;
-Styling_Option_dict[layer].Fontsize = fontSize;
+  // Update the Styling_Option_dict with the selected values
+  Styling_Option_dict[layer].Bold = boldCheckbox;
+  Styling_Option_dict[layer].Italic = italicCheckbox;
+  Styling_Option_dict[layer].Underline = underlineCheckbox;
+  Styling_Option_dict[layer].Fontsize = fontSize;
 
-// Get the selected color from the Spectrum color picker
-
-
-// Update the visualization with the new styles (replace with your visualization update logic)
-updateVisualization_list();
+  // Update the visualization with the new styles (replace with your visualization update logic)
+  updateVisualization_list();
 }
 
 // Add event listeners to checkboxes and sliders for all layers
 function addEventListeners() {
-["Class", "LigandType", "ReceptorFamily", "Receptor"].forEach(layer => {
-    // Add event listeners for checkboxes
-    document.getElementById(`boldCheckbox_${layer}`).addEventListener("change", function() {
-    updateLayerStyling(layer);
-    });
+  ["Class", "LigandType", "ReceptorFamily", "Receptor"].forEach(layer => {
+      // Add event listeners for checkboxes
+      document.getElementById(`boldCheckbox_${layer}`).addEventListener("change", function() {
+      updateLayerStyling(layer);
+      });
 
-    document.getElementById(`italicCheckbox_${layer}`).addEventListener("change", function() {
-    updateLayerStyling(layer);
-    });
+      document.getElementById(`italicCheckbox_${layer}`).addEventListener("change", function() {
+      updateLayerStyling(layer);
+      });
 
-    document.getElementById(`underlineCheckbox_${layer}`).addEventListener("change", function() {
-    updateLayerStyling(layer);
-    });
+      document.getElementById(`underlineCheckbox_${layer}`).addEventListener("change", function() {
+      updateLayerStyling(layer);
+      });
 
-    // Add event listener for font size slider
-    document.getElementById(`fontSizeSlider_${layer}`).addEventListener("input", function() {
-    document.getElementById(`fontSizeSliderLabel_${layer}`).textContent = `${this.value} px`;
-    updateLayerStyling(layer);
-    });
-});
+      // Add event listener for font size slider
+      document.getElementById(`fontSizeSlider_${layer}`).addEventListener("input", function() {
+      document.getElementById(`fontSizeSliderLabel_${layer}`).textContent = `${this.value} px`;
+      updateLayerStyling(layer);
+      });
+  });
 }
 
 // Call this function to initialize everything once the DOM is ready
 function initializeStylingOptions() {
-addEventListeners();
+  addEventListeners();
 }
 
 // Trigger initialization when the document is fully loaded
@@ -852,7 +830,6 @@ function initialize_ListPlot_ColorPicker(elementId, start_color, column, type) {
   });
 }
 
-
 // Call this function to populate options for continuous data columns
 document.addEventListener("DOMContentLoaded", function () {
   populateLegendLabelInputs("legendLabelContainer");
@@ -880,6 +857,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 });
+
 // ###################
 // ## Label switch ###
 // ###################
@@ -913,8 +891,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
-
-
 </script>
-
 {% endblock %}

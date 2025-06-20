@@ -9,7 +9,6 @@
 {% endblock %}
 
 {% block content %}
-
 <!-- Heatmap Controls Row -->
 <div class="container" style="margin-top: 30px;">
   <div class="row text-center" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px;">
@@ -47,106 +46,106 @@
                 Number of colors
               </label>
               <div style="width: 100%; margin: -3px auto;">
-              <select id="Heatmap_color_styling" class="form-control" style="width: 130px;">
-                <option value="One">One</option>
-                <option value="Two">Two</option>
-                <option value="Three_RWB">Three</option>
-                <option value="Three_TWM">Three</option>
-              </select>
-            </div>
+                <select id="Heatmap_color_styling" class="form-control" style="width: 130px;">
+                  <option value="One">One</option>
+                  <option value="Two">Two</option>
+                  <option value="Three_RWB">Three</option>
+                  <option value="Three_TWM">Three</option>
+                </select>
+              </div>
             </div>
 
             <!-- Color pickers column -->
             <div class="col-md-7">
-            <!-- Label row -->
-            <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 3px; font-size: 12px;">
-              <div id="Heatmap_Color_min_label" style="width: 80px; text-align: center;">Min</div>
-              <div id="Heatmap_Color_avg_label" style="width: 80px; text-align: center;">Mid</div>
-              <div style="width: 80px; text-align: center;">Max</div>
-            </div>
-            <!-- Input row -->
-            <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-              <div id="Heatmap_Color_min_container" style="width: 80px; display: flex; justify-content: center;">
-                <input type="text" id="Heatmap_colorPicker_min" />
+              <!-- Label row -->
+              <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 3px; font-size: 12px;">
+                <div id="Heatmap_Color_min_label" style="width: 80px; text-align: center;">Min</div>
+                <div id="Heatmap_Color_avg_label" style="width: 80px; text-align: center;">Mid</div>
+                <div style="width: 80px; text-align: center;">Max</div>
               </div>
-              <div id="Heatmap_Color_avg_container" style="width: 80px; display: flex; justify-content: center;">
-                <input type="text" id="Heatmap_colorPicker_avg" />
-              </div>
-              <div id="Heatmap_Color_max_container" style="width: 80px; display: flex; justify-content: center;">
-                <input type="text" id="Heatmap_colorPicker_max" />
+              <!-- Input row -->
+              <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
+                <div id="Heatmap_Color_min_container" style="width: 80px; display: flex; justify-content: center;">
+                  <input type="text" id="Heatmap_colorPicker_min" />
+                </div>
+                <div id="Heatmap_Color_avg_container" style="width: 80px; display: flex; justify-content: center;">
+                  <input type="text" id="Heatmap_colorPicker_avg" />
+                </div>
+                <div id="Heatmap_Color_max_container" style="width: 80px; display: flex; justify-content: center;">
+                  <input type="text" id="Heatmap_colorPicker_max" />
+                </div>
               </div>
             </div>
           </div>
+        </div>
       </div>
-    </div>
-    </div>
     </div>
 
     <!-- Layout Dropdown -->
     <div class="dropdown">
-    <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_Layout_Menu" data-toggle="dropdown">
-        Layout
-    </button>
-    <div class="dropdown-menu p-3" style="width: 200px; padding: 10px 15px; left: 100%; top: 50%;
-                margin-left: 5px; position: absolute; transform: translateY(-10%);">
+      <button class="btn btn-primary dropdown-toggle" type="button" id="Heatmap_Layout_Menu" data-toggle="dropdown">
+          Layout
+      </button>
+      <div class="dropdown-menu p-3" style="width: 200px; padding: 10px 15px; left: 100%; top: 50%;
+                  margin-left: 5px; position: absolute; transform: translateY(-10%);">
 
-        <!-- Label Styling Section -->
-        <hr style="margin: 10px 0px 10px 0px">
-        <h5 class="text-center" style="margin-top: 5px; font-weight: bold;">Labels</h5>
-        <hr style="margin: 5px 0px 10px 0px">
+          <!-- Label Styling Section -->
+          <hr style="margin: 10px 0px 10px 0px">
+          <h5 class="text-center" style="margin-top: 5px; font-weight: bold;">Labels</h5>
+          <hr style="margin: 5px 0px 10px 0px">
 
-        <!-- Orientation Row -->
-        <div style="display: flex; align-items: center; margin-bottom: 10px;">
-          <div style="flex: 1; text-align: right; padding-right: 10px;">
-            <label for="toggleLabelOrientation" style="font-size: 14px; font-weight: normal;">Orientation:</label>
+          <!-- Orientation Row -->
+          <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <div style="flex: 1; text-align: right; padding-right: 10px;">
+              <label for="toggleLabelOrientation" style="font-size: 14px; font-weight: normal;">Orientation:</label>
+            </div>
+            <div style="flex: 1; text-align: left;">
+              <button id="toggleLabelOrientation" class="btn btn-primary btn-sm" style="min-width: 100px;">Vertical</button>
+            </div>
           </div>
-          <div style="flex: 1; text-align: left;">
-            <button id="toggleLabelOrientation" class="btn btn-primary btn-sm" style="min-width: 100px;">Vertical</button>
-          </div>
-        </div>
 
-        <!-- Position Row -->
-        <div style="display: flex; align-items: center; margin-bottom: 10px;">
-          <div style="flex: 1; text-align: right; padding-right: 10px;">
-            <label for="toggleLabelPosition" style="font-size: 14px; font-weight: normal;">Position:</label>
+          <!-- Position Row -->
+          <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <div style="flex: 1; text-align: right; padding-right: 10px;">
+              <label for="toggleLabelPosition" style="font-size: 14px; font-weight: normal;">Position:</label>
+            </div>
+            <div style="flex: 1; text-align: left;">
+              <button id="toggleLabelPosition" class="btn btn-primary btn-sm" style="min-width: 100px;">Bottom</button>
+            </div>
           </div>
-          <div style="flex: 1; text-align: left;">
-            <button id="toggleLabelPosition" class="btn btn-primary btn-sm" style="min-width: 100px;">Bottom</button>
+
+          <hr>
+          <div class="text-center" style="margin-bottom: 15px;">
+            <label for="Heatmap_fontSizeSlider" style="font-size: 14px;font-weight: normal;">Label font size</label>
+            <input type="range" class="form-control" min="10" max="16" id="Heatmap_fontSizeSlider" value="14" style="width: 200px">
+            <div style="margin-top: -5px;"><span id="Heatmap_fontSizeValue">14</span> px</div>
           </div>
-        </div>
+          <hr style="margin: 10px 0px 10px 0px">
+          <div class="text-center" style="margin-bottom: 20px;">
+            <label for="Heatmap_receptor_fontSizeSlider" style="font-size: 14px;font-weight: normal;">Receptor font size</label>
+            <input type="range" class="form-control" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14" style="width: 200px">
+            <div style="margin-top: -5px;"><span id="Heatmap_receptor_fontSizeValue">14</span> px</div>
+          </div>
 
-        <hr>
-        <div class="text-center" style="margin-bottom: 15px;">
-          <label for="Heatmap_fontSizeSlider" style="font-size: 14px;font-weight: normal;">Label font size</label>
-          <input type="range" class="form-control" min="10" max="16" id="Heatmap_fontSizeSlider" value="14" style="width: 200px">
-          <div style="margin-top: -5px;"><span id="Heatmap_fontSizeValue">14</span> px</div>
-        </div>
-        <hr style="margin: 10px 0px 10px 0px">
-        <div class="text-center" style="margin-bottom: 20px;">
-          <label for="Heatmap_receptor_fontSizeSlider" style="font-size: 14px;font-weight: normal;">Receptor font size</label>
-          <input type="range" class="form-control" min="8" max="15" id="Heatmap_receptor_fontSizeSlider" value="14" style="width: 200px">
-          <div style="margin-top: -5px;"><span id="Heatmap_receptor_fontSizeValue">14</span> px</div>
-        </div>
-
-        <!-- Data Styling Section -->
-        <hr style="margin: -10px 0px 5px 0px">
-        <h5 class="text-center" style="font-weight: bold;">Data</h5>
-        <hr style="margin: 5px 0px 10px 0px">
-        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 5px 0px;">
-          <label for="Heatmap_data_labels" style="margin: 0; font-size: 14px;font-weight: normal;">Data Labels:</label>
-          <button id="Heatmap_data_labels" class="btn btn-success" style="min-width: 60px;">Shown</button>
-        </div>
-        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 5px 0px; margin-bottom: 0px;">
-          <label for="Heatmap_Border_Styling" style="margin: 0; font-size: 14px;font-weight: normal;">Data Border:</label>
-          <button id="Heatmap_Border_Styling" class="btn btn-success" style="min-width: 60px;">Shown</button>
-        </div>
-        <hr style="margin: 5px 0px 10px 0px">
-        <div class="text-center">
-        <label for="Heatmap_data_fontSizeSlider" style="font-size: 14px;font-weight: normal;">Data label font size</label>
-        <input type="range" class="form-control" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12" style="width: 200px">
-        <div style="margin-top: -5px;"><span id="Heatmap_data_fontSizeSliderLabel">14</span> px</div>
-        </div>
-    </div>
+          <!-- Data Styling Section -->
+          <hr style="margin: -10px 0px 5px 0px">
+          <h5 class="text-center" style="font-weight: bold;">Data</h5>
+          <hr style="margin: 5px 0px 10px 0px">
+          <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 5px 0px;">
+            <label for="Heatmap_data_labels" style="margin: 0; font-size: 14px;font-weight: normal;">Data Labels:</label>
+            <button id="Heatmap_data_labels" class="btn btn-success" style="min-width: 60px;">Shown</button>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center; gap: 10px; padding: 5px 0px; margin-bottom: 0px;">
+            <label for="Heatmap_Border_Styling" style="margin: 0; font-size: 14px;font-weight: normal;">Data Border:</label>
+            <button id="Heatmap_Border_Styling" class="btn btn-success" style="min-width: 60px;">Shown</button>
+          </div>
+          <hr style="margin: 5px 0px 10px 0px">
+          <div class="text-center">
+          <label for="Heatmap_data_fontSizeSlider" style="font-size: 14px;font-weight: normal;">Data label font size</label>
+          <input type="range" class="form-control" min="8" max="16" id="Heatmap_data_fontSizeSlider" value="12" style="width: 200px">
+          <div style="margin-top: -5px;"><span id="Heatmap_data_fontSizeSliderLabel">14</span> px</div>
+          </div>
+      </div>
     </div>
 
     <!-- Edit Labels -->
@@ -175,17 +174,12 @@
         <button type="button" class="btn btn-primary btn-block" onclick="saveSvgAsTiff(document.getElementById('Heatmap_plot_svg'), 'Heatmap.tiff');">TIFF</button>
       </div>
     </div>
-
   </div>
 </div>
 
 <!-- Heatmap container -->
 <div id="heatmapPlot" class="text-center" style="margin-top: 40px;"></div>
-
-
-
 {% endblock %}
-
 {% block addon_js %}
 <script src="{% static 'home/js/d3.min.js' %}"></script>
 <script src="{% static 'home/js/nv.d3.min.js' %}"></script>
@@ -196,51 +190,42 @@
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 
-
 <!-- Universal scripts -->
 <script>
 $('.dropdown-menu').on('click', function(event){
     event.stopPropagation();
 });
-
 </script>
-  
 <script>
 
 var heatmap = {{ heatmap_data|safe }};
 var label_converter = {{ Label_converter|safe }};
-
 var label_x_converter = {'Value1':'Dataset 1','Value2':'Dataset 2','Value3':'Dataset 3','Value4':'Dataset 4','Value5':'Dataset 5'}
-
 var heatmap_DataStyling = heatmap_DataStyling();
 
 document.addEventListener("DOMContentLoaded", function() {
-// Initialize heatmap
-Heatmap(heatmap, 'heatmapPlot', heatmap_DataStyling, label_x_converter);
+  // Initialize heatmap
+  Heatmap(heatmap, 'heatmapPlot', heatmap_DataStyling, label_x_converter);
 });
-  
+
 // Function to update the visualization
 function Heatmap_updateVisualization() {
-    // Clear existing SVG content
-    d3.select("#heatmapPlot svg").remove();
-    // Re-render the visualization
-    Heatmap(heatmap, 'heatmapPlot', heatmap_DataStyling, label_x_converter);
-    }
-
-$('.dropdown-menu').on('click', function(event){
-event.stopPropagation();
-});
+  // Clear existing SVG content
+  d3.select("#heatmapPlot svg").remove();
+  // Re-render the visualization
+  Heatmap(heatmap, 'heatmapPlot', heatmap_DataStyling, label_x_converter);
+  }
 
 // Function to update a label and redraw the legend
 function updateLabel(category) {
-    var inputId = "labelInput_" + category;
-    var newValue = document.getElementById(inputId).value;
+  var inputId = "labelInput_" + category;
+  var newValue = document.getElementById(inputId).value;
 
-    // Update the Label_dict
-    label_x_converter[category] = newValue;
+  // Update the Label_dict
+  label_x_converter[category] = newValue;
 
-    // Now re-run your createLegendBars with updated labels
-    Heatmap_updateVisualization();
+  // Now re-run your createLegendBars with updated labels
+  Heatmap_updateVisualization();
 }
 
 // ###################
@@ -368,44 +353,44 @@ $('#Heatmap_color_styling').select2({
 
 // Function to update the label styling
 function updateLabelStyling() {
-// Get the values for label styling from the data object
-const xlabel_orientation = heatmap_DataStyling.rotation;
-const xlabel_position = heatmap_DataStyling.label_position;
-const xlabel_fontsize = document.getElementById('Heatmap_fontSizeSlider').value;
-const ylabel_fontsize = document.getElementById('Heatmap_receptor_fontSizeSlider').value;
+  // Get the values for label styling from the data object
+  const xlabel_orientation = heatmap_DataStyling.rotation;
+  const xlabel_position = heatmap_DataStyling.label_position;
+  const xlabel_fontsize = document.getElementById('Heatmap_fontSizeSlider').value;
+  const ylabel_fontsize = document.getElementById('Heatmap_receptor_fontSizeSlider').value;
 
-// Update the data styling values
-heatmap_DataStyling.label_fontsize = xlabel_fontsize;
-heatmap_DataStyling.receptor_fontsize = ylabel_fontsize;
+  // Update the data styling values
+  heatmap_DataStyling.label_fontsize = xlabel_fontsize;
+  heatmap_DataStyling.receptor_fontsize = ylabel_fontsize;
 
-// Update the heatmap
-Heatmap_updateVisualization();
+  // Update the heatmap
+  Heatmap_updateVisualization();
 }
 
 // Toggle label orientation between Horizontal and Vertical
 const toggleLabelOrientation = document.getElementById("toggleLabelOrientation");
 toggleLabelOrientation.addEventListener("click", function() {
-if (heatmap_DataStyling.rotation === 90) {
-    heatmap_DataStyling.rotation = 0;
-    toggleLabelOrientation.textContent = "Horizontal";
-} else {
-    heatmap_DataStyling.rotation = 90;
-    toggleLabelOrientation.textContent = "Vertical";
-}
-updateLabelStyling();  // Update the visualization when toggled
+  if (heatmap_DataStyling.rotation === 90) {
+      heatmap_DataStyling.rotation = 0;
+      toggleLabelOrientation.textContent = "Horizontal";
+  } else {
+      heatmap_DataStyling.rotation = 90;
+      toggleLabelOrientation.textContent = "Vertical";
+  }
+  updateLabelStyling();  // Update the visualization when toggled
 });
 
 // Toggle label position between Bottom and Top
 const toggleLabelPosition = document.getElementById("toggleLabelPosition");
 toggleLabelPosition.addEventListener("click", function() {
-if (heatmap_DataStyling.label_position === "Bottom") {
-    heatmap_DataStyling.label_position = "Top";
-    toggleLabelPosition.textContent = "Top";
-} else {
-    heatmap_DataStyling.label_position = "Bottom";
-    toggleLabelPosition.textContent = "Bottom";
-}
-updateLabelStyling();  // Update the visualization when toggled
+  if (heatmap_DataStyling.label_position === "Bottom") {
+      heatmap_DataStyling.label_position = "Top";
+      toggleLabelPosition.textContent = "Top";
+  } else {
+      heatmap_DataStyling.label_position = "Bottom";
+      toggleLabelPosition.textContent = "Bottom";
+  }
+  updateLabelStyling();  // Update the visualization when toggled
 });
 
 // Dynamic Font Size Updates
@@ -423,53 +408,47 @@ Heatmap_receptor_fontSizeSlider.addEventListener('input', () => {
   updateLabelStyling();
 });
 
-
 // ###################
 // ## Data styling ##
 // ###################
 
 document.addEventListener('DOMContentLoaded', (event) => {
-
-    // ########################
-    // ## Toggle Data Labels ##
-    // ########################
+    // == Toggle Data Labels ==
     const dataLabelsToggleButton = document.getElementById('Heatmap_data_labels');
     dataLabelsToggleButton.addEventListener('click', () => {
-    heatmap_DataStyling.datalabels = !heatmap_DataStyling.datalabels; // Toggle the state
+      heatmap_DataStyling.datalabels = !heatmap_DataStyling.datalabels; // Toggle the state
 
-    // Update the button appearance and text
-    if (heatmap_DataStyling.datalabels) {
-        dataLabelsToggleButton.textContent = 'Shown';
-        dataLabelsToggleButton.classList.add('btn-primary');
-        dataLabelsToggleButton.classList.remove('btn-danger');
-    } else {
-        dataLabelsToggleButton.textContent = 'Hidden';
-        dataLabelsToggleButton.classList.remove('btn-primary');
-        dataLabelsToggleButton.classList.add('btn-danger');
-    }
-    // Re-render heatmap
-    Heatmap_updateVisualization();
+      // Update the button appearance and text
+      if (heatmap_DataStyling.datalabels) {
+          dataLabelsToggleButton.textContent = 'Shown';
+          dataLabelsToggleButton.classList.add('btn-primary');
+          dataLabelsToggleButton.classList.remove('btn-danger');
+      } else {
+          dataLabelsToggleButton.textContent = 'Hidden';
+          dataLabelsToggleButton.classList.remove('btn-primary');
+          dataLabelsToggleButton.classList.add('btn-danger');
+      }
+      // Re-render heatmap
+      Heatmap_updateVisualization();
     });
 
-    // ############################
-    // ## Toggle Data Border ##
-    // ############################
+    // == Toggle Data Border ==
     const dataBorderToggleButton = document.getElementById('Heatmap_Border_Styling');
     dataBorderToggleButton.addEventListener('click', () => {
-    heatmap_DataStyling.data_border = !heatmap_DataStyling.data_border; // Toggle the state
+      heatmap_DataStyling.data_border = !heatmap_DataStyling.data_border; // Toggle the state
 
-    // Update the button appearance and text
-    if (heatmap_DataStyling.data_border) {
-        dataBorderToggleButton.textContent = 'Shown';
-        dataBorderToggleButton.classList.add('btn-primary');
-        dataBorderToggleButton.classList.remove('btn-danger');
-    } else {
-        dataBorderToggleButton.textContent = 'Hidden';
-        dataBorderToggleButton.classList.remove('btn-primary');
-        dataBorderToggleButton.classList.add('btn-danger');
-    }
-    // Re-render heatmap
-    Heatmap_updateVisualization();
+      // Update the button appearance and text
+      if (heatmap_DataStyling.data_border) {
+          dataBorderToggleButton.textContent = 'Shown';
+          dataBorderToggleButton.classList.add('btn-primary');
+          dataBorderToggleButton.classList.remove('btn-danger');
+      } else {
+          dataBorderToggleButton.textContent = 'Hidden';
+          dataBorderToggleButton.classList.remove('btn-primary');
+          dataBorderToggleButton.classList.add('btn-danger');
+      }
+      // Re-render heatmap
+      Heatmap_updateVisualization();
     });
 
     // #############################
@@ -489,11 +468,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 });
 
-
-
-// ###################
-// ## Label switch ###
-// ###################
+// === Label switch ===
 
 // Receptor name toggle behavior
 document.addEventListener('DOMContentLoaded', function () {
@@ -561,7 +536,6 @@ function populateHeatmapLabelInputs(containerId, labelDict, activeKeys) {
       const row = document.createElement("div");
       row.className = "row";
       row.style.marginBottom = "10px";
-
       row.innerHTML = `
         <div><hr style="margin: 0px 0px 10px 0px"></div>
         <div class="col-md-3 text-left" style="padding-top: 6px; margin-left: 10px;">
@@ -573,13 +547,10 @@ function populateHeatmapLabelInputs(containerId, labelDict, activeKeys) {
                  oninput="updateLabel('${key}')">
         </div>
       `;
-
       container.appendChild(row);
     }
   }
 }
-
-
 
 function getActiveHeatmapKeys(heatmapData) {
   const activeKeys = {
@@ -589,7 +560,6 @@ function getActiveHeatmapKeys(heatmapData) {
     'Value4': false,
     'Value5': false
   };
-
   Object.values(heatmapData).forEach(entry => {
     for (const key in activeKeys) {
       if (entry.hasOwnProperty(key) && entry[key] !== null && entry[key] !== "") {
@@ -597,17 +567,12 @@ function getActiveHeatmapKeys(heatmapData) {
       }
     }
   });
-
   return activeKeys;
 }
-
 
 document.addEventListener("DOMContentLoaded", function () {
   const activeKeys = getActiveHeatmapKeys(heatmap);  // Auto-detect used values
   populateHeatmapLabelInputs("Heatmap_LabelInputs", label_x_converter, activeKeys);
 });
-
-
 </script>
-
 {% endblock %}

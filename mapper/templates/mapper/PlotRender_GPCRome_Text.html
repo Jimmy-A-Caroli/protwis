@@ -17,14 +17,12 @@
     line-height: 24px;
     font-size: 14px;
 }
-
 .select2-container--default .select2-selection--single .select2-selection__rendered {
     line-height: 24px;
     padding-left: 0;
     text-align: center;
     width: 100%;
 }
-
 .select2-container--default .select2-results__option {
     text-align: center;
 }
@@ -161,20 +159,16 @@
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 
-
 <!-- Universal scripts -->
 <script>
 $('.dropdown-menu').on('click', function(event){
     event.stopPropagation();
 });
-
 </script>
 <script>
-
 // Load the data
 var GPCRome_WheelDict = {{ GPCRomeData|safe }};
 var PlotType = "{{ PlotType }}";
-
 var GPCRomes_styling = {
     DataType: "Text",
     FontStyle: "Arial",
@@ -185,7 +179,6 @@ var GPCRomes_styling = {
     ShowLegend: true,
     LegendLayout: { "mode": "row", "columns": "1", "sorted": "Vertically" }
 };
-
 
 let GPCRome_location = "GPCRome_plot";
 DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling);
@@ -216,10 +209,10 @@ function extractDataValues(obj) {
 }
 
 function updateGPCRome() {
-    // Remove current
-    d3.select("#" + GPCRome_location).select("svg").remove();
-    // Redraw the GPCRome wheel plot
-    DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling); // ← Use the updated copy
+  // Remove current
+  d3.select("#" + GPCRome_location).select("svg").remove();
+  // Redraw the GPCRome wheel plot
+  DrawGPCRomeWheel(GPCRome_WheelDict, GPCRome_location, GPCRomes_styling); // ← Use the updated copy
 }
 
 // Attach click handler to dropdown items for receptor names
@@ -333,7 +326,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 function setLegendLayout(mode, cols = 1) {
   GPCRomes_styling.LegendLayout = { mode: mode, columns: cols };
-  console.log(GPCRomes_styling)
   updateGPCRome();
 }
 
@@ -389,9 +381,5 @@ document.addEventListener('DOMContentLoaded', function () {
     updateGPCRome();
   });
 });
-
-
-
 </script>
-
 {% endblock %}

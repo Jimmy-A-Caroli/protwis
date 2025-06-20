@@ -8,7 +8,6 @@
 {% endblock %}
 
 {% block content %}
-
 <div style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
   <div class="col-md-12" style="margin-top: 20px; margin-bottom: 30px;">
     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; align-items: center;">
@@ -80,7 +79,6 @@
               <span id="cluster_strokeWidthValue">0.5</span>px
             </div>
           </div>
-
         </div>
       </div>
 
@@ -141,7 +139,6 @@
     <div id="plotContainer_cluster" style="width: 1200px; height: 700px;"></div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block addon_js %}
@@ -155,17 +152,13 @@
 <script src="{% static 'home/js/ml.js' %}"></script>
 <script src="{% static 'home/js/plotly_v1_58_5.js' %}"></script>
 
-
 <!-- Universal scripts -->
 <script>
 $('.dropdown-menu').on('click', function(event){
     event.stopPropagation();
 });
-
 </script>
-
 <script>
-
 // Global variables for cluster data
 var cluster_data_seq = {{ cluster_data_seq|safe }};
 var Label_converter = {{ Label_converter|safe }};
@@ -199,154 +192,161 @@ const cluster_DataStyling = {
 
 // Function to download the plot
 function downloadPlot(format) {
-    const plotElement = document.getElementById('plotContainer_cluster');
+  const plotElement = document.getElementById('plotContainer_cluster');
 
-    Plotly.toImage(plotElement, {
-        format: format,
-        height: 700,
-        width: 1200,
-        scale: 3
-    }).then(function (dataUrl) {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = `Cluster.${format}`;
-        link.click();
-    }).catch(function (error) {
-        console.error('Error exporting plot:', error);
-    });
+  // Use correct format values for Plotly
+  const actualFormat = (format === 'tiff') ? 'png' :
+                        (format === 'jpg')  ? 'jpeg' :
+                        format;
+
+  Plotly.toImage(plotElement, {
+      format: actualFormat,
+      height: 700,
+      width: 1200,
+      scale: 3
+  }).then(function (dataUrl) {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `Cluster.${format}`;  // Force extension as user requested
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  }).catch(function (error) {
+      console.error('Error exporting plot:', error);
+  });
 }
 
 // Document ready function
 $(document).ready(function() {
 
-// Enhanced Color By button logic with visual toggle
-const colorButtons = document.querySelectorAll('#ColorBy_Menu ~ .dropdown-menu .btn');
+  // Enhanced Color By button logic with visual toggle
+  const colorButtons = document.querySelectorAll('#ColorBy_Menu ~ .dropdown-menu .btn');
 
-colorButtons.forEach(btn => {
-  btn.addEventListener('click', function () {
-    const selectedId = this.id;
+  colorButtons.forEach(btn => {
+    btn.addEventListener('click', function () {
+      const selectedId = this.id;
 
-    // Reset all buttons
-    colorButtons.forEach(b => {
-      b.classList.remove('active', 'btn-primary');
-      b.classList.add('btn-outline-primary');
+      // Reset all buttons
+      colorButtons.forEach(b => {
+        b.classList.remove('active', 'btn-primary');
+        b.classList.add('btn-outline-primary');
+      });
+
+      // Activate the clicked one
+      this.classList.add('active', 'btn-primary');
+      this.classList.remove('btn-outline-primary');
+
+      // Update functionality
+      setActiveButton(selectedId);
+      updatePlotWithAnnotations();
     });
-
-    // Activate the clicked one
-    this.classList.add('active', 'btn-primary');
-    this.classList.remove('btn-outline-primary');
-
-    // Update functionality
-    setActiveButton(selectedId);
-    updatePlotWithAnnotations();
   });
-});
 
-const labelToggleBtn = document.getElementById('labelVisibilityToggle');
+  const labelToggleBtn = document.getElementById('labelVisibilityToggle');
 
-labelToggleBtn.addEventListener('click', () => {
-    labelsVisible = !labelsVisible;
+  labelToggleBtn.addEventListener('click', () => {
+      labelsVisible = !labelsVisible;
 
-    // Show/hide UI controls depending on plot type
-    const labelMenu = document.getElementById('clusteringMenu_datastyling_labels'); // Labels menu
-    const markerMenu = document.getElementById('clusteringMenu_datastyling');       // Markers menu
-    const receptorDropdown = document.getElementById('Cluster_LabelType_Button');   // Receptor name dropdown button
+      // Show/hide UI controls depending on plot type
+      const labelMenu = document.getElementById('clusteringMenu_datastyling_labels'); // Labels menu
+      const markerMenu = document.getElementById('clusteringMenu_datastyling');       // Markers menu
+      const receptorDropdown = document.getElementById('Cluster_LabelType_Button');   // Receptor name dropdown button
 
-    if (labelsVisible) {
-        labelToggleBtn.textContent = 'Plot type: Text';
-        // Show label-related controls
-        if (labelMenu) labelMenu.parentElement.style.display = '';
-        if (receptorDropdown) receptorDropdown.parentElement.style.display = '';
-        if (markerMenu) markerMenu.parentElement.style.display = 'none';
-    } else {
-        labelToggleBtn.textContent = 'Plot type: Dot';
-        // Show marker-related controls
-        if (labelMenu) labelMenu.parentElement.style.display = 'none';
-        if (receptorDropdown) receptorDropdown.parentElement.style.display = 'none';
-        if (markerMenu) markerMenu.parentElement.style.display = '';
-    }
+      if (labelsVisible) {
+          labelToggleBtn.textContent = 'Plot type: Text';
+          // Show label-related controls
+          if (labelMenu) labelMenu.parentElement.style.display = '';
+          if (receptorDropdown) receptorDropdown.parentElement.style.display = '';
+          if (markerMenu) markerMenu.parentElement.style.display = 'none';
+      } else {
+          labelToggleBtn.textContent = 'Plot type: Dot';
+          // Show marker-related controls
+          if (labelMenu) labelMenu.parentElement.style.display = 'none';
+          if (receptorDropdown) receptorDropdown.parentElement.style.display = 'none';
+          if (markerMenu) markerMenu.parentElement.style.display = '';
+      }
 
-    updatePlotWithAnnotations();  // Reflect change
-});
+      updatePlotWithAnnotations();  // Reflect change
+  });
 
-// Clustering options
-const clusterSlider = document.getElementById('clusterSlider');
-const clusterSliderValue = document.getElementById('clusterSliderValue');
+  // Clustering options
+  const clusterSlider = document.getElementById('clusterSlider');
+  const clusterSliderValue = document.getElementById('clusterSliderValue');
 
-// Set max value of the slider to dataPointsCount - 1
-const dataPointsCount = currentClusterData.length; // Get the number of data points
-clusterSlider.max = Math.min(20, dataPointsCount - 1); // Max 20 clusters or dataPoints - 1
+  // Set max value of the slider to dataPointsCount - 1
+  const dataPointsCount = currentClusterData.length; // Get the number of data points
+  clusterSlider.max = Math.min(20, dataPointsCount - 1); // Max 20 clusters or dataPoints - 1
 
-// Update the displayed value of the slider
-clusterSliderValue.textContent = clusterSlider.value;
+  // Update the displayed value of the slider
+  clusterSliderValue.textContent = clusterSlider.value;
 
-// Add an event listener for the slider input event to dynamically render clustering
-clusterSlider.addEventListener('input', function() {
-    // Update the number next to the slider dynamically
-    clusterSliderValue.textContent = clusterSlider.value;
+  // Add an event listener for the slider input event to dynamically render clustering
+  clusterSlider.addEventListener('input', function() {
+      // Update the number next to the slider dynamically
+      clusterSliderValue.textContent = clusterSlider.value;
 
-    // Perform dynamic clustering based on the current value of the slider
-    const numClusters = parseInt(clusterSlider.value, 10);
-    performClustering(numClusters);
-});
+      // Perform dynamic clustering based on the current value of the slider
+      const numClusters = parseInt(clusterSlider.value, 10);
+      performClustering(numClusters);
+  });
 
-// Update label font size slider
-$('#cluster_labelFontSizeSlider').on('input', function() {
-        const fontSize = $(this).val();
-        $('#cluster_labelFontSizeValue').text(fontSize);
-        cluster_DataStyling.labelFontSize = parseInt(fontSize, 10);  // Update the data styling object
-        updatePlotWithAnnotations();  // Dynamically update the plot
-    });
+  // Update label font size slider
+  $('#cluster_labelFontSizeSlider').on('input', function() {
+          const fontSize = $(this).val();
+          $('#cluster_labelFontSizeValue').text(fontSize);
+          cluster_DataStyling.labelFontSize = parseInt(fontSize, 10);  // Update the data styling object
+          updatePlotWithAnnotations();  // Dynamically update the plot
+      });
 
-    // Update marker size slider
-    $('#cluster_markerSizeSlider').on('input', function() {
-        const markerSize = $(this).val();
-        $('#cluster_markerSizeValue').text(markerSize);
-        cluster_DataStyling.markerSize = parseInt(markerSize, 10);  // Update the data styling object
-        updatePlotWithAnnotations();  // Dynamically update the plot
-    });
+      // Update marker size slider
+      $('#cluster_markerSizeSlider').on('input', function() {
+          const markerSize = $(this).val();
+          $('#cluster_markerSizeValue').text(markerSize);
+          cluster_DataStyling.markerSize = parseInt(markerSize, 10);  // Update the data styling object
+          updatePlotWithAnnotations();  // Dynamically update the plot
+      });
 
-    // Update stroke width slider
-    $('#cluster_strokeWidthSlider').on('input', function() {
-        const strokeWidth = $(this).val();
-        $('#cluster_strokeWidthValue').text(strokeWidth);
-        cluster_DataStyling.strokeWidth = parseFloat(strokeWidth);  // Update the data styling object
-        updatePlotWithAnnotations();  // Dynamically update the plot
-    });
+      // Update stroke width slider
+      $('#cluster_strokeWidthSlider').on('input', function() {
+          const strokeWidth = $(this).val();
+          $('#cluster_strokeWidthValue').text(strokeWidth);
+          cluster_DataStyling.strokeWidth = parseFloat(strokeWidth);  // Update the data styling object
+          updatePlotWithAnnotations();  // Dynamically update the plot
+      });
 
-    // Initial state for border toggle
-    cluster_DataStyling.borderOn = true;  // Default to true (border on)
+  // Initial state for border toggle
+  cluster_DataStyling.borderOn = true;  // Default to true (border on)
 
 
-    // Initial state for text color
-    cluster_DataStyling.textColorEnabled = true;  // Default to true (text color on)
+  // Initial state for text color
+  cluster_DataStyling.textColorEnabled = true;  // Default to true (text color on)
 
-    // Get the button element
-    const textColorToggleButton = document.getElementById('textColorToggleButton');
+  // Get the button element
+  const textColorToggleButton = document.getElementById('textColorToggleButton');
 
-    // Add click event listener to the button
-    textColorToggleButton.addEventListener('click', () => {
-        // Toggle the textColorEnabled state
-        cluster_DataStyling.textColorEnabled = !cluster_DataStyling.textColorEnabled;
+  // Add click event listener to the button
+  textColorToggleButton.addEventListener('click', () => {
+      // Toggle the textColorEnabled state
+      cluster_DataStyling.textColorEnabled = !cluster_DataStyling.textColorEnabled;
 
-        // Update the button text and styling based on the state
-        if (cluster_DataStyling.textColorEnabled) {
-            textColorToggleButton.textContent = 'Shown';
-            textColorToggleButton.classList.add('btn-primary');
-            textColorToggleButton.classList.remove('btn-danger');
-        } else {
-            textColorToggleButton.textContent = 'Hidden';
-            textColorToggleButton.classList.remove('btn-primary');
-            textColorToggleButton.classList.add('btn-danger');
-        }
+      // Update the button text and styling based on the state
+      if (cluster_DataStyling.textColorEnabled) {
+          textColorToggleButton.textContent = 'Shown';
+          textColorToggleButton.classList.add('btn-primary');
+          textColorToggleButton.classList.remove('btn-danger');
+      } else {
+          textColorToggleButton.textContent = 'Hidden';
+          textColorToggleButton.classList.remove('btn-primary');
+          textColorToggleButton.classList.add('btn-danger');
+      }
 
-        // Update the plot with the new text color setting
-        updatePlotWithAnnotations();  // Call the function to re-render the plot
-    });
+      // Update the plot with the new text color setting
+      updatePlotWithAnnotations();  // Call the function to re-render the plot
+  });
 
-    // Set initial button state to "Text Color: Yes" with primary button styling
-    textColorToggleButton.textContent = 'Shown';
-    textColorToggleButton.classList.add('btn-primary');
+  // Set initial button state to "Text Color: Yes" with primary button styling
+  textColorToggleButton.textContent = 'Shown';
+  textColorToggleButton.classList.add('btn-primary');
 
   // Initial plot rendering on page load
   renderInitialPlot();
@@ -403,7 +403,7 @@ function renderInitialPlot() {
 
     // Perform autoscale after the initial plot is rendered
     const plotElement = document.getElementById('plotContainer_cluster');
-    
+
     // Autoscale the axes after the plot is initially rendered
     Plotly.relayout(plotElement, {
         'xaxis.autorange': true,
@@ -413,28 +413,28 @@ function renderInitialPlot() {
 
 // Function to perform clustering
 function performClustering(numClusters) {
-    const data = currentClusterData;
-    const coordinates = data.map(d => [d.x, d.y]);
+  const data = currentClusterData;
+  const coordinates = data.map(d => [d.x, d.y]);
 
-    if (typeof ML.KMeans === 'function') {
-        const options = {
-            maxIterations: 100,
-            tolerance: 1e-6,
-            initialization: 'kmeans++'
-        };
+  if (typeof ML.KMeans === 'function') {
+      const options = {
+          maxIterations: 100,
+          tolerance: 1e-6,
+          initialization: 'kmeans++'
+      };
 
-        const result = ML.KMeans(coordinates, numClusters, options);
+      const result = ML.KMeans(coordinates, numClusters, options);
 
-        data.forEach((point, idx) => {
-            point.cluster = result.clusters[idx]; // Update only the cluster value
-        });
+      data.forEach((point, idx) => {
+          point.cluster = result.clusters[idx]; // Update only the cluster value
+      });
 
-        currentClusterData = data; // Update cluster_data
-        setActiveButton("colorByCluster");
-        updatePlotWithAnnotations();  // Pass 'cluster' as the color option
-    } else {
-        console.error('kmeans-js library not loaded correctly.');
-    }
+      currentClusterData = data; // Update cluster_data
+      setActiveButton("colorByCluster");
+      updatePlotWithAnnotations();  // Pass 'cluster' as the color option
+  } else {
+      console.error('kmeans-js library not loaded correctly.');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -516,8 +516,5 @@ $('#plotContainer_cluster').on('plotly_relayout', function(eventdata) {
     switchClusterLabels("IUPHAR");
     updatePlotWithAnnotations(); // Update annotations on zoom or pan
 });
-
-
 </script>
-
 {% endblock %}

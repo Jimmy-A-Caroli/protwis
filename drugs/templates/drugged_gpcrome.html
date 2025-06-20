@@ -782,8 +782,7 @@ existingCategories.forEach((category, index) => {
 });
 }
 
-
-  // Function to draw labels to the left of a specific node
+// Function to draw labels to the left of a specific node
 function DrawStaticPhaseLabelsRightAlignedViewBox(svgId, labels, options = {}) {
   // Select the <svg>
   const svgSel = d3.select(`#${svgId}`).select('svg');
@@ -831,8 +830,7 @@ function DrawStaticPhaseLabelsRightAlignedViewBox(svgId, labels, options = {}) {
   });
 }
 
-
-  // # Change leaves buttons for tree #
+// # Change leaves buttons for tree #
 $("#Tree_Uniprot").click(function(){
     $("#Tree_Uniprot").addClass("active");
     $("#Tree_Entrez").removeClass("active");
