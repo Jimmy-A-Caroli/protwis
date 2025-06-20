@@ -353,7 +353,6 @@
       </div>
     </div>
   </div>
-
   <div id="ListPlot" class="text-left" style="margin-top: 120px;"></div>
 </div>
 
@@ -375,7 +374,6 @@ $('.dropdown-menu').on('click', function(event){
 </script>
 <script>
 $(document).ready(function() {
-
     // Function to initialize Spectrum color picker
     function initialize_List_Styling_ColorPicker(elementId, start_color, layer) {
         $("#" + elementId).spectrum({
@@ -407,7 +405,6 @@ $(document).ready(function() {
     initialize_List_Styling_ColorPicker('colorPicker_Receptor', Styling_Option_dict.Receptor.Color, 'Receptor');
 });
 </script>
-
 <script>
 
 // #####################
@@ -436,7 +433,6 @@ var Styling_Option_dict = {
     LigandType: {Bold: false, Italic: false, Underline: false, Fontsize: "18px", Color: "#000"},
     ReceptorFamily: {Bold: false, Italic: false, Underline: false, Fontsize: "16px", Color: "#000"},
     Receptor: {Bold: false, Italic: false, Underline: false, Fontsize: "14px", Color: "#000"}};
-
 
 function transformListDataForLegend(data) {
     const legendData = {};
@@ -601,29 +597,25 @@ if (document.querySelector("#Layout_Max_Label").value === 'Auto') {
 document.querySelector("#List_Layout_Max_Label_input").disabled = true;
 }
 
-
 // #####################
 // ## Styling options ##
 // #####################
 // Function to update the styles for each section dynamically
 function updateLayerStyling(layer) {
-// Get the selected values for the current layer
-const boldCheckbox = document.getElementById(`boldCheckbox_${layer}`).checked;
-const italicCheckbox = document.getElementById(`italicCheckbox_${layer}`).checked;
-const underlineCheckbox = document.getElementById(`underlineCheckbox_${layer}`).checked;
-const fontSize = `${document.getElementById(`fontSizeSlider_${layer}`).value}px`;
+  // Get the selected values for the current layer
+  const boldCheckbox = document.getElementById(`boldCheckbox_${layer}`).checked;
+  const italicCheckbox = document.getElementById(`italicCheckbox_${layer}`).checked;
+  const underlineCheckbox = document.getElementById(`underlineCheckbox_${layer}`).checked;
+  const fontSize = `${document.getElementById(`fontSizeSlider_${layer}`).value}px`;
 
-// Update the Styling_Option_dict with the selected values
-Styling_Option_dict[layer].Bold = boldCheckbox;
-Styling_Option_dict[layer].Italic = italicCheckbox;
-Styling_Option_dict[layer].Underline = underlineCheckbox;
-Styling_Option_dict[layer].Fontsize = fontSize;
+  // Update the Styling_Option_dict with the selected values
+  Styling_Option_dict[layer].Bold = boldCheckbox;
+  Styling_Option_dict[layer].Italic = italicCheckbox;
+  Styling_Option_dict[layer].Underline = underlineCheckbox;
+  Styling_Option_dict[layer].Fontsize = fontSize;
 
-// Get the selected color from the Spectrum color picker
-
-
-// Update the visualization with the new styles (replace with your visualization update logic)
-updateVisualization_list();
+  // Update the visualization with the new styles (replace with your visualization update logic)
+  updateVisualization_list();
 }
 
 // Add event listeners to checkboxes and sliders for all layers
@@ -652,7 +644,7 @@ function addEventListeners() {
 
 // Call this function to initialize everything once the DOM is ready
 function initializeStylingOptions() {
-addEventListeners();
+  addEventListeners();
 }
 
 // Trigger initialization when the document is fully loaded
@@ -744,5 +736,4 @@ document.getElementById("legendToggleBtn").addEventListener("click", function ()
   updateVisualization_list();
 });
 </script>
-
 {% endblock %}

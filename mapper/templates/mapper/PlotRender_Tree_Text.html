@@ -315,7 +315,6 @@ function ReDraw_all() {
   }
 }
 
-
 // # Change leaves buttons #
 function setTreeLabelType(labelType) {
   // Set visual highlight (if needed)
@@ -430,7 +429,6 @@ $(document).ready(function () {
         applyLabelStyling();  // Dynamically update the plot
     });
 });
-
 
 document.addEventListener("DOMContentLoaded", function () {
   const labelButtons = document.querySelectorAll('.tree-label-btn');
@@ -588,7 +586,6 @@ positionButton.addEventListener("click", function () {
   updatePositionButton(next);
   ReDraw_all();  // Redraw with updated position
 });
-
 
 // === Legend Font Size Slider ===
 document.getElementById("legendFontSizeSlider").addEventListener("input", function () {
