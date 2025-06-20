@@ -933,16 +933,12 @@ Specific sets of ligands can be downloaded from the <a href="/ligand/biasedsubty
         </div>
       </div>
     </div>
-  <br />
-  <br />
-  <br />
-
+  </div>
   <div id="image-container" data-image-url="{% static 'home/images/DataMapper/DataMapper_GPCRome_icon_legend.png' %}"></div>
     <!-- GPCRome -->
-    <div class="col-md-12" style="margin-top: 0px;margin-bottom: 30px;">
+    <div class="col-md-12" style="margin-top: 20px;margin-bottom: 30px">
         <div id="GPCRome_plot" class="text-center"></div>
     </div>
-  </div>
 </div>
 {% endif %}
 
@@ -1709,7 +1705,7 @@ const GPCRomeWheelValues = extractDataValues(GPCRomeData)
       showIcon: true,
       LabelType: "Protein",
       ShowLegend: true,
-      LegendLabel: "Mutations count"
+      LegendLabel: "Ligand count"
   };
 
 let GPCRome_location = "GPCRome_plot";
