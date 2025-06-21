@@ -313,11 +313,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name', # Gene Name
                 'target__name',  # Target name
                 'ligand__name',  # Agent/Drug
-                'ligand__ligand_type__name',  # Modality
+                'ligand__ligand_type__name',  # Modality, wrong, should be 'Ligand type'
                 'ligand__smiles', # SMILES
                 'ligand__mw', 
                 'ligand__sequence',
-                'moa__name',  # Mode of action
+                'moa__name',  # Mode of action should be Modality
                 'indication__title',  # Disease name
                 'indication__code',  # Disease ICD11 code
                 'indication_max_phase',  # Max phase
@@ -338,11 +338,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name': 'Gene name',
                 'target__name': 'Target name',
                 'ligand__name': 'Ligand name',
-                'ligand__ligand_type__name': 'Modality',
+                'ligand__ligand_type__name': 'Type',
                 'ligand__smiles': 'raw_smiles',
                 'ligand__mw': 'mw',
                 'ligand__sequence': 'sequence',
-                'moa__name': 'Mode of action',
+                'moa__name': 'Modality',
                 'indication__title': 'Indication name',
                 'indication__code': 'ICD11',
                 'indication_max_phase': 'Phase',
@@ -367,7 +367,7 @@ class DrugSectionSelection(TemplateView):
 
             # Group by necessary columns and perform aggregation in one go
             grouped = df.groupby(
-                ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Modality', 'Mode of action', 'ICD11', 'ATC', 'Association score']
+                ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Type', 'Modality', 'ICD11', 'ATC', 'Association score']
             )
 
             # Perform aggregation

@@ -1185,7 +1185,7 @@
                                 const picVal    = row.picture || "Not_available";
                                 const ligID     = row.LigandID;
             
-                                if (row['Modality'] && typeof row['Modality'] === 'string' && row['Modality'].toLowerCase() === 'peptide') {
+                                if (row['Type'] && typeof row['Type'] === 'string' && row['Type'].toLowerCase() === 'peptide') {
                                     const sequenceValue = row.sequence || ""; 
                                     if (!sequenceValue) {
                                         console.warn("Peptide ligand " + data + " (LigandID: " + ligID + ") has no sequence!");
@@ -1214,8 +1214,8 @@
                         }
                         return data;
                     }},
-                    {data: "Modality", name: "Type",width: "7%"}, 
-                    {data: "Mode of action", name: "Modality",width: "10%"},
+                    {data: "Type", name: "Type",width: "7%"}, 
+                    {data: "Modality", name: "Modality",width: "10%"},
                     {data: "In trial", name: "In trial",width: "8%"},
                     {data: "Approved", name: "Approved",width: "8%"},
                     {data: "Indication name", name: "Indication",render: function (data, type, row, meta) {
