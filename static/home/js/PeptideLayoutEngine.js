@@ -2,6 +2,8 @@
 // Author: Binghan
 // A robust engine for generating SVG representations of peptide sequences.
 
+const PEPTIDE_LAYOUT_EPSILON = 1e-9;
+
 /**
  * A robust engine for generating SVG representations of peptide sequences
  * in a smooth, snake-like layout.
@@ -137,7 +139,6 @@ class PeptideLayoutEngine {
     
     _calculateLayout(numToLayout, residuesPerRow) {
         if (numToLayout <= 0) return [];
-        const EPSILON = 0.000000001;
         
         let d = "M 0 0";
         let x = 0, y = 0, direction = 1;
@@ -171,7 +172,7 @@ class PeptideLayoutEngine {
         const pathLength = path.getTotalLength();
         
         const centers = [];
-        const numPointsToSample = pathLength > 0 ? Math.floor(pathLength / this.stepDistance + EPSILON) + 1 : numToLayout;
+        const numPointsToSample = pathLength > 0 ? Math.floor(pathLength / this.stepDistance + PEPTIDE_LAYOUT_EPSILON) + 1 : numToLayout;
         const finalNumPoints = Math.min(numToLayout, numPointsToSample);
 
         for (let i = 0; i < finalNumPoints; i++) {
