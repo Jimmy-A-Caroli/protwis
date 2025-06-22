@@ -2,8 +2,7 @@
 // Author: Binghan
 // A robust engine for generating SVG representations of peptide sequences.
 
-// eslint-disable-next-line no-loss-of-precision
-const PEPTIDE_LAYOUT_EPSILON = 1e-9;
+const PEPTIDE_LAYOUT_EPSILON = Number('1e-9');
 
 /**
  * A robust engine for generating SVG representations of peptide sequences
