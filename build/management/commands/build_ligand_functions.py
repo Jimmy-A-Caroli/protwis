@@ -315,6 +315,10 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     #ligand.ids.add(wl)
                     current_ids.append(str(ids[type_id]))
 
+    # Updating the parent data if the child has more data
+    if ligand and parent and ligand.pk != parent.pk:
+        update_parent(parent, ligand)
+
     return ligand
 
 unichem_src_types = {"1": "chembl_ligand", "2": "drugbank", "3": "pdb", "4": "gtoplig", "22": "pubchem", "34": "drug_central"}
@@ -672,6 +676,50 @@ def check_name(smiles: str,
 
     # 5) All retries failed
     return name
+
+def update_parent(parent, child):
+    """
+    Update the parent ligand with data from the child if the parent lacks it.
+    - SMILES will be standardized.
+    - inchikey and clean_inchikey will be handled specially.
+    """
+
+    fields_to_check = ['sequence', 'logp', 'mw', 'helm', 'uniprot', 'pdbe']
+    updated = False
+
+    # Special case: SMILES needs standardization
+    if not parent.smiles and child.smiles:
+        std_smiles = standardize_smiles(child.smiles)
+        if std_smiles:
+            parent.smiles = std_smiles
+            updated = True
+            print(f"Updated parent {parent.name} field 'smiles' with standardized child SMILES.")
+
+    # Special case: inchikey and clean_inchikey
+    if not parent.inchikey and child.inchikey:
+        parent.inchikey = child.inchikey
+        updated = True
+        print(f"Updated parent {parent.name} field 'inchikey' with child value.")
+
+        # Also update clean_inchikey if missing
+        if not parent.clean_inchikey:
+            clean = child.inchikey.split('-')[0]
+            parent.clean_inchikey = clean
+            print(f"Updated parent {parent.name} field 'clean_inchikey' with derived value.")
+
+    # Standard fields
+    for field in fields_to_check:
+        parent_val = getattr(parent, field, None)
+        child_val = getattr(child, field, None)
+
+        if not parent_val and child_val:
+            setattr(parent, field, child_val)
+            updated = True
+            print(f"Updated parent {parent.name} field '{field}' with child value.")
+
+    if updated:
+        parent.save()
+
 
 #### Block for fixing mismatched LigandType assignment in Ligand model
 
