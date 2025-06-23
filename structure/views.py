@@ -256,7 +256,6 @@ class StructureDataJsonView(View):
             # t2 = perf_counter()
             # print(f"query {t1-t0:5.2f}s  |  python {t2-t1:5.2f}s  "
             #       f"(rows={len(structures)})")
-            print("delicious")
 
             return JsonResponse(out, safe=False, encoder=DjangoJSONEncoder)
 
