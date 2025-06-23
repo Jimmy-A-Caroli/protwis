@@ -734,7 +734,7 @@
 
 	function isStandardPeptideSequence(seqStr) {
 		if (!seqStr) return false;
-		return /^[ACDEFGHIKLMNPQRSTVWXYZUO\s]+$/i.test(seqStr);
+		return /^[ABCDEFGHIKLMNOPQRSTUVWXYZ\s]+$/i.test(seqStr);
 	}
 
 	if (ligandPicture === "Generate_from_SMILES" && smiles) {
