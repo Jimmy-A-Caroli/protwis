@@ -700,9 +700,6 @@ class DruggedGPCRome(TemplateView):
                 if int(pair[1]) > int(drug_count_receptor_dict[pair[0]]):
                     drug_count_receptor_dict[pair[0]] = int(pair[1])
 
-        proteins = list(Protein.objects.filter(entry_name__in=drug_count_receptor_dict.keys()
-        ).values('entry_name', 'name').order_by('entry_name'))
-
         # Mapping for Value2
         status_color_map = {
             1: '#f5bcbf',

@@ -403,7 +403,11 @@ function getActiveColorOption() {
 function renderInitialPlot() {
     const colorOption = getActiveColorOption(); // Get the initially selected color option
 
-    performClustering(5); // Perform initial clustering with 5 clusters
+    // Set max value of the slider to dataPointsCount - 1
+    const dataPointsCountInit = currentClusterData.length; // Get the number of data points
+    clusteringNum = Math.min(5, dataPointsCountInit - 1); // Max 20 clusters or dataPoints - 1
+
+    performClustering(clusteringNum); // Perform initial clustering with 5 clusters
 
     updatePlotWithAnnotations(); // Use the updated function to render the plot with annotations
 
@@ -517,10 +521,17 @@ function switchClusterLabels(labelType) {
     updatePlotWithAnnotations();
 }
 
+function getInitialLabelTypeFromUI() {
+    const activeButton = document.querySelector('.cluster-label-btn.btn-primary');
+    return activeButton ? activeButton.getAttribute('data-value') : "IUPHAR"; // Fallback
+}
+
 // Attach the plotly_relayout event listener for zoom handling using jQuery
 $('#plotContainer_cluster').on('plotly_relayout', function(eventdata) {
-    switchClusterLabels("IUPHAR");
-    updatePlotWithAnnotations(); // Update annotations on zoom or pan
+
+  let labelType = getInitialLabelTypeFromUI();
+  switchClusterLabels(labelType);
 });
+
 </script>
 {% endblock %}

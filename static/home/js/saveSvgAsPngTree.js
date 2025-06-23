@@ -17,7 +17,8 @@
         var href = image.getAttributeNS("http://www.w3.org/1999/xlink", "href") || image.getAttribute("href");
         if (isExternal(href)) {
           console.warn("External image skipped:", href);
-          if (--left === 0) callback();
+          left--;
+          if (left === 0) callback();
           return;
         }
 
@@ -29,11 +30,13 @@
           canvas.height = img.height;
           canvas.getContext("2d").drawImage(img, 0, 0);
           image.setAttributeNS("http://www.w3.org/1999/xlink", "href", canvas.toDataURL("image/png"));
-          if (--left === 0) callback();
+          left--;
+          if (left === 0) callback();
         };
         img.onerror = function () {
           console.warn("Image failed to load:", href);
-          if (--left === 0) callback();
+          left--;
+          if (left === 0) callback();
         };
       })(images[i]);
     }
