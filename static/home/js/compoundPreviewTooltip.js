@@ -1,23 +1,12 @@
 /**
- * compoundPreviewTooltip.js (v2.0)
+ * compoundPreviewTooltip.js (v2.3)
  *
- * This module provides a tooltip for chemical structures. It now supports both
- * small molecules (via SMILES and OpenChemLib) and peptides (via sequences and PeptideLayoutEngine).
- *
- * It binds a hover event to elements matching the provided selector (e.g., "a.struct").
- * The tooltip's content is determined by the element's data attributes:
- *
- *  - For Peptides:
- *    - It looks for `data-ligand-type="peptide"` and a `data-sequence` attribute.
- *    - If found, it uses PeptideLayoutEngine to render a snake-like diagram.
- *
- *  - For Small Molecules:
- *    - It checks `rel="Generate_from_SMILES"` and a `data-smiles` attribute.
- *    - If found, it uses OpenChemLib (OCL) to generate an SVG.
- *
- *  - Fallbacks:
- *    - If `rel` contains an image URL, it displays that image.
- *    - Otherwise, it displays a default "No image available" picture.
+ * This module provides a tooltip for chemical structures.
+ * - For Peptides: Uses PeptideLayoutEngine if sequence is standard and engine is available.
+ * - For Small Molecules (and others):
+ *   - If `data-picture` or `rel` is "Generate_from_SMILES" AND `data-smiles` and OCL are available, generates SVG.
+ *   - Else if `data-picture` or `rel` is a valid image URL, displays that image.
+ *   - Else, falls back to a default "No image available" picture.
  *
  * Usage:
  *   compoundPreview("a.struct");
@@ -28,10 +17,11 @@
  *   - PeptideLayoutEngine - must be loaded if peptide rendering is needed.
  *
  * Note:
- *   - Ensure that window.NO_IMAGE_URL is defined in your HTML.
- *   - The anchor tags in your table should have the following data attributes:
- *     - For peptides: `data-ligand-type="peptide" data-sequence="..."`
- *     - For small molecules: `rel="Generate_from_SMILES" data-smiles="..."`
+ *   - `window.NO_IMAGE_URL` should be defined.
+ *   - Data attributes for peptides: `data-ligand-type="peptide" data-sequence="SEQUENCE_STRING"`
+ *   - Data attributes for small molecules:
+ *     - SMILES rendering: `data-smiles="SMILES_STRING" [data-picture="Generate_from_SMILES" or rel="Generate_from_SMILES"]`
+ *     - Pre-rendered image: `[data-picture="IMAGE_URL" or rel="IMAGE_URL"]`
  */
 function compoundPreview(selector = "a.struct", noImageUrl = window.NO_IMAGE_URL) {
     if (!noImageUrl) {
@@ -39,49 +29,61 @@ function compoundPreview(selector = "a.struct", noImageUrl = window.NO_IMAGE_URL
     }
     const xOffset = 30, yOffset = -10;
 
-    // Use event delegation for better performance with DataTables
-    // This binds one event listener to the body, instead of one for each link.
+	function isStandardPeptideSequence(seqStr) {
+		if (!seqStr) return false;
+		return /^[ABCDEFGHIKLMNOPQRSTUVWXYZ\s]+$/i.test(seqStr);
+	}
+
     $('body').on('mouseenter', selector, function(e) {
         let $link = $(this);
         let tooltipHtml = "";
 
-        // --- NEW LOGIC: Check ligand type first ---
         const ligandType = $link.data('ligand-type');
+        const sequence = $link.data('sequence');
 
         if (ligandType === 'peptide') {
-            const sequence = $link.data('sequence');
-            if (sequence && typeof PeptideLayoutEngine !== 'undefined') {
+            if (isStandardPeptideSequence(sequence) && typeof PeptideLayoutEngine !== 'undefined') {
                 try {
-                    // It's a peptide! Use our new engine.
                     const peptideDrawer = new PeptideLayoutEngine({
-                        // Settings optimized for a small tooltip
-                        residueRadius: 16,
-                        overlapAmount: 6,
-                        padding: 10,
-                        fontSize: 12,
-                        residuesPerRow: 10,
-                        maxLength: 50,
+                        residueRadius: 16, overlapAmount: 6, padding: 10,
+                        fontSize: 12, residuesPerRow: 10, maxLength: 50,
                         rowSpacingFactor: 1.5
                     });
-                    const svgElement = peptideDrawer.generateSvgElement(sequence);
-                    if (svgElement) {
-                        tooltipHtml = svgElement.outerHTML;
+                    const cleanedSequence = sequence.replace(/\s+/g, '').toUpperCase();
+                    if (cleanedSequence) {
+                        const svgElement = peptideDrawer.generateSvgElement(cleanedSequence);
+                        if (svgElement) {
+                            tooltipHtml = svgElement.outerHTML;
+                        } else {
+                            console.warn("PeptideLayoutEngine.generateSvgElement returned null for sequence:", cleanedSequence);
+                            tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`;
+                        }
                     } else {
-                        tooltipHtml = "<div>Peptide sequence empty</div>";
+                        console.warn("Peptide sequence became empty after cleaning:", sequence);
+                        tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`;
                     }
                 } catch(err) {
-                    console.error("PeptideLayoutEngine error:", err);
-                    tooltipHtml = "<div>Error rendering peptide</div>";
+                    console.error("PeptideLayoutEngine error in tooltip:", err, "Original sequence:", sequence);
+                    tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`;
                 }
             } else {
-                tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" />`;
+                // Fallback for non-standard peptide or missing engine
+                if (sequence && !isStandardPeptideSequence(sequence)) {
+                     console.log("Tooltip: Peptide sequence non-standard, falling back. Sequence:", sequence);
+                } else if (!sequence) {
+                     console.log("Tooltip: Peptide sequence data attribute is missing or empty.");
+                } else if (typeof PeptideLayoutEngine === 'undefined') {
+                     console.warn("Tooltip: PeptideLayoutEngine library not found for peptide rendering.");
+                }
+                tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`;
             }
-        } else {
-            // --- ORIGINAL LOGIC for small molecules and other fallbacks ---
-            let fallbackUrl = $link.attr("rel");
+        } else { // Not 'peptide', so treat as small molecule or other
             let smiles = $link.data("smiles") || "";
+            // Prioritize data-picture, then rel, for pictureSource info
+            let pictureSource = $link.data("picture") || $link.attr("rel");
 
-            if (fallbackUrl === "Generate_from_SMILES" && smiles && typeof OCL !== 'undefined') {
+            if (pictureSource === "Generate_from_SMILES" && smiles && typeof OCL !== 'undefined') {
+                // Explicit request to generate from SMILES (similar to v2.0's primary SMILES condition)
                 try {
                     let mol = OCL.Molecule.fromSmiles(smiles);
                     mol.inventCoordinates();
@@ -92,13 +94,24 @@ function compoundPreview(selector = "a.struct", noImageUrl = window.NO_IMAGE_URL
                     };
                     tooltipHtml = mol.toSVG(svgSize, svgSize, null, svgOptions);
                 } catch (err) {
-                    console.error("OCL error:", err);
-                    tooltipHtml = "<div>Invalid SMILES</div>";
+                    console.error("OCL error in tooltip (explicit SMILES gen):", err, "SMILES:", smiles);
+                    tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`; // Changed from "Invalid SMILES" div to image
                 }
-            } else if (fallbackUrl && fallbackUrl !== "Not_available") {
-                tooltipHtml = `<img style="max-width: 200px; height: auto" src="${fallbackUrl}" />`;
+            } else if (pictureSource && pictureSource !== "Not_available" && pictureSource !== "Generate_from_SMILES") {
+                // If pictureSource is a valid image URL (not "Generate_from_SMILES" or "Not_available")
+                tooltipHtml = `<img style="max-width: 200px; height: auto" src="${pictureSource}" alt="Ligand preview" />`;
             } else {
-                tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" />`;
+                // Final fallback:
+                // This will be hit if:
+                // 1. pictureSource was "Not_available"
+                // 2. pictureSource was undefined (neither data-picture nor rel was set)
+                // 3. pictureSource was "Generate_from_SMILES" but SMILES was missing or OCL was undefined.
+                if (smiles && pictureSource === "Generate_from_SMILES" && typeof OCL === 'undefined') {
+                    console.warn("Tooltip: SMILES present and Generate_from_SMILES requested, but OCL library not found.");
+                } else if (smiles && pictureSource === "Generate_from_SMILES" && !smiles) {
+                     console.warn("Tooltip: Generate_from_SMILES requested, but no SMILES data found.");
+                }
+                tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`;
             }
         }
         
