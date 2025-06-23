@@ -721,10 +721,25 @@
 	// Get data from Django context
 	const ligandPicture = "{{ ligand.picture }}";
 	const ligandType = "{{ ligand.type }}";
-	const sequence = "{{ ligand.sequence|default:'' }}";
-	const smiles = "{{ ligand.ligand_smiles_for_image|default:'' }}";
+	const sequence = "{{ ligand.sequence|default:''|escapejs }}";
+	const smiles = "{{ ligand.ligand_smiles_for_image|default:''|escapejs }}";
+	const noImageUrl = "{% static 'home/images/No_image_available.svg' %}";
+
+	function displayFallbackImage(containerId) {
+		const container = document.getElementById(containerId);
+		if (container) {
+			container.innerHTML = `<img src="${noImageUrl}" alt="No image available" width="300" height="300" style="display: block; margin: auto;">`;
+		}
+	}
+
+	function isStandardPeptideSequence(seqStr) {
+		if (!seqStr) return false;
+		return /^[ACDEFGHIKLMNPQRSTVWYUO\s]+$/i.test(seqStr);
+	}
+
 	if (ligandPicture === "Generate_from_SMILES" && smiles) {
-		// Case 1: Explicit instruction to use SMILES and SMILES string exists
+		const containerBioId = "my-molecule-svg-bioactivity";
+		const containerAgentId = "my-molecule-svg-agent";
 		if (typeof OCL !== "undefined") {
 			try {
 				const mol = OCL.Molecule.fromSmiles(smiles);
@@ -736,19 +751,26 @@
 				};
 				const svg = mol.toSVG(svgSize, svgSize, null, options);
 				
-				const container1 = document.getElementById("my-molecule-svg-bioactivity");
-				const container2 = document.getElementById("my-molecule-svg-agent");
+				const container1 = document.getElementById(containerBioId);
+				const container2 = document.getElementById(containerAgentId);
 				
 				if (container1) container1.innerHTML = svg;
 				if (container2) container2.innerHTML = svg;
 
 			} catch (error) {
 				console.error("Error rendering SMILES with OCL:", error);
+				displayFallbackImage(containerBioId); // Display fallback
+				displayFallbackImage(containerAgentId); // Display fallback
 			}
+		} else {
+			console.warn("OCL library not found for SMILES rendering.");
+			displayFallbackImage(containerBioId); // Display fallback
+			displayFallbackImage(containerAgentId); // Display fallback
 		}
 	} else if (ligandType === 'Peptide' && sequence) {
-		// Case 2: It's a Peptide and has a sequence
-		if (typeof PeptideLayoutEngine !== "undefined") {
+		const containerBioId = "peptide-svg-container-bioactivity";
+		const containerAgentId = "peptide-svg-container-agent";
+		if (isStandardPeptideSequence(sequence) && typeof PeptideLayoutEngine !== "undefined") {
 			try {
 				const peptideDrawer = new PeptideLayoutEngine({
 					fixedWidth: 300,
@@ -756,35 +778,43 @@
 					residuesPerRow: 8,
 					rowSpacingFactor: 1.3, 
 				});
-				const svgElement = peptideDrawer.generateSvgElement(sequence);
+				const cleanedSequence = sequence.replace(/\s+/g, '').toUpperCase();
+				const svgElement = peptideDrawer.generateSvgElement(cleanedSequence);
 
-				// Note: It's better to have unique IDs for these containers.
-				// Assuming 'peptide-svg-container-agent' is the ID for the second tab.
-				const container1 = document.getElementById("peptide-svg-container-bioactivity");
-				const container2 = document.getElementById("peptide-svg-container-agent"); 
-				if (container1 && svgElement) {
-					// Clear the container before appending
-					while (container1.firstChild) {
-						container1.removeChild(container1.firstChild);
+				const container1 = document.getElementById(containerBioId);
+				const container2 = document.getElementById(containerAgentId);
+
+				if (svgElement) { // Check if svgElement was successfully created
+					if (container1) {
+						while (container1.firstChild) container1.removeChild(container1.firstChild);
+						container1.appendChild(svgElement);
 					}
-					container1.appendChild(svgElement);
-				}
-				if (container2 && svgElement) {
-					// Clear the container before appending
-						while (container2.firstChild) {
-						container2.removeChild(container2.firstChild);
+					if (container2) {
+						while (container2.firstChild) container2.removeChild(container2.firstChild);
+						container2.appendChild(svgElement.cloneNode(true));
 					}
-					container2.appendChild(svgElement.cloneNode(true));
+				} else {
+						console.warn("PeptideLayoutEngine.generateSvgElement returned null for sequence:", cleanedSequence);
+						displayFallbackImage(containerBioId);
+						displayFallbackImage(containerAgentId);
 				}
 			} catch (error) {
-				console.error("Error rendering Peptide with PeptideLayoutEngine:", error);
+				console.error("Error rendering Peptide with PeptideLayoutEngine:", error, "Original sequence:", sequence);
+				displayFallbackImage(containerBioId); // Display fallback
+				displayFallbackImage(containerAgentId); // Display fallback
 			}
+		} else {
+			if (!isStandardPeptideSequence(sequence)) {
+				console.log("Ligand Info Page: Peptide sequence is non-standard. Sequence:", sequence);
+			}
+			if (typeof PeptideLayoutEngine === "undefined") {
+				console.warn("PeptideLayoutEngine library not found for Peptide rendering.");
+			}
+			displayFallbackImage(containerBioId); // Display fallback
+			displayFallbackImage(containerAgentId); // Display fallback
 		}
 	}
-	// Case 3 (Fallback) is implicitly handled, as the `<img>` tag is already in the HTML.
-	// No 'else' block is needed.
-
-}); // This parenthesis and curly brace now correctly close the addEventListener and its callback.
+});
 </script>
 
 <script type="text/javascript">
