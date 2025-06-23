@@ -358,7 +358,18 @@ class DrugSectionSelection(TemplateView):
             # Merge the ATC data into the main DataFrame (df) on 'Ligand ID'
             df = df.merge(atc_df_grouped, on='LigandID', how='left')
             # Fill NaN values in the 'ATC' column with None
-            df['ATC'] = df['ATC'].fillna("")
+            group_cols = ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Modality', 'Mode of action', 'ICD11', 'ATC', 'Association score']
+            df[group_cols] = df[group_cols].fillna({
+                'Target name': 'Unknown',
+                'Gene name': 'Unknown',
+                'Ligand name': 'Unknown',
+                'Indication name': 'Unknown',
+                'Modality': 'Unknown',
+                'Mode of action': 'Unknown',
+                'ICD11': 'Unspecified',
+                'ATC': '',
+                'Association score': 0
+            })
 
             # Precompute flags for phase and approval status
             df['Is_Approved'] = (df['Status'] == 'Approved').astype(int)
