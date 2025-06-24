@@ -1,5 +1,5 @@
 /**
- * compoundPreviewTooltip.js (v2.3)
+ * compoundPreviewTooltip.js (v2.4)
  *
  * This module provides a tooltip for chemical structures.
  * - For Peptides: Uses PeptideLayoutEngine if sequence is standard and engine is available.
@@ -27,12 +27,52 @@ function compoundPreview(selector = "a.struct", noImageUrl = window.NO_IMAGE_URL
     if (!noImageUrl) {
         noImageUrl = "/static/home/images/No_image_available.svg";
     }
-    const xOffset = 30, yOffset = -10;
+    const xOffset = 30, yOffset = -10; // Original yOffset makes it appear slightly above cursor line.
 
-	function isStandardPeptideSequence(seqStr) {
-		if (!seqStr) return false;
-		return /^[ABCDEFGHIKLMNOPQRSTUVWXYZ\s]+$/i.test(seqStr);
-	}
+    function isStandardPeptideSequence(seqStr) {
+        if (!seqStr) return false;
+        return /^[ABCDEFGHIKLMNOPQRSTUVWXYZ\s]+$/i.test(seqStr);
+    }
+
+    function calculateAndSetPosition(e, $tooltip) {
+        if (!$tooltip || !$tooltip.length) return;
+
+        const tooltipWidth = $tooltip.outerWidth();
+        const tooltipHeight = $tooltip.outerHeight();
+        const windowWidth = $(window).width();
+        const windowHeight = $(window).height();
+        // e.pageX/pageY are document coordinates.
+        // e.clientX/clientY are viewport coordinates.
+
+        let newLeft = e.pageX + xOffset;
+        // Original logic for yOffset: e.pageY - yOffset means e.pageY - (-10) = e.pageY + 10
+        // So the top of the tooltip is 10px BELOW the mouse y-coordinate.
+        let newTop = e.pageY - yOffset;
+
+        // Check right boundary (using clientX for viewport-relative check)
+        if (e.clientX + xOffset + tooltipWidth > windowWidth) {
+            newLeft = e.pageX - tooltipWidth - xOffset; // Place to the left of cursor
+        }
+
+        // Check bottom boundary (using clientY for viewport-relative check)
+        // e.clientY - yOffset + tooltipHeight: e.clientY - (-10) + tooltipHeight = e.clientY + 10 + tooltipHeight
+        if (e.clientY - yOffset + tooltipHeight > windowHeight) {
+            // Place above the cursor.
+            // newTop becomes: e.pageY (cursor) + yOffset (push up by 10) - tooltipHeight
+            newTop = e.pageY + yOffset - tooltipHeight;
+        }
+
+        // Prevent tooltip from going off the top or left of the document after adjustments
+        // (though less likely with this logic, good for robustness)
+        if (newLeft < $(window).scrollLeft()) {
+            newLeft = $(window).scrollLeft();
+        }
+        if (newTop < $(window).scrollTop()) {
+            newTop = $(window).scrollTop();
+        }
+
+        $tooltip.css({ top: newTop + "px", left: newLeft + "px" });
+    }
 
     $('body').on('mouseenter', selector, function(e) {
         let $link = $(this);
@@ -114,16 +154,24 @@ function compoundPreview(selector = "a.struct", noImageUrl = window.NO_IMAGE_URL
                 tooltipHtml = `<img style="max-width: 200px; height: auto" src="${noImageUrl}" alt="Preview not available" />`;
             }
         }
-        
-        // Create and position the tooltip
+
+        // Create the tooltip, but don't show it yet
         $("body").append(`<p class="tooltip-struct">${tooltipHtml}</p>`);
-        $(".tooltip-struct")
-            .css({ top: e.pageY - yOffset + "px", left: e.pageX + xOffset + "px" })
-            .fadeIn("fast");
-            
+        const $tooltipInstance = $(".tooltip-struct");
+
+        // Calculate position (this function now handles viewport collision)
+        // Note: For accurate dimensions, the tooltip must be in the DOM.
+        // If its content is dynamic and affects size significantly, you might need to
+        // make it visible but off-screen (e.g., left: -9999px) to measure, then position.
+        // However, with max-width:200px on images, current approach should be mostly fine.
+        calculateAndSetPosition(e, $tooltipInstance);
+
+        $tooltipInstance.fadeIn("fast");
+
     }).on('mouseleave', selector, function() {
         $(".tooltip-struct").remove();
     }).on('mousemove', selector, function(e) {
-        $(".tooltip-struct").css({ top: e.pageY - yOffset + "px", left: e.pageX + xOffset + "px" });
+        // Update position on mouse move, also handling viewport collision
+        calculateAndSetPosition(e, $(".tooltip-struct"));
     });
 }
