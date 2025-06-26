@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
 <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/BusyLoad.css' %}" type="text/css">
+<link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
 
 <style type="text/css">
  /* Target the select2 dropdown and ensure it applies */
@@ -142,6 +143,9 @@
         background: white; /* Match the header background */
         border-right: 1px solid #cccccc; /* Optional for visual clarity */
     }
+    .popover {
+        z-index: 9999 !important;
+    }
 </style>
 {% endblock %}
 {% block content %}
@@ -231,7 +235,15 @@
                         <th style="text-align: center;">Agents</th>
                         <th style="text-align: center;">Ligands</th>
                         <th style="text-align: center;border-left: 1px solid #cccccc;">Small molecule</th>
-                        <th style="text-align: center;">Biologics</th>
+                        <th style="text-align: center;">Biologics
+                            <span class="glyphicon glyphicon-info-sign"
+                            data-html="true"
+                            data-toggle="popover"
+                            data-trigger="hover"
+                            data-placement="right"
+                            data-content="This includes peptides, proteins, and antibodies."
+                            style="font-size: 14px;">
+                        </span></th>
                         <th style="text-align: center;border-left: 1px solid #cccccc;">Max Phase</th>
                         <th style="text-align: center;">Drugs</th>
                         <th style="text-align: center;">Agents</th>
@@ -380,6 +392,18 @@
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
 <script src="{% static 'home/js/BusyLoad.js' %}"></script>
+
+<script type="text/javascript" charset="utf-8">
+  $(document).ready(function(){
+    paper.install(window);
+    $('[data-toggle="popover"]').popover({
+      trigger: 'hover',
+      html: true,
+      container: 'body',
+      delay: { show: 100, hide: 300 } // Makes it less twitchy
+    });
+  });
+</script>
 
 <script type="text/javascript">
 
@@ -668,7 +692,15 @@ $(document).ready(function() {
                     text: 'Reset filters', 
                     action: function () { reset_all(); } 
                 }
-            ]
+            ],
+            drawCallback: function(settings) {
+                $('[data-toggle="popover"]').popover({
+                    trigger: 'hover',
+                    html: true,
+                    container: 'body',
+                    delay: { show: 100, hide: 300 }
+                });
+            }
         });
     }
 
