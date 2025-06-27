@@ -764,7 +764,7 @@ class MutationStatistics(TemplateView):
             for key, value in mut_count_receptor_dict.items()
         }
 
-        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
         updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], updated_results)
         context['GPCRome_data'] = json.dumps(updated_data)
 

@@ -2387,7 +2387,7 @@ class LigandStatistics(TemplateView):
                 for key, value in human_dict.items()
             }
 
-            gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+            gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
             updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], updated_dict)
 
             context['GPCRome_data'] = json.dumps(updated_data)

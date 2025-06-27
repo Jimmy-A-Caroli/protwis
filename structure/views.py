@@ -1745,7 +1745,7 @@ class StructureStatistics(TemplateView):
                     for key, value in result_dict.items()
                 }
 
-                gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+                gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
                 updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], results_updated_dict)
 
                 context['GPCRome_data'] = json.dumps(updated_data)
@@ -1811,7 +1811,7 @@ class StructureStatistics(TemplateView):
                     for key, value in result_dict.items()
                 }
 
-                gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+                gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
                 updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], results_updated_dict)
 
                 context['GPCRome_data'] = json.dumps(updated_data)
@@ -1845,7 +1845,7 @@ class StructureStatistics(TemplateView):
                     for key, value in complexes_dict.items()
                 }
 
-                gpcr_data_complexes = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+                gpcr_data_complexes = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
                 complexes_updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data_complexes["Data"], complexes_updated_dict)
 
                 context['GPCRome_data_complexes'] = json.dumps(complexes_updated_data)
@@ -1875,7 +1875,7 @@ class StructureStatistics(TemplateView):
                     for key, value in odorant_struct_dict.items()
                 }
 
-                gpcr_data_odorant = DataMapperHome.GenerateGPCRomeDataStructure(type="Odorant")
+                gpcr_data_odorant = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Odorant")
                 Odorant_updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data_odorant["Data"], updated_odorant_struct_dict)
                 context['GPCRome_data_odorant'] = json.dumps(Odorant_updated_data)
 

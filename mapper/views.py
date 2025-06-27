@@ -290,7 +290,7 @@ class DataMapperHome(TemplateView):
                 slug_parts = item.slug.split('_')
                 current_level = datatree
 
-                for i in enumerate(slug_parts):
+                for i in range(len(slug_parts)):
                     full_slug = '_'.join(slug_parts[:i + 1])
                     name = item.name if full_slug == item.slug else None
 
@@ -1647,7 +1647,7 @@ class GPCRomeRender(TemplateView):
 
         try:
             Data = json.loads(Data_json)
-            gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+            gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
             updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], Data)
 
             # Store PlotType so get_template_names can access it
