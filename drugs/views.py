@@ -717,7 +717,7 @@ class DruggedGPCRome(TemplateView):
             for key, value in drug_count_receptor_dict.items()
                 }
 
-        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(type="Classic")
+        gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
         updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], results_updated_dict)
 
         context['GPCRomeData'] = json.dumps(updated_data)

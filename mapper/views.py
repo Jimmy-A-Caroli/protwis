@@ -513,7 +513,6 @@ class DataMapperHome(TemplateView):
                     entry = d["EntryName"].upper()
                     if entry in normalized_raw_data:
                         d["Data"] = normalized_raw_data[entry]["Data"]
-                        
                         color = normalized_raw_data[entry].get("Color")
                         if color is not None:
                             d["Color"] = color
@@ -891,7 +890,7 @@ class DataMapperHome(TemplateView):
 
                         # Fetch protein data for processing 2 (GPCRome wheel and Tree plot) #
                         Proteins_GPCRomeTree = Protein.objects.filter(
-                                species_id=1, 
+                                species_id=1,
                                 parent_id__isnull=True,
                                 accession__isnull=False,
                                 family_id__slug__startswith='0'
