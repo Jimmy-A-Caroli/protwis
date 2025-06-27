@@ -619,9 +619,9 @@ class DataMapperHome(TemplateView):
 
         # Step 2: Trim protein queries
         whole_receptors = Protein.objects.filter(entry_name__in=entry_names_list).prefetch_related("family", "family__parent__parent__parent")
-            
+
         protein_genes = Protein.objects.filter(entry_name__in=entry_names_list).prefetch_related('genes')
-            
+
         entry_to_gene = {
             protein.entry_name: next((g.name for g in protein.genes.all() if g.position == 0), None)
             for protein in protein_genes
