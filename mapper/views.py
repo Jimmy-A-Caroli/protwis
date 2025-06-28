@@ -1345,7 +1345,7 @@ class DataMapperHome(TemplateView):
                                                     break
                                         else:
                                             status = 'Failed'
-                                            
+
                                         ## Update Plot_parser for Cluster
                                         Plot_parser = status
 
@@ -1754,7 +1754,6 @@ class HeatmapRender(TemplateView):
 
     def post(self, request, *args, **kwargs):
         Data_json = request.POST.get('Data')
-        # PlotType = request.POST.get('PlotType')
 
         try:
             # Get data
