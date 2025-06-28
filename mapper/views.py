@@ -897,7 +897,7 @@ class DataMapperHome(TemplateView):
                             ).exclude(
                                 family_id__slug__startswith='008'
                             ).values_list('entry_name', flat=True).distinct()
-                        
+
                         # Fetch proteins with prefetch on genes
                         proteins = Protein.objects.prefetch_related('genes').filter(entry_name__in=all_proteins)
 
