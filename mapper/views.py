@@ -1553,7 +1553,7 @@ class DataMapperHome(TemplateView):
 
                                                     if receptor not in Data:
                                                         Data[receptor] = {}
-                                                    
+
                                                     # Check datatype -> Numeric or Text:
                                                     if Plot_type in ('Numeric', 'Text'):
                                                         for i in range(1, 6):
