@@ -28,7 +28,6 @@ import re
 import openpyxl
 import os
 
-
 class DataMapperHome(TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
@@ -858,7 +857,6 @@ class DataMapperHome(TemplateView):
         }
 
         return Label_converter
-    
 
     def post(self, request, *args, **kwargs):
         ### This method handles POST requests for form submission ###
