@@ -1110,7 +1110,7 @@ class DataMapperHome(TemplateView):
                                     #################
 
                                     elif Plot_name == 'Tree':
-                                        
+
                                         # Incorrect_values['GPCRs'] = {}
                                         IndexToColumn = ['A','B','C','D','E','F','G']
                                         empty_sheet = True  # Initialize the flag
@@ -1307,7 +1307,7 @@ class DataMapperHome(TemplateView):
                                                                 Data[receptor]['Value1'] = float_value
                                                             except ValueError:
                                                                 Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Non-numeric Value.'
-                                                            
+
                                                             if row[2] not in (None, ""):
                                                                 try:
                                                                     float_value = float(row[2])
