@@ -1115,7 +1115,7 @@ class DataMapperHome(TemplateView):
                                         IndexToColumn = ['A','B','C','D','E','F','G']
                                         empty_sheet = True  # Initialize the flag
                                         TreeNonEmptyEntryCounter = 0
-                                        
+
                                         # Check if sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) to G (6) is not None or empty
@@ -1131,7 +1131,7 @@ class DataMapperHome(TemplateView):
                                                 # Check if column A has a value AND at least one column in B-G has a value
                                                 if row[0] not in (None, "") and any(cell not in (None, "") for cell in row[1:7]):
                                                     TreeNonEmptyEntryCounter += 1
-                                                
+
                                                 # Stop if we exceed 200 valid entries
                                                 if TreeNonEmptyEntryCounter > 200:
                                                     break
@@ -1349,7 +1349,6 @@ class DataMapperHome(TemplateView):
                                         ## Update Plot_parser for Cluster
                                         Plot_parser = status
 
-
                                     #################
                                     ### List plot ###
                                     #################
@@ -1359,7 +1358,7 @@ class DataMapperHome(TemplateView):
                                         IndexToColumn = ['A','B','C','D','E','F','G',"H","I"]
                                         # # Initialize the inccorect column values
                                         empty_sheet = True  # Initialize the flag
-                                        
+
                                         # Check if sheet is empty
                                         for row in worksheet.iter_rows(min_row=2, values_only=True):
                                             # Check if any value in columns B (1) to G (6) is not None or empty
@@ -1693,13 +1692,12 @@ class TreeRender(TemplateView):
 
         except json.JSONDecodeError:
             return HttpResponse("Invalid JSON data")
-        
+
 class ClusterRender(TemplateView):
     template_name = 'mapper/PlotRender_Cluster.html'  # default fallback
 
     def post(self, request, *args, **kwargs):
         Data_json = request.POST.get('Data')
-        # PlotType = request.POST.get('PlotType')
 
         try:
             # Get data
@@ -1717,7 +1715,7 @@ class ClusterRender(TemplateView):
 
         except json.JSONDecodeError:
             return HttpResponse("Invalid JSON data")
-        
+
 class ListRender(TemplateView):
     template_name = 'mapper/PlotRender_List.html'  # default fallback
 
