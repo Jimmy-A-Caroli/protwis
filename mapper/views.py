@@ -1104,7 +1104,7 @@ class DataMapperHome(TemplateView):
                                             status = 'Failed'
 
                                         Plot_parser = status
-                            
+
                                     #################
                                     ### Tree plot ###
                                     #################
