@@ -35,7 +35,7 @@ from common.views import AbsReferenceSelectionTable, getReferenceTable, getLigan
 from common.models import ReleaseNotes, WebResource, Publication
 from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from common.selection import Selection, SelectionItem
-from mapper.views import LandingPage
+from mapper.views import DataMapperHome
 from ligand.models import Ligand, LigandVendorLink, BiasedPathways, AssayExperiment, BiasedData, Endogenous_GTP, LigandID, LigandPeptideStructure, LigandMol, LigandFingerprint
 from ligand.functions import OnTheFly, AddPathwayData, standardize_smiles
 from protein.models import Protein, ProteinFamily, Tissues, TissueExpression
@@ -2831,12 +2831,7 @@ class LigandStatistics(TemplateView):
             names_dict = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False, family_id__slug__startswith='0').values('entry_name', 'name').order_by('entry_name')
             names_conversion_dict = {item['entry_name']: item['name'] for item in names_dict}
             data = list(names_conversion_dict.keys())
-            names = list(Protein.objects.filter(entry_name__in=data).values_list('name', flat=True))
-            IUPHAR_to_uniprot_dict = {item['name']: item['entry_name'] for item in names_dict}
 
-            families = ProteinFamily.objects.all()
-            datatree = {}
-            conversion = {}
             human_dict = {}
             # Iterate over the dictionary
             for key, value in lig_count_receptor_dict.items():
@@ -2854,27 +2849,17 @@ class LigandStatistics(TemplateView):
                     # Sum values under the human key
                     human_dict[human_key] += value
 
-            for item in families:
-                if len(item.slug) == 3 and item.slug not in datatree.keys():
-                    datatree[item.slug] = {}
-                    conversion[item.slug] = item.name
-                if len(item.slug) == 7 and item.slug not in datatree[item.slug[:3]].keys():
-                    datatree[item.slug[:3]][item.slug[:7]] = {}
-                    conversion[item.slug] = item.name
-                if len(item.slug) == 11 and item.slug not in datatree[item.slug[:3]][item.slug[:7]].keys():
-                    datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]] = []
-                    conversion[item.slug] = item.name
-                if len(item.slug) == 15 and item.slug not in datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]]:
-                    datatree[item.slug[:3]][item.slug[:7]][item.slug[:11]].append(item.name)
+            updated_dict = {
+                key: {
+                    'Value1': value,
+                }
+                for key, value in human_dict.items()
+            }
 
-            datatree2 = LandingPage.convert_keys(datatree, conversion)
-            datatree2.pop('Parent family', None)
-            datatree3 = LandingPage.filter_dict(datatree2, names)
-            data_converted = {names_conversion_dict[key]: {'Value1':value} for key, value in human_dict.items()}
-            Data_full = {"NameList": datatree3, "DataPoints": data_converted, "LabelConversionDict":IUPHAR_to_uniprot_dict}
-            context['GPCRome_data'] = json.dumps(Data_full["NameList"])
-            context['GPCRome_data_variables'] = json.dumps(Data_full['DataPoints'])
-            context['GPCRome_Label_Conversion'] = json.dumps(Data_full['LabelConversionDict'])
+            gpcr_data = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Classic")
+            updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data["Data"], updated_dict)
+
+            context['GPCRome_data'] = json.dumps(updated_data)
             context["render"] = "not_bias"
 
         else:
