@@ -82,6 +82,7 @@ def Venn(request, origin="both"):
             'ligand__ligand_type__name',
             'ligand__smiles',
             'ligand__mw',
+            'ligand__sequence',
             'moa__name',
             'indication__title',
             'indication__slug',
@@ -111,6 +112,7 @@ def Venn(request, origin="both"):
             'moa__name': 'Modality',
             'ligand__smiles': 'raw_smiles',
             'ligand__mw': 'mw',
+            'ligand__sequence': 'sequence',
             'indication__slug': 'Indication Slug',
             'indication__title': 'Indication name',
             'indication__code': 'ICD11',
@@ -313,10 +315,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name', # Gene Name
                 'target__name',  # Target name
                 'ligand__name',  # Agent/Drug
-                'ligand__ligand_type__name',  # Modality
+                'ligand__ligand_type__name',  # Modality, wrong, should be 'Ligand type'
                 'ligand__smiles', # SMILES
                 'ligand__mw', 
-                'moa__name',  # Mode of action
+                'ligand__sequence',
+                'moa__name',  # Mode of action should be Modality
                 'indication__title',  # Disease name
                 'indication__code',  # Disease ICD11 code
                 'indication_max_phase',  # Max phase
@@ -337,10 +340,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name': 'Gene name',
                 'target__name': 'Target name',
                 'ligand__name': 'Ligand name',
-                'ligand__ligand_type__name': 'Modality',
+                'ligand__ligand_type__name': 'Type',
                 'ligand__smiles': 'raw_smiles',
                 'ligand__mw': 'mw',
-                'moa__name': 'Mode of action',
+                'ligand__sequence': 'sequence',
+                'moa__name': 'Modality',
                 'indication__title': 'Indication name',
                 'indication__code': 'ICD11',
                 'indication_max_phase': 'Phase',
@@ -376,13 +380,14 @@ class DrugSectionSelection(TemplateView):
 
             # Group by necessary columns and perform aggregation in one go
             grouped = df.groupby(
-                ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Modality', 'Mode of action', 'ICD11', 'ATC', 'Association score']
+                ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Type', 'Modality', 'ICD11', 'ATC', 'Association score']
             )
 
             # Perform aggregation
             Modified_df = grouped.agg(
                 Highest_phase=('Phase', 'max'),  # Get the highest phase for each group
                 Approved=('Is_Approved', 'max'),  # Check if any row has 'Approved' status (max of binary flag)
+                sequence=('sequence', 'first'),
                 smiles_for_image=('smiles_for_image', 'first'),
                 picture=('picture', 'first')
             ).reset_index()
@@ -422,6 +427,7 @@ class DrugSectionSelection(TemplateView):
                 'ligand__name',  # Ligand name
                 'ligand__smiles', # SMILES
                 'ligand__mw',
+                'ligand__sequence',
                 'indication_max_phase',  # Max phase
                 'drug_status',  # Approval
                 'ligand__ligand_type__name',  # Molecule type
@@ -471,6 +477,7 @@ class DrugSectionSelection(TemplateView):
                 'ligand__name': 'Drug name',
                 'ligand__smiles': 'raw_smiles',
                 'ligand__mw': 'mw',
+                'ligand__sequence': 'sequence',
                 'indication_max_phase': 'Phase',
                 'drug_status': 'Status',
                 'ligand__ligand_type__name': 'Molecule_type',
@@ -560,7 +567,8 @@ class DrugSectionSelection(TemplateView):
             agg_data_targets = grouped_targets.agg(
                 All_max_phase=('Phase', 'max'),
                 All_Drugs=('Classification', lambda x: (x == 'Drug').sum()),
-                All_Agents=('Classification', lambda x: (x == 'Agent').sum())
+                All_Agents=('Classification', lambda x: (x == 'Agent').sum()),
+                sequence=('sequence', 'first')
             ).reset_index()
 
             # Compute the stimulatory and inhibitory max phase and counts efficiently
@@ -615,6 +623,7 @@ class DrugSectionSelection(TemplateView):
                 Phase_II_trials=('Is_Phase_II', 'sum'),
                 Phase_III_trials=('Is_Phase_III', 'sum'),
                 Approved=('Is_Approved', 'max'),
+                sequence=('sequence', 'first'),
                 smiles_for_image=('smiles_for_image', 'first'),
                 picture=('picture', 'first')
             ).reset_index()
