@@ -82,6 +82,7 @@ def Venn(request, origin="both"):
             'ligand__ligand_type__name',
             'ligand__smiles',
             'ligand__mw',
+            'ligand__sequence',
             'moa__name',
             'indication__title',
             'indication__slug',
@@ -111,6 +112,7 @@ def Venn(request, origin="both"):
             'moa__name': 'Modality',
             'ligand__smiles': 'raw_smiles',
             'ligand__mw': 'mw',
+            'ligand__sequence': 'sequence',
             'indication__slug': 'Indication Slug',
             'indication__title': 'Indication name',
             'indication__code': 'ICD11',
@@ -313,10 +315,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name', # Gene Name
                 'target__name',  # Target name
                 'ligand__name',  # Agent/Drug
-                'ligand__ligand_type__name',  # Modality
+                'ligand__ligand_type__name',  # Modality, wrong, should be 'Ligand type'
                 'ligand__smiles', # SMILES
                 'ligand__mw', 
-                'moa__name',  # Mode of action
+                'ligand__sequence',
+                'moa__name',  # Mode of action should be Modality
                 'indication__title',  # Disease name
                 'indication__code',  # Disease ICD11 code
                 'indication_max_phase',  # Max phase
@@ -337,10 +340,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name': 'Gene name',
                 'target__name': 'Target name',
                 'ligand__name': 'Ligand name',
-                'ligand__ligand_type__name': 'Modality',
+                'ligand__ligand_type__name': 'Type',
                 'ligand__smiles': 'raw_smiles',
                 'ligand__mw': 'mw',
-                'moa__name': 'Mode of action',
+                'ligand__sequence': 'sequence',
+                'moa__name': 'Modality',
                 'indication__title': 'Indication name',
                 'indication__code': 'ICD11',
                 'indication_max_phase': 'Phase',
@@ -358,20 +362,32 @@ class DrugSectionSelection(TemplateView):
             # Merge the ATC data into the main DataFrame (df) on 'Ligand ID'
             df = df.merge(atc_df_grouped, on='LigandID', how='left')
             # Fill NaN values in the 'ATC' column with None
-            df['ATC'] = df['ATC'].fillna("")
+            group_cols = ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Modality', 'Mode of action', 'ICD11', 'ATC', 'Association score']
+            df[group_cols] = df[group_cols].fillna({
+                'Target name': 'Unknown',
+                'Gene name': 'Unknown',
+                'Ligand name': 'Unknown',
+                'Indication name': 'Unknown',
+                'Modality': 'Unknown',
+                'Mode of action': 'Unknown',
+                'ICD11': 'Unspecified',
+                'ATC': '',
+                'Association score': 0
+            })
 
             # Precompute flags for phase and approval status
             df['Is_Approved'] = (df['Status'] == 'Approved').astype(int)
 
             # Group by necessary columns and perform aggregation in one go
             grouped = df.groupby(
-                ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Modality', 'Mode of action', 'ICD11', 'ATC', 'Association score']
+                ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Type', 'Modality', 'ICD11', 'ATC', 'Association score']
             )
 
             # Perform aggregation
             Modified_df = grouped.agg(
                 Highest_phase=('Phase', 'max'),  # Get the highest phase for each group
                 Approved=('Is_Approved', 'max'),  # Check if any row has 'Approved' status (max of binary flag)
+                sequence=('sequence', 'first'),
                 smiles_for_image=('smiles_for_image', 'first'),
                 picture=('picture', 'first')
             ).reset_index()
@@ -411,6 +427,7 @@ class DrugSectionSelection(TemplateView):
                 'ligand__name',  # Ligand name
                 'ligand__smiles', # SMILES
                 'ligand__mw',
+                'ligand__sequence',
                 'indication_max_phase',  # Max phase
                 'drug_status',  # Approval
                 'ligand__ligand_type__name',  # Molecule type
@@ -460,6 +477,7 @@ class DrugSectionSelection(TemplateView):
                 'ligand__name': 'Drug name',
                 'ligand__smiles': 'raw_smiles',
                 'ligand__mw': 'mw',
+                'ligand__sequence': 'sequence',
                 'indication_max_phase': 'Phase',
                 'drug_status': 'Status',
                 'ligand__ligand_type__name': 'Molecule_type',
@@ -549,7 +567,8 @@ class DrugSectionSelection(TemplateView):
             agg_data_targets = grouped_targets.agg(
                 All_max_phase=('Phase', 'max'),
                 All_Drugs=('Classification', lambda x: (x == 'Drug').sum()),
-                All_Agents=('Classification', lambda x: (x == 'Agent').sum())
+                All_Agents=('Classification', lambda x: (x == 'Agent').sum()),
+                sequence=('sequence', 'first')
             ).reset_index()
 
             # Compute the stimulatory and inhibitory max phase and counts efficiently
@@ -604,6 +623,7 @@ class DrugSectionSelection(TemplateView):
                 Phase_II_trials=('Is_Phase_II', 'sum'),
                 Phase_III_trials=('Is_Phase_III', 'sum'),
                 Approved=('Is_Approved', 'max'),
+                sequence=('sequence', 'first'),
                 smiles_for_image=('smiles_for_image', 'first'),
                 picture=('picture', 'first')
             ).reset_index()
@@ -1295,23 +1315,25 @@ class TargetSelectionTool(TemplateView):
 
         # Fetch all data in a single query
         table_data = Drugs.objects.select_related(
-                'target__family__parent__parent__parent',  # All target info
-                'moa'
-            ).values(
-                'target', # Target ID
-                'target__entry_name',  # Gene name
-                'target__name',  # Protein name
-                'target__family__parent__name',  # Receptor family
-                'target__family__parent__parent__name',  # Ligand type
-                'target__family__parent__parent__parent__name',  # Class
-                'ligand',
-                'novelty_score', # Novelty score
-                'drug_status',  # Approval
-                'moa__name',  # Mode of action
-                'indication_max_phase', # Max pahse
-                'publication_count', # publication count
-                'target_level' # IDG target level
-            )
+            'target__family__parent__parent__parent',
+            'moa',
+            'ligand__ligand_type'
+        ).values(
+            'target',
+            'target__entry_name',
+            'target__name',
+            'target__family__parent__name',
+            'target__family__parent__parent__name',
+            'target__family__parent__parent__parent__name',
+            'ligand',
+            'ligand__ligand_type',
+            'novelty_score',
+            'drug_status',
+            'moa__name',
+            'indication_max_phase',
+            'publication_count',
+            'target_level'
+        )
 
         # Convert the table_data queryset to a list of dictionaries
         table_data_list = list(table_data)
@@ -1331,6 +1353,7 @@ class TargetSelectionTool(TemplateView):
             'target__family__parent__parent__name': 'Ligand type', # Ligand type
             'target__family__parent__parent__parent__name': 'Class', # Class
             'ligand': "Ligand ID", # Ligand ID
+            'ligand__ligand_type': "LigandType", # Ligand type
             'novelty_score': 'Novelty (Pharos)', #Only novelty we have
             'drug_status': 'Status', #Approval
             'moa__name': 'Mode of action', #Modality
@@ -1432,11 +1455,38 @@ class TargetSelectionTool(TemplateView):
             inhib_moa_df, group_cols, 'Ligand ID', 'Classification'
         ).rename(columns={'Drug': 'Inhibitory_Drugs', 'Agent': 'Inhibitory_Agents'})
 
+        # add in the ligand type aggragation
+
+        # Filter only relevant ligand types
+        ligand_type_df = df[df['LigandType'].isin([1, 2, 3, 8])]
+
+        # Drop duplicates to ensure we're only counting each ligand once per target
+        unique_ligands = ligand_type_df[['Target ID', 'Ligand ID', 'LigandType']].drop_duplicates()
+
+        # Create boolean masks
+        # small_mol = unique_ligands['LigandType'] == 1
+        # biologics = unique_ligands['LigandType'].isin([2, 3, 8])
+
+        # Count unique ligand IDs by type per target
+        # ligand_type_counts = unique_ligands.groupby('Target ID').apply(
+        #     lambda g: pd.Series({
+        #         'Type_small_molecule': g[small_mol & (g['Target ID'] == g.name)]['Ligand ID'].nunique(),
+        #         'Type_biologics': g[biologics & (g['Target ID'] == g.name)]['Ligand ID'].nunique()
+        #     })
+        # ).reset_index()
+
+        # Group and count unique ligands of each type per Target ID
+        ligand_type_counts = unique_ligands.groupby('Target ID').apply(lambda group: pd.Series({
+            'Type_small_molecule': group[group['LigandType'] == 1]['Ligand ID'].nunique(),
+            'Type_biologics': group[group['LigandType'].isin([2, 3, 8])]['Ligand ID'].nunique(),
+        })).reset_index()
+
         # Merge these into the aggregated data
         agg_data_targets = all_max_phase.merge(stim_max_phase, on=group_cols, how='left')
         agg_data_targets = agg_data_targets.merge(inhib_max_phase, on=group_cols, how='left')
         agg_data_targets = agg_data_targets.merge(stim_counts_unique, on=group_cols, how='left').fillna(0)
         agg_data_targets = agg_data_targets.merge(inhib_counts_unique, on=group_cols, how='left').fillna(0)
+        agg_data_targets = agg_data_targets.merge(ligand_type_counts, on=group_cols, how='left').fillna(0)
 
         # Compute total unique drugs and agents
         agg_data_targets['All_Drugs'] = agg_data_targets['Stimulatory_Drugs'] + agg_data_targets['Inhibitory_Drugs']
@@ -1447,7 +1497,7 @@ class TargetSelectionTool(TemplateView):
             'Stimulatory_max_phase': 0, 'Inhibitory_max_phase': 0,
             'Stimulatory_Drugs': 0, 'Stimulatory_Agents': 0,
             'Inhibitory_Drugs': 0, 'Inhibitory_Agents': 0,
-            'All_Drugs': 0, 'All_Agents': 0,
+            'All_Drugs': 0, 'All_Agents': 0, 'Type_small_molecule': 0, 'Type_biologics': 0
         }, inplace=True)
 
         # Merge `agg_data_targets` back into the original DataFrame on `Target ID`
@@ -1459,7 +1509,8 @@ class TargetSelectionTool(TemplateView):
             'Class', 'Literature', 'Novelty (Pharos)', 'IDG',
             'Total', 'Active', 'Inactive', 'All_Max_Phase', 'All_Drugs', 'All_Agents',
             'Stimulatory_max_phase', 'Stimulatory_Drugs', 'Stimulatory_Agents',
-            'Inhibitory_max_phase', 'Inhibitory_Drugs', 'Inhibitory_Agents']
+            'Inhibitory_max_phase', 'Inhibitory_Drugs', 'Inhibitory_Agents',
+            'Type_small_molecule', 'Type_biologics']
 
         # Keep only the specified columns in df_first
         df_first = df_first[keep_col_names]
@@ -1513,11 +1564,11 @@ class TargetSelectionTool(TemplateView):
         df_first[["Total_Ligands", "pEC50_Count", "pIC50_Count",
                 "Total", "Active", "Inactive", "All_Drugs", "All_Agents",
                 "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents",
-                "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents"]] = \
+                "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents", "Type_small_molecule", "Type_biologics"]] = \
             df_first[["Total_Ligands", "pEC50_Count", "pIC50_Count",
                     "Total", "Active", "Inactive", "All_Drugs", "All_Agents",
                     "Stimulatory_max_phase", "Stimulatory_Drugs", "Stimulatory_Agents",
-                    "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents"]].replace(0, "")
+                    "Inhibitory_max_phase", "Inhibitory_Drugs", "Inhibitory_Agents", "Type_small_molecule", "Type_biologics"]].replace(0, "")
 
         # Step 1: Query the TissueExpression model
         tissue_datatable = TissueExpression.objects.select_related('tissue').values(
