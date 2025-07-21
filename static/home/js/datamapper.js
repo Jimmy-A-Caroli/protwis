@@ -2126,6 +2126,18 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     // ## Render Legend Bars on Top ##
     // #############################
 
+    // === Helper functions ====
+
+    function getDecimals(num) {
+        const parts = num.toString().split('.');
+        return parts[1]?.length || 0;
+    }
+
+    function formatMidpoint(low, high) {
+        const decimals = Math.max(getDecimals(low), getDecimals(high));
+        return ((low + high) / 2).toFixed(decimals);
+    }
+
     let bar_index = 0;
     Object.keys(data_styling).forEach(function(column) {
         if (data_styling[column].Data === "Yes" && data_styling[column].Datatype === 'Continuous') {
@@ -2133,6 +2145,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
             const data_fontsize = data_fontsize_variable; // Adjust as needed
             const lowest_value = data_styling[column].Data_min;
             const highest_value = data_styling[column].Data_max;
+            const midpointText = formatMidpoint(lowest_value, highest_value);
             const spacing_bar = 30;
             const bar_height = 20;
             const text_off_set = 35;
@@ -2238,7 +2251,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     .style("font-size", `${data_fontsize}px`)
                     .style("font-family", "sans-serif")
                     .style("text-anchor", "middle")
-                    .text((highest_value + lowest_value) / 2); // Middle value
+                    .text(midpointText); // Middle value
             }
 
             // Maximum value text
