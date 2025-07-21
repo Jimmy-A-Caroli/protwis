@@ -817,13 +817,8 @@ function CreateTextLegend(location, circle_data, Layout) {
 // #################
 
 // Function to naturally sort an array
-function naturalSort(arr) {
-    return arr.sort((a, b) => {
-        if (a == null || b == null) {
-            console.log('Unexpected null or undefined value in sort:', a, b);
-        }
-        return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true });
-    });
+function naturalSort(a, b) {
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 }
 
 function decodeHtmlEntities(text) {
@@ -1283,13 +1278,8 @@ function Data_resorter(data) {
     let category_array = [];
 
     // Helper function to sort arrays naturally
-    function naturalSort(arr) {
-        return arr.sort((a, b) => {
-            if (a == null || b == null) {
-                console.log('Null/undefined found in array:', a, b);
-            }
-            return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true });
-        });
+    function naturalSort(a, b) {
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
     }
 
     // Build the sorted Class list (only include it if Layer1 is checked)
