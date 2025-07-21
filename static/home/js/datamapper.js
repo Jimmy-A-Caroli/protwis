@@ -1281,7 +1281,7 @@ function Data_resorter(data) {
     function naturalSort(arr) {
         return arr.sort((a, b) => {
             if (a == null || b == null) {
-                console.warn('Null/undefined found in array:', a, b);
+                console.log('Null/undefined found in array:', a, b);
             }
             return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true });
         });
