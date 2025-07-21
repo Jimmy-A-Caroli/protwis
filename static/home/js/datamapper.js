@@ -1664,6 +1664,9 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
     // Calculate total width based on spacing_dict and columns
     const col_list = ['Col1', 'Col2', 'Col3', 'Col4'];
     for (let i = 0; i < columns; i++) {
+         if (spacing_dict[col_list[i]] === -Infinity) {
+            spacing_dict[col_list[i]] = 0; // or use 20 if you want a fixed minimum column width
+        }
         width += spacing_dict[col_list[i]];
     }
     width += 45; // Add some padding
