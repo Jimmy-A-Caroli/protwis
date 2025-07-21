@@ -817,8 +817,13 @@ function CreateTextLegend(location, circle_data, Layout) {
 // #################
 
 // Function to naturally sort an array
-function naturalSort(a, b) {
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+function naturalSort(arr) {
+    return arr.sort((a, b) => {
+        if (a == null || b == null) {
+            console.log('Unexpected null or undefined value in sort:', a, b);
+        }
+        return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true });
+    });
 }
 
 function decodeHtmlEntities(text) {
