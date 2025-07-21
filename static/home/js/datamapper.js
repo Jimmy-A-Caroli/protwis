@@ -1279,9 +1279,12 @@ function Data_resorter(data) {
 
     // Helper function to sort arrays naturally
     function naturalSort(arr) {
-        return arr.sort((a, b) =>
-            String(a).localeCompare(String(b), undefined, { numeric: true })
-        );
+        return arr.sort((a, b) => {
+            if (a == null || b == null) {
+                console.warn('Null/undefined found in array:', a, b);
+            }
+            return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true });
+        });
     }
 
     // Build the sorted Class list (only include it if Layer1 is checked)
