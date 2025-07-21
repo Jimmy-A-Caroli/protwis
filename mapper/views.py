@@ -1437,7 +1437,7 @@ class DataMapperHome(TemplateView):
 
                                                     if DataValue not in (None, ""):
                                                         try:
-                                                            Data[receptor]['Inner'] = str(DataValue)
+                                                            Data[receptor]['Value1'] = str(DataValue)
                                                         except Exception:
                                                             Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Corrupted Value, not a string'
 

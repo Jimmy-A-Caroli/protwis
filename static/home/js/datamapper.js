@@ -1080,11 +1080,11 @@ function updatePlotWithAnnotations() {
         },
         plot_bgcolor: '#FFFFFF',
         autosize: false,
-        width: 1200,
+        width: 1024,
         height: 700,
         margin: {
-            l: 200,
-            r: 0,
+            l: 100,
+            r: 350,
             t: 50,
             b: 50
         },
