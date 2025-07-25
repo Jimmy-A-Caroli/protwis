@@ -1080,11 +1080,11 @@ function updatePlotWithAnnotations() {
         },
         plot_bgcolor: '#FFFFFF',
         autosize: false,
-        width: 1200,
+        width: 1024,
         height: 700,
         margin: {
-            l: 200,
-            r: 0,
+            l: 100,
+            r: 350,
             t: 50,
             b: 50
         },
@@ -1278,8 +1278,8 @@ function Data_resorter(data) {
     let category_array = [];
 
     // Helper function to sort arrays naturally
-    function naturalSort(arr) {
-        return arr.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    function naturalSort(a, b) {
+        return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
     }
 
     // Build the sorted Class list (only include it if Layer1 is checked)
@@ -1654,6 +1654,9 @@ function RenderListPlot_Labels(data, category_data, location, styling_option, La
     // Calculate total width based on spacing_dict and columns
     const col_list = ['Col1', 'Col2', 'Col3', 'Col4'];
     for (let i = 0; i < columns; i++) {
+         if (spacing_dict[col_list[i]] === -Infinity) {
+            spacing_dict[col_list[i]] = 0; // or use 20 if you want a fixed minimum column width
+        }
         width += spacing_dict[col_list[i]];
     }
     width += 45; // Add some padding
@@ -2116,6 +2119,18 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
     // ## Render Legend Bars on Top ##
     // #############################
 
+    // === Helper functions ====
+
+    function getDecimals(num) {
+        const parts = num.toString().split('.');
+        return parts[1]?.length || 0;
+    }
+
+    function formatMidpoint(low, high) {
+        const decimals = Math.max(getDecimals(low), getDecimals(high));
+        return ((low + high) / 2).toFixed(decimals);
+    }
+
     let bar_index = 0;
     Object.keys(data_styling).forEach(function(column) {
         if (data_styling[column].Data === "Yes" && data_styling[column].Datatype === 'Continuous') {
@@ -2123,6 +2138,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
             const data_fontsize = data_fontsize_variable; // Adjust as needed
             const lowest_value = data_styling[column].Data_min;
             const highest_value = data_styling[column].Data_max;
+            const midpointText = formatMidpoint(lowest_value, highest_value);
             const spacing_bar = 30;
             const bar_height = 20;
             const text_off_set = 35;
@@ -2228,7 +2244,7 @@ function data_visualization(data, category_data, location, Layout_dict, data_sty
                     .style("font-size", `${data_fontsize}px`)
                     .style("font-family", "sans-serif")
                     .style("text-anchor", "middle")
-                    .text((highest_value + lowest_value) / 2); // Middle value
+                    .text(midpointText); // Middle value
             }
 
             // Maximum value text

@@ -147,7 +147,7 @@
           <th style="text-align: center;">
             <span class="title-header">Tree</span>
             <br>
-            <img src="{% static 'home/images/DataMapper/tree_icon.png' %}" 
+            <img src="{% static 'home/images/DataMapper/Tree_icon.png' %}" 
                 width="140" height="140" alt="Tree" style="margin-bottom: 5px;"/>
             <br>
             <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#phyloTreeModal" style="margin-top: 5px;">
@@ -200,16 +200,6 @@
         <tr>
           <!-- First cell in the body row: match the right border to keep consistency -->
           <th style="border-right: 1px solid #ccc; text-align: left;">
-            <span class="left-column">Shapes</span>
-          </th>
-          <!-- Other cells: no border, or any style you’d like -->
-          <td><i class="fas fa-minus my-icon-minus"></i></td>
-          <td><i class="fas fa-minus my-icon-minus"></i></td>
-          <td><i class="fas fa-check my-icon-check"></i></td>
-        </tr>
-        <tr>
-          <!-- First cell in the body row: match the right border to keep consistency -->
-          <th style="border-right: 1px solid #ccc; text-align: left;">
             <span class="left-column">Sizes</span>
           </th>
           <!-- Other cells: no border, or any style you’d like -->
@@ -217,8 +207,6 @@
           <td><i class="fas fa-check my-icon-check"></i></td>
           <td><i class="fas fa-minus my-icon-minus"></i></td>
         </tr>
-
-      <!-- Separator row (no borders). Spans all 6 columns. -->
       <!-- Separator row (no borders). Spans all 6 columns. -->
       <tr class="separator-row">
         <td colspan="6" style="height: 30px;"></td>
@@ -242,9 +230,9 @@
         <th style="border-right: 1px solid #ccc; text-align: left; vertical-align: middle;">
           <span class="left-column">For text data</span>
         </th>
-        <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - GPCRome wheel - Text.xlsx' %}" download="Template - GPCRome wheel - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
-        <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Tree - Text.xlsx' %}" download="Template - Tree - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
-        <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Text.xlsx' %}" download="Template - List - Text.xlsx"><img src="{% static 'home/images/Datamapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+        <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - GPCRome wheel - Text.xlsx' %}" download="Template - GPCRome wheel - Text.xlsx"><img src="{% static 'home/images/DataMapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+        <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - Tree - Text.xlsx' %}" download="Template - Tree - Text.xlsx"><img src="{% static 'home/images/DataMapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
+        <td><div class="img-container expand-image" style="text-align:center;"><a href="{% static 'Files/Template - List - Text.xlsx' %}" download="Template - List - Text.xlsx"><img src="{% static 'home/images/DataMapper/Mapper_Download.png' %}" width="70" height="70" style="cursor:pointer;"></a></div></td>
       </tr>
 
       <!-- Separator row (no borders). Spans all 6 columns. -->
@@ -332,7 +320,7 @@
           </div>
           <div class="modal-body">
             <h4 class="plot-item">
-              <img src="{% static 'home/images/DataMapper/Mapper_Success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
+              <img src="{% static 'home/images/DataMapper/Mapper_success_image.png' %}" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
               {{ plot_name }}
               <span class="plot-status">Click "Continue" to generate</span>
             </h4>
