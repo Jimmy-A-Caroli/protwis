@@ -315,11 +315,11 @@ class DrugSectionSelection(TemplateView):
                 'target__entry_name', # Gene Name
                 'target__name',  # Target name
                 'ligand__name',  # Agent/Drug
-                'ligand__ligand_type__name',  # Modality, wrong, should be 'Ligand type'
+                'ligand__ligand_type__name',  # "type'
                 'ligand__smiles', # SMILES
                 'ligand__mw', 
                 'ligand__sequence',
-                'moa__name',  # Mode of action should be Modality
+                'moa__name',  # Modality
                 'indication__title',  # Disease name
                 'indication__code',  # Disease ICD11 code
                 'indication_max_phase',  # Max phase
@@ -362,14 +362,14 @@ class DrugSectionSelection(TemplateView):
             # Merge the ATC data into the main DataFrame (df) on 'Ligand ID'
             df = df.merge(atc_df_grouped, on='LigandID', how='left')
             # Fill NaN values in the 'ATC' column with None
-            group_cols = ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Modality', 'Mode of action', 'ICD11', 'ATC', 'Association score']
+            group_cols = ['Target ID', 'Target name','Gene name', 'LigandID', 'Ligand name', 'Indication name', 'Type', 'Modality', 'ICD11', 'ATC', 'Association score']
             df[group_cols] = df[group_cols].fillna({
                 'Target name': 'Unknown',
                 'Gene name': 'Unknown',
                 'Ligand name': 'Unknown',
                 'Indication name': 'Unknown',
+                'Type': 'Unknown',
                 'Modality': 'Unknown',
-                'Mode of action': 'Unknown',
                 'ICD11': 'Unspecified',
                 'ATC': '',
                 'Association score': 0
