@@ -71,7 +71,7 @@
             <label class="btn btn-default btn-s" id="download_btn" href="javascript:void(0)">
                 Download PDBs
             </label>
-            <label class="btn btn-default btn-s" id="superpose_template_btn" href="javascript:void(0)">
+            <label class="btn btn-default btn-s" id="superpose_btn" href="javascript:void(0)">
                 Superposition
             </label>
             <input class="btn btn-default btn-s" type="button" onclick="GlobalTableToExcel('structures_scrollable', 'Structure data', 'GPCRdb_structures.xls')" value="Export Excel"></input>
@@ -220,9 +220,9 @@
 <script src="{% static 'home/js/BusyLoad.js' %}"></script>
 
 <script>
-  window.addEventListener("hashchange", updateSuperpositionButtonConfiguration, false);
+  window.addEventListener("hashchange", updateSuperpositionButtonConfigurationModern, false);
   // Call this function on page load to set the initial configuration
-  document.addEventListener("DOMContentLoaded", updateSuperpositionButtonConfiguration);
+  document.addEventListener("DOMContentLoaded", updateSuperpositionButtonConfigurationModern);
 </script>
 
 <script>
@@ -239,7 +239,9 @@ $("#Init_loader").busyLoad("show", {
     background: "white",
 });
 
-  $(document).ready(function() {
+const globalSelectedIds = new Set();
+
+$(document).ready(function() {
 
     var columnDefs = [
         { className: "dt-head-nowrap dt-head-center dt-center dt-body-center expand", targets: "_all" },
@@ -356,14 +358,51 @@ $("#Init_loader").busyLoad("show", {
 
     // Handle "Select All" checkbox
     $('#select-all').on('click', function () {
-        var rows = $("#StructureBrowserTable").DataTable().rows({ search: 'applied' }).nodes();
-        $('input.select-row', rows).prop('checked', this.checked);
+        const table = $("#StructureBrowserTable").DataTable();
+        const rows = table.rows({ search: 'applied', page: 'current' }).nodes();
+        const checked = this.checked;
+
+        $('input.select-row', rows).prop('checked', checked);
+
+        table.rows({ page: 'current' }).every(function () {
+            const rowData = this.data();
+            const id = String(rowData?.id);
+            if (checked) {
+                globalSelectedIds.add(id);
+            } else {
+                globalSelectedIds.delete(id);
+            }
+        });
     });
 
     // Initialize buttons
     initAlignButton("#StructureBrowserTable");
     initDownloadButton("#StructureBrowserTable");
     initSuperpositionButton("#StructureBrowserTable");
+
+
+    // $('#StructureBrowserTable').on('draw.dt', function () {
+    //     const table = $('#StructureBrowserTable').DataTable();
+
+    //     table.rows({ page: 'current' }).every(function () {
+    //         const rowNode = this.node();
+    //         const rowData = this.data();
+    //         const id = String(rowData?.id);
+
+    //         if (globalSelectedIds.has(id)) {
+    //             $(rowNode).find(".select-row").prop("checked", true);
+    //         }
+    //     });
+    // });
+
+    $(document).on("change", ".select-row", function () {
+        const id = $(this).val();
+        if (this.checked) {
+            globalSelectedIds.add(id);
+        } else {
+            globalSelectedIds.delete(id);
+        }
+    });
 });
 
 </script>
