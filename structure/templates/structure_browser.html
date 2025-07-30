@@ -7,7 +7,7 @@
     <!-- <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" /> -->
     <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
     <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css" />
-    <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet">
+    <!-- <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet"> -->
     <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
     <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
@@ -45,9 +45,78 @@
         }
     #select-all {
         transform: scale(1.2);
+        display: inline-block;
+        margin: 0 auto;
+        vertical-align: middle;
+        overflow: visible;
     }
     .border-left {
         border-left: 1px solid #cccccc !important; /* Adjust the width and color as needed */
+    }
+    .dt-button.active-superpose {
+    background-color: #007bff !important;
+    color: #fff !important;
+    border: 1px solid #007bff !important;
+    }
+    /* === Stack tags vertically === */
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px;
+        padding: 2px;
+        margin: 0;
+    }
+
+    /* === Full-width tags === */
+    .select2-selection__choice {
+        width: 100% !important;
+        margin: 0 !important;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* === Make the multi-select container grow === */
+    .select2-container--default .select2-selection--multiple {
+        height: auto !important;
+        max-height: 150px;
+        overflow-y: auto !important;
+        font-size: 12px;
+    }
+
+    /* === Center placeholder text === */
+    .select2-search__field::placeholder {
+        text-align: center;
+    }
+
+    /* === Scrollable dropdown === */
+    .custom-dropdown {
+        max-height: 500px !important;
+        overflow-y: auto !important;
+    }
+    .custom-dropdown .select2-results__options {
+        max-height: 450px !important;
+        overflow-y: auto !important;
+    }
+
+    /* Centered */
+    th .dt-column-order {
+        margin-right: -12px; /* Shift the sort arrow to the right */
+    }
+    /* Ensure proper alignment of header titles with data rows */
+    th:not(:first-child) .dt-column-title {
+        display: inline-block; /* Makes the content inside the <th> inline for proper alignment */
+        text-align: center;    /* Align the title text in the center */
+        padding-left: 24px;    /* Apply consistent padding for all lines */
+        margin: 0;             /* Remove unnecessary margin */
+        line-height: 1.2em;    /* Ensure consistent line spacing */
+        white-space: normal;   /* Allow line breaks in the titles */
+    }
+    /* Ensure the checkbox column is wide enough */
+    th:first-child {
+        min-width: 45px; /* Adjust as needed */
+        text-align: center;
     }
     
     </style>
@@ -57,26 +126,6 @@
 {% block content %}
 <!-- <div class="container" id="Target_selection_tool_container" style="margin-top: 30px;display: none;"> -->
 <div id="browser">
-    <div style='width:100%; display:inline;'>
-        <div class="btn-group">
-            <a id="dlink"  style="display:none;"></a>
-            <div id="excel_table"  style2="display:none;"></div>
-            <input class="btn btn-default btn-s" type="button" id="toggle_columns_btn" value="Show hidden columns" href="javascript:void(0)">
-            <input class="btn btn-default btn-s" type="button" id="representative_btn" value="Representative structures (state & receptor)" href="javascript:void(0)" data-toggle="buttons"></input>
-        </div>
-        <div class="btn-group" style='padding-left:10px;'>
-            <label class="btn btn-default btn-s" id="align_btn" href="javascript:void(0)">
-                Align seqs
-            </label>
-            <label class="btn btn-default btn-s" id="download_btn" href="javascript:void(0)">
-                Download PDBs
-            </label>
-            <label class="btn btn-default btn-s" id="superpose_btn" href="javascript:void(0)">
-                Superposition
-            </label>
-            <input class="btn btn-default btn-s" type="button" onclick="GlobalTableToExcel('structures_scrollable', 'Structure data', 'GPCRdb_structures.xls')" value="Export Excel"></input>
-        </div>
-    </div>
     <div class="container" id="StructureBrowserContainer" style="margin-top: 30px;">
         <div id="Init_loader"></div>
         <div class="col-md-12" id="StructureBrowserTableContainer" style="display: none">
@@ -89,14 +138,14 @@
                         </tr>
                         <!-- Super Header Row -->
                         <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-                            <th colspan="8" style="text-align:center;">Receptor</th>
-                            <th colspan="8" style="text-align:center;border-left: 1px solid #cccccc;">Structure</th>
-                            <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;">Signal protein</th>
-                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Auxiliary protein</th>
-                            <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;">Structure ligand</th>
-                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Physiological ligand</th>
-                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Sodium ion site</th>
-                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;">Reference</th>
+                            <th colspan="8" style="text-align:center;" data-dt-order="disable">Receptor</th>
+                            <th colspan="8" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Structure</th>
+                            <th colspan="4" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Signal protein</th>
+                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Auxiliary protein</th>
+                            <th colspan="3" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Structure ligand</th>
+                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Physiological ligand</th>
+                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Sodium ion site</th>
+                            <th colspan="2" style="text-align:center;border-left: 1px solid #cccccc;" data-dt-order="disable">Reference</th>
                         </tr>
                         <!-- Header Row -->
                         <tr>
@@ -220,12 +269,6 @@
 <script src="{% static 'home/js/BusyLoad.js' %}"></script>
 
 <script>
-  window.addEventListener("hashchange", updateSuperpositionButtonConfigurationModern, false);
-  // Call this function on page load to set the initial configuration
-  document.addEventListener("DOMContentLoaded", updateSuperpositionButtonConfigurationModern);
-</script>
-
-<script>
   
 $("#Init_loader").show();
 $("#Init_loader").busyLoad("show", { 
@@ -244,7 +287,13 @@ const globalSelectedIds = new Set();
 $(document).ready(function() {
 
     var columnDefs = [
-        { className: "dt-head-nowrap dt-head-center dt-center dt-body-center expand", targets: "_all" },
+        {
+        targets: "_all",
+        className: "dt-head-nowrap dt-head-center dt-center dt-body-center",
+        createdCell: function (td, cellData, rowData, row, col) {
+            td.classList.add("expand");
+        }
+        },
         { targets: [0], orderable: false },  // Disable ordering on the checkbox column
         { targets: [8,16,20,22,25,27,29], className: 'border-left' },
     ];
@@ -288,10 +337,10 @@ $(document).ready(function() {
     function initializeDataTable(tableId, data, columns, columnDefs) {
         // Initialize DataTable
         $(tableId).DataTable({
-            dom: "<'row'<'col-sm-3 dt-btn'B><'col-sm-6'><'col-sm-3 text-end'f>>" +  // Buttons and search bar in the same row
+            dom: "<'row'<'col-sm-7 dt-btn'B><'col-sm-2'><'col-sm-3 text-end'f>>" +  // Buttons and search bar in the same row
             "<'row'<'col-sm-12'tr>>" +                                       // Table rows
             "<'row'<'col-sm-12'ip>>",                                        // Pagination and info
-            order: [0, "asc"],              // Initial sort order
+            order: [1, "asc"],              // Initial sort order
             pageLength: 20,                 // Show all rows by default
             data: data,                     // Data source
             columns: columns,               // Column definitions
@@ -301,13 +350,45 @@ $(document).ready(function() {
             deferRender: true,              // Optimize rendering for large data sets
             paging: true,                  // Disable pagination
             scrollX: true,                  // Enable horizontal scrolling
-            scrollY: "60vh",                // Enable vertical scrolling with a height of 50% of the viewport
+            scrollY: "55vh",                // Enable vertical scrolling with a height of 50% of the viewport
             scrollCollapse: true,           // Allow the table to collapse vertically if data is less than `scrollY`
             fixedHeader: false, // Disable FixedHeader
             buttons: [
                 { 
-                    text: 'Reset filters', 
-                    action: function () { reset_all(); } 
+                    text: 'Reset filters',
+                    action: function () { reset_all(); }
+                },
+                {
+                    text: 'Align seqs',
+                    action: function () {
+                        handleAlignmentClick("#StructureBrowserTable");
+                    }
+                },
+                {
+                    text: 'Download PDBs',
+                    action: function () {
+                        handleDownloadClick("#StructureBrowserTable");
+                    }
+                },
+                (() => {
+                    const config = getSuperposeButtonConfig();
+                    return {
+                        text: config.label,
+                        attr: {
+                            id: "superpose_btn",
+                            class: config.class,
+                            "data-type": config.type
+                        },
+                        action: function () {
+                            handleSuperpositionClick("#StructureBrowserTable", config.type);
+                        }
+                    };
+                })(),
+                {
+                    text: 'Export Excel',
+                    action: function () {
+                        GlobalTableToExcel("structures_scrollable", "Structure data", "GPCRdb_structures.xls");
+                    }
                 }
             ]
         });
@@ -323,7 +404,9 @@ $(document).ready(function() {
         column_filters = column_filters.concat(CreateColumnFilters(Table_selector,13,3,"Range-float-vertical"));
         column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,3,"Multi-select-exact"));
         column_filters = column_filters.concat(CreateColumnFilters(Table_selector,19,1,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,20,11,"Multi-select-exact"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,20,9,"Multi-select-exact"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,29,2,"Multi-select-unspecific"));
+        
         // // Create the filteres
         createDropdownFilters(Table_selector,column_filters);
     }
@@ -374,26 +457,6 @@ $(document).ready(function() {
             }
         });
     });
-
-    // Initialize buttons
-    initAlignButton("#StructureBrowserTable");
-    initDownloadButton("#StructureBrowserTable");
-    initSuperpositionButton("#StructureBrowserTable");
-
-
-    // $('#StructureBrowserTable').on('draw.dt', function () {
-    //     const table = $('#StructureBrowserTable').DataTable();
-
-    //     table.rows({ page: 'current' }).every(function () {
-    //         const rowNode = this.node();
-    //         const rowData = this.data();
-    //         const id = String(rowData?.id);
-
-    //         if (globalSelectedIds.has(id)) {
-    //             $(rowNode).find(".select-row").prop("checked", true);
-    //         }
-    //     });
-    // });
 
     $(document).on("change", ".select-row", function () {
         const id = $(this).val();

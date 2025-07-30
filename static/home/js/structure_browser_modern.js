@@ -6,8 +6,7 @@ function getSelectedRowData(tableId) {
     return allData.filter(row => globalSelectedIds.has(String(row.id)));
 }
 
-function initAlignButton(tableId) {
-    $("#align_btn").on("click", function () {
+function handleAlignmentClick(tableId) {
         const selectedData = getSelectedRowData(tableId);
 
         ClearSelection("targets");
@@ -23,86 +22,75 @@ function initAlignButton(tableId) {
         });
 
         window.location.href = "/structure/selection_convert";
-    });
 }
 
-function initDownloadButton(tableId) {
-    $("#download_btn").on("click", function () {
-        const selectedData = getSelectedRowData(tableId);
+function handleDownloadClick(tableId) {
+    const selectedData = getSelectedRowData(tableId);
 
-        ClearSelection("targets");
+    ClearSelection("targets");
 
-        if (selectedData.length === 0) {
-            showAlert("No structures selected for download", "danger");
+    if (selectedData.length === 0) {
+        showAlert("No structures selected for download", "danger");
+        return;
+    } else if (selectedData.length > 100) {
+        showAlert("Maximum number of selected entries is 100", "warning");
+        return;
+    }
+
+    const ids = selectedData.map(row => row.pdb.replace(/\s+/g, ""));
+    AddToSelection("targets", "structure_many", ids.join(","));
+
+    window.location.href = "/structure/pdb_download";
+}
+
+function getSuperposeButtonConfig() {
+    const hash = window.location.hash;
+    return {
+        label: hash === "#keepselectionreference"
+            ? "Add reference to superposition"
+            : hash === "#keepselectiontargets"
+                ? "Add targets to superposition"
+                : "Superposition",
+        type: hash === "#keepselectionreference"
+            ? "reference"
+            : hash === "#keepselectiontargets"
+                ? "targets"
+                : "default",
+        class: hash === "#keepselectionreference" || hash === "#keepselectiontargets"
+            ? "dt-button active-superpose"
+            : "dt-button"
+    };
+}
+
+
+
+function handleSuperpositionClick(tableId, type = "default") {
+    const selectedData = getSelectedRowData(tableId);
+
+    if (type === "reference") {
+        if (selectedData.length !== 1) {
+            showAlert("Please select exactly one entry as reference", "danger");
             return;
-        } else if (selectedData.length > 100) {
-            showAlert("Maximum number of selected entries is 100", "warning");
+        }
+        const refPdb = selectedData[0].pdb.replace(/\s+/g, "");
+        AddToSelection("reference", "structure", refPdb);
+        window.location.href = "/structure/superposition_workflow_index#keepselection";
+    } else if (type === "targets") {
+        if (selectedData.length === 0) {
+            showAlert("No targets selected", "danger");
+            return;
+        } else if (selectedData.length > 50) {
+            showAlert("Maximum number of selected targets is 50", "warning");
             return;
         }
 
         const ids = selectedData.map(row => row.pdb.replace(/\s+/g, ""));
         AddToSelection("targets", "structure_many", ids.join(","));
-
-        window.location.href = "/structure/pdb_download";
-    });
-}
-
-function updateSuperpositionButtonConfigurationModern() {
-    const button = document.getElementById("superpose_btn");  // Always use this ID
-
-    switch (window.location.hash) {
-        case "#keepselectionreference":
-            button.innerText = "Add reference to superposition";
-            button.classList.remove("btn-default");
-            button.classList.add("btn-primary");
-            button.dataset.type = "reference";
-            break;
-        case "#keepselectiontargets":
-            button.innerText = "Add targets to superposition";
-            button.classList.remove("btn-default");
-            button.classList.add("btn-primary");
-            button.dataset.type = "targets";
-            break;
-        default:
-            button.innerText = "Superposition";
-            button.classList.remove("btn-primary");
-            button.classList.add("btn-default");
-            button.dataset.type = "default";
-            break;
+        window.location.href = "/structure/superposition_workflow_index#keepselection";
+    } else {
+        // Default case — open modal
+        superpositionModern(tableId, ["pdb", "entry_short", "iuphar_name", "family", "class", "species", "state", "pub_date"], "structure_browser", "gpcr", "pdb");
     }
-}
-
-function initSuperpositionButton(tableId) {
-    $("#superpose_btn").off("click").on("click", function () {
-
-        const selectedData = getSelectedRowData(tableId);
-        const type = this.dataset.type || "default";
-
-        if (type === "reference") {
-            if (selectedData.length !== 1) {
-                showAlert("Please select exactly one entry as reference", "danger");
-                return;
-            }
-            const refPdb = selectedData[0].pdb.replace(/\s+/g, "");
-            AddToSelection("reference", "structure", refPdb);
-            window.location.href = "/structure/superposition_workflow_index#keepselection";
-        } else if (type === "targets") {
-            if (selectedData.length === 0) {
-                showAlert("No targets selected", "danger");
-                return;
-            } else if (selectedData.length > 50) {
-                showAlert("Maximum number of selected targets is 50", "warning");
-                return;
-            }
-
-            const ids = selectedData.map(row => row.pdb.replace(/\s+/g, ""));
-            AddToSelection("targets", "structure_many", ids.join(","));
-            window.location.href = "/structure/superposition_workflow_index#keepselection";
-        } else {
-            // Default case — open modal
-            superpositionModern(tableId, ["pdb", "entry_short", "iuphar_name", "family", "class", "species", "state", "pub_date"], "structure_browser", "gpcr", "pdb");
-        }
-    });
 }
 
 function superpositionModern(tableId, columns, site, source = 'gpcr', structure_column_key = "pdb", hidden_columns = []) {

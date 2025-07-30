@@ -141,6 +141,7 @@ class StructureDataJsonView(View):
                         to_attr="prefetched_ligands",
                     ),
                     "stabilizing_agents",              # regex filter
+                    "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type",
                 )
                 .annotate(
                     coverage_pct=ExpressionWrapper(
@@ -184,6 +185,7 @@ class StructureDataJsonView(View):
                 arr_note   = arrestin.note or "-" if arrestin else "-"
                 arr_cov    = arrestin.wt_coverage or "-" if arrestin else "-"
 
+
                 # stabilising agents – tiny regex pass
                 fusions = "<br>".join(a.name for a in s.stabilizing_agents.all()
                                       if self.fusion_pat.match(a.name)) or "-"
@@ -196,10 +198,14 @@ class StructureDataJsonView(View):
                     if not li.ligand:
                         continue
                     lig_html.append(li.ligand.name)
-                    if li.ligand.ligand_type_id:
-                        lig_types.add(li.ligand.ligand_type_id)
-                    if li.ligand_role_id:
-                        lig_roles.add(li.ligand_role_id)
+                    if li.ligand.ligand_type:
+                        lig_types.add(li.ligand.ligand_type.name)
+                    if li.ligand_role:
+                        lig_roles.add(li.ligand_role.name)
+
+                # Get endogenous ligands from parent protein
+                endos = getattr(pp, 'endogenous_gtp_set', []).all() if hasattr(pp, 'endogenous_gtp_set') else []
+                # print("Structure:", s.id, "| Endogenous:", [e.ligand.name for e in endos if e.ligand])
 
                 pdb_code = s.pdb_code.index if s.pdb_code else "-"
 
@@ -241,7 +247,8 @@ class StructureDataJsonView(View):
                     "ligand_type":  "<br>".join(map(str, sorted(lig_types))) or "-",
                     "ligand_role":  "<br>".join(map(str, sorted(lig_roles))) or "-",
 
-                    "endo_ligands": "-", "endo_type": "-",
+                    "endo_ligands": "<br>".join(sorted({e.ligand.name for e in endos if e.ligand})) or "-",
+                    "endo_type": "<br>".join(sorted({e.ligand.ligand_type.name for e in endos if e.ligand and e.ligand.ligand_type})) or "-",
                     "sodium_site":  "Yes" if s.has_sodium_site else "No",
                     "sodium":       "Yes" if s.sodium else "No",
 
