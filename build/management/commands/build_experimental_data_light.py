@@ -1,3 +1,4 @@
+from django.core.management.base import CommandError
 from build.management.commands.base_build import Command as BaseBuild
 from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types
 from django.conf import settings
@@ -10,9 +11,13 @@ from common.models import WebLink, WebResource, Publication, PublicationJournal
 from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole, LigandEffect, LigandTargetPairing
 from protein.models import Protein, Species
 
+import django.apps
 import requests
 import math
 import os
+import csv
+import re
+import time
 import statistics
 import datamol as dm
 import datetime
@@ -20,9 +25,13 @@ import pandas as pd
 import numpy as np
 import urllib.parse
 import urllib.request
-import django.apps
+import urllib.error
+import socket
+import ssl
+from io import StringIO
 
 from rdkit import Chem
+from chembl_structure_pipeline import standardizer
 from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers, StereoEnumerationOptions
 
 class Command(BaseBuild):
@@ -38,6 +47,10 @@ class Command(BaseBuild):
     helm_cid_filepath = os.sep.join([data_dir, 'HELM_CID.csv'])
     helm_chembl = pd.read_csv(helm_chembl_filepath, index_col=0)
     helm_cid = pd.read_csv(helm_cid_filepath, index_col=0)
+    ligand_dump = os.sep.join([data_dir, 'ligand_reload_dump.csv'])
+    ligand_csv = pd.read_csv(ligand_dump, sep=';', index_col=0)
+    id_dump = os.sep.join([data_dir, 'ligandid_reload_dump.csv'])
+    id_csv = pd.read_csv(id_dump, sep=';', index_col=0)
     test_model_updates(all_models, tracker, initialize=True)
 
     def add_arguments(self, parser):
@@ -64,6 +77,11 @@ class Command(BaseBuild):
             self.tracker = {}
             test_model_updates(self.all_models, self.tracker, initialize=True)
             print("Ended purging data")
+
+
+        print("\n\nRebuilding the Ligand Model based on latest dump")
+        self.reload_dump()
+        print("Ended reloading data from ligand dump")
 
         # Fetching all the Guide to Pharmacology data
         print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
@@ -109,7 +127,6 @@ class Command(BaseBuild):
 
         print("\n\nStarted building all Guide to Pharmacology ligands")
         print('\n\nRetrieving IUPHAR ids from UniProt ids')
-
         print('\n\nRetrieving ALL ligands from GTP associated to GPCRs')
         endogenous_ligands_ids = self.obtain_ligands(gtp_detailed_endogenous, iuphar_ids, ['target_id', 'ligand_id'])
         ligand_ids = list(set(bioactivity_ligands_ids + endogenous_ligands_ids))
@@ -195,24 +212,63 @@ class Command(BaseBuild):
         gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
         gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-
-        print('\n\nSaving the ligands in the models')
-        self.save_the_ligands_save_the_world(ligand_data_merged, gtp_peptides_merged)
-        # Assign the species to duplicated peptides
-        # print('\n\nAssign the species to duplicated peptides')
-        # self.assign_species_to_peptide()
-
+        #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
+        #GTP
+        print('\n\nStarted comparing GTP data to reloaded database')
+        small_to_update, peptide_to_update = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
+        print(f"Building {len(small_to_update)} small molecules and {len(peptide_to_update)} peptide from GTP that were missing from dump")
+        self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
         print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
-        print('\n\nFetching Drug Bank ligands and saving to model')
-        self.build_drugbank_ligands()
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        #CHEMBL
+        print("\n\nStarted comparing ChEBML ligands")
+        self.build_chembl_ligands()
+        print("\n\nEnded building ChEMBL ligands")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #BUILDING BIOACTIVITIES
+        #GTP bioactivity data
         print("\n\nStarted building Guide to Pharmacology bioactivities")
+        # bioactivities_to_update = self.find_unmatched_bioactivities(Command.ligand_csv, bioactivity_data_gtp)
         self.build_gtp_bioactivities(bioactivity_data_gtp)
         print("Ended building Guide to Pharmacology bioactivities")
-
         print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
+        #ChEMBL bioactivity data
+        print("\n\nStarted building ChEMBL bioactivities")
+        self.build_chembl_bioactivities()
+        print("Ended building ChEMBL bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #ChEMBL/PubChem vendor data
+        print("\n\nStarted building PubChem vendor data")
+        self.build_pubchem_vendor_links()
+        print("Ended building PubChem vendor data")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #PDSP KiDatabase bioactivity data
+        print("\n\nStarted building PDSP KiDatabase bioactivities")
+        # to_update = self.comparePDSP(Command.ligand_csv)
+        # print(f"Building {len(to_update)} PDSP KiDatabase bioactivities missing from dump")
+        self.build_kidatabase_bioactivities()  # 14,562
+        print("Ended building PDSP KiDatabase bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #Drug Central bioactivity data
+        print("\n\nStarted building Drug Central bioactivities")
+        # to_update = self.compareDrugCentral(Command.ligand_csv)
+        # print(f"Building {len(to_update)}  Drug Central bioactivities missing from dump")
+        self.build_drugcentral_bioactivities()  # 5,844
+        print("Ended building Drug Central bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #ENDOGENOUS LIGANDS
         print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
         print('\n#1 Preprocessing the data')
         processed_data = self.data_preparation(gtp_detailed_endogenous, gtp_interactions, iuphar_ids)
@@ -224,45 +280,10 @@ class Command(BaseBuild):
         endogenous_dicts = self.convert_dataframe(ranked_data)
         self.create_model(endogenous_dicts)
         print("\n\nEnded building endogenous data")
-
         print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        print("\n\nStarted building ChEBML ligands")
-        self.build_chembl_ligands()
-        print("\n\nEnded building ChEMBL ligands")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
-
-        # Parse ChEMBL bioactivity data
-        print("\n\nStarted building ChEMBL bioactivities")
-        self.build_chembl_bioactivities()
-        print("Ended building ChEMBL bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
-
-        # Parse ChEMBL/PubChem vendor data
-        print("\n\nStarted building PubChem vendor data")
-        self.build_pubchem_vendor_links()
-        print("Ended building PubChem vendor data")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
-
-        # Building PDSP KiDatabase bioactivity data
-        print("\n\nStarted building PDSP KiDatabase bioactivities")
-        self.build_kidatabase_bioactivities()  # 14,562
-        print("Ended building PDSP KiDatabase bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
-
-        # Building Drug Central bioactivity data
-        print("\n\nStarted building Drug Central bioactivities")
-        self.build_drugcentral_bioactivities()  # 5,844
-        print("Ended building Drug Central bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True)
-
-        # Building Drug Central bioactivity data
+        #AFTERMATH FIXES
         print("\n\nStarted calculating potency and affinity indexes")
         self.calculate_potency_and_affinity()
         print("Potency and affinity indexes have been added to the model")
@@ -282,6 +303,22 @@ class Command(BaseBuild):
         with connection.cursor() as cursor:
             cursor.execute(f'ALTER SEQUENCE "{sequence_name}" RESTART WITH 1;')
 
+    @staticmethod
+    def sync_pk_sequence_to_max(model):
+        """
+        Set the model's PostgreSQL sequence to MAX(id), so the next INSERT gets MAX(id)+1.
+        Works even if rows were inserted with explicit IDs.
+        """
+        table = model._meta.db_table
+        with connection.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT setval(
+                    pg_get_serial_sequence('"{table}"','id'),
+                    COALESCE((SELECT MAX(id) FROM "{table}"), 0),
+                    true
+                );
+            ''')
+
 
     @staticmethod
     def purge_data():
@@ -297,6 +334,453 @@ class Command(BaseBuild):
         Command.reset_pk_sequence(Endogenous_GTP)
         Command.reset_pk_sequence(Ligand)
         Command.reset_pk_sequence(LigandID)
+
+    @staticmethod
+    def try_std(smiles):
+        """
+        Safely standardize a SMILES string:
+          - returns None for missing/invalid SMILES
+          - handles pipelines that return either Mol or (Mol, status)
+          - strips stereochemistry and returns non-isomeric SMILES
+        """
+        if not isinstance(smiles, str) or not smiles.strip():
+            return None
+        try:
+            mol = Chem.MolFromSmiles(smiles)
+            if mol is None:
+                return None
+            out = standardizer.standardize_mol(mol)
+            std_mol = out[0] if isinstance(out, tuple) else out
+            Chem.RemoveStereochemistry(std_mol)
+            return Chem.MolToSmiles(std_mol, isomericSmiles=False)
+        except Exception:
+            return None
+
+    @staticmethod
+    def comparePDSP(dump):
+        pdsp_link = get_or_create_url_cache(
+            "https://pdsp.unc.edu/databases/kiDownload/download.php", 7 * 24 * 3600)
+        bioactivity_kidata = pd.read_csv(pdsp_link, dtype=str, encoding='mac_roman')
+        # Keeping data that has either SMILES info OR CAS info
+        # CAS number can be translated into pubchem CID
+        pdsp = bioactivity_kidata.loc[(
+            ~bioactivity_kidata['SMILES'].isnull()) | (~bioactivity_kidata['CAS'].isnull())]
+        pdsp = pdsp.loc[(
+            ~pdsp['Unigene'].isnull())]
+        pdsp.fillna('None', inplace=True)
+        # 1) Normalize column names
+        up = pdsp.rename(columns={
+            ' Ligand Name': 'name',
+            'SMILES':        'smiles',
+        })
+
+        # 2) Deduplicate the key columns
+        up_sub = up[['name','smiles']].drop_duplicates().copy()
+        lc_sub = dump[['name','smiles']].drop_duplicates().copy()
+
+        up_sub['smiles'] = up_sub['smiles'].apply(Command.try_std)
+        # 3) Merge on both name & smiles → find those missing entirely
+        merged = up_sub.merge(
+            lc_sub,
+            on=['name','smiles'],
+            how='left',
+            indicator=True
+        )
+        missing_both = merged[merged['_merge']=='left_only'][['name','smiles']]
+
+        # 5) Try matching again on (name, std_smiles)
+        std_merged = missing_both.merge(
+            lc_sub,
+            on=['name','smiles'],
+            how='left',
+            indicator=True
+        )
+        std_matched   = std_merged[std_merged['_merge']=='both'][['name','smiles']]
+        still_missing = std_merged[std_merged['_merge']=='left_only'][['name','smiles']]
+
+        #  → truly no match
+        true_no_matches = still_missing[
+            ~still_missing['name'].isin(lc_sub['name']) &
+            ~still_missing['smiles'].isin(lc_sub['smiles'])
+        ]
+
+        # get all names from up that are NOT in true_no_matches
+        reverse_no_matches = up.loc[~up['name'].isin(true_no_matches['name']), 'name'].unique()
+
+        reverse_no_matches = list(reverse_no_matches)
+
+        return true_no_matches
+
+    @staticmethod
+    def compareDrugCentral(dump):
+        """
+        Compare ligand_csv vs merged_df on DRUG_NAME⇄name, SMILES⇄smiles, InChIKey⇄inchikey
+        Returns a dict of DataFrames: std_matched, still_missing, name_only, smiles_only,
+        inchikey_only, none.
+        """
+        # 1) Get DrugCentral data
+        drugcentral_ligands_link = get_or_create_url_cache("https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/drug.target.interaction.tsv.gz", 7 * 24 * 3600)
+        # drugcentral_ligands_link = "https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/drug.target.interaction.tsv.gz"
+        drugcentral_smiles_link = get_or_create_url_cache("https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/structures.smiles.tsv", 7 * 24 * 3600)
+        # drugcentral_smiles_link = "https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/structures.smiles.tsv"
+        drugcentral_ligands = pd.read_csv(drugcentral_ligands_link, sep='\t', header=0, compression='gzip')
+        drugcentral_smiles = pd.read_csv(drugcentral_smiles_link, sep='\t', header=0)
+        #Adjusting the data and filter
+        drugcentral_ligands['ID'] =  drugcentral_ligands['STRUCT_ID']
+        drugcentral_ligands.drop('STRUCT_ID', axis=1, inplace=True)
+        drugcentral_ligands = drugcentral_ligands.loc[drugcentral_ligands['TARGET_CLASS'] == 'GPCR']
+        merged_data = pd.merge(drugcentral_ligands, drugcentral_smiles, on='ID', how='left')
+        # Keeping data that has either SMILES info OR CAS info
+        # CAS number can be translated into pubchem CID
+        merged_data_filtered = merged_data.loc[(~merged_data['SMILES'].isnull()) | (~merged_data['CAS_RN'].isnull())]
+        merged_data_filtered = merged_data_filtered.loc[(~merged_data_filtered['GENE'].isnull())]
+        merged_data_filtered = merged_data_filtered.loc[(~merged_data_filtered['ACT_VALUE'].isnull())]
+        merged_data_filtered.fillna('None', inplace=True)
+        merged_data_filtered = Command.classify_assay(merged_data_filtered, 'ACT_TYPE', 'ACT_COMMENT')
+
+        # 2) Normalize column names
+        md = merged_data_filtered.rename(columns={
+            'DRUG_NAME':'name',
+            'SMILES':   'smiles',
+            'InChIKey': 'inchikey',
+        })
+
+        # 3) Pull just the three key cols and dedupe
+        lc_sub = dump[['name','smiles','inchikey']].drop_duplicates().copy()
+        md_sub = md[['name','smiles','inchikey']].drop_duplicates().copy()
+
+        # 4) Standardize SMILES
+        md_sub['smiles'] = md_sub['smiles'].apply(Command.try_std)
+
+        # 5) Exact-match on all three → find missing in ligand_csv
+        merged_exact = md_sub.merge(
+            lc_sub,
+            on=['name','smiles','inchikey'],
+            how='left',
+            indicator=True
+        )
+        missing_exact = merged_exact[merged_exact['_merge']=='left_only'][['name','smiles','inchikey']]
+
+        merged_std = missing_exact.merge(
+            lc_sub[['name','smiles','inchikey']],
+            left_on=['name','smiles','inchikey'],
+            right_on=['name','smiles','inchikey'],
+            how='left',
+            indicator=True
+        )
+        still_missing = merged_std[merged_std['_merge']=='left_only'][['name','smiles','inchikey']]
+
+        # 6) And the ones matching none of the three
+        none = still_missing[
+            ~still_missing['name'].isin(lc_sub['name']) &
+            ~still_missing['smiles'].isin(lc_sub['smiles']) &
+            ~still_missing['inchikey'].isin(lc_sub['inchikey'])
+        ]
+
+        to_update = pd.merge(
+              none,
+              md,
+              on='inchikey',
+              how='inner',       # keeps only rows where C exists in both
+              suffixes=('_none','_og')   # if A/B differ, you’ll need suffixes; here we assume they’re identical
+        )
+
+        # 2) Select the “preferred” columns
+        keep = []
+        for col in to_update.columns:
+            # if it’s a “_none” column but we have a corresponding “_og”, skip it
+            if col.endswith('_none'):
+                base = col[:-5]
+                if f'{base}_og' in to_update.columns:
+                    continue
+            keep.append(col)
+
+        # Sub‑select
+        unmatched = to_update[keep].copy()
+
+        # 3) Strip any of the suffixes off the names
+        unmatched.rename(
+            columns=lambda c: re.sub(r'_(none|og)$','',c),
+            inplace=True
+        )
+
+        unmatched = unmatched.loc[:, ~unmatched.columns.duplicated()]
+
+        return unmatched
+
+    @staticmethod
+    def find_unmatched_gtp(reference_df, small_mols_df, peptide_df):
+
+        # 1) normalize columns
+        small = small_mols_df.rename(columns={
+            'ligand_name':'name'
+        })[['name','smiles','inchikey']].drop_duplicates().copy()
+
+        small['smiles'] = small['smiles'].apply(Command.try_std)
+
+        peptide = peptide_df.rename(columns={
+            'single_letter_amino_acid_sequence':'sequence'
+        })[['name','smiles','inchikey','helm','sequence']].drop_duplicates().copy()
+
+        peptide['smiles'] = peptide['smiles'].apply(Command.try_std)
+
+        # 2) grab just name, smiles, inchikey, sequence and helm from reference
+        ref = reference_df[['name','smiles','inchikey','sequence','helm']].drop_duplicates().copy()
+
+        # 3) exact‐match on all three → which small are missing in reference?
+        small_cmp = small.merge(
+            ref, on=['name','smiles','inchikey'],
+            how='left', indicator=True
+        )
+        small_missing = small_cmp[small_cmp['_merge']=='left_only'][['name','smiles','inchikey']].copy()
+
+        # 4) those matching none of the three
+        small_none = small_missing[
+            ~small_missing['name'].isin(ref['name']) &
+            ~small_missing['smiles'].isin(ref['smiles']) &
+            ~small_missing['inchikey'].isin(ref['inchikey'] )
+        ]
+
+        small_to_update = pd.merge(
+              small_none,
+              small_mols_df,
+              on='inchikey',
+              how='inner',       # keeps only rows where C exists in both
+              suffixes=('_none','_og')   # if A/B differ, you’ll need suffixes; here we assume they’re identical
+        )
+
+        # 2) Select the “preferred” columns
+        keep = []
+        for col in small_to_update.columns:
+            # if it’s a “_none” column but we have a corresponding “_og”, skip it
+            if col.endswith('_none'):
+                base = col[:-5]
+                if f'{base}_og' in small_to_update.columns:
+                    continue
+            keep.append(col)
+
+        # Sub‑select
+        unmatched_small = small_to_update[keep].copy()
+
+        # 3) Strip any of the suffixes off the names
+        unmatched_small.rename(
+            columns=lambda c: re.sub(r'_(none|og)$','',c),
+            inplace=True
+        )
+
+        unmatched_small = unmatched_small.loc[:, ~unmatched_small.columns.duplicated()]
+
+        #6) Let's redo everything for peptides
+
+        peptide_cmp = peptide.merge(
+            ref, on=['name','smiles','inchikey','sequence','helm'],
+            how='left', indicator=True
+        )
+        peptide_missing = peptide_cmp[peptide_cmp['_merge']=='left_only'][['name','smiles','inchikey','sequence','helm']].copy()
+
+        # 5) those matching none of the three
+        peptide_none = peptide_missing[
+            ~peptide_missing['name'].isin(ref['name']) &
+            ~peptide_missing['smiles'].isin(ref['smiles']) &
+            ~peptide_missing['sequence'].isin(ref['sequence']) &
+            ~peptide_missing['helm'].isin(ref['helm']) &
+            ~peptide_missing['inchikey'].isin(ref['inchikey'] )
+        ]
+
+        peptides_to_update = pd.merge(
+              peptide_none,
+              peptide_df,
+              on='inchikey',
+              how='inner',       # keeps only rows where C exists in both
+              suffixes=('_none','_og')   # if A/B differ, you’ll need suffixes; here we assume they’re identical
+        )
+
+        # 2) Select the “preferred” columns
+        keep = []
+        for col in peptides_to_update.columns:
+            # if it’s a “_none” column but we have a corresponding “_og”, skip it
+            if col.endswith('_none'):
+                base = col[:-5]
+                if f'{base}_og' in peptides_to_update.columns:
+                    continue
+            keep.append(col)
+
+        # Sub‑select
+        unmatched_peptide = peptides_to_update[keep].copy()
+
+        # 3) Strip any of the suffixes off the names
+        unmatched_peptide.rename(
+            columns=lambda c: re.sub(r'_(none|og)$','',c),
+            inplace=True
+        )
+
+        unmatched_peptide = unmatched_peptide.loc[:, ~unmatched_peptide.columns.duplicated()]
+
+        return unmatched_small, unmatched_peptide
+
+    @staticmethod
+    def find_unmatched_bioactivities(reference_df, bio_df):
+
+        # 1) normalize columns
+        bio = bio_df[['name','smiles','inchikey']].drop_duplicates().copy()
+
+        bio['smiles'] = small['smiles'].apply(Command.try_std)
+
+        # 2) grab just name, smiles, inchikey, sequence and helm from reference
+        ref = reference_df[['name','smiles','inchikey']].drop_duplicates().copy()
+
+        # 3) exact‐match on all three → which small are missing in reference?
+        bio_cmp = bio.merge(
+            ref, on=['name','smiles','inchikey'],
+            how='left', indicator=True
+        )
+        bio_missing = bio_cmp[bio_cmp['_merge']=='left_only'][['name','smiles','inchikey']].copy()
+
+        # 4) those matching none of the three
+        bio_none = bio_missing[
+            ~bio_missing['name'].isin(ref['name']) &
+            ~bio_missing['smiles'].isin(ref['smiles']) &
+            ~bio_missing['inchikey'].isin(ref['inchikey'] )
+        ]
+
+        bio_to_update = pd.merge(
+              bio_none,
+              bio_df,
+              on='name',
+              how='inner',       # keeps only rows where C exists in both
+              suffixes=('_none','_og')   # if A/B differ, you’ll need suffixes; here we assume they’re identical
+        )
+
+        # 2) Select the “preferred” columns
+        keep = []
+        for col in bio_to_update.columns:
+            # if it’s a “_none” column but we have a corresponding “_og”, skip it
+            if col.endswith('_none'):
+                base = col[:-5]
+                if f'{base}_og' in bio_to_update.columns:
+                    continue
+            keep.append(col)
+
+        # Sub‑select
+        unmatched_bio = bio_to_update[keep].copy()
+
+        # 3) Strip any of the suffixes off the names
+        unmatched_bio.rename(
+            columns=lambda c: re.sub(r'_(none|og)$','',c),
+            inplace=True
+        )
+
+        unmatched_bio = unmatched_bio.loc[:, ~unmatched_bio.columns.duplicated()]
+
+        return unmatched_bio
+
+    @staticmethod
+    def reload_dump():
+        compounds = {}
+
+        # --- Helper to print progress every 10% ---
+        def _progress_printer(total, prefix):
+            """Returns a closure that you can call with current index to print at 10% intervals."""
+            percent = 10
+            def tick(idx):
+                nonlocal percent
+                # when idx crosses the next threshold, print and bump
+                if idx >= total * percent / 100:
+                    print(f"{prefix}: {percent}%")
+                    percent += 10
+            return tick
+
+        # --- PASS 1: create all compounds without parent ---
+        # 1a) count rows
+        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as f:
+            total = sum(1 for _ in f) - 1
+
+        print("Pass 1 (compounds): 0%")
+        tick1 = _progress_printer(total, "Pass 1 (compounds)")
+
+        # 1b) actual work
+        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter=';')
+            for idx, row in enumerate(reader, start=1):
+                # print progress if needed
+                tick1(idx)
+
+                lig_type = (
+                    LigandType.objects.get(id=row['ligand_type_id'])
+                    if row.get('ligand_type_id')
+                    else LigandType.objects.get(id=5)
+                )
+
+                compound = Ligand.objects.create(
+                    id=int(row['id']),
+                    name=row['name'],
+                    pdbe=row.get('pdbe') or None,
+                    ambiguous_alias=row.get('ambiguous_alias') or None,
+                    clean_inchikey=row.get('clean_inchikey') or None,
+                    hacc=row.get('hacc') or None,
+                    hdon=row.get('hdon') or None,
+                    inchikey=row.get('inchikey') or None,
+                    ligand_type=lig_type,
+                    logp=row.get('logp') or None,
+                    mw=row.get('mw') or None,
+                    rotatable_bonds=row.get('rotatable_bonds') or None,
+                    sequence=row.get('sequence') or None,
+                    smiles=row.get('smiles') or None,
+                    uniprot=row.get('uniprot') or None,
+                    source=row.get('source') or None,
+                    helm=row.get('helm') or None,
+                    parent=None
+                )
+                compounds[compound.id] = compound
+        print("Pass 1 (compounds): 100%")
+
+        # --- PASS 2: set parent relationships ---
+        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as f:
+            total = sum(1 for _ in f) - 1
+
+        print("Pass 2 (parents): 0%")
+        tick2 = _progress_printer(total, "Pass 2 (parents)")
+
+        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as csvfile:
+            reader = csv.DictReader(csvfile, delimiter=';')
+            for idx, row in enumerate(reader, start=1):
+                tick2(idx)
+                parent_id = row.get('parent_id')
+                if parent_id:
+                    try:
+                        compound = compounds[int(row['id'])]
+                        compound.parent = compounds.get(int(parent_id))
+                        compound.save()
+                    except KeyError:
+                        print(f"Parent ID {parent_id} not found for compound ID {row['id']}")
+        print("Pass 2 (parents): 100%")
+
+        # --- PASS 3: create all the LigandIDs ---
+        with open(Command.id_dump, newline='', encoding='utf-8-sig') as f:
+            total = sum(1 for _ in f) - 1
+
+        print("Pass 3 (IDs): 0%")
+        tick3 = _progress_printer(total, "Pass 3 (IDs)")
+
+        with open(Command.id_dump, newline='', encoding='utf-8-sig') as idsfile:
+            reader = csv.DictReader(idsfile, delimiter=';')
+            for idx, row in enumerate(reader, start=1):
+                tick3(idx)
+                try:
+                    record = LigandID(
+                        id=int(row['id']),
+                        index=row['index'],
+                        ligand=Ligand.objects.get(id=row['ligand_id']),
+                        web_resource=WebResource.objects.get(id=row['web_resource_id'])
+                    )
+                    record.save()
+                except Exception as e:
+                    print(f"Impossible to import LigandID {row['index']}: {e!r}")
+        print("Pass 3 (IDs): 100%")
+
+        print("Syncing the MAX id values")
+        Command.sync_pk_sequence_to_max(Ligand)
+        Command.sync_pk_sequence_to_max(LigandID)
 
     @staticmethod
     def data_preparation(endogenous_data, interactions, iuphar_ids):
@@ -1175,10 +1659,7 @@ class Command(BaseBuild):
                         ~((filtered_ligands["molecule_type"].isin(["Small molecule", "Oligosaccharide"])) |
                         (pd.isna(filtered_ligands["molecule_type"])))
                      ].reset_index()
-
-        nonsm_entries = len(nonsm_data)
-
-        print("Found", nonsm_entries, "new non-small-molecules")
+        print("Found", len(nonsm_data), "new non-small-molecules")
 
         ligands = []
         ligand_types = {"Unknown": "na", "Protein": "protein"}
@@ -1228,12 +1709,6 @@ class Command(BaseBuild):
                                 web_resource=wr
                             )
                         )
-
-            # -- PROGRESS REPORTING ADDED HERE --
-            completed = index + 1
-            if completed % 200 == 0 or completed == nonsm_entries:
-                percent = completed / nonsm_entries * 100
-                print(f"Processed {completed} of {nonsm_entries} ligands — {percent:.1f}% complete")
 
         # Bulk insert all new ligandIDs
         LigandID.objects.bulk_create(weblinks)
@@ -1377,6 +1852,75 @@ class Command(BaseBuild):
         LigandVendorLink.objects.bulk_create(links)
 
     @staticmethod
+    def uniprot_mapper_update(protein, organism):
+        organism_dict = {
+            'PIG': 'sus_scrofa', 'RAT': 'rattus_norvegicus', 'HUMAN': 'homo_sapiens', 'MOUSE': 'mus_musculus',
+            'CANINE': 'canis_lupus_familiaris', 'BOVINE': 'bos_taurus', 'CALF': 'bos_taurus', 'COW': 'bos_taurus',
+            'GUINEA PIG': 'cavia_porcellus', 'CAT': 'felis_catus', 'NEONATAL RAT': 'rattus_norvegicus',
+            '? HUMAN': 'homo_sapiens', 'OPOSSUM': 'didelphis_marsupialis', 'Rat 6B': 'rattus_norvegicus',
+            'HUMAN M3': 'homo_sapiens', 'HUMAN M4': 'homo_sapiens', 'Chick': 'gallus_gallus',
+            'Frog': 'pseudis_balbodactyla', 'Newborn rats': 'rattus_norvegicus', 'Beef': 'bos_taurus',
+            'Sheep': 'ovis_aries', 'OX': 'bos_taurus', 'Dog': 'canis_lupus_familiaris',
+            'Rhesus': 'macaca_mulatta', 'Monkey': 'macaca_mulatta', 'PIGLET': 'sus_scrofa',
+            'Rat Y861': 'rattus_norvegicus', 'Zebra Finch': 'taeniopygia_guttata', 'Chicken': 'gallus_gallus',
+            'MICE': 'mus_musculus', 'Rhesus Monkey': 'macaca_mulatta', 'Zebrafish': 'danio_rerio'
+        }
+
+        # Build the UniProt search query
+        gene_term = f"gene_exact:{protein.lower()}"
+        if organism in organism_dict:
+            org_term = f'organism_name:"{organism_dict[organism]}"'
+            query = f"{gene_term} AND {org_term}"
+        else:
+            query = gene_term
+
+        if query in Command.mapper_cache:
+            return Command.mapper_cache[query]
+
+        params = {
+            "query": query,
+            "fields": "id",
+            "format": "tsv",
+            "size": 1  # only first hit
+        }
+        url = "https://rest.uniprot.org/uniprotkb/search?" + urllib.parse.urlencode(params)
+
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; pdsp-mapper/1.0)"}
+
+        # Retry with exponential backoff for transient network issues
+        retries = 5
+        backoff = 0.5
+        last_err = None
+        text = None
+
+        for attempt in range(1, retries + 1):
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    text = resp.read().decode("utf-8", errors="replace")
+                break
+            except (urllib.error.URLError, socket.timeout, ConnectionResetError, ssl.SSLError) as e:
+                last_err = e
+                if attempt < retries:
+                    time.sleep(backoff * (2 ** (attempt - 1)))
+                else:
+                    # do not cache a transient failure
+                    print(f"UniProt request failed for query={query!r}: {e}")
+                    return None
+
+        # Robust TSV parsing
+        reader = csv.DictReader(StringIO(text), delimiter="\t")
+        first_row = next(reader, None)
+        converted = (first_row["Entry"] if first_row and "Entry" in first_row else None)
+
+        # Optional: keep original case (recommended)
+        # If you *must* lower for keys, do it at the call site, not the accession.
+        Command.mapper_cache[query] = converted
+        return converted
+
+
+
+    @staticmethod
     def uniprot_mapper(protein, organism):
         organism_dict = {'PIG': 'sus_scrofa', 'RAT': 'rattus_norvegicus', 'HUMAN': 'homo_sapiens', 'MOUSE': 'mus_musculus',
                          'CANINE': 'canis_lupus_familiaris', 'BOVINE': 'bos_taurus', 'CALF': 'bos_taurus', 'COW': 'bos_taurus',
@@ -1450,7 +1994,6 @@ class Command(BaseBuild):
     def compare_proteins(gtp_data):
         gpcrdb_proteins = Protein.objects.filter(
             family__slug__startswith="00", sequence_type__slug="wt").values_list('entry_name', 'accession')
-        entries = gtp_data.loc[gtp_data['uniprotkb_id'].isin([protein[1].split(
         entries = gtp_data.loc[gtp_data['uniprotkb_id'].isin([protein[1].split(
             "-")[0] for protein in gpcrdb_proteins]), ['uniprotkb_id', 'gtopdb_iuphar_id']]
         return list(entries['gtopdb_iuphar_id'].unique())
@@ -1811,25 +2354,41 @@ class Command(BaseBuild):
     def build_kidatabase_bioactivities():
         protein_names = {}
         ligand_cache = {}
-        print("\n===============\n#1 Reading PDSP bioacitivity data")
-        pdsp_link = get_or_create_url_cache(
-            "https://pdsp.unc.edu/databases/kiDownload/download.php", 7 * 24 * 3600)
+        src = 'Remote'
+        conversion = {'Gene': {'Remote': 'Unigene',
+                              'Local': 'UniGene Code'},
+                      'Species': {'Remote': 'species',
+                                  'Local': 'Species'},
+                      'Ligand': {'Remote': ' Ligand Name',
+                                 'Local': 'Ligand name'},
+                      'Ki': {'Remote': 'ki Val',
+                             'Local': 'Ki value'},
+                      'Hot': {'Remote': 'Hotligand',
+                              'Local': 'Hot Ligand'}
+                      }
+        pdsp_link = get_or_create_url_cache("https://pdspdb.unc.edu/databases/kiDownload/download.php", 7 * 24 * 3600)
+        pdsp_file = os.sep.join([Command.data_dir, 'pdsp_ki_backup_august25.csv'])
         bioactivity_kidata = pd.read_csv(pdsp_link, dtype=str, encoding='mac_roman')
+        if 'Could not connect: ' in bioactivity_kidata.columns:
+            print("\n===============\Prep: Error is fetching data from remote, using local backup file")
+            bioactivity_kidata = pd.read_csv(pdsp_file, dtype=str, encoding='mac_roman')
+            bioactivity_kidata["Ki value"].replace(">10000", 10000.0, inplace=True)
+            src = 'Local'
         # Keeping data that has either SMILES info OR CAS info
         # CAS number can be translated into pubchem CID
-        bioactivity_data_filtered = bioactivity_kidata.loc[(
+        pdsp = bioactivity_kidata.loc[(
             ~bioactivity_kidata['SMILES'].isnull()) | (~bioactivity_kidata['CAS'].isnull())]
-        bioactivity_data_filtered = bioactivity_data_filtered.loc[(
-            ~bioactivity_data_filtered['Unigene'].isnull())]
-        bioactivity_data_filtered.fillna('None', inplace=True)
-        bio_entries = len(bioactivity_data_filtered)
-        print("\n===============\n#2 Start parsing PDSP data")
+        pdsp = pdsp.loc[(
+            ~pdsp[conversion['Gene'][src]].isnull())]
+        pdsp.fillna('None', inplace=True)
+        bio_entries = len(pdsp)
+        print("\n===============\n#1 Start parsing PDSP data")
         bioacts = []
-        for index, (_, row) in enumerate(bioactivity_data_filtered.iterrows()):
+        for index, (_, row) in enumerate(pdsp.iterrows()):
             receptor = None
-            label = '_'.join([row['Unigene'], row['species']])
+            label = '_'.join([row[conversion['Gene'][src]], row[conversion['Species'][src]]])
             if label not in protein_names.keys():
-                protein = Command.uniprot_mapper(row['Unigene'], row['species'])
+                protein = Command.uniprot_mapper_update(row[conversion['Gene'][src]], row[conversion['Species'][src]])
                 if protein is not None:
                     protein_names[label] = Command.fetch_protein(protein, 'PDSP')
 
@@ -1842,26 +2401,25 @@ class Command(BaseBuild):
                     ids['inchikey'] = dm.to_inchikey(input_mol)
             if row['CAS'] != 'None':
                 ids['CAS'] = row['CAS']
-            if row[' Ligand Name'] not in ligand_cache.keys():
-                print(ids)
-                ligand = get_or_create_ligand(row[' Ligand Name'], ids, source='PDSP KiDatabase')
-                ligand_cache[row[' Ligand Name']] = ligand
+            if row[conversion['Ligand'][src]] not in ligand_cache.keys():
+                ligand = get_or_create_ligand(row[conversion['Ligand'][src]], ids, source='PDSP KiDatabase')
+                ligand_cache[row[conversion['Ligand'][src]]] = ligand
             if label in protein_names.keys():
                 receptor = protein_names[label]
-            if (receptor is not None) and (ligand_cache[row[' Ligand Name']] is not None):
+            if (receptor is not None) and (ligand_cache[row[conversion['Ligand'][src]]] is not None):
                 bioacts.append(AssayExperiment())
-                bioacts[-1].ligand_id = ligand_cache[row[' Ligand Name']].id
+                bioacts[-1].ligand_id = ligand_cache[row[conversion['Ligand'][src]]].id
                 bioacts[-1].protein_id = receptor.id
                 bioacts[-1].assay_type = 'B'
                 bioacts[-1].assay_description = None
-                bioacts[-1].standard_activity_value = round(float(row['ki Val']), 2)
-                bioacts[-1].p_activity_value = round(-math.log10(float(row['ki Val']) * 1e-9), 2)
+                bioacts[-1].standard_activity_value = round(float(row[conversion['Ki'][src]]), 2)
+                bioacts[-1].p_activity_value = round(-math.log10(float(row[conversion['Ki'][src]]) * 1e-9), 2)
                 bioacts[-1].p_activity_ranges = None
                 bioacts[-1].standard_relation = '='
                 bioacts[-1].value_type = 'pKi'
                 bioacts[-1].source = 'PDSP KiDatabase'
                 bioacts[-1].document_chembl_id = None
-                bioacts[-1].reference_ligand = row['Hotligand']
+                bioacts[-1].reference_ligand = row[conversion['Hot'][src]]
                 # BULK insert every X entries or last entry
             if (len(bioacts) == Command.bulk_size) or (index == bio_entries - 1):
                 AssayExperiment.objects.bulk_create(bioacts)
@@ -1869,13 +2427,14 @@ class Command(BaseBuild):
                       bio_entries, "bioactivities")
                 bioacts = []
 
-            Command.assign_ligand_target_pairing(ligand_cache[row[' Ligand Name']], receptor, None, 'pKi')
+            Command.assign_ligand_target_pairing(ligand_cache[row[conversion['Ligand'][src]]], receptor, None, 'pKi')
 
     @staticmethod
     def build_drugcentral_bioactivities():
         print("# Collecting DrugCentral data")
         accession_numbers = {}
         ligand_cache = {}
+        # 1) Get DrugCentral data
         drugcentral_ligands_link = get_or_create_url_cache("https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/drug.target.interaction.tsv.gz", 7 * 24 * 3600)
         # drugcentral_ligands_link = "https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/drug.target.interaction.tsv.gz"
         drugcentral_smiles_link = get_or_create_url_cache("https://unmtid-shinyapps.net/download/DrugCentral/2021_09_01/structures.smiles.tsv", 7 * 24 * 3600)
@@ -1894,6 +2453,7 @@ class Command(BaseBuild):
         merged_data_filtered = merged_data_filtered.loc[(~merged_data_filtered['ACT_VALUE'].isnull())]
         merged_data_filtered.fillna('None', inplace=True)
         merged_data_filtered = Command.classify_assay(merged_data_filtered, 'ACT_TYPE', 'ACT_COMMENT')
+
         bio_entries = len(merged_data_filtered)
 
         print("# Parsing DrugCentral data")
@@ -2156,12 +2716,12 @@ class Command(BaseBuild):
           - role determined by `assay_type` slug lookup in LigandType
         """
         # 1. Determine effect slug
-        effect_slug = 'unknown'
+        effect_slug = None
         if unit in ['EC50', 'pEC50']:
             effect_slug = 'stimulatory'
         elif unit in ['pA2', 'pKB', 'IC50', 'pIC50', 'pKb']:
             effect_slug = 'inhibitory'
-        elif unit in ['pKi', 'pKd', 'Ki', 'Kd']:
+        elif unit in ['pKi', 'pKd', 'Ki', 'Kd', 'Potency']:
             effect_slug = 'binding'
         elif unit == 'AC50':
             desc = assay_description.lower()

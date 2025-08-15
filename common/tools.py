@@ -23,7 +23,7 @@ import xml.etree.ElementTree as etree
 from http.client import HTTPException
 
 
-def test_model_updates(model, master_data, initialize=False, check=False, rerun=False):
+def test_model_updates(model, master_data, initialize=False, check=False, rerun=False, rebuild=False):
     #check if the input is a single model or a list of models
     #and initialize the dictionary with the model name and length (set to 0)
     if initialize:
@@ -66,8 +66,11 @@ def test_model_updates(model, master_data, initialize=False, check=False, rerun=
                         print(str(diff) + ' records have been removed')
 
         if not CHECK:
-            print('EXITING: No module have been updated. Probably some error?')
-            sys.exit()
+            if rebuild:
+                print('No module have been updated. Previous rebuild covered whole data')
+            else:
+                print('EXITING: No module have been updated. Probably some error?')
+                sys.exit()
 
     if rerun:
         print('Checking if changes have happened during a build rerun')

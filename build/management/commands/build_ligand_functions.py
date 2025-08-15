@@ -2,7 +2,7 @@
 #from django.db import IntegrityError
 from django.db.models import Q, Count
 from django.utils.text import slugify
-from django.db import transaction
+from django.db import transaction, IntegrityError
 
 from ligand.models import Ligand, LigandID, LigandType, LigandRole
 from common.models import WebResource
@@ -73,7 +73,6 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
     # Order of checks:
     ## Check if Standardized SMILES exists
     ## Check if first section of INCHIKEY exists
-    ## Check if fsequence exists
     ## Check if name exists
     ## if all above fails, generate a parent
 
@@ -114,11 +113,12 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         head_inchi = ids["inchikey"].split('-')[0]
         parent = try_get_parent({"clean_inchikey":head_inchi, "parent__isnull":True})
 
-    # Attempt using sequence if still not found
-    if not parent and "sequence" in ids:
-        parent = try_get_parent({"sequence":ids["sequence"], "parent__isnull":True})
+    # # Attempt using sequence if still not found
+    # if not parent and "sequence" in ids:
+    #     parent = try_get_parent({"sequence":ids["sequence"], "parent__isnull":True})
 
     # Attempt using name if still not found (here need to add an exception)
+    # Here the logic is to find parents which have only the name stored and no other info
     if not parent and "smiles" in ids and "inchikey" in ids:
         std_smiles = standardize_smiles(ids["smiles"])
         head_inchi = ids["inchikey"].split('-')[0]
@@ -133,7 +133,21 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 return
 
         # either std_smiles was falsy, or it was truthy but name==new_name
-        parent = try_get_parent({"name": name, "parent__isnull": True})
+        parent = try_get_parent({"name__iexact": name, "parent__isnull": True})
+
+    # Final fallback: use name-only matching (case-insensitive)
+    if not parent:
+        parent = try_get_parent({"name__iexact": name, "parent__isnull": True})
+
+    if not parent:
+        for type in external_sources:
+            if ligand is None and type in ids:
+                ligand = get_ligand_by_id(type, ids[type])
+        if ligand:
+            if ligand.parent:
+                parent = ligand.parent
+            else:
+                parent = ligand
 
     # Finally, generate a parent if none was found
     if not parent:
@@ -679,46 +693,80 @@ def check_name(smiles: str,
 
 def update_parent(parent, child):
     """
-    Update the parent ligand with data from the child if the parent lacks it.
-    - SMILES will be standardized.
-    - inchikey and clean_inchikey will be handled specially.
+    1) If child.inchikey → clean collision, reassign to that existing parent.
+    2) Update any missing fields (smiles, inchikey, clean_inchikey, etc.) on
+       whichever parent record is now in play.
+    3) Return the “true” parent record.
     """
-
-    fields_to_check = ['sequence', 'logp', 'mw', 'helm', 'uniprot', 'pdbe']
     updated = False
 
-    # Special case: SMILES needs standardization
-    if not parent.smiles and child.smiles:
-        std_smiles = standardize_smiles(child.smiles)
-        if std_smiles:
-            parent.smiles = std_smiles
-            updated = True
-            print(f"Updated parent {parent.name} field 'smiles' with standardized child SMILES.")
+    # ————————————————
+    # 0) EARLY CLEAN‑KEY COLLISION / REASSIGN
+    # ————————————————
+    if child.inchikey and not parent.clean_inchikey:
+        clean = child.inchikey.split('-', 1)[0]
+        collision = (
+            Ligand.objects
+                 .filter(clean_inchikey=clean)
+                 .exclude(pk=parent.pk)
+                 .first()
+        )
+        if collision:
+            print(f"clean_inchikey '{clean}' already on {collision.name!r}; "
+                  f"switching to that record.")
+            # rebind to the “correct” parent
+            parent = collision
+            # also update the FK on the child object
+            child.parent = collision
+            child.save(update_fields=['parent'])
+            # now continue with filling-in on this new parent
 
-    # Special case: inchikey and clean_inchikey
+    # ————————————————
+    # 1) SMILES standardization
+    # ————————————————
+    if not parent.smiles and child.smiles:
+        std = standardize_smiles(child.smiles)
+        if std:
+            parent.smiles = std
+            updated = True
+            print(f"→ {parent.name}: set smiles")
+
+    # ————————————————
+    # 2) inchikey
+    # ————————————————
     if not parent.inchikey and child.inchikey:
         parent.inchikey = child.inchikey
         updated = True
-        print(f"Updated parent {parent.name} field 'inchikey' with child value.")
+        print(f"→ {parent.name}: set inchikey")
 
-        # Also update clean_inchikey if missing
-        if not parent.clean_inchikey:
-            clean = child.inchikey.split('-')[0]
-            parent.clean_inchikey = clean
-            print(f"Updated parent {parent.name} field 'clean_inchikey' with derived value.")
+    # ————————————————
+    # 3) clean_inchikey (now safe)
+    # ————————————————
+    if not parent.clean_inchikey and child.inchikey:
+        clean = child.inchikey.split('-', 1)[0]
+        parent.clean_inchikey = clean
+        updated = True
+        print(f"→ {parent.name}: set clean_inchikey '{clean}'")
 
-    # Standard fields
-    for field in fields_to_check:
-        parent_val = getattr(parent, field, None)
-        child_val = getattr(child, field, None)
-
-        if not parent_val and child_val:
-            setattr(parent, field, child_val)
+    # ————————————————
+    # 4) other standard fields
+    # ————————————————
+    for field in ['sequence', 'logp', 'mw', 'helm', 'uniprot', 'pdbe']:
+        if not getattr(parent, field) and getattr(child, field):
+            setattr(parent, field, getattr(child, field))
             updated = True
-            print(f"Updated parent {parent.name} field '{field}' with child value.")
+            print(f"→ {parent.name}: set {field}")
 
+    # ————————————————
+    # 5) save parent if needed
+    # ————————————————
     if updated:
-        parent.save()
+        try:
+            parent.save()
+        except IntegrityError as e:
+            print(f"❗️ Unable to save {parent.name}: {e!r}")
+
+    return parent
 
 
 #### Block for fixing mismatched LigandType assignment in Ligand model
