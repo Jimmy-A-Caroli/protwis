@@ -4,6 +4,15 @@ from django.core.cache import cache
 from django.apps import apps
 from difflib import get_close_matches
 from common import definitions
+from io import BytesIO
+from string import Template
+from Bio import Entrez, Medline
+from http.client import HTTPException
+from pathlib import Path
+from urllib.parse import quote
+from urllib.request import urlopen
+from urllib.error import HTTPError
+from typing import List, Tuple, Optional, Dict
 import re
 import os
 import sys
@@ -11,96 +20,110 @@ import yaml
 import time
 import logging
 import urllib
-from urllib.parse import quote
-from urllib.request import urlopen
-from urllib.error import HTTPError
 import hashlib
 import json
 import gzip
 import csv
-from io import BytesIO
-from string import Template
-from Bio import Entrez, Medline
-import xml.etree.ElementTree as etree
-from http.client import HTTPException
-from pathlib import Path
-from datetime import datetime
 import datetime as dt
 import math
-from typing import List, Tuple, Optional, Dict
+import xml.etree.ElementTree as etree
 
-def dump_check(record_count, model_label):
+def dump_checker(model_label, record_count=None):
     """
-    Minimal snapshot helper (CSV version).
-
-    Inputs:
-      - record_count: current number of rows (e.g., MyModel.objects.count()).
-      - model_label: 'app_label.ModelName' (e.g., 'myapp.MyModel').
-
-    Behavior:
-      - Compares record_count to the last stored count for this model.
-      - If changed, writes a CSV dump to {model_label_lower}_{YYYY-MM-DD}.csv
-        under BASE_DIR / 'model_snapshots', and updates the stored count.
-      - Returns True if a dump was written, False otherwise.
+    One-shot helper:
+      1) Finds the latest dump in `dump_path` for `model_label`.
+      2) Compares latest dump's data-row count vs `record_count`.
+         - If `record_count` is None, it will query the DB count.
+      3) If grown, writes a new CSV: {app_model}_{YYYY_MM_DD}.csv (overwrites same-day).
+    Returns:
+      {
+        'latest_dump': <str|None>,
+        'latest_count': <int>,
+        'written': <bool>,
+        'new_dump': <str|None>
+      }
     """
-    snap_dir = os.sep.join([settings.DATA_DIR, 'model_snapshots'])
-    snap_dir.mkdir(parents=True, exist_ok=True)
+    # ---- config & naming ----
+    dump_path = os.sep.join([settings.DATA_DIR, 'model_snapshots'])
+    safe = model_label.replace('.', '_').lower()
 
-    safe_name = model_label.replace(".", "_").lower()
-    count_file = snap_dir / f"{safe_name}__count.txt"
+    # ---- find latest dump ----
+    latest_path, latest_date, latest_n = None, None, -1
+    if os.path.isdir(dump_path):
+        for fname in os.listdir(dump_path):
+            if not (fname.startswith(safe + "_") and fname.endswith(".csv")):
+                continue
+            m = re.match(r'^' + re.escape(safe) + r'_(\d{4})[-_](\d{2})[-_](\d{2})(?:__(\d+))?\.csv$', fname)
+            if not m:
+                continue
+            y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            try:
+                dte = dt.date(y, mo, d)
+            except ValueError:
+                continue
+            n = int(m.group(4)) if m.group(4) else 0
+            if (latest_date is None) or (dte > latest_date) or (dte == latest_date and n > latest_n):
+                latest_date, latest_n = dte, n
+                latest_path = os.path.join(dump_path, fname)
 
-    # Load previous count (if any)
-    prev_count = None
-    if count_file.exists():
-        try:
-            prev_count = int(count_file.read_text().strip())
-        except ValueError:
-            prev_count = None  # treat as changed if corrupted
+    # ---- count rows in latest dump (data lines only) ----
+    latest_count = 0
+    if latest_path and os.path.isfile(latest_path):
+        with open(latest_path, "r", encoding="utf-8", newline="") as fh:
+            line_no = -1
+            for line_no, _ in enumerate(fh, 0):
+                pass
+            latest_count = max(line_no, 0)  # minus header -> we started at 0, so header is line 0
 
-    # No change → no dump
-    if prev_count is not None and prev_count == record_count:
-        return False
+    # ---- get current count if not provided ----
+    if record_count is None:
+        app_label, model_name = model_label.split(".", 1)
+        Model = apps.get_model(app_label, model_name)
+        record_count = Model._default_manager.count()
 
-    # Dump the model (only when count changed)
+    # ---- if not grown, stop ----
+    if record_count <= latest_count:
+        print('Found an existing dump, loading it in the output of the function')
+        return {
+            "latest_dump": latest_path,
+            "latest_count": latest_count,
+            "written": False,
+            "new_dump": None,
+        }
+
+    # ---- write fresh dump (overwrite same-day) ----
+    os.makedirs(dump_path, exist_ok=True)
+    today = dt.date.today().strftime("%Y_%m_%d")
+    out_path = os.path.join(dump_path, f"{safe}_{today}.csv")
+
     app_label, model_name = model_label.split(".", 1)
     Model = apps.get_model(app_label, model_name)
+    fields = list(Model._meta.concrete_fields)
+    columns = [getattr(f, "attname", f.name) for f in fields]
+    pk = Model._meta.pk.attname
+    qs = Model._default_manager.all().order_by(pk).values_list(*columns)
 
-    # Concrete DB fields (includes FK ids via attname)
-    field_objs = list(Model._meta.concrete_fields)
-    field_names = [getattr(f, "attname", f.name) for f in field_objs]
-    pk_name = Model._meta.pk.attname
-
-    # Deterministic order
-    qs = Model._default_manager.all().order_by(pk_name).values_list(*field_names)
-
-    date_part = datetime.now().strftime("%Y-%m-%d")
-    out_file = snap_dir / f"{safe_name}_{date_part}.csv"
-
-    # Avoid overwriting multiple runs in the same day
-    i = 0
-    final_out = out_file
-    while final_out.exists():
-        i += 1
-        final_out = snap_dir / f"{safe_name}_{date_part}__{i}.csv"
-
-    with final_out.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.writer(fh)
-        writer.writerow(field_names)
+    with open(out_path, "w", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(columns)
         for row in qs.iterator():
-            writer.writerow([_coerce_csv_value(v) for v in row])
+            out_row = []
+            for v in row:
+                if v is None:
+                    out_row.append("")
+                elif isinstance(v, (dt.date, dt.datetime, dt.time)):
+                    out_row.append(v.isoformat())
+                else:
+                    out_row.append(str(v))
+            w.writerow(out_row)
 
-    # Update last count
-    count_file.write_text(str(record_count) + "\n", encoding="utf-8")
-    return True
-
-def _coerce_csv_value(v):
-    """Make values CSV-friendly without surprises."""
-    if v is None:
-        return ""
-    if isinstance(v, (dt.datetime, dt.date, dt.time)):
-        # ISO 8601 for temporal fields
-        return v.isoformat()
-    return str(v)
+    print('Dump has been successfully updated!')
+    return {
+        "latest_dump": latest_path,
+        "latest_count": latest_count,
+        "written": True,
+        "new_dump": out_path,
+    }
 
 def test_model_updates(model, master_data, initialize=False, check=False, rerun=False, rebuild=False):
     #check if the input is a single model or a list of models

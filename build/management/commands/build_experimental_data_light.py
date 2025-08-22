@@ -6,7 +6,7 @@ from django.utils.text import slugify
 from django.db import IntegrityError, transaction, connection
 from django.db.models import Count, Q
 
-from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role, dump_check, generate_helm_universal, parse_cycl_pos
+from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role, dump_checker, generate_helm_universal, parse_cycl_pos
 from common.models import WebLink, WebResource, Publication, PublicationJournal
 from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole, LigandEffect, LigandTargetPairing
 from protein.models import Protein, Species
@@ -48,10 +48,14 @@ class Command(BaseBuild):
     helm_cid_filepath = os.sep.join([data_dir, 'HELM_CID.csv'])
     helm_chembl = pd.read_csv(helm_chembl_filepath, index_col=0)
     helm_cid = pd.read_csv(helm_cid_filepath, index_col=0)
-    ligand_dump = os.sep.join([dump_dir, 'ligand_reload_dump.csv'])
-    ligand_csv = pd.read_csv(ligand_dump, sep=';', index_col=0)
-    id_dump = os.sep.join([dump_dir, 'ligandid_reload_dump.csv'])
-    id_csv = pd.read_csv(id_dump, sep=';', index_col=0)
+    ### These are here as a safety valve in case you want to manually check
+    #ligand_dump = os.sep.join([dump_dir, 'ligand_reload_dump.csv'])
+    #id_dump = os.sep.join([dump_dir, 'ligandid_reload_dump.csv'])
+    #######################################################################
+    ligand_dump = dump_checker('ligand.Ligand')
+    ligand_csv = pd.read_csv(ligand_dump['latest_dump'], sep=';', index_col=0)
+    id_dump = dump_checker('ligand.LigandID')
+    id_csv = pd.read_csv(id_dump['latest_dump'], sep=';', index_col=0)
     test_model_updates(all_models, tracker, initialize=True)
 
     def add_arguments(self, parser):
@@ -299,6 +303,10 @@ class Command(BaseBuild):
         print("\n\nFixing mismatched LigandType definition")
         n  = apply_canonical_ligand_types()
         print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
+
+        print("\n\nRunning the Dump Checker and saving new dumps if needed")
+        ligand_dump = dump_checker('ligand.Ligand')
+        id_dump = dump_checker('ligand.LigandID')
 
     @staticmethod
     def reset_pk_sequence(model):
@@ -2581,8 +2589,9 @@ class Command(BaseBuild):
                        'Curator',
                        'Remarks']
 
-        class_a_data = Command.read_data(structure_data_dir, 'Annotation_AB1.xlsx', 'cl_A')
-        class_b1_data = Command.read_data(structure_data_dir, 'Annotation_AB1.xlsx', 'cl_B1')
+        evolvus_data = os.path.join(settings.DATA_DIR, "ligand_data", "evolvus_data")
+        class_a_data = Command.read_data(evolvus_data, 'Annotation_AB1.xlsx', 'cl_A')
+        class_b1_data = Command.read_data(evolvus_data, 'Annotation_AB1.xlsx', 'cl_B1')
         class_a_data = class_a_data.loc[:, ~class_a_data.columns.str.lower().str.startswith("unnamed")]
         class_b1_data = class_b1_data.loc[:, ~class_b1_data.columns.str.lower().str.startswith("unnamed")]
         class_a_data.columns = new_columns
