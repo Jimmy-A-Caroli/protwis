@@ -6,7 +6,7 @@ from django.utils.text import slugify
 from django.db import IntegrityError, transaction, connection
 from django.db.models import Count, Q
 
-from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role
+from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role, dump_check, generate_helm_universal, parse_cycl_pos
 from common.models import WebLink, WebResource, Publication, PublicationJournal
 from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole, LigandEffect, LigandTargetPairing
 from protein.models import Protein, Species
@@ -29,7 +29,7 @@ import urllib.error
 import socket
 import ssl
 from io import StringIO
-
+from typing import List, Tuple, Optional, Dict
 from rdkit import Chem
 from chembl_structure_pipeline import standardizer
 from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers, StereoEnumerationOptions
@@ -43,13 +43,14 @@ class Command(BaseBuild):
     tracker = {}
     all_models = django.apps.apps.get_models()[6:]
     data_dir = os.sep.join([settings.DATA_DIR, 'ligand_data'])
+    dump_dir = os.sep.join([settings.DATA_DIR, 'model_snapshots'])
     helm_chembl_filepath = os.sep.join([data_dir, 'HELM_CHEMBL.csv'])
     helm_cid_filepath = os.sep.join([data_dir, 'HELM_CID.csv'])
     helm_chembl = pd.read_csv(helm_chembl_filepath, index_col=0)
     helm_cid = pd.read_csv(helm_cid_filepath, index_col=0)
-    ligand_dump = os.sep.join([data_dir, 'ligand_reload_dump.csv'])
+    ligand_dump = os.sep.join([dump_dir, 'ligand_reload_dump.csv'])
     ligand_csv = pd.read_csv(ligand_dump, sep=';', index_col=0)
-    id_dump = os.sep.join([data_dir, 'ligandid_reload_dump.csv'])
+    id_dump = os.sep.join([dump_dir, 'ligandid_reload_dump.csv'])
     id_csv = pd.read_csv(id_dump, sep=';', index_col=0)
     test_model_updates(all_models, tracker, initialize=True)
 
@@ -268,6 +269,13 @@ class Command(BaseBuild):
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
+        #Evolvus bioactivity data
+        print("\n\nStarted building Evolvus bioactivities")
+        self.build_evolvus_bioactivities()
+        print("\n\nEnded building Evolvus bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
         #ENDOGENOUS LIGANDS
         print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
         print('\n#1 Preprocessing the data')
@@ -318,7 +326,6 @@ class Command(BaseBuild):
                     true
                 );
             ''')
-
 
     @staticmethod
     def purge_data():
@@ -1918,37 +1925,35 @@ class Command(BaseBuild):
         Command.mapper_cache[query] = converted
         return converted
 
-
-
-    @staticmethod
-    def uniprot_mapper(protein, organism):
-        organism_dict = {'PIG': 'sus_scrofa', 'RAT': 'rattus_norvegicus', 'HUMAN': 'homo_sapiens', 'MOUSE': 'mus_musculus',
-                         'CANINE': 'canis_lupus_familiaris', 'BOVINE': 'bos_taurus', 'CALF': 'bos_taurus', 'COW': 'bos_taurus',
-                         'GUINEA PIG': 'cavia_porcellus', 'CAT': 'felis_catus', 'NEONATAL RAT': 'rattus_norvegicus',
-                         '? HUMAN': 'homo_sapiens', 'OPOSSUM': 'didelphis_marsupialis', 'Rat 6B': 'rattus_norvegicus',
-                         'HUMAN M3': 'homo_sapiens', 'HUMAN M4': 'homo_sapiens', 'Chick': 'gallus_gallus',
-                         'Frog': 'pseudis_balbodactyla', 'Newborn rats': 'rattus_norvegicus', 'Beef': 'bos_taurus',
-                         'Sheep': 'ovis_aries', 'OX': 'bos_taurus', 'Dog': 'canis_lupus_familiaris',
-                         'Rhesus': 'macaca_mulatta', 'Monkey': 'macaca_mulatta', 'PIGLET': 'sus_scrofa',
-                         'Rat Y861': 'rattus_norvegicus', 'Zebra Finch': 'taeniopygia_guttata', 'Chicken': 'gallus_gallus',
-                         'MICE': 'mus_musculus', 'Rhesus Monkey': 'macaca_mulatta', 'Zebrafish': 'danio_rerio'}
-        if organism in organism_dict.keys():
-            query = 'gene_exact:{0}+AND+organism_name:{1}'.format(
-                urllib.parse.quote(protein.lower()), organism_dict[organism])
-        else:
-            query = 'gene_exact:{}'.format(urllib.parse.quote(protein.lower()))
-        if query not in Command.mapper_cache.keys():
-            url = 'https://rest.uniprot.org/uniprotkb/search?query={}&fields=id&format=tsv'.format(query)
-            req = urllib.request.Request(url)
-            try:
-                converted = urllib.request.urlopen(
-                    req).read().decode('utf-8').split('\n')[1].lower()
-            except IndexError:
-                converted = None
-
-            Command.mapper_cache[query] = converted
-
-        return Command.mapper_cache[query]
+    # @staticmethod
+    # def uniprot_mapper(protein, organism):
+    #     organism_dict = {'PIG': 'sus_scrofa', 'RAT': 'rattus_norvegicus', 'HUMAN': 'homo_sapiens', 'MOUSE': 'mus_musculus',
+    #                      'CANINE': 'canis_lupus_familiaris', 'BOVINE': 'bos_taurus', 'CALF': 'bos_taurus', 'COW': 'bos_taurus',
+    #                      'GUINEA PIG': 'cavia_porcellus', 'CAT': 'felis_catus', 'NEONATAL RAT': 'rattus_norvegicus',
+    #                      '? HUMAN': 'homo_sapiens', 'OPOSSUM': 'didelphis_marsupialis', 'Rat 6B': 'rattus_norvegicus',
+    #                      'HUMAN M3': 'homo_sapiens', 'HUMAN M4': 'homo_sapiens', 'Chick': 'gallus_gallus',
+    #                      'Frog': 'pseudis_balbodactyla', 'Newborn rats': 'rattus_norvegicus', 'Beef': 'bos_taurus',
+    #                      'Sheep': 'ovis_aries', 'OX': 'bos_taurus', 'Dog': 'canis_lupus_familiaris',
+    #                      'Rhesus': 'macaca_mulatta', 'Monkey': 'macaca_mulatta', 'PIGLET': 'sus_scrofa',
+    #                      'Rat Y861': 'rattus_norvegicus', 'Zebra Finch': 'taeniopygia_guttata', 'Chicken': 'gallus_gallus',
+    #                      'MICE': 'mus_musculus', 'Rhesus Monkey': 'macaca_mulatta', 'Zebrafish': 'danio_rerio'}
+    #     if organism in organism_dict.keys():
+    #         query = 'gene_exact:{0}+AND+organism_name:{1}'.format(
+    #             urllib.parse.quote(protein.lower()), organism_dict[organism])
+    #     else:
+    #         query = 'gene_exact:{}'.format(urllib.parse.quote(protein.lower()))
+    #     if query not in Command.mapper_cache.keys():
+    #         url = 'https://rest.uniprot.org/uniprotkb/search?query={}&fields=id&format=tsv'.format(query)
+    #         req = urllib.request.Request(url)
+    #         try:
+    #             converted = urllib.request.urlopen(
+    #                 req).read().decode('utf-8').split('\n')[1].lower()
+    #         except IndexError:
+    #             converted = None
+    #
+    #         Command.mapper_cache[query] = converted
+    #
+    #     return Command.mapper_cache[query]
 
     @staticmethod
     def get_ligands_data(ligands, complete_ligands, ligand_mapping, ligand_interactions=pd.DataFrame(), target_ids=False):
@@ -2548,6 +2553,121 @@ class Command(BaseBuild):
                 ligand_cache[name] = ligand
 
     @staticmethod
+    def build_evolvus_bioactivities():
+        protein_names = {}
+        ligand_cache = {}
+        new_columns = ['Reference',
+                       'Fig/Table with data',
+                       'Fig/Table no.',
+                       'GPCR Name',
+                       'UniProt',
+                       'RAMP UniProt',
+                       'Ligand Name',
+                       'N-term mod',
+                       'Sequence',
+                       'C-term mod',
+                       'Cyclization positions',
+                       'Cyclization type',
+                       'Label',
+                       'Activity Type',
+                       'Sign',
+                       'Value',
+                       'Unit',
+                       'Emax (%)',
+                       'Qualitative activity',
+                       'Assay Type',
+                       'Reference ligand name',
+                       'Reference ligand PubChem CID',
+                       'Curator',
+                       'Remarks']
+
+        class_a_data = Command.read_data(structure_data_dir, 'Annotation_AB1.xlsx', 'cl_A')
+        class_b1_data = Command.read_data(structure_data_dir, 'Annotation_AB1.xlsx', 'cl_B1')
+        class_a_data = class_a_data.loc[:, ~class_a_data.columns.str.lower().str.startswith("unnamed")]
+        class_b1_data = class_b1_data.loc[:, ~class_b1_data.columns.str.lower().str.startswith("unnamed")]
+        class_a_data.columns = new_columns
+        class_b1_data.columns = new_columns
+        print("\n===============\n#1 Start parsing Evolvus data")
+        Command.evolvus_main(class_a_data)
+        Command.evolvus_main(class_b1_data)
+
+    @staticmethod
+    def evolvus_main(data):
+        bioacts = []
+        pub_links = []
+        bio_entries = len(data)
+        for index, (_, row) in enumerate(data.iterrows()):
+            assay_type = 'U'
+            receptor = None
+            helm = None
+            if pd.notna(row['Assay Type']):
+                assay_type = row['Assay Type'][0]
+            protein = str(row['UniProt']).lower() if pd.notna(row['UniProt']) else None
+
+            if protein:
+                if protein not in protein_names:
+                    protein_names[protein] = Command.fetch_protein(protein, 'PDSP')  # may be None
+                receptor = protein_names[protein]
+
+            if pd.notna(row['Sequence']):
+                helm = generate_helm_universal(sequence = row['Sequence'],
+                                               n_term = row['N-term mod'],
+                                               c_term = row['C-term mod'],
+                                               cyclizations = parse_cycl_pos(row['Cyclization positions']),
+                                               cyclization_type = row['Cyclization type'])
+
+            ligand_label = f"{row['Ligand Name']}_{hash(helm)}"  # shorter/stable key
+
+            if ligand_label not in ligand_cache.keys():
+                ids = {}
+                ligand = get_or_create_ligand(row['Ligand Name'], ids, lig_type='peptide', source='Evolvus', helm=helm)
+                ligand_cache[ligand_label] = ligand
+
+            if (receptor is not None) and (ligand_cache[ligand_label] is not None):
+                exp = AssayExperiment()
+                exp.ligand_id = ligand_cache[ligand_label].id
+                exp.protein_id = receptor.id
+                exp.assay_type = assay_type
+                exp.assay_description = row['Assay Type']
+
+                exp.standard_activity_value = round(float(row['Value']), 2) if row['Activity Type'] != 'Emax' else round(float(row['Emax (%)']), 2)
+                exp.p_activity_value = round(-math.log10(float(row['Value']) * 1e-9), 2) if float(row['Value']) != 0 else None
+
+                exp.p_activity_ranges = None
+                exp.standard_relation = row['Sign']
+                exp.value_type = row['Activity Type']
+                exp.source = 'Evolvus'
+                exp.document_chembl_id = None
+                exp.reference_ligand = row['Reference ligand name']
+                exp.qualitative_activity = row['Qualitative activity']
+                bioacts.append(exp)
+
+                # stash publication to attach later (after PKs exist)
+                if pd.notna(row.get('Reference')):
+                    pub = Command.fetch_publication(row['Reference'])
+                    # stash the publication for the current exp index within this batch
+                    pub_links.append((len(bioacts) - 1, pub.id))
+
+            # if (len(bioacts) == Command.bulk_size) or (index == bio_entries - 1):
+            if (len(bioacts) == bulk_size) or (index == bio_entries - 1):
+                created = AssayExperiment.objects.bulk_create(bioacts)
+                # Build through rows
+                Through = AssayExperiment.publication.through
+                through_rows = [
+                    Through(assayexperiment_id=created[idx].id, publication_id=pub_id)
+                    for idx, pub_id in pub_links
+                    if created[idx].id is not None
+                ]
+
+                # Bulk create M2M links (ignore duplicates if needed)
+                Through.objects.bulk_create(through_rows, ignore_conflicts=True)
+                print("Inserted", index, "out of", bio_entries, "bioactivities")
+                bioacts = []
+                pub_links = []
+
+            Command.assign_ligand_target_pairing(ligand_cache[ligand_label], receptor, None, row['Activity Type'])
+
+    @staticmethod
     def calculate_potency_and_affinity():
         ligand_target_couples = AssayExperiment.objects.exclude(p_activity_value='None').values_list('ligand_id',
                                                                                                      'protein_id',
@@ -2717,11 +2837,11 @@ class Command(BaseBuild):
         """
         # 1. Determine effect slug
         effect_slug = None
-        if unit in ['EC50', 'pEC50']:
+        if unit in ['EC50', 'pEC50', 'Emax']:
             effect_slug = 'stimulatory'
-        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50', 'pKb']:
+        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50', 'pKb', 'K(b)', 'pK(b)']:
             effect_slug = 'inhibitory'
-        elif unit in ['pKi', 'pKd', 'Ki', 'Kd', 'Potency']:
+        elif unit in ['pKi', 'pKd', 'Ki', 'Kd', 'Potency', 'Specific binding', 'K(i)', 'K(d)', 'K(act)', 'pK(d)', 'pK(i)']:
             effect_slug = 'binding'
         elif unit == 'AC50':
             desc = assay_description.lower()
@@ -2750,3 +2870,10 @@ class Command(BaseBuild):
             pairing.save()
 
         return pairing
+
+    @staticmethod
+    def read_data(datadir, filename, sheet):
+        source_file_path = os.sep.join([datadir, filename]).replace('//', '/')
+        xls = pd.ExcelFile(source_file_path)
+        df = pd.read_excel(xls, sheet, dtype=str)
+        return df

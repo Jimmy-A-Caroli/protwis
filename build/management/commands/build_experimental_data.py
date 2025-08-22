@@ -1451,7 +1451,6 @@ class Command(BaseBuild):
         gpcrdb_proteins = Protein.objects.filter(
             family__slug__startswith="00", sequence_type__slug="wt").values_list('entry_name', 'accession')
         entries = gtp_data.loc[gtp_data['uniprotkb_id'].isin([protein[1].split(
-        entries = gtp_data.loc[gtp_data['uniprotkb_id'].isin([protein[1].split(
             "-")[0] for protein in gpcrdb_proteins]), ['uniprotkb_id', 'gtopdb_iuphar_id']]
         return list(entries['gtopdb_iuphar_id'].unique())
 

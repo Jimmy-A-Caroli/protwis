@@ -30,7 +30,7 @@ class Ligand(models.Model):
     inchikey = models.CharField(max_length=27, null=True)
     clean_inchikey = models.CharField(max_length=27, null=True, unique=True)
     sequence = models.CharField(max_length=1000, null=True)
-    helm = models.CharField(max_length=1000, null=True)
+    helm = models.TextField(max_length=4000, null=True)
 
     # Ligand properties
     mw = models.DecimalField(max_digits=15, decimal_places=3, null=True)
@@ -420,6 +420,7 @@ class AssayExperiment(models.Model):
     count_affinity_test = models.CharField(max_length=10, null=True)
     count_potency_test = models.CharField(max_length=10, null=True)
     reference_ligand = models.CharField(max_length=300, null=True)
+    qualitative_activity = models.CharField(max_length=300, null=True)
 
 
 class LigandVendors(models.Model):
