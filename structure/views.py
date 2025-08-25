@@ -226,6 +226,7 @@ class StructureDataJsonView(View):
                     "class":  p.family.parent.parent.parent.shorter(),
                     "species": p.species.common_name,
                     "method":  s.structure_type.type_short(),
+                    "rep": 1 if s.representative else 0,
                     "pdb":     pdb_code,
                     "refined": f"refined/{pdb_code.upper()}" if s.refined and pdb_code != "-" else "-",
                     "resolution":     s.resolution,

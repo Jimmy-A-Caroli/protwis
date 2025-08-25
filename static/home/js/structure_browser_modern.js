@@ -176,3 +176,76 @@ function superpositionModern(tableId, columns, site, source = 'gpcr', structure_
         window.location.href = redirectUrl;
     });
 }
+// Modern copy function using globalSelectedIds
+function copySelectedToClipboard(key, label) {
+    const table = $("#StructureBrowserTable").DataTable();
+
+    // Collect selected rows
+    const selectedRows = [];
+    table.rows().every(function () {
+        const data = this.data();
+        if (data && globalSelectedIds.has(String(data.id))) {
+            selectedRows.push(data);
+        }
+    });
+
+    // No selection → danger
+    if (!selectedRows.length) {
+        showAlert("No entries selected for copying", "danger");
+        return;
+    }
+
+    // Extract values for the given key
+    const values = selectedRows
+        .map(r => r[key])
+        .filter(v => v && v.trim() !== "");
+
+    if (!values.length) {
+        showAlert(`No ${label} available for selected rows`, "warning");
+        return;
+    }
+
+    const out = values.join("\n");
+
+    // Copy to clipboard
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(out).then(() => {
+            showAlert(`${label} copied to clipboard!`, "success");
+        }).catch(() => fallbackCopy(out, label));
+    } else {
+        fallbackCopy(out, label);
+    }
+}
+
+// Fallback copy (execCommand)
+function fallbackCopy(text, label) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+
+    showAlert(`${label} copied to clipboard!`, "success");
+}
+
+// Attach handlers
+$("#uniprot_copy").on("click", function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation(); // prevent DataTables sort
+    copySelectedToClipboard("entry_short", "UniProt IDs");
+});
+
+$("#pdb_copy").on("click", function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    copySelectedToClipboard("pdb", "PDB IDs");
+});
+
+function updateExportSelectedState(){
+  const table = $("#StructureBrowserTable").DataTable();
+  const hasAny = globalSelectedIds.size > 0;   // change to >1 if you want 2+
+  const btn = table.button('exportSelected:name');
+  if (btn && btn.length) btn.enable(hasAny);
+}
+

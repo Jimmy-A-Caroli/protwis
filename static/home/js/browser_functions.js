@@ -515,3 +515,4 @@ function copyToClipboard(array, delimiter, data_name, powertip_object=false) {
     }
     document.body.removeChild(textArea);
 }
+
