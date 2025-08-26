@@ -344,7 +344,7 @@
         "<'row'<'col-sm-12'tr>>" +
         "<'row'<'col-sm-12'ip>>",
       order: [2, "asc"],
-      pageLength: 20,
+      pageLength: 50,
       data,
       columns,
       columnDefs,
@@ -363,7 +363,7 @@
         state.order = settings.aaSorting;
         state.search = { search: "" };
         state.start = 0;
-        state.length = 20;
+        state.length = 50;
         state.columns.forEach(c => c.search = { search: "" });
       },
       stateLoadParams: function (settings, state) {
