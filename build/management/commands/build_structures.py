@@ -13,7 +13,7 @@ from protein.models import (Protein, ProteinConformation, ProteinState, ProteinA
     ProteinSegment)
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, Residue, ResidueGenericNumberEquivalent
 from common.models import WebLink, WebResource, Publication
-from common.tools import test_model_updates
+from common.tools import test_model_updates, find_role
 from structure.models import Structure, StructureType, StructureStabilizingAgent,PdbData, Rotamer, Fragment
 from construct.functions import *
 
@@ -1758,14 +1758,15 @@ class Command(BaseBuild):
 
                     # structure-ligand interaction
                     if l and ligand['role']:
-                        role_slug = slugify(ligand['role'])
-                        try:
-                            lr, created = LigandRole.objects.get_or_create(slug=role_slug,
-                            defaults={'name': ligand['role']})
-                            if created:
-                                self.logger.info('Created ligand role {}'.format(ligand['role']))
-                        except IntegrityError:
-                            lr = LigandRole.objects.get(slug=role_slug)
+                        lr = find_role(ligand['role'])
+                        # role_slug = slugify(ligand['role'])
+                        # try:
+                        #     lr, created = LigandRole.objects.get_or_create(slug=role_slug,
+                        #     defaults={'name': ligand['role']})
+                        #     if created:
+                        #         self.logger.info('Created ligand role {}'.format(ligand['role']))
+                        # except IntegrityError:
+                        #     lr = LigandRole.objects.get(slug=role_slug)
 
                         i, created = StructureLigandInteraction.objects.get_or_create(structure=s,
                             ligand=l, ligand_role=lr, annotated=True,
