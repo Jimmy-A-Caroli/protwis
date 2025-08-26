@@ -104,14 +104,20 @@
     th .dt-column-order {
         margin-right: -12px; /* Shift the sort arrow to the right */
     }
-    /* Ensure proper alignment of header titles with data rows */
+
+    /* default for all titles (except first col = checkbox) */
     th:not(:first-child) .dt-column-title {
-        display: inline-block; /* Makes the content inside the <th> inline for proper alignment */
-        text-align: center;    /* Align the title text in the center */
-        padding-left: 24px;    /* Apply consistent padding for all lines */
-        margin: 0;             /* Remove unnecessary margin */
-        line-height: 1.2em;    /* Ensure consistent line spacing */
-        white-space: normal;   /* Allow line breaks in the titles */
+    display: inline-block;  /* inline so sort arrow can sit beside */
+    text-align: center;
+    padding-left: 24px;     /* space for sort arrow */
+    margin: 0;
+    line-height: 1.2em;
+    white-space: normal;
+    }
+
+    /* override for GPCRdb col (no sort arrow, just logo) */
+    th.gpcrdb-col .dt-column-title {
+    padding-left: 0 !important;
     }
 
     /* Ensure the checkbox column is wide enough */
@@ -121,260 +127,279 @@
     }
 
     /* Center the ColVis “collection” like a modal */
-div.dt-button-collection.columns-8 {
-    position: fixed !important;
-    inset: 0 !important;
-    margin: auto !important;
-    width: 90vw !important;
-    max-width: 1400px;
+    div.dt-button-collection.columns-8 {
+        position: fixed !important;
+        inset: 0 !important;
+        margin: auto !important;
+        width: 90vw !important;
+        max-width: 1400px;
 
-    height: auto !important;        /* 👈 let it size to content */
-    max-height: 65vh !important;    /* 👈 but never exceed viewport */
-    
-    z-index: 9999;
-    border-radius: 8px;
-    box-shadow: 0 12px 32px rgba(0,0,0,.25);
+        height: auto !important;        /* 👈 let it size to content */
+        max-height: 65vh !important;    /* 👈 but never exceed viewport */
+        
+        z-index: 9999;
+        border-radius: 8px;
+        box-shadow: 0 12px 32px rgba(0,0,0,.25);
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+    }
+
+
+    /* Make only the inner menu scroll, not the title */
+    div.dt-button-collection.columns-8 > div[role="menu"].cv-columns {
+        flex: 1 1 auto;
+        max-height: calc(65vh - 56px);  /* cap at viewport */
+        height: auto !important;        /* shrink if smaller */
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+
+        padding: 8px 12px;
+        display: grid !important;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 10px;
+        align-items: start;
+    }
+
+
+    /* Nice dimmed backdrop (DataTables already injects this element) */
+    div.dt-button-background {
+        background: rgba(0,0,0,.35) !important;
+        opacity: 1 !important;
+    }
+
+    /* Each group lives inside a column wrapper */
+    div.dt-button-collection.columns-8 .cv-col {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0; /* allow shrinking inside scroll */
+    }
+
+    /* Buttons look good in a column */
+    div.dt-button-collection.columns-8 .cv-col > button.dt-button {
+        max-width: 100%;
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        line-height: 1.25;
+        padding-right: 1.8em;       /* reserve space for ✓ on the right */
+    }
+
+    /* If the text is in a <span>, force that to wrap too */
+    div.dt-button-collection.columns-8 .cv-col > button.dt-button span {
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    /* Title + our injected group headings span the full width of a column */
+    div.dt-button-collection.columns-8 .dt-button-collection-title {
+        grid-column: 1 / -1;
+        margin-bottom: 6px;
+    }
+
+    /* Group headings: centered + uniform height */
+    div.dt-button-collection.columns-8 .cv-col .dt-colvis-heading {
+        cursor: pointer;
+        white-space: normal;       /* allow wrap */
+        line-height: 1.2;
+        text-align: center;        /* center the text */
+        display: flex;
+        align-items: center;       /* vertical centering */
+        justify-content: center;
+        height: 2.6em;             /* consistent 2-line box */
+        margin: 0 0 6px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #eee;
+        font-weight: 600;
+    }
+
+    /* Footer inside the ColVis popup */
+    div.dt-button-collection.columns-8 .cv-footer{
+        border-top: 1px solid #eee;
+        padding: 8px 12px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    /* Superheader (2nd thead row) – make the first group ("RECEPTOR") sticky */
+    table thead tr:nth-child(2) th:nth-child(1) {
+    position: sticky;
+    left: 0;               /* aligns with col 1 (checkbox) */
+    z-index: 6;            /* above the title/filter rows */
     background: #fff;
-    display: flex;
-    flex-direction: column;
-}
+    }
 
+    /* Col 1: checkbox */
+    table thead tr:nth-child(3) th:nth-child(1),
+    table thead tr:nth-child(4) th:nth-child(1),
+    #StructureBrowserTable tbody td:nth-child(1) {
+    position: sticky; left: 0;
+    width: 45px; min-width: 45px; max-width: 45px;
+    z-index: 5; background: #fff;
+    }
 
-/* Make only the inner menu scroll, not the title */
-div.dt-button-collection.columns-8 > div[role="menu"].cv-columns {
-    flex: 1 1 auto;
-    max-height: calc(65vh - 56px);  /* cap at viewport */
-    height: auto !important;        /* shrink if smaller */
-    overflow-y: auto !important;
-    overflow-x: auto !important;
+    /* Col 2: GPCRdb */
+    table thead tr:nth-child(3) th:nth-child(2),
+    table thead tr:nth-child(4) th:nth-child(2),
+    #StructureBrowserTable tbody td:nth-child(2) {
+    position: sticky; left: 45px;
+    width: 70px; min-width: 70px; max-width: 70px;
+    z-index: 5; background: #fff;
+    }
 
-    padding: 8px 12px;
-    display: grid !important;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 10px;
-    align-items: start;
-}
+    /* Col 3: Gene */
+    table thead tr:nth-child(3) th:nth-child(3),
+    table thead tr:nth-child(4) th:nth-child(3),
+    #StructureBrowserTable tbody td:nth-child(3) {
+    position: sticky; left: 115px;
+    width: 100px; min-width: 100px; max-width: 100px;
+    z-index: 5; background: #fff;
+    }
 
+    /* Col 4: UniProt */
+    table thead tr:nth-child(3) th:nth-child(4),
+    table thead tr:nth-child(4) th:nth-child(4),
+    #StructureBrowserTable tbody td:nth-child(4) {
+    position: sticky; left: 215px;
+    width: 100px; min-width: 100px; max-width: 100px;
+    z-index: 5; background: #fff;
+    }
 
-/* Nice dimmed backdrop (DataTables already injects this element) */
-div.dt-button-background {
-    background: rgba(0,0,0,.35) !important;
-    opacity: 1 !important;
-}
+    /* Col 5: Protein */
+    table thead tr:nth-child(3) th:nth-child(5),
+    table thead tr:nth-child(4) th:nth-child(5),
+    #StructureBrowserTable tbody td:nth-child(5) {
+    position: sticky; left: 315px;
+    width: 100px; min-width: 100px; max-width: 100px;
+    z-index: 5; background: #fff;
+    }
 
-/* Each group lives inside a column wrapper */
-div.dt-button-collection.columns-8 .cv-col {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0; /* allow shrinking inside scroll */
-}
+    /* vertical divider after Protein (now col 5) */
+    table thead tr:nth-child(2) th:nth-child(1)::after,
+    table thead tr:nth-child(3) th:nth-child(5)::after,
+    table thead tr:nth-child(4) th:nth-child(5)::after,
+    #StructureBrowserTable tbody td:nth-child(5)::after {
+    content: "";
+    position: absolute; top: 0; right: 0; width: 1px; height: 100%;
+    background-color: #cccccc; pointer-events: none;
+    }
 
-/* Buttons look good in a column */
-div.dt-button-collection.columns-8 .cv-col > button.dt-button {
-    max-width: 100%;
-    white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.25;
-    padding-right: 1.8em;       /* reserve space for ✓ on the right */
-}
+    /* collapsed by default: one line + ellipsis */
+    td.expand_1line{
+    max-width:100px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    position:relative;          /* keep hover expansion sane */
+    }
 
-/* If the text is in a <span>, force that to wrap too */
-div.dt-button-collection.columns-8 .cv-col > button.dt-button span {
-    white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-}
+    /* two layers we’ll swap on hover */
+    td.expand_1line .expanded{ display:none; white-space:normal; }
 
-/* Title + our injected group headings span the full width of a column */
-div.dt-button-collection.columns-8 .dt-button-collection-title {
-    grid-column: 1 / -1;
-    margin-bottom: 6px;
-}
+    /* on hover: show full HTML (with <br>), hide collapsed text */
+    td.expand_1line:hover{
+    overflow:visible;            /* allow the pop-out */
+    white-space:normal;
+    }
+    td.expand_1line:hover .collapsed{ display:none; }
+    td.expand_1line:hover .expanded{ display:inline; }
 
-/* Group headings: centered + uniform height */
-div.dt-button-collection.columns-8 .cv-col .dt-colvis-heading {
-    cursor: pointer;
-    white-space: normal;       /* allow wrap */
-    line-height: 1.2;
-    text-align: center;        /* center the text */
-    display: flex;
-    align-items: center;       /* vertical centering */
-    justify-content: center;
-    height: 2.6em;             /* consistent 2-line box */
-    margin: 0 0 6px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #eee;
-    font-weight: 600;
-}
+    /* bootstrap-ish selected row color with fallbacks */
+    :root{
+    --sel-bg: var(--bs-primary-bg-subtle, #e7f1ff);
+    --sel-border: var(--bs-primary-border-subtle, #9ec5fe);
+    }
 
+    /* make rows feel clickable */
+    #StructureBrowserTable tbody tr{ cursor:pointer; }
 
-/* Column 1: checkbox */
-table thead tr:nth-child(3) th:nth-child(1),
-table thead tr:nth-child(4) th:nth-child(1),
-#StructureBrowserTable tbody td:nth-child(1) {
-  position: sticky;
-  left: 0;
-  width: 45px;
-  min-width: 45px;
-  max-width: 45px;
-  z-index: 5;
-  background: #fff;
-}
+    /* selected row highlight (override sticky cell backgrounds) */
+    #StructureBrowserTable tbody tr.row-selected td{
+    background-color: var(--sel-bg) !important;
+    }
 
-/* Column 2: Gene */
-table thead tr:nth-child(3) th:nth-child(2),
-table thead tr:nth-child(4) th:nth-child(2),
-#StructureBrowserTable tbody td:nth-child(2) {
-  position: sticky;
-  left: 45px;
-  width: 100px;
-  min-width: 100px;
-  max-width: 100px;
-  z-index: 5;
-  background: #fff;
-}
+    .icon-button {
+        background: none;
+        border: none;
+        padding: 0;
+        margin-left: 4px;      /* 👈 small spacing from text */
+        cursor: pointer;
+        position: relative;    /* ✅ required so z-index applies */
+        z-index: 4;           /* ✅ float above DT sorting layer */
+        display: inline-flex;  /* ✅ keeps icon aligned inline */
+        align-items: center;
+    }
 
-/* Column 3: UniProt */
-table thead tr:nth-child(3) th:nth-child(3),
-table thead tr:nth-child(4) th:nth-child(3),
-#StructureBrowserTable tbody td:nth-child(3) {
-  position: sticky;
-  left: 145px;
-  width: 100px;
-  min-width: 100px;
-  max-width: 100px;
-  z-index: 5;
-  background: #fff;
-}
+    /* Special case: UniProt (sticky column) */
+    th.sticky-uniprot .icon-button {
+    z-index: 6;   /* ✅ above sticky header overlay */
+    }
 
-/* Column 4: Protein */
-table thead tr:nth-child(3) th:nth-child(4),
-table thead tr:nth-child(4) th:nth-child(4),
-#StructureBrowserTable tbody td:nth-child(4) {
-  position: sticky;
-  left: 245px;
-  width: 100px;
-  min-width: 100px;
-  max-width: 100px;
-  z-index: 5;
-  background: #fff;
-}
+    .icon-button i {
+        font-size: 14px;       /* shrink icon */
+        color: #444;           /* softer color */
+        pointer-events: auto;  /* ✅ ensure clicks register */
+    }
 
-table thead tr:nth-child(3) th:nth-child(4)::after,
-table thead tr:nth-child(4) th:nth-child(4)::after,
-#StructureBrowserTable tbody td:nth-child(4)::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 1px;
-  height: 100%;
-  background-color: #cccccc;
-  pointer-events: none; /* don’t block clicks */
-}
+    .icon-button:hover i {
+        color: #007bff;        /* highlight on hover */
+    }
 
-/* collapsed by default: one line + ellipsis */
-td.expand_1line{
-  max-width:100px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  position:relative;          /* keep hover expansion sane */
-}
+    .popover.popover-wide {
+    max-width: 600px;   /* make it readable */
+    white-space: normal;
+    word-wrap: break-word;
+    z-index: 99999;     /* float above DataTable tbody */
+    }
 
-/* two layers we’ll swap on hover */
-td.expand_1line .expanded{ display:none; white-space:normal; }
+    .popover.popover-wide .popover-content {
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 10px 14px;
+    }
 
-/* on hover: show full HTML (with <br>), hide collapsed text */
-td.expand_1line:hover{
-  overflow:visible;            /* allow the pop-out */
-  white-space:normal;
-}
-td.expand_1line:hover .collapsed{ display:none; }
-td.expand_1line:hover .expanded{ display:inline; }
+    .dt-button { position: relative; }
 
-/* bootstrap-ish selected row color with fallbacks */
-:root{
-  --sel-bg: var(--bs-primary-bg-subtle, #e7f1ff);
-  --sel-border: var(--bs-primary-border-subtle, #9ec5fe);
-}
+    .dt-button > .btn-spinner{
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    /* include rotate(0) so keyframes can tween both */
+    transform: translate(-50%, -50%) rotate(0deg);
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,.25);
+    border-top-color: rgba(0,0,0,.7);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    animation: btnSpin .8s linear infinite;
+    }
 
-/* make rows feel clickable */
-#StructureBrowserTable tbody tr{ cursor:pointer; }
+    @keyframes btnSpin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
 
-/* selected row highlight (override sticky cell backgrounds) */
-#StructureBrowserTable tbody tr.row-selected td{
-  background-color: var(--sel-bg) !important;
-}
+    .dt-button.is-busy > .btn-spinner{ display: inline-block; }
+    .dt-button.is-busy > span{ opacity: .45; /* or visibility:hidden */ }
 
-.icon-button {
-    background: none;
-    border: none;
-    padding: 0;
-    margin-left: 4px;      /* 👈 small spacing from text */
-    cursor: pointer;
-    position: relative;    /* ✅ required so z-index applies */
-    z-index: 4;           /* ✅ float above DT sorting layer */
-    display: inline-flex;  /* ✅ keeps icon aligned inline */
-    align-items: center;
-}
+    .gpcrdb-link {
+        filter: grayscale(100%);
+    }
 
-/* Special case: UniProt (sticky column) */
-th.sticky-uniprot .icon-button {
-  z-index: 6;   /* ✅ above sticky header overlay */
-}
+    .gpcrdb-link:hover {
+        filter: grayscale(0%);
+    }
 
-.icon-button i {
-    font-size: 14px;       /* shrink icon */
-    color: #444;           /* softer color */
-    pointer-events: auto;  /* ✅ ensure clicks register */
-}
-
-.icon-button:hover i {
-    color: #007bff;        /* highlight on hover */
-}
-
-.popover.popover-wide {
-  max-width: 600px;   /* make it readable */
-  white-space: normal;
-  word-wrap: break-word;
-  z-index: 99999;     /* float above DataTable tbody */
-}
-
-.popover.popover-wide .popover-content {
-  font-size: 14px;
-  line-height: 1.5;
-  padding: 10px 14px;
-}
-
-.dt-button { position: relative; }
-
-.dt-button > .btn-spinner{
-  display: none;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  /* include rotate(0) so keyframes can tween both */
-  transform: translate(-50%, -50%) rotate(0deg);
-  width: 16px; height: 16px;
-  border: 2px solid rgba(0,0,0,.25);
-  border-top-color: rgba(0,0,0,.7);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 1;
-  animation: btnSpin .8s linear infinite;
-}
-
-@keyframes btnSpin {
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-.dt-button.is-busy > .btn-spinner{ display: inline-block; }
-.dt-button.is-busy > span{ opacity: .45; /* or visibility:hidden */ }
-
-
+    /* tighter gaps between buttons */
+    .dt-buttons .dt-button { margin-right: 0px !important; }
+    /* bigger gap before the second cluster */
+    .dt-buttons .dt-button.cluster-sep { margin-left: 35px !important; }
+    /* optional: slightly tighter padding for the button label */
+    .dt-buttons .dt-button > span { padding: 0px 0px !important; }
 </style>
 {% endblock %}
 
@@ -390,55 +415,37 @@ th.sticky-uniprot .icon-button {
                     <thead>
                         <!-- Dummy Header Row for Complex Header Fix -->
                         <tr>
-                            <th colspan="31" style="text-align: center" data-dt-order="disable"></th>
+                            <th colspan="33" style="text-align: center" data-dt-order="disable"></th>
                         </tr>
                         <!-- Super Header Row -->
                         <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-                            <th colspan="8" style="text-align:Left;" data-dt-order="disable">RECEPTOR</th>
+                            <th colspan="6" style="text-align:Left;" data-dt-order="disable">RECEPTOR</th>
+                            <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">CLASSIFICATION</th>
                             <th colspan="8" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">STRUCTURE</th>
                             <th colspan="4" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">SIGNAL PROTEIN</th>
                             <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">AUXILIARY PROTEIN</th>
                             <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">STRUCTURE LIGAND</th>
-                            <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">PHYSIOLOGICAL LIGAND</th>
+                            <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;min-width: 220px;" data-dt-order="disable">PHYSIOLOGICAL LIGAND</th>
                             <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">SODIUM ION SITE</th>
-                            <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">REFERENCE</th>
+                            <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">REFERENCE</th>
                         </tr>
                         <!-- Header Row -->
                         <tr>
-                            <th style="text-align: center;">
-                                <input type="checkbox" id="select-all">
-                            </th>
+                            <th style="text-align: center;" data-dt-order="disable"><input type="checkbox" id="select-all"></th>
+                            <th class="gpcrdb-col text-center" data-dt-order="disable">GPCRdb</th>
                             <th style="text-align: center;">Gene</th>
-                            <th style="text-align: center;">
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                <div>UniProt</div>
-                                <div>
-                                <button class="icon-button" type="button" id="uniprot_copy">
-                                    <i class="glyphicon glyphicon-export uniprot-export"></i>
-                                </button>
-                                </div>
-                            </div>
-                            </th>
+                            <th style="text-align: center;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><div>UniProt</div><div><button class="icon-button" type="button" id="uniprot_copy"><i class="glyphicon glyphicon-export uniprot-export"></i></button></div></div></th>
                             <th style="text-align: center;">Protein</th>
                             <th style="text-align: center;">ID</th>
                             <th style="text-align: center;">Receptor family</th>
                             <th style="text-align: center;">Class</th>
                             <th style="text-align: center;">Species</th>
                             <th style="text-align: center;">Method</th>
-                            <th style="text-align: center;">
-                                <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                    <div>PDB</div>
-                                    <div>
-                                        <button class="icon-button" type="button">
-                                            <i id="pdb_copy" class="glyphicon glyphicon-export pdb-export"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </th>
+                            <th style="text-align: center;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><div>PDB</div><div><button class="icon-button" type="button"><i id="pdb_copy" class="glyphicon glyphicon-export pdb-export"></i></button></div></div></th>
                             <th style="text-align: center;">Refined<br>structure <a href="https://docs.gpcrdb.org/structures.html#refined-structures" target="_blank" class="icon-button" title="Read more"><i class="glyphicon glyphicon-book"></i></a></th>
                             <th style="text-align: center;">Resolution</th>
                             <th style="text-align: center;">Preferred<br>chain</th>
-                            <th>State<br><span class="glyphicon glyphicon-info-sign" data-html="true" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-content="<b>GPCR structure state classification</b><br>GPCRdb calculates a ‘degree active’ percent value for each structure. Fully inactive state structures (0% active) are defined based on a maximum Cα atom distance between class-specific residue pairs A: 11.9Å between 2x46 and 6x37, B1: 13.0Å between 2x53 and 6x42, C: 14.5Å between 2x43 and 6x39, and F: 13.0Å between 2x43 and 6x30. These distance cut-offs were defined based on the best correlation with structures reported as inactive in their publications. Fully active state structures (100% active) are defined as G protein or arrestin bound. These fully inactive and active state reference structures are used to measure the conformational similarity of and to classify all other structures into the same categories or to an intermediate state category for classes A and B1 (classes C and F have no intermediate state structures). The conformational similarity measure is based on all-to-all Cα atom distances between class-specific generic residue pairs. A few outlier structures that have a very low similarity to both inactive and active state reference structures are classified as 'Other' e.g., the structure of the platelet-activating receptor binding the antagonist foropafant."></span><a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank"><span class="glyphicon glyphicon-book icon-button"></span></a></th>
+                            <th style="text-align: center;">State<br><span class="glyphicon glyphicon-info-sign" data-html="true" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-content="<b>GPCR structure state classification</b><br>GPCRdb calculates a ‘degree active’ percent value for each structure. Fully inactive state structures (0% active) are defined based on a maximum Cα atom distance between class-specific residue pairs A: 11.9Å between 2x46 and 6x37, B1: 13.0Å between 2x53 and 6x42, C: 14.5Å between 2x43 and 6x39, and F: 13.0Å between 2x43 and 6x30. These distance cut-offs were defined based on the best correlation with structures reported as inactive in their publications. Fully active state structures (100% active) are defined as G protein or arrestin bound. These fully inactive and active state reference structures are used to measure the conformational similarity of and to classify all other structures into the same categories or to an intermediate state category for classes A and B1 (classes C and F have no intermediate state structures). The conformational similarity measure is based on all-to-all Cα atom distances between class-specific generic residue pairs. A few outlier structures that have a very low similarity to both inactive and active state reference structures are classified as 'Other' e.g., the structure of the platelet-activating receptor binding the antagonist foropafant."></span><a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank"><span class="glyphicon glyphicon-book icon-button"></span></a></th>
                             <th style="text-align: center;">Degree<br>active (%) <a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank" class="icon-button" title="Read more"><i class="glyphicon glyphicon-book"></i></a></th>
                             <th style="text-align: center;">% of Seq</th>
                             <th style="text-align: center;">Family</th>
@@ -456,8 +463,11 @@ th.sticky-uniprot .icon-button {
                             <th style="text-align: center;">Sodium in<br>structure</th>
                             <th style="text-align: center;">Authors</th>
                             <th style="text-align: center;">Reference</th>
+                            <th style="text-align: center;">Publication date</th>
                         </tr>
                         <tr>
+                            <th style="text-align: center;" data-dt-order="disable"></th>
+                            <th style="text-align: center;" data-dt-order="disable"></th>
                             <th style="text-align: center;" data-dt-order="disable"></th>
                             <th style="text-align: center;" data-dt-order="disable"></th>
                             <th style="text-align: center;" data-dt-order="disable"></th>
@@ -574,7 +584,7 @@ $(document).ready(function() {
         },
         { targets: [0], orderable: false },  // Disable ordering on the checkbox column
         {
-        targets: [0, 1, 2, 3],
+        targets: [0, 1, 2, 3, 4],
         createdCell: function (td, cellData, rowData, row, col) {
             td.classList.add("sticky-col");
         },
@@ -582,70 +592,152 @@ $(document).ready(function() {
     }
     ];
 
-    function expand1LineRender(data, type){
-        const html = data == null ? '' : String(data);
+    function expand1LineRender(d, type) {
+        // Decode HTML entities (α, β, etc.)
+        const decode = (s) => {
+            const div = document.createElement('div');
+            div.innerHTML = s || '';
+            return div.textContent || div.innerText || '';
+        };
 
-        // For sort/filter/export: plain text with newlines
-        if (type && type !== 'display'){
-            return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g,'');
+        // Normalize any shape to an array of plain strings
+        const toItems = (val) => {
+            if (val == null) return [];
+            if (Array.isArray(val)) {
+            return val
+                .map(x => typeof x === 'string' ? x : (x?.name ?? x?.text ?? x?.label ?? ''))
+                .map(s => decode(s).trim())
+                .filter(Boolean);
+            }
+            // string (may contain <br> and/or entities)
+            const s = String(val).trim();
+            if (!s || s === '-') return [];
+            const dec = decode(s.replace(/<br\s*\/?>/gi, '\n'));
+            return dec.split(/\n+/).map(t => t.trim()).filter(Boolean);
+        };
+
+        const items = toItems(d);
+
+        // 🔑 For filter/sort: use a non-collapsing delimiter
+        if (type === 'filter' || type === 'sort') return items.join('|');
+
+        // For export/other non-display: keep newlines
+        if (type && type !== 'display') return items.join('\n');
+
+        // Display: first + "(+N more)" with hover to expand
+        if (!items.length) return '-';
+        const first = items[0];
+        const more  = items.length - 1;
+        const hint  = more > 0 ? ` <span class="muted">(+${more} more)</span>` : '';
+        const expanded = items.join('<br>');
+
+        return (
+            '<span class="expand_1line">' +
+            '<span class="collapsed">' + first + hint + '</span>' +
+            '<span class="expanded">'  + expanded + '</span>' +
+            '</span>'
+        );
+    }
+
+
+
+    // Show only the first name; on hover reveal full list (links)
+    // d = [{id,name}, ...]
+    function expandFirstThenHoverLinkList(d, type, hrefBuilder, { showCountHint = true } = {}) {
+        const arr = Array.isArray(d) ? d.filter(x => x && (x.name || x.id != null)) : [];
+        if (!arr.length) return (type === 'display' ? '-' : '');
+
+        // decode entities → Unicode (so "&alpha;-CGRP" becomes "α-CGRP")
+        const decode = (s) => {
+            const div = document.createElement('div');
+            div.innerHTML = s || '';
+            return div.textContent || div.innerText || '';
+        };
+
+        // ✅ For filter/sort/export: newline-separated, decoded plain text
+        if (type && type !== 'display') {
+            return arr.map(x => decode(x.name || '')).join('\n');
         }
 
-        // Display: collapsed (spaces) + full (with <br>)
-        const collapsed = html.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g,'');
-        return '<span class="expand_1line">'
-            +   '<span class="collapsed">' + collapsed + '</span>'
-            +   '<span class="expanded">'  + html      + '</span>'
-            + '</span>';
+        // ---- DISPLAY (unchanged nice UI) ----
+        const first = arr[0];
+        const firstHref = (first.id != null && first.id !== '-' && first.id !== '')
+            ? (hrefBuilder ? hrefBuilder(first.id, first) : `https://gpcrdb.org/ligand/${first.id}/info`)
+            : null;
+
+        const collapsed = firstHref
+            ? `<a href="${firstHref}" target="_blank" rel="noopener">${first.name || ''}</a>`
+            : (first.name || '');
+
+        const more = arr.length - 1;
+        const hint = (showCountHint && more > 0) ? ` <span class="muted">(+${more} more)</span>` : '';
+
+        const expanded = arr.map(x => {
+            const nm = x.name || '';
+            if (x.id == null || x.id === '' || x.id === '-') return nm;
+            const href = hrefBuilder ? hrefBuilder(x.id, x) : `https://gpcrdb.org/ligand/${x.id}/info`;
+            return `<a href="${href}" target="_blank" rel="noopener">${nm}</a>`;
+        }).join('<br>');
+
+        return (
+            '<span class="expand_1line">' +
+            '<span class="collapsed">' + collapsed + hint + '</span>' +
+            '<span class="expanded">'  + expanded  + '</span>' +
+            '</span>'
+        );
     }
 
     var columns = [
         // Receptor
         {data: "id", name: "Select", orderable: false,searchable: false, render: function (data, type, row) {return `<input type="checkbox" class="select-row" value="${data}">`;}},
+        { data: "gpcrdb_link", name: "GPCRdb", orderable: false, searchable: false, render: (d, t) => (t === 'display' && d ? `<a href="${d}" target="_blank" rel="noopener"><img class="gpcrdb-link" src="{% static 'home/logo/gpcr/main.png' %}" width="12" height="12" alt="GPCRdb"></a>` : '') },
         {data: "Gene", name: "Gene"},
         { data: "entry_short", name: "UniProt", render: (d, t, r) => t === 'display' && r ? `<a href="${r.uniprot_link}" target="_blank">${d}</a>` : d },
-        { data: "iuphar_name", name: "Protein", render: (d, t, r) => t === 'display' && r ? `<a href="${r.iuphar_link}" target="_blank">${d}</a>` : d },
+        { data: "iuphar_name", name: "Protein", render: (d, t, r) => { if (t !== 'display') return d; const url = r && r.iuphar_link; return (url && url !== "-") ? `<a href="${url}" target="_blank" rel="noopener">${d}</a>` : d; }},
         { data: "id", name: "ID", visible:false},
         { data: "family", name: "Receptor family" },
         { data: "class", name: "Class" },
         { data: "species", name: "Species" },
         // Structure
         { data: "method", name: "Method" },
-        { data: "pdb", name: "PDB" },
+        { data: "pdb", name: "PDB", render: (d,t) => t!=='display' ? d : (d && d!=="-" ? `<a href="https://gpcrdb.org/structure/${d}" target="_blank" rel="noopener">${d}</a>` : d) },
         { data: "refined", name: "Refined structure", render: (d, t, r) => d === "-" ? "-" : (t === 'display' && r ? `<a href="${d}" target="_blank">${d.replace("refined/", "").toUpperCase()}_refined</a>` : d.replace("refined/", "").toUpperCase() + "_refined") },
         { data: "resolution", name: "Resolution", render: d => d ? parseFloat(d).toFixed(1) : "-" },
         { data: "preferred_chain", name: "Preferred chain" },
         { data: "state", name: "State" },
         { data: "active_pct", name: "Degree active (%)", render: d => d !== null && d !== undefined ? Math.round(d) : "-" },
         { data: "coverage", name: "% of Seq" },
+        // SIGNAL PROTEIN
         { data: "arrestin_family", name: "Family" },
-        { data: "arrestin_name", name: "Subtype"},
+        { data: "arrestin_name", name: "Subtype", render: (d,t,r) => t!=='display' ? d : (r?.arrestin_entry && r.arrestin_entry!=="-" ? `<a href="https://gpcrdb.org/signprot/${r.arrestin_entry}/" target="_blank" rel="noopener">${d}</a>` : d) },
         { data: "arrestin_note", name: "Note" },
         { data: "arrestin_coverage", name: "% of Seq" },
-        { data: "fusions", name: "Fusion" },
-        { data: "antibodies", name: "Antibodies", render: expand1LineRender },
-        { data: "ligands", name: "Name" },
-        { data: "ligand_type", name: "Type" },
-        { data: "ligand_role", name: "Modality" },
-        { data: "endo_ligands", name: "Name", render: expand1LineRender },
-        { data: "endo_type", name: "Type" },
+        // AUXILIARY PROTEIN
+        { data: "fusions", name: "Fusion" , render: (d,t) => expand1LineRender(d,t) },
+        { data: "antibodies", name: "Antibodies",render: (d,t) => expand1LineRender(d,t) },
+        // STRUCTURE LIGAND
+        { data: "ligands", name: "Name", render: (d, t) => expandFirstThenHoverLinkList(d, t, id => `https://gpcrdb.org/ligand/${id}/info`, { showCountHint: true } )},
+        { data: "ligand_type", name: "Type", render: (d,t) => expand1LineRender(d,t)},
+        { data: "ligand_role", name: "Modality", render: (d,t) => expand1LineRender(d,t)},
+        // PHYSIOLOGICAL LIGAND
+        { data: "endo_ligands", name: "Name", render: (d, t) => expandFirstThenHoverLinkList(d, t, id => `https://gpcrdb.org/ligand/${id}/info`, { showCountHint: true } )},
+        { data: "endo_type", name: "Type",  render: (d,t) => expand1LineRender(d,t) },
+        // SODIUM ION SITE
         { data: "sodium_site", name: "D2x50 S3x39" },
         { data: "sodium", name: "Sodium in structure" },
+        // REFERENCE
         { data: "authors", name: "Autors" },
-        { data: "reference", name: "Reference" }
+        { data: "reference", name: "Reference" },
+        { data: "pub_date", name: "Publication date" }
+
     ];
 
     function controlTableButtonWithGroups(table) {
-        const managedIdx = table.columns().indexes().toArray().filter(i => i >= 5); // lock 0..4
-
-        return {
-            extend: "colvis",
-            text: "Table Control",
-            className: "btn-table-control",
-            columns: managedIdx,
-            collectionLayout: "fixed",
-            collectionTitle: "Column Visibility"
-        };
+        const managedIdx = table.columns().indexes().toArray().filter(i => i >= 6); // lock 0..5
+        return { extend: "colvis", text: "Table Control", className: "btn-table-control cluster-a",
+                columns: managedIdx, collectionLayout: "fixed", collectionTitle: "Column Visibility" };
     }
+
 
 
    function buildColvisMenu($menu, table) {
@@ -654,33 +746,35 @@ $(document).ready(function() {
 
     // hard-coded, stable index → label map (0-based columns)
     const G = [
-        { label: 'RECEPTOR', items: [
-            {i:5,  t:'Receptor family'}, {i:6, t:'Class'}, {i:7,  t:'Species'}
+        { label: 'CLASSIFICATION', items: [
+            { i:6, t:'Receptor family' }, { i:7, t:'Class' }, { i:8, t:'Species' }
         ]},
         { label: 'STRUCTURE', items: [
-            {i:8,  t:'Method'}, {i:9,  t:'PDB'}, {i:10, t:'Refined structure'},
-            {i:11, t:'Resolution'}, {i:12, t:'Preferred chain'}, {i:13, t:'State'},
-            {i:14, t:'Degree active (%)'}, {i:15, t:'% of Seq'}
+            { i:9, t:'Method' }, { i:10, t:'PDB' }, { i:11, t:'Refined structure' },
+            { i:12, t:'Resolution' }, { i:13, t:'Preferred chain' }, { i:14, t:'State' },
+            { i:15, t:'Degree active (%)' }, { i:16, t:'% of Seq' }
         ]},
         { label: 'SIGNAL PROTEIN', items: [
-            {i:16, t:'Family'}, {i:17, t:'Subtype'}, {i:18, t:'Note'}, {i:19, t:'% of Seq'}
+            { i:17, t:'Family' }, { i:18, t:'Subtype' }, { i:19, t:'Note' }, { i:20, t:'% of Seq' }
         ]},
         { label: 'AUXILIARY PROTEIN', items: [
-            {i:20, t:'Fusion'}, {i:21, t:'Antibodies'}
+            { i:21, t:'Fusion' }, { i:22, t:'Antibodies' }
         ]},
         { label: 'STRUCTURE LIGAND', items: [
-            {i:22, t:'Name'}, {i:23, t:'Type'}, {i:24, t:'Modality'}
+            { i:23, t:'Name' }, { i:24, t:'Type' }, { i:25, t:'Modality' }
         ]},
         { label: 'PHYSIOLOGICAL LIGAND', items: [
-            {i:25, t:'Name'}, {i:26, t:'Type'}
+            { i:26, t:'Name' }, { i:27, t:'Type' }
         ]},
         { label: 'SODIUM ION SITE', items: [
-            {i:27, t:'D2x50 S3x39'}, {i:28, t:'Sodium in structure'}
+            { i:28, t:'D2x50 S3x39' }, { i:29, t:'Sodium in structure' }
         ]},
         { label: 'REFERENCE', items: [
-            {i:29, t:'Authors'}, {i:30, t:'Reference'}
+            { i:30, t:'Authors' }, { i:31, t:'Reference' }, { i:32, t:'Publication date' }
         ]}
     ];
+
+
 
     // factory for a toggle that matches DT’s look/feel
     const makeBtn = (idx, label) => {
@@ -761,6 +855,32 @@ $(document).ready(function() {
     equalize();
     $(window).off('resize.cvColvis').on('resize.cvColvis', equalize);
 
+    // --- Show-all footer (bottom-right) ---
+    $menu.siblings('.cv-footer').remove(); // avoid duplicates on reopen
+    const MANAGED = [].concat(...G.map(g => g.items.map(x => x.i))); // columns in the menu
+    const $footer = $('<div class="cv-footer"></div>');
+    const $showAll = $('<button type="button" class="dt-button"><span>Show all columns</span></button>');
+
+    const refreshStates = () => {
+    // re-sync group heading ticks and individual button active state
+    syncHeadings();
+    $menu.find('[data-dt-column]').each(function () {
+        const idx = $(this).data('dt-column');
+        $(this).toggleClass('dt-button-active', table.column(idx).visible());
+    });
+    applyGroupBorders(table);
+    };
+
+    $showAll.on('click', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    MANAGED.forEach(i => table.column(i).visible(true, false)); // turn on all managed cols
+    table.columns.adjust().draw(false);
+    refreshStates();
+    });
+
+    $footer.append($showAll);
+    $menu.after($footer);
+
     // initial sync of heading ✓
     syncHeadings();
 }
@@ -768,14 +888,17 @@ $(document).ready(function() {
 
     // groups to apply left border to (skip RECEPTOR)
     const BORDER_GROUPS = {
-        STRUCTURE:             [8, 9,10,11,12,13,14,15],
-        "SIGNAL PROTEIN":      [16,17,18,19],
-        "AUXILIARY PROTEIN":   [20,21],
-        "STRUCTURE LIGAND":    [22,23,24],
-        "PHYSIOLOGICAL LIGAND":[25,26],
-        "SODIUM ION SITE":     [27,28],
-        REFERENCE:             [29,30]
+        CLASSIFICATION:         [6,7,8],
+        STRUCTURE:              [9,10,11,12,13,14,15,16],
+        "SIGNAL PROTEIN":       [17,18,19,20],
+        "AUXILIARY PROTEIN":    [21,22],
+        "STRUCTURE LIGAND":     [23,24,25],
+        "PHYSIOLOGICAL LIGAND": [26,27],
+        "SODIUM ION SITE":      [28,29],
+        REFERENCE:              [30,31,32]
     };
+
+
 
     function applyGroupBorders(table) {
         const $theadDisp = $(table.table().header());      // cloned/displayed thead
@@ -844,10 +967,10 @@ $(document).ready(function() {
     function initializeDataTable(tableId, data, columns, columnDefs) {
         // Initialize DataTable
         $(tableId).DataTable({
-            dom: "<'row'<'col-sm-7 dt-btn'B><'col-sm-2'><'col-sm-3 text-end'f>>" +  // Buttons and search bar in the same row
+            dom: "<'row'<'col-sm-9 dt-btn'B><'col-sm-3 text-end'f>>" +  // Buttons and search bar in the same row
             "<'row'<'col-sm-12'tr>>" +                                       // Table rows
             "<'row'<'col-sm-12'ip>>",                                        // Pagination and info
-            order: [1, "asc"],              // Initial sort order
+            order: [2, "dsc"],              // Initial sort order
             pageLength: 20,                 // Show all rows by default
             data: data,                     // Data source
             columns: columns,               // Column definitions
@@ -883,6 +1006,7 @@ $(document).ready(function() {
             buttons: [
                 {
                 text: 'Reset filters',
+                className: 'cluster-a',
                 attr: { id: 'btnReset' },
                 action: function (e, dt, node) {
                     const $btn = $(node).closest('.dt-button');
@@ -899,6 +1023,7 @@ $(document).ready(function() {
                 {
                     text: 'Show Representatives Only',
                     attr: { id: "rep_toggle_btn" },
+                    className: 'cluster-a',
                     action: function (e, dt, node, config) {
                         repFilterOn = !repFilterOn;   // toggle flag
                         dt.draw();                   // re-run filtering
@@ -913,12 +1038,14 @@ $(document).ready(function() {
                 },
                 {
                     text: 'Align seqs',
+                    className: 'cluster-sep cluster-b',
                     action: function () {
                         handleAlignmentClick("#StructureBrowserTable");
                     }
                 },
                 {
                     text: 'Download PDBs',
+                    className: 'cluster-b',
                     action: function () {
                         handleDownloadClick("#StructureBrowserTable");
                     }
@@ -929,7 +1056,7 @@ $(document).ready(function() {
                         text: config.label,
                         attr: {
                             id: "superpose_btn",
-                            class: config.class,
+                            class: (config.class ? config.class + " cluster-b" : "cluster-b"),
                             "data-type": config.type
                         },
                         action: function () {
@@ -940,6 +1067,7 @@ $(document).ready(function() {
                 {
                 extend: 'collection',
                 text: 'Export Excel',
+                className: 'cluster-b',
                 autoClose: true,
                 name: 'exportExcel',
                 buttons: [
@@ -970,14 +1098,17 @@ $(document).ready(function() {
         var column_filters = [];
         const Table_selector = $("#StructureBrowserTable").DataTable();
         // CreateColumnFilters --> CreateColumnFilters(datatable_selector,column_number, column_range, filter_type)
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,1,9,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,10,1,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,11,2,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,13,3,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,16,3,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,19,1,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,20,9,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,29,2,"Multi-select-unspecific"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,2,10,"Multi-select-exact"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,12,1,"Range-float-vertical"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,13,2,"Multi-select-exact"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,15,2,"Range-float-vertical"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,17,3,"Multi-select-exact"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,20,1,"Range-float-vertical"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,21,7,"Multi-select-exact-filter"));                
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,28,2,"Multi-select-exact"));            
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,30,2,"Multi-select-unspecific"));
+        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,32,1,"Range-select-vertical"));
+        
         
         // // Create the filteres
         createDropdownFilters(Table_selector,column_filters);
@@ -1084,21 +1215,26 @@ $(document).ready(function() {
 
    // ====== EXPORT CONSTANTS ======
 
-// Exclude checkbox (0) and hidden ID (4)
-const EXCLUDE_EXPORT_COLS = [0, 4];
+// Exclude: checkbox (0), GPCRdb (1), hidden ID (now 5)
+const EXCLUDE_EXPORT_COLS = [0, 1, 5];
 
-// Superheader groups by absolute DT column index (0-based)
-// (do NOT include the checkbox in RECEPTOR)
+// Superheader groups for export (still exclude checkbox; also exclude GPCRdb so merges look clean)
 const SUPER_GROUPS = [
-  { label: 'RECEPTOR',             idxs: [1,2,3,4,5,6,7] },
-  { label: 'STRUCTURE',            idxs: [8,9,10,11,12,13,14,15] },
-  { label: 'SIGNAL PROTEIN',       idxs: [16,17,18,19] },
-  { label: 'AUXILIARY PROTEIN',    idxs: [20,21] },
-  { label: 'STRUCTURE LIGAND',     idxs: [22,23,24] },
-  { label: 'PHYSIOLOGICAL LIGAND', idxs: [25,26] },
-  { label: 'SODIUM ION SITE',      idxs: [27,28] },
-  { label: 'REFERENCE',            idxs: [29,30] }
+  { label: 'RECEPTOR',             idxs: [2,3,4] },          // Gene, UniProt, Protein
+  { label: 'CLASSIFICATION',       idxs: [6,7,8] },          // Family, Class, Species
+  { label: 'STRUCTURE',            idxs: [9,10,11,12,13,14,15,16] },
+  { label: 'SIGNAL PROTEIN',       idxs: [17,18,19,20] },
+  { label: 'AUXILIARY PROTEIN',    idxs: [21,22] },
+  { label: 'STRUCTURE LIGAND',     idxs: [23,24,25] },
+  { label: 'PHYSIOLOGICAL LIGAND', idxs: [26,27] },
+  { label: 'SODIUM ION SITE',      idxs: [28,29] },
+  { label: 'REFERENCE',            idxs: [30,31,32] }
 ];
+
+
+// Column numbers used in export fixups (shifted +1)
+const REFINED_COL   = 11;
+const REFERENCE_COL = 31;
 
 // ====== UTILITIES ======
 
@@ -1196,8 +1332,8 @@ function exportToXlsx(mode){
   const settings = table.settings()[0];
 
   // Absolute DT indexes (from your columns[] definition)
-  const REFINED_COL   = 10; // "Refined structure"
-  const REFERENCE_COL = 30; // "Reference"
+  const REFINED_COL   = 11; // "Refined structure"
+  const REFERENCE_COL = 31; // "Reference"
 
   const REFINED_BASE  = 'https://gpcrdb.org/structure/';
 

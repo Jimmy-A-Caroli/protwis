@@ -25,7 +25,7 @@ from construct.functions import convert_ordered_to_disordered_annotation,add_con
 from common.views import AbsSegmentSelection,AbsReferenceSelection
 from common.selection import Selection, SelectionItem
 from common.extensions import MultiFileField
-from common.models import ReleaseNotes
+from common.models import ReleaseNotes, WebLink
 from common.alignment import Alignment, GProteinAlignment
 from residue.models import Residue, ResidueNumberingScheme, ResiduePositionSet
 from contactnetwork.models import Interaction
@@ -140,6 +140,13 @@ class StructureDataJsonView(View):
                             "ligand", "ligand_role", "ligand__ligand_type"),
                         to_attr="prefetched_ligands",
                     ),
+                    Prefetch(
+                        "protein_conformation__protein__parent__web_links",
+                        queryset=WebLink.objects
+                            .select_related("web_resource")
+                            .filter(web_resource__slug="gtop"),   # or .filter(web_resource_id=5)
+                        to_attr="prefetched_gtop_links",
+                    ),
                     "stabilizing_agents",              # regex filter
                     "protein_conformation__protein__parent__endogenous_gtp_set__ligand__ligand_type",
                 )
@@ -193,11 +200,11 @@ class StructureDataJsonView(View):
                                          if self.antibody_pat.match(a.name)) or "-"
 
                 # ligands – build names/types/roles here
-                lig_html, lig_types, lig_roles = [], set(), set()
+                lig_list, lig_types, lig_roles = [], set(), set()
                 for li in getattr(s, "prefetched_ligands", []):
                     if not li.ligand:
                         continue
-                    lig_html.append(li.ligand.name)
+                    lig_list.append({"id": li.ligand.id, "name": li.ligand.name})
                     if li.ligand.ligand_type:
                         lig_types.add(li.ligand.ligand_type.name)
                     if li.ligand_role:
@@ -205,7 +212,16 @@ class StructureDataJsonView(View):
 
                 # Get endogenous ligands from parent protein
                 endos = getattr(pp, 'endogenous_gtp_set', []).all() if hasattr(pp, 'endogenous_gtp_set') else []
-                # print("Structure:", s.id, "| Endogenous:", [e.ligand.name for e in endos if e.ligand])
+                endo_list, seen = [], set()
+                for e in endos:
+                    lig = getattr(e, "ligand", None)
+                    if not lig:
+                        continue
+                    key = getattr(lig, "id", None) or lig.name
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    endo_list.append({"id": lig.id, "name": lig.name})
 
                 pdb_code = s.pdb_code.index if s.pdb_code else "-"
 
@@ -214,14 +230,28 @@ class StructureDataJsonView(View):
                     pub_link = pub.web_link.web_resource.url.replace("$index", pub_ref)
                 else:
                     pub_ref, pub_link = "-", "#"
+                
+                # GPCRdb internal link (rename your existing field)
+                gpcrdb_link = f"/protein/{pp.entry_name}"
+
+                # IUPHAR / GToP link
+                iuphar_link = "-"
+                iuphar_index = None
+                wl = next(iter(getattr(pp, "prefetched_gtop_links", [])), None)
+                if wl and wl.web_resource and wl.index:
+                    iuphar_index = wl.index
+                    # web_resource.url should contain "$index"
+                    iuphar_link = wl.web_resource.url.replace("$index", str(wl.index))
 
                 out.append({
                     "id": s.id,
                     "uniprot_link": f"http://www.uniprot.org/uniprot/{pp.accession}",
                     "Gene": gene_name,
                     "entry_short": pp.entry_name.split("_")[0].upper(),
-                    "iuphar_link": f"/protein/{pp.entry_name}",
-                    "iuphar_name": pp.name,
+                    "gpcrdb_link": gpcrdb_link,
+                    "iuphar_link": iuphar_link,
+                    "iuphar_index": iuphar_index,
+                    "iuphar_name": pp.name.replace("receptor", '').replace("-adrenoceptor", '').replace("<i>", "").replace("</i>", "").strip(),
                     "family": p.family.parent.short(),
                     "class":  p.family.parent.parent.parent.shorter(),
                     "species": p.species.common_name,
@@ -244,11 +274,11 @@ class StructureDataJsonView(View):
                     "fusions":    fusions,
                     "antibodies": antibodies,
 
-                    "ligands":      "<br>".join(lig_html) or "-",
+                    "ligands":      lig_list,
                     "ligand_type":  "<br>".join(map(str, sorted(lig_types))) or "-",
                     "ligand_role":  "<br>".join(map(str, sorted(lig_roles))) or "-",
 
-                    "endo_ligands": "<br>".join(sorted({e.ligand.name for e in endos if e.ligand})) or "-",
+                    "endo_ligands": endo_list,
                     "endo_type": "<br>".join(sorted({e.ligand.ligand_type.name for e in endos if e.ligand and e.ligand.ligand_type})) or "-",
                     "sodium_site":  "Yes" if s.has_sodium_site else "No",
                     "sodium":       "Yes" if s.sodium else "No",
