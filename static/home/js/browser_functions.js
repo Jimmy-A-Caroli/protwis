@@ -200,7 +200,6 @@ function direct_superposition(oTable, source="gpcr", structure_column_index, sel
 
 function updateSuperpositionButtonConfiguration() {
     const button = document.getElementById("superpose_template_btn");
-    console.log("Updating button config...", window.location.hash);
 
     switch (window.location.hash) {
         case "#keepselectionreference":
@@ -228,7 +227,6 @@ function updateSuperpositionButtonConfiguration() {
             button.dataset.type = "default";
           break;
     }
-    console.log("Updated button type to:", button.dataset.type);
 }
 
 function Sort(clicked_th, table1, table2) {
@@ -515,4 +513,3 @@ function copyToClipboard(array, delimiter, data_name, powertip_object=false) {
     }
     document.body.removeChild(textArea);
 }
-
