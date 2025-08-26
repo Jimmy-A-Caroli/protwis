@@ -2,1526 +2,167 @@
 {% load static %}
 {% load structure_extras %}
 
-<!-- CSS -->
 {% block addon_css %}
-    <!-- <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" /> -->
-    <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
-    <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css" />
-    <!-- <link href="{% static 'home/css/construct_alignment.css' %}" rel="stylesheet"> -->
-    <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
-    <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
-    <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
-    <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
-    <link rel="stylesheet" href="{% static 'home/css/BusyLoad.css' %}" type="text/css">
-    <style>
-    /*Structure preview in tooltip*/
-    pre {
-        display: block;
-        font: 100% "Courier New", Courier, monospace;
-        padding: 10px;
-        border: 1px solid #bae2f0;
-        background: #e3f4f9;
-        margin: .5em 0;
-        overflow: auto;
-        width: 800px;
-    }
-
-    #struct {
-        display: none;
-        position: absolute;
-        z-index: 100;
-        border: 1px;
-        background-color: white;
-        border-style: solid;
-        border-width: 1px;
-        padding: 3px;
-    }
-    #Init_loader {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 60vh;
-    }
-    #select-all {
-        transform: scale(1.2);
-        display: inline-block;
-        margin: 0 auto;
-        vertical-align: middle;
-        overflow: visible;
-    }
-    .border-left {
-        border-left: 1px solid #cccccc !important; /* Adjust the width and color as needed */
-    }
-    .dt-button.active-superpose {
-    background-color: #007bff !important;
-    color: #fff !important;
-    border: 1px solid #007bff !important;
-    }
-    /* === Stack tags vertically === */
-    .select2-container--default .select2-selection--multiple .select2-selection__rendered {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 4px;
-        padding: 2px;
-        margin: 0;
-    }
-
-    /* === Full-width tags === */
-    .select2-selection__choice {
-        width: 100% !important;
-        margin: 0 !important;
-        box-sizing: border-box;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    /* === Make the multi-select container grow === */
-    .select2-container--default .select2-selection--multiple {
-        height: auto !important;
-        max-height: 150px;
-        overflow-y: auto !important;
-        font-size: 12px;
-    }
-
-    /* === Center placeholder text === */
-    .select2-search__field::placeholder {
-        text-align: center;
-    }
-
-    /* === Scrollable dropdown === */
-    .custom-dropdown {
-        max-height: 500px !important;
-        overflow-y: auto !important;
-    }
-    .custom-dropdown .select2-results__options {
-        max-height: 450px !important;
-        overflow-y: auto !important;
-    }
-
-    /* Centered */
-    th .dt-column-order {
-        margin-right: -12px; /* Shift the sort arrow to the right */
-    }
-
-    /* default for all titles (except first col = checkbox) */
-    th:not(:first-child) .dt-column-title {
-    display: inline-block;  /* inline so sort arrow can sit beside */
-    text-align: center;
-    padding-left: 24px;     /* space for sort arrow */
-    margin: 0;
-    line-height: 1.2em;
-    white-space: normal;
-    }
-
-    /* override for GPCRdb col (no sort arrow, just logo) */
-    th.gpcrdb-col .dt-column-title {
-    padding-left: 0 !important;
-    }
-
-    /* Ensure the checkbox column is wide enough */
-    th:first-child {
-        min-width: 45px; /* Adjust as needed */
-        text-align: center;
-    }
-
-    /* Center the ColVis “collection” like a modal */
-    div.dt-button-collection.columns-8 {
-        position: fixed !important;
-        inset: 0 !important;
-        margin: auto !important;
-        width: 90vw !important;
-        max-width: 1400px;
-
-        height: auto !important;        /* 👈 let it size to content */
-        max-height: 65vh !important;    /* 👈 but never exceed viewport */
-        
-        z-index: 9999;
-        border-radius: 8px;
-        box-shadow: 0 12px 32px rgba(0,0,0,.25);
-        background: #fff;
-        display: flex;
-        flex-direction: column;
-    }
-
-
-    /* Make only the inner menu scroll, not the title */
-    div.dt-button-collection.columns-8 > div[role="menu"].cv-columns {
-        flex: 1 1 auto;
-        max-height: calc(65vh - 56px);  /* cap at viewport */
-        height: auto !important;        /* shrink if smaller */
-        overflow-y: auto !important;
-        overflow-x: auto !important;
-
-        padding: 8px 12px;
-        display: grid !important;
-        grid-template-columns: repeat(8, 1fr);
-        gap: 10px;
-        align-items: start;
-    }
-
-
-    /* Nice dimmed backdrop (DataTables already injects this element) */
-    div.dt-button-background {
-        background: rgba(0,0,0,.35) !important;
-        opacity: 1 !important;
-    }
-
-    /* Each group lives inside a column wrapper */
-    div.dt-button-collection.columns-8 .cv-col {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        min-width: 0; /* allow shrinking inside scroll */
-    }
-
-    /* Buttons look good in a column */
-    div.dt-button-collection.columns-8 .cv-col > button.dt-button {
-        max-width: 100%;
-        white-space: normal !important;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-        line-height: 1.25;
-        padding-right: 1.8em;       /* reserve space for ✓ on the right */
-    }
-
-    /* If the text is in a <span>, force that to wrap too */
-    div.dt-button-collection.columns-8 .cv-col > button.dt-button span {
-        white-space: normal !important;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-    }
-
-    /* Title + our injected group headings span the full width of a column */
-    div.dt-button-collection.columns-8 .dt-button-collection-title {
-        grid-column: 1 / -1;
-        margin-bottom: 6px;
-    }
-
-    /* Group headings: centered + uniform height */
-    div.dt-button-collection.columns-8 .cv-col .dt-colvis-heading {
-        cursor: pointer;
-        white-space: normal;       /* allow wrap */
-        line-height: 1.2;
-        text-align: center;        /* center the text */
-        display: flex;
-        align-items: center;       /* vertical centering */
-        justify-content: center;
-        height: 2.6em;             /* consistent 2-line box */
-        margin: 0 0 6px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid #eee;
-        font-weight: 600;
-    }
-
-    /* Footer inside the ColVis popup */
-    div.dt-button-collection.columns-8 .cv-footer{
-        border-top: 1px solid #eee;
-        padding: 8px 12px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-    }
-
-    /* Superheader (2nd thead row) – make the first group ("RECEPTOR") sticky */
-    table thead tr:nth-child(2) th:nth-child(1) {
-    position: sticky;
-    left: 0;               /* aligns with col 1 (checkbox) */
-    z-index: 6;            /* above the title/filter rows */
-    background: #fff;
-    }
-
-    /* Col 1: checkbox */
-    table thead tr:nth-child(3) th:nth-child(1),
-    table thead tr:nth-child(4) th:nth-child(1),
-    #StructureBrowserTable tbody td:nth-child(1) {
-    position: sticky; left: 0;
-    width: 45px; min-width: 45px; max-width: 45px;
-    z-index: 5; background: #fff;
-    }
-
-    /* Col 2: GPCRdb */
-    table thead tr:nth-child(3) th:nth-child(2),
-    table thead tr:nth-child(4) th:nth-child(2),
-    #StructureBrowserTable tbody td:nth-child(2) {
-    position: sticky; left: 45px;
-    width: 70px; min-width: 70px; max-width: 70px;
-    z-index: 5; background: #fff;
-    }
-
-    /* Col 3: Gene */
-    table thead tr:nth-child(3) th:nth-child(3),
-    table thead tr:nth-child(4) th:nth-child(3),
-    #StructureBrowserTable tbody td:nth-child(3) {
-    position: sticky; left: 115px;
-    width: 100px; min-width: 100px; max-width: 100px;
-    z-index: 5; background: #fff;
-    }
-
-    /* Col 4: UniProt */
-    table thead tr:nth-child(3) th:nth-child(4),
-    table thead tr:nth-child(4) th:nth-child(4),
-    #StructureBrowserTable tbody td:nth-child(4) {
-    position: sticky; left: 215px;
-    width: 100px; min-width: 100px; max-width: 100px;
-    z-index: 5; background: #fff;
-    }
-
-    /* Col 5: Protein */
-    table thead tr:nth-child(3) th:nth-child(5),
-    table thead tr:nth-child(4) th:nth-child(5),
-    #StructureBrowserTable tbody td:nth-child(5) {
-    position: sticky; left: 315px;
-    width: 100px; min-width: 100px; max-width: 100px;
-    z-index: 5; background: #fff;
-    }
-
-    /* vertical divider after Protein (now col 5) */
-    table thead tr:nth-child(2) th:nth-child(1)::after,
-    table thead tr:nth-child(3) th:nth-child(5)::after,
-    table thead tr:nth-child(4) th:nth-child(5)::after,
-    #StructureBrowserTable tbody td:nth-child(5)::after {
-    content: "";
-    position: absolute; top: 0; right: 0; width: 1px; height: 100%;
-    background-color: #cccccc; pointer-events: none;
-    }
-
-    /* collapsed by default: one line + ellipsis */
-    td.expand_1line{
-    max-width:100px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    position:relative;          /* keep hover expansion sane */
-    }
-
-    /* two layers we’ll swap on hover */
-    td.expand_1line .expanded{ display:none; white-space:normal; }
-
-    /* on hover: show full HTML (with <br>), hide collapsed text */
-    td.expand_1line:hover{
-    overflow:visible;            /* allow the pop-out */
-    white-space:normal;
-    }
-    td.expand_1line:hover .collapsed{ display:none; }
-    td.expand_1line:hover .expanded{ display:inline; }
-
-    /* bootstrap-ish selected row color with fallbacks */
-    :root{
-    --sel-bg: var(--bs-primary-bg-subtle, #e7f1ff);
-    --sel-border: var(--bs-primary-border-subtle, #9ec5fe);
-    }
-
-    /* make rows feel clickable */
-    #StructureBrowserTable tbody tr{ cursor:pointer; }
-
-    /* selected row highlight (override sticky cell backgrounds) */
-    #StructureBrowserTable tbody tr.row-selected td{
-    background-color: var(--sel-bg) !important;
-    }
-
-    .icon-button {
-        background: none;
-        border: none;
-        padding: 0;
-        margin-left: 4px;      /* 👈 small spacing from text */
-        cursor: pointer;
-        position: relative;    /* ✅ required so z-index applies */
-        z-index: 4;           /* ✅ float above DT sorting layer */
-        display: inline-flex;  /* ✅ keeps icon aligned inline */
-        align-items: center;
-    }
-
-    /* Special case: UniProt (sticky column) */
-    th.sticky-uniprot .icon-button {
-    z-index: 6;   /* ✅ above sticky header overlay */
-    }
-
-    .icon-button i {
-        font-size: 14px;       /* shrink icon */
-        color: #444;           /* softer color */
-        pointer-events: auto;  /* ✅ ensure clicks register */
-    }
-
-    .icon-button:hover i {
-        color: #007bff;        /* highlight on hover */
-    }
-
-    .popover.popover-wide {
-    max-width: 600px;   /* make it readable */
-    white-space: normal;
-    word-wrap: break-word;
-    z-index: 99999;     /* float above DataTable tbody */
-    }
-
-    .popover.popover-wide .popover-content {
-    font-size: 14px;
-    line-height: 1.5;
-    padding: 10px 14px;
-    }
-
-    .dt-button { position: relative; }
-
-    .dt-button > .btn-spinner{
-    display: none;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    /* include rotate(0) so keyframes can tween both */
-    transform: translate(-50%, -50%) rotate(0deg);
-    width: 16px; height: 16px;
-    border: 2px solid rgba(0,0,0,.25);
-    border-top-color: rgba(0,0,0,.7);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 1;
-    animation: btnSpin .8s linear infinite;
-    }
-
-    @keyframes btnSpin {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-
-    .dt-button.is-busy > .btn-spinner{ display: inline-block; }
-    .dt-button.is-busy > span{ opacity: .45; /* or visibility:hidden */ }
-
-    .gpcrdb-link {
-        filter: grayscale(100%);
-    }
-
-    .gpcrdb-link:hover {
-        filter: grayscale(0%);
-    }
-
-    /* tighter gaps between buttons */
-    .dt-buttons .dt-button { margin-right: 0px !important; }
-    /* bigger gap before the second cluster */
-    .dt-buttons .dt-button.cluster-sep { margin-left: 35px !important; }
-    /* optional: slightly tighter padding for the button label */
-    .dt-buttons .dt-button > span { padding: 0px 0px !important; }
-</style>
+  <link rel="stylesheet" href="{% static 'home/css/construct_browser.css' %}" type="text/css" />
+  <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css" />
+  <link href="{% static 'home/css/sequenceviewer.css' %}" rel="stylesheet">
+  <link href="{% static 'home/css/modal.css' %}" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="{% static 'home/css/jquery.powertip.css' %}" />
+  <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
+  <link rel="stylesheet" href="{% static 'home/css/select2_4.1.0-rc.0._full.css' %}" type="text/css">
+  <link rel="stylesheet" href="{% static 'home/css/BusyLoad.css' %}" type="text/css">
+  <link rel="stylesheet" href="{% static 'home/css/structure_browser_modern.css' %}" type="text/css">
 {% endblock %}
 
-<!-- Html body -->
 {% block content %}
-<!-- <div class="container" id="Target_selection_tool_container" style="margin-top: 30px;display: none;"> -->
 <div id="browser">
-    <div class="container" id="StructureBrowserContainer" style="margin-top: 30px;">
-        <div id="Init_loader"></div>
-        <div class="col-md-12" id="StructureBrowserTableContainer" style="display: none">
-            <div>
-                <table width="100%" class="display compact" id="StructureBrowserTable">
-                    <thead>
-                        <!-- Dummy Header Row for Complex Header Fix -->
-                        <tr>
-                            <th colspan="33" style="text-align: center" data-dt-order="disable"></th>
-                        </tr>
-                        <!-- Super Header Row -->
-                        <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
-                            <th colspan="6" style="text-align:Left;" data-dt-order="disable">RECEPTOR</th>
-                            <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">CLASSIFICATION</th>
-                            <th colspan="8" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">STRUCTURE</th>
-                            <th colspan="4" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">SIGNAL PROTEIN</th>
-                            <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">AUXILIARY PROTEIN</th>
-                            <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">STRUCTURE LIGAND</th>
-                            <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;min-width: 220px;" data-dt-order="disable">PHYSIOLOGICAL LIGAND</th>
-                            <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">SODIUM ION SITE</th>
-                            <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">REFERENCE</th>
-                        </tr>
-                        <!-- Header Row -->
-                        <tr>
-                            <th style="text-align: center;" data-dt-order="disable"><input type="checkbox" id="select-all"></th>
-                            <th class="gpcrdb-col text-center" data-dt-order="disable">GPCRdb</th>
-                            <th style="text-align: center;">Gene</th>
-                            <th style="text-align: center;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><div>UniProt</div><div><button class="icon-button" type="button" id="uniprot_copy"><i class="glyphicon glyphicon-export uniprot-export"></i></button></div></div></th>
-                            <th style="text-align: center;">Protein</th>
-                            <th style="text-align: center;">ID</th>
-                            <th style="text-align: center;">Receptor family</th>
-                            <th style="text-align: center;">Class</th>
-                            <th style="text-align: center;">Species</th>
-                            <th style="text-align: center;">Method</th>
-                            <th style="text-align: center;"><div style="display: flex; flex-direction: column; align-items: center; gap: 2px;"><div>PDB</div><div><button class="icon-button" type="button"><i id="pdb_copy" class="glyphicon glyphicon-export pdb-export"></i></button></div></div></th>
-                            <th style="text-align: center;">Refined<br>structure <a href="https://docs.gpcrdb.org/structures.html#refined-structures" target="_blank" class="icon-button" title="Read more"><i class="glyphicon glyphicon-book"></i></a></th>
-                            <th style="text-align: center;">Resolution</th>
-                            <th style="text-align: center;">Preferred<br>chain</th>
-                            <th style="text-align: center;">State<br><span class="glyphicon glyphicon-info-sign" data-html="true" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-content="<b>GPCR structure state classification</b><br>GPCRdb calculates a ‘degree active’ percent value for each structure. Fully inactive state structures (0% active) are defined based on a maximum Cα atom distance between class-specific residue pairs A: 11.9Å between 2x46 and 6x37, B1: 13.0Å between 2x53 and 6x42, C: 14.5Å between 2x43 and 6x39, and F: 13.0Å between 2x43 and 6x30. These distance cut-offs were defined based on the best correlation with structures reported as inactive in their publications. Fully active state structures (100% active) are defined as G protein or arrestin bound. These fully inactive and active state reference structures are used to measure the conformational similarity of and to classify all other structures into the same categories or to an intermediate state category for classes A and B1 (classes C and F have no intermediate state structures). The conformational similarity measure is based on all-to-all Cα atom distances between class-specific generic residue pairs. A few outlier structures that have a very low similarity to both inactive and active state reference structures are classified as 'Other' e.g., the structure of the platelet-activating receptor binding the antagonist foropafant."></span><a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank"><span class="glyphicon glyphicon-book icon-button"></span></a></th>
-                            <th style="text-align: center;">Degree<br>active (%) <a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank" class="icon-button" title="Read more"><i class="glyphicon glyphicon-book"></i></a></th>
-                            <th style="text-align: center;">% of Seq</th>
-                            <th style="text-align: center;">Family</th>
-                            <th style="text-align: center;">Subtype</th>
-                            <th style="text-align: center;">Note</th>
-                            <th style="text-align: center;">% of Seq</th>
-                            <th style="text-align: center;">Fusion</th>
-                            <th style="text-align: center;">Antibodies</th>
-                            <th style="text-align: center;">Name</th>
-                            <th style="text-align: center;">Type</th>
-                            <th style="text-align: center;">Modality</th>
-                            <th style="text-align: center;">Name</th>
-                            <th style="text-align: center;">Type</th>
-                            <th style="text-align: center;">D2x50<br>S3x39</th>
-                            <th style="text-align: center;">Sodium in<br>structure</th>
-                            <th style="text-align: center;">Authors</th>
-                            <th style="text-align: center;">Reference</th>
-                            <th style="text-align: center;">Publication date</th>
-                        </tr>
-                        <tr>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                            <th style="text-align: center;" data-dt-order="disable"></th>
-                            <th style="text-align: center" data-dt-order="disable"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  <div class="container" id="StructureBrowserContainer" style="margin-top: 15px;">
+    <div id="Init_loader"></div>
+
+    <div class="col-md-12" id="StructureBrowserTableContainer" style="display: none">
+      <div>
+        <table width="100%" class="display compact" id="StructureBrowserTable">
+          <thead>
+            <!-- Dummy Header Row for Complex Header Fix -->
+            <tr>
+              <th colspan="33" style="text-align: center" data-dt-order="disable"></th>
+            </tr>
+
+            <!-- Super Header Row -->
+            <tr style="padding-top: 10px; font-size: 14px; white-space: nowrap;">
+              <th colspan="6" style="text-align:Left;" data-dt-order="disable">RECEPTOR</th>
+              <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">CLASSIFICATION</th>
+              <th colspan="8" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">STRUCTURE</th>
+              <th colspan="4" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">SIGNAL PROTEIN</th>
+              <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">AUXILIARY PROTEIN</th>
+              <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">STRUCTURE LIGAND</th>
+              <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;min-width: 220px;" data-dt-order="disable">PHYSIOLOGICAL LIGAND</th>
+              <th colspan="2" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">SODIUM ION SITE</th>
+              <th colspan="3" style="text-align:Left;border-left: 1px solid #cccccc;" data-dt-order="disable">REFERENCE</th>
+            </tr>
+
+            <!-- Titles Row -->
+            <tr>
+              <th style="text-align: center;" data-dt-order="disable"><input type="checkbox" id="select-all"></th>
+              <th class="gpcrdb-col text-center" data-dt-order="disable">GPCRdb</th>
+              <th style="text-align: center;">Gene</th>
+              <th style="text-align: center;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                  <div>UniProt</div>
+                  <div><button class="icon-button" type="button" id="uniprot_copy"><i class="glyphicon glyphicon-export uniprot-export"></i></button></div>
+                </div>
+              </th>
+              <th style="text-align: center;">Protein</th>
+              <th style="text-align: center;">ID</th>
+
+              <th style="text-align: center;">Receptor family</th>
+              <th style="text-align: center;">Class</th>
+              <th style="text-align: center;">Species</th>
+
+              <th style="text-align: center;">Method</th>
+              <th style="text-align: center;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                  <div>PDB</div>
+                  <div><button class="icon-button" type="button" id="pdb_copy"><i class="glyphicon glyphicon-export pdb-export"></i></button></div>
+                </div>
+              </th>
+              <th style="text-align: center;">Refined<br>structure <a href="https://docs.gpcrdb.org/structures.html#refined-structures" target="_blank" class="icon-button" title="Read more"><i class="glyphicon glyphicon-book"></i></a></th>
+              <th style="text-align: center;">Resolution</th>
+              <th style="text-align: center;">Preferred<br>chain</th>
+              <th style="text-align: center;">State<br>
+                <span class="glyphicon glyphicon-info-sign"
+                      data-html="true" data-toggle="popover" data-trigger="hover" data-placement="bottom"
+                      data-content="<b>GPCR structure state classification</b><br>GPCRdb calculates a ‘degree active’ percent value for each structure. Fully inactive state structures (0% active) are defined based on a maximum Cα atom distance between class-specific residue pairs A: 11.9Å between 2x46 and 6x37, B1: 13.0Å between 2x53 and 6x42, C: 14.5Å between 2x43 and 6x39, and F: 13.0Å between 2x43 and 6x30. These distance cut-offs were defined based on the best correlation with structures reported as inactive in their publications. Fully active state structures (100% active) are defined as G protein or arrestin bound. These fully inactive and active state reference structures are used to measure the conformational similarity of and to classify all other structures into the same categories or to an intermediate state category for classes A and B1 (classes C and F have no intermediate state structures). The conformational similarity measure is based on all-to-all Cα atom distances between class-specific generic residue pairs. A few outlier structures that have a very low similarity to both inactive and active state reference structures are classified as 'Other' e.g., the structure of the platelet-activating receptor binding the antagonist foropafant."></span>
+                <a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank"><span class="glyphicon glyphicon-book icon-button"></span></a>
+              </th>
+              <th style="text-align: center;">Degree<br>active (%) <a href="https://docs.gpcrdb.org/structures.html#structure-descriptors" target="_blank" class="icon-button" title="Read more"><i class="glyphicon glyphicon-book"></i></a></th>
+              <th style="text-align: center;">% of Seq</th>
+
+              <th style="text-align: center;">Family</th>
+              <th style="text-align: center;">Subtype</th>
+              <th style="text-align: center;">Note</th>
+              <th style="text-align: center;">% of Seq</th>
+
+              <th style="text-align: center;">Fusion</th>
+              <th style="text-align: center;">Antibodies</th>
+
+              <th style="text-align: center;">Name</th>
+              <th style="text-align: center;">Type</th>
+              <th style="text-align: center;">Modality</th>
+
+              <th style="text-align: center;">Name</th>
+              <th style="text-align: center;">Type</th>
+
+              <th style="text-align: center;">D2x50<br>S3x39</th>
+              <th style="text-align: center;">Sodium in<br>structure</th>
+
+              <th style="text-align: center;">Authors</th>
+              <th style="text-align: center;">Reference</th>
+              <th style="text-align: center;">Publication date</th>
+            </tr>
+
+            <!-- Filter Row (empty; filled by filter builder) -->
+            <tr>
+                <!-- 33 empty <th> cells -->
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                <th data-dt-order="disable"></th><th data-dt-order="disable"></th><th data-dt-order="disable"></th>
+                </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
+  </div>
 </div>
 
 <div id="superposition-modal" class="modal">
-  <!-- Modal content -->
-    <div class="modal-content">
-        <button id="close_superposition_modal" style="float:right;display:inline;" aria-hidden="true" aria-label="Close" class="close" data-dismiss="superposition-modal">&times;</button>
-        <h3>Pick reference from selection</h3>
-        <p>Superpositions structures selected in the browser to the reference checked in this table</p>
-        <br>
-        <table id="superposition_modal_table" class="display compact" width="100%">
-            <thead>
-                <tr>
-                    <th></th>
-                    <th>PDB</th>
-                    <th>UniProt</th>
-                    <th>IUPHAR</th>
-                    <th>Rec. family</th>
-                    <th>Class</th>
-                    <th>Species</th>
-                    <th>State</th>
-                    <th>PDB Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Javascript populates the table from selected rows -->
-            </tbody>
-        </table>
-    </div>
+  <div class="modal-content">
+    <button id="close_superposition_modal" style="float:right;display:inline;" aria-hidden="true" aria-label="Close" class="close" data-dismiss="superposition-modal">&times;</button>
+    <h3>Pick reference from selection</h3>
+    <p>Superpositions structures selected in the browser to the reference checked in this table</p>
+    <br>
+    <table id="superposition_modal_table" class="display compact" width="100%">
+      <thead>
+        <tr>
+          <th></th>
+          <th>PDB</th>
+          <th>UniProt</th>
+          <th>IUPHAR</th>
+          <th>Rec. family</th>
+          <th>Class</th>
+          <th>Species</th>
+          <th>State</th>
+          <th>PDB Date</th>
+        </tr>
+      </thead>
+      <tbody><!-- populated by JS --></tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
 
-<!-- Javascript -->
 {% block addon_js %}
-<script src="{% static 'home/js/gpcrdb.js' %}"></script>
-<script src="{% static 'home/js/alignment.js' %}"> </script>
-<script src="{% static 'home/js/browser_functions.js' %}"> </script>
-<!-- <script src="{% static 'home/js/structure_browser.js' %}"> </script> -->
-<script src="{% static 'home/js/structure_browser_modern.js' %}"></script>
-<script src="{% static 'home/js/jquery.powertip.js' %}"></script>
-<script src="{% static 'home/js/xlsx.full.min.js' %}"></script>  
-<script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
-<script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
-<script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
-<script src="{% static 'home/js/BusyLoad.js' %}"></script>
-
-
-<script>
-  
-$("#Init_loader").show();
-$("#Init_loader").busyLoad("show", { 
-    spinner: "accordion", 
-    text: "Loading data...", 
-    fontSize: "2.5rem",
-    textClass: "custom-loader-text", // Ensures easy access for text changes
-    textPosition: "top",
-    textMargin: "-6rem",
-    color: "black",
-    background: "white",
-});
-
-const globalSelectedIds = new Set();
-
-$(document).ready(function() {
-
-    // Custom filter flag
-    let repFilterOn = false;
-
-    var columnDefs = [
-        {
-        targets: "_all",
-        className: "dt-head-nowrap dt-head-center dt-center dt-body-center",
-        createdCell: function (td, cellData, rowData, row, col) {
-            td.classList.add("expand_1line");
-        }
-        },
-        { targets: [0], orderable: false },  // Disable ordering on the checkbox column
-        {
-        targets: [0, 1, 2, 3, 4],
-        createdCell: function (td, cellData, rowData, row, col) {
-            td.classList.add("sticky-col");
-        },
-        className: "sticky-col"
-    }
-    ];
-
-    function expand1LineRender(d, type) {
-        // Decode HTML entities (α, β, etc.)
-        const decode = (s) => {
-            const div = document.createElement('div');
-            div.innerHTML = s || '';
-            return div.textContent || div.innerText || '';
-        };
-
-        // Normalize any shape to an array of plain strings
-        const toItems = (val) => {
-            if (val == null) return [];
-            if (Array.isArray(val)) {
-            return val
-                .map(x => typeof x === 'string' ? x : (x?.name ?? x?.text ?? x?.label ?? ''))
-                .map(s => decode(s).trim())
-                .filter(Boolean);
-            }
-            // string (may contain <br> and/or entities)
-            const s = String(val).trim();
-            if (!s || s === '-') return [];
-            const dec = decode(s.replace(/<br\s*\/?>/gi, '\n'));
-            return dec.split(/\n+/).map(t => t.trim()).filter(Boolean);
-        };
-
-        const items = toItems(d);
-
-        // 🔑 For filter/sort: use a non-collapsing delimiter
-        if (type === 'filter' || type === 'sort') return items.join('|');
-
-        // For export/other non-display: keep newlines
-        if (type && type !== 'display') return items.join('\n');
-
-        // Display: first + "(+N more)" with hover to expand
-        if (!items.length) return '-';
-        const first = items[0];
-        const more  = items.length - 1;
-        const hint  = more > 0 ? ` <span class="muted">(+${more} more)</span>` : '';
-        const expanded = items.join('<br>');
-
-        return (
-            '<span class="expand_1line">' +
-            '<span class="collapsed">' + first + hint + '</span>' +
-            '<span class="expanded">'  + expanded + '</span>' +
-            '</span>'
-        );
-    }
-
-
-
-    // Show only the first name; on hover reveal full list (links)
-    // d = [{id,name}, ...]
-    function expandFirstThenHoverLinkList(d, type, hrefBuilder, { showCountHint = true } = {}) {
-        const arr = Array.isArray(d) ? d.filter(x => x && (x.name || x.id != null)) : [];
-        if (!arr.length) return (type === 'display' ? '-' : '');
-
-        // decode entities → Unicode (so "&alpha;-CGRP" becomes "α-CGRP")
-        const decode = (s) => {
-            const div = document.createElement('div');
-            div.innerHTML = s || '';
-            return div.textContent || div.innerText || '';
-        };
-
-        // ✅ For filter/sort/export: newline-separated, decoded plain text
-        if (type && type !== 'display') {
-            return arr.map(x => decode(x.name || '')).join('\n');
-        }
-
-        // ---- DISPLAY (unchanged nice UI) ----
-        const first = arr[0];
-        const firstHref = (first.id != null && first.id !== '-' && first.id !== '')
-            ? (hrefBuilder ? hrefBuilder(first.id, first) : `https://gpcrdb.org/ligand/${first.id}/info`)
-            : null;
-
-        const collapsed = firstHref
-            ? `<a href="${firstHref}" target="_blank" rel="noopener">${first.name || ''}</a>`
-            : (first.name || '');
-
-        const more = arr.length - 1;
-        const hint = (showCountHint && more > 0) ? ` <span class="muted">(+${more} more)</span>` : '';
-
-        const expanded = arr.map(x => {
-            const nm = x.name || '';
-            if (x.id == null || x.id === '' || x.id === '-') return nm;
-            const href = hrefBuilder ? hrefBuilder(x.id, x) : `https://gpcrdb.org/ligand/${x.id}/info`;
-            return `<a href="${href}" target="_blank" rel="noopener">${nm}</a>`;
-        }).join('<br>');
-
-        return (
-            '<span class="expand_1line">' +
-            '<span class="collapsed">' + collapsed + hint + '</span>' +
-            '<span class="expanded">'  + expanded  + '</span>' +
-            '</span>'
-        );
-    }
-
-    var columns = [
-        // Receptor
-        {data: "id", name: "Select", orderable: false,searchable: false, render: function (data, type, row) {return `<input type="checkbox" class="select-row" value="${data}">`;}},
-        { data: "gpcrdb_link", name: "GPCRdb", orderable: false, searchable: false, render: (d, t) => (t === 'display' && d ? `<a href="${d}" target="_blank" rel="noopener"><img class="gpcrdb-link" src="{% static 'home/logo/gpcr/main.png' %}" width="12" height="12" alt="GPCRdb"></a>` : '') },
-        {data: "Gene", name: "Gene"},
-        { data: "entry_short", name: "UniProt", render: (d, t, r) => t === 'display' && r ? `<a href="${r.uniprot_link}" target="_blank">${d}</a>` : d },
-        { data: "iuphar_name", name: "Protein", render: (d, t, r) => { if (t !== 'display') return d; const url = r && r.iuphar_link; return (url && url !== "-") ? `<a href="${url}" target="_blank" rel="noopener">${d}</a>` : d; }},
-        { data: "id", name: "ID", visible:false},
-        { data: "family", name: "Receptor family" },
-        { data: "class", name: "Class" },
-        { data: "species", name: "Species" },
-        // Structure
-        { data: "method", name: "Method" },
-        { data: "pdb", name: "PDB", render: (d,t) => t!=='display' ? d : (d && d!=="-" ? `<a href="https://gpcrdb.org/structure/${d}" target="_blank" rel="noopener">${d}</a>` : d) },
-        { data: "refined", name: "Refined structure", render: (d, t, r) => d === "-" ? "-" : (t === 'display' && r ? `<a href="${d}" target="_blank">${d.replace("refined/", "").toUpperCase()}_refined</a>` : d.replace("refined/", "").toUpperCase() + "_refined") },
-        { data: "resolution", name: "Resolution", render: d => d ? parseFloat(d).toFixed(1) : "-" },
-        { data: "preferred_chain", name: "Preferred chain" },
-        { data: "state", name: "State" },
-        { data: "active_pct", name: "Degree active (%)", render: d => d !== null && d !== undefined ? Math.round(d) : "-" },
-        { data: "coverage", name: "% of Seq" },
-        // SIGNAL PROTEIN
-        { data: "arrestin_family", name: "Family" },
-        { data: "arrestin_name", name: "Subtype", render: (d,t,r) => t!=='display' ? d : (r?.arrestin_entry && r.arrestin_entry!=="-" ? `<a href="https://gpcrdb.org/signprot/${r.arrestin_entry}/" target="_blank" rel="noopener">${d}</a>` : d) },
-        { data: "arrestin_note", name: "Note" },
-        { data: "arrestin_coverage", name: "% of Seq" },
-        // AUXILIARY PROTEIN
-        { data: "fusions", name: "Fusion" , render: (d,t) => expand1LineRender(d,t) },
-        { data: "antibodies", name: "Antibodies",render: (d,t) => expand1LineRender(d,t) },
-        // STRUCTURE LIGAND
-        { data: "ligands", name: "Name", render: (d, t) => expandFirstThenHoverLinkList(d, t, id => `https://gpcrdb.org/ligand/${id}/info`, { showCountHint: true } )},
-        { data: "ligand_type", name: "Type", render: (d,t) => expand1LineRender(d,t)},
-        { data: "ligand_role", name: "Modality", render: (d,t) => expand1LineRender(d,t)},
-        // PHYSIOLOGICAL LIGAND
-        { data: "endo_ligands", name: "Name", render: (d, t) => expandFirstThenHoverLinkList(d, t, id => `https://gpcrdb.org/ligand/${id}/info`, { showCountHint: true } )},
-        { data: "endo_type", name: "Type",  render: (d,t) => expand1LineRender(d,t) },
-        // SODIUM ION SITE
-        { data: "sodium_site", name: "D2x50 S3x39" },
-        { data: "sodium", name: "Sodium in structure" },
-        // REFERENCE
-        { data: "authors", name: "Autors" },
-        { data: "reference", name: "Reference" },
-        { data: "pub_date", name: "Publication date" }
-
-    ];
-
-    function controlTableButtonWithGroups(table) {
-        const managedIdx = table.columns().indexes().toArray().filter(i => i >= 6); // lock 0..5
-        return { extend: "colvis", text: "Table Control", className: "btn-table-control cluster-a",
-                columns: managedIdx, collectionLayout: "fixed", collectionTitle: "Column Visibility" };
-    }
-
-
-
-   function buildColvisMenu($menu, table) {
-    // wipe whatever DT created
-    $menu.empty();
-
-    // hard-coded, stable index → label map (0-based columns)
-    const G = [
-        { label: 'CLASSIFICATION', items: [
-            { i:6, t:'Receptor family' }, { i:7, t:'Class' }, { i:8, t:'Species' }
-        ]},
-        { label: 'STRUCTURE', items: [
-            { i:9, t:'Method' }, { i:10, t:'PDB' }, { i:11, t:'Refined structure' },
-            { i:12, t:'Resolution' }, { i:13, t:'Preferred chain' }, { i:14, t:'State' },
-            { i:15, t:'Degree active (%)' }, { i:16, t:'% of Seq' }
-        ]},
-        { label: 'SIGNAL PROTEIN', items: [
-            { i:17, t:'Family' }, { i:18, t:'Subtype' }, { i:19, t:'Note' }, { i:20, t:'% of Seq' }
-        ]},
-        { label: 'AUXILIARY PROTEIN', items: [
-            { i:21, t:'Fusion' }, { i:22, t:'Antibodies' }
-        ]},
-        { label: 'STRUCTURE LIGAND', items: [
-            { i:23, t:'Name' }, { i:24, t:'Type' }, { i:25, t:'Modality' }
-        ]},
-        { label: 'PHYSIOLOGICAL LIGAND', items: [
-            { i:26, t:'Name' }, { i:27, t:'Type' }
-        ]},
-        { label: 'SODIUM ION SITE', items: [
-            { i:28, t:'D2x50 S3x39' }, { i:29, t:'Sodium in structure' }
-        ]},
-        { label: 'REFERENCE', items: [
-            { i:30, t:'Authors' }, { i:31, t:'Reference' }, { i:32, t:'Publication date' }
-        ]}
-    ];
-
-
-
-    // factory for a toggle that matches DT’s look/feel
-    const makeBtn = (idx, label) => {
-        const $b = $(`
-            <button type="button" class="dt-button buttons-columnVisibility" data-dt-column="${idx}">
-                <span>${label}</span>
-            </button>
-        `);
-
-        const sync = () => $b.toggleClass('dt-button-active', table.column(idx).visible());
-
-        $b.on('click', function (e) {
-            e.preventDefault(); e.stopPropagation();
-            const v = table.column(idx).visible();
-            table.column(idx).visible(!v, false);
-            table.columns.adjust().draw(false);
-            sync();
-            syncHeadings();
-        });
-
-        sync();
-        return $b;
-    };
-
-    const headings = [];
-
-    const syncHeadings = () => {
-        headings.forEach(h => {
-            const idxs = h.idxs;
-            const allVisible = idxs.every(i => table.column(i).visible());
-            h.$el.toggleClass('dt-button-active', allVisible);
-        });
-    };
-
-    // build the 8 groups
-    G.forEach(group => {
-        const $col = $('<div class="cv-col"></div>');
-        const idxs = group.items.map(x => x.i);
-
-        // heading as a button (so it can get ✓ like entries)
-        const $heading = $(`
-            <button type="button" class="dt-button dt-colvis-heading">
-                <span>${group.label}</span>
-            </button>
-        `).data('idxs', idxs);
-
-        headings.push({ $el: $heading, idxs });
-        $col.append($heading);
-
-        group.items.forEach(x => $col.append(makeBtn(x.i, x.t)));
-
-        $menu.append($col);
-    });
-
-    // group toggle (click heading toggles all)
-    $menu.off('click.cvGroupToggle').on('click.cvGroupToggle', '.dt-colvis-heading', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        const idxs = $(this).data('idxs') || [];
-        const show = idxs.some(i => !table.column(i).visible()); // if any hidden → show all
-        idxs.forEach(i => table.column(i).visible(show, false));
-        table.columns.adjust().draw(false);
-        syncHeadings();
-        $menu.find(`[data-dt-column]`).each(function(){
-            const idx = $(this).data('dt-column');
-            $(this).toggleClass('dt-button-active', table.column(idx).visible());
-        });
-    });
-
-    // activate grid layout
-    $menu.addClass('cv-columns');
-
-    // equalize heading heights so 1- and 2-line headings align perfectly
-    const equalize = () => {
-        const $heads = $menu.find('.dt-colvis-heading').css('height', 'auto');
-        const maxH = Math.max(0, ...$heads.map((i, el) => $(el).outerHeight()).get());
-        $heads.css('height', maxH + 'px');
-    };
-    equalize();
-    $(window).off('resize.cvColvis').on('resize.cvColvis', equalize);
-
-    // --- Show-all footer (bottom-right) ---
-    $menu.siblings('.cv-footer').remove(); // avoid duplicates on reopen
-    const MANAGED = [].concat(...G.map(g => g.items.map(x => x.i))); // columns in the menu
-    const $footer = $('<div class="cv-footer"></div>');
-    const $showAll = $('<button type="button" class="dt-button"><span>Show all columns</span></button>');
-
-    const refreshStates = () => {
-    // re-sync group heading ticks and individual button active state
-    syncHeadings();
-    $menu.find('[data-dt-column]').each(function () {
-        const idx = $(this).data('dt-column');
-        $(this).toggleClass('dt-button-active', table.column(idx).visible());
-    });
-    applyGroupBorders(table);
-    };
-
-    $showAll.on('click', function (e) {
-    e.preventDefault(); e.stopPropagation();
-    MANAGED.forEach(i => table.column(i).visible(true, false)); // turn on all managed cols
-    table.columns.adjust().draw(false);
-    refreshStates();
-    });
-
-    $footer.append($showAll);
-    $menu.after($footer);
-
-    // initial sync of heading ✓
-    syncHeadings();
-}
-
-
-    // groups to apply left border to (skip RECEPTOR)
-    const BORDER_GROUPS = {
-        CLASSIFICATION:         [6,7,8],
-        STRUCTURE:              [9,10,11,12,13,14,15,16],
-        "SIGNAL PROTEIN":       [17,18,19,20],
-        "AUXILIARY PROTEIN":    [21,22],
-        "STRUCTURE LIGAND":     [23,24,25],
-        "PHYSIOLOGICAL LIGAND": [26,27],
-        "SODIUM ION SITE":      [28,29],
-        REFERENCE:              [30,31,32]
-    };
-
-
-
-    function applyGroupBorders(table) {
-        const $theadDisp = $(table.table().header());      // cloned/displayed thead
-        const $rowsDisp  = $theadDisp.find('tr');
-        const $labelDisp = $rowsDisp.eq(-2);               // second-last row = titles
-        const $boundDisp = $rowsDisp.eq(-1);               // last row = filters/bound
-
-        const $theadOrig = $('#StructureBrowserTable thead'); // original thead
-        const $rowsOrig  = $theadOrig.find('tr');
-        const $labelOrig = $rowsOrig.eq(-2);               // second-last = titles
-        const $boundOrig = $rowsOrig.eq(-1);               // last = filters
-
-        // clear borders (headers + body)
-        [$labelDisp, $boundDisp, $labelOrig, $boundOrig].forEach($r => $r.children().removeClass('border-left'));
-        $(table.cells().nodes()).removeClass('border-left');
-
-        // for each group: find first visible column and mark borders
-        Object.values(BORDER_GROUPS).forEach(idxs => {
-            const firstVisible = idxs.find(i => table.column(i).visible());
-            if (firstVisible == null) return;
-
-            const $boundTH = $(table.column(firstVisible).header()); // this is in $boundDisp
-            const pos = $boundTH.index(); // sibling position in the bound row
-
-            // displayed header
-            $boundTH.addClass('border-left');                // filter row (works already)
-            $labelDisp.children().eq(pos).addClass('border-left'); // titles row 🔥
-
-            // original header (mirror for consistency with DT scroll cloning)
-            $boundOrig.children().eq(pos).addClass('border-left');
-            $labelOrig.children().eq(pos).addClass('border-left');
-
-            // body cells
-            $(table.column(firstVisible).nodes()).addClass('border-left');
-        });
-    }
-
-    // helper: set a specific row selected/unselected and sync checkbox + Set
-    function setRowSelected($tr, selected){
-        const table = $("#StructureBrowserTable").DataTable();
-        const row   = table.row($tr);
-        const data  = row.data();
-        if (!data) return;
-
-        const id = String(data.id);
-        $tr.toggleClass('row-selected', selected);
-        $tr.find('input.select-row').prop('checked', selected);
-
-        if (selected) globalSelectedIds.add(id);
-        else          globalSelectedIds.delete(id);
-        updateExportSelectedState();
-    }
-
-    // helper: reapply selection state after draws/paging/filtering
-    function applySelectionStyles(){
-        const table = $("#StructureBrowserTable").DataTable();
-        table.rows({ page: 'current' }).every(function(){
-            const id   = String(this.data()?.id);
-            const sel  = globalSelectedIds.has(id);
-            const $tr  = $(this.node());
-            $tr.toggleClass('row-selected', sel);
-            $tr.find('input.select-row').prop('checked', sel);
-        });
-    }
-
-    function initializeDataTable(tableId, data, columns, columnDefs) {
-        // Initialize DataTable
-        $(tableId).DataTable({
-            dom: "<'row'<'col-sm-9 dt-btn'B><'col-sm-3 text-end'f>>" +  // Buttons and search bar in the same row
-            "<'row'<'col-sm-12'tr>>" +                                       // Table rows
-            "<'row'<'col-sm-12'ip>>",                                        // Pagination and info
-            order: [2, "dsc"],              // Initial sort order
-            pageLength: 20,                 // Show all rows by default
-            data: data,                     // Data source
-            columns: columns,               // Column definitions
-            columnDefs: columnDefs,         // Column-specific settings
-            autoWidth: true,               // Disable automatic column width calculation
-            processing: false,              // Disable processing indicator
-            deferRender: true,              // Optimize rendering for large data sets
-            paging: true,                  // Disable pagination
-            scrollX: true,                  // Enable horizontal scrolling
-            scrollY: "55vh",                // Enable vertical scrolling with a height of 50% of the viewport
-            scrollCollapse: true,           // Allow the table to collapse vertically if data is less than `scrollY`
-            fixedHeader: false, // Disable FixedHeader
-            stateSave: true,
-            stateDuration: 0,  // 0 = save in localStorage (persists across reloads and sessions)
-            stateSaveParams: function (settings, data) {
-                // Keep only column visibility + ordering if you want
-                data.columns = data.columns.map(col => ({ visible: col.visible }));
-                data.order = settings.aaSorting; // optional: keep sort
-                // explicitly clear filters/page
-                data.search = { search: "" };
-                data.start = 0;
-                data.length = 20; // your default
-                data.columns.forEach(c => c.search = { search: "" });
-            },
-
-            stateLoadParams: function (settings, data) {
-                // force filters/search empty
-                data.search = { search: "" };
-                data.columns.forEach(c => { c.search = { search: "" }; });
-                // reset paging
-                data.start = 0;
-            },
-            buttons: [
-                {
-                text: 'Reset filters',
-                className: 'cluster-a',
-                attr: { id: 'btnReset' },
-                action: function (e, dt, node) {
-                    const $btn = $(node).closest('.dt-button');
-                    showBtnSpinner($btn);
-
-                    // let the browser paint the spinner before running reset_all()
-                    requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        reset_all().finally(() => hideBtnSpinner($btn));
-                    });
-                    });
-                }
-                },
-                {
-                    text: 'Show Representatives Only',
-                    attr: { id: "rep_toggle_btn" },
-                    className: 'cluster-a',
-                    action: function (e, dt, node, config) {
-                        repFilterOn = !repFilterOn;   // toggle flag
-                        dt.draw();                   // re-run filtering
-
-                        // Update button text/appearance
-                        if (repFilterOn) {
-                            $(node).addClass("active-rep").text("Show All Structures");
-                        } else {
-                            $(node).removeClass("active-rep").text("Show Representatives Only");
-                        }
-                    }
-                },
-                {
-                    text: 'Align seqs',
-                    className: 'cluster-sep cluster-b',
-                    action: function () {
-                        handleAlignmentClick("#StructureBrowserTable");
-                    }
-                },
-                {
-                    text: 'Download PDBs',
-                    className: 'cluster-b',
-                    action: function () {
-                        handleDownloadClick("#StructureBrowserTable");
-                    }
-                },
-                (() => {
-                    const config = getSuperposeButtonConfig();
-                    return {
-                        text: config.label,
-                        attr: {
-                            id: "superpose_btn",
-                            class: (config.class ? config.class + " cluster-b" : "cluster-b"),
-                            "data-type": config.type
-                        },
-                        action: function () {
-                            handleSuperpositionClick("#StructureBrowserTable", config.type);
-                        }
-                    };
-                })(),
-                {
-                extend: 'collection',
-                text: 'Export Excel',
-                className: 'cluster-b',
-                autoClose: true,
-                name: 'exportExcel',
-                buttons: [
-                    {
-                    text: 'Full table (filtered)',
-                    name: 'exportAll',
-                    action: function (e, dt/*, node*/) {
-                        runWithExportSpinner(dt, () => exportToXlsx('all'));
-                    }
-                    },
-                    {
-                    text: 'Selected rows',
-                    name: 'exportSelected',
-                    action: function (e, dt/*, node*/) {
-                        runWithExportSpinner(dt, () => exportToXlsx('selected'));
-                    }
-                    }
-                ]
-                }
-
-            ]
-        });
-        // return table; // 👈 return it
-    }
-
-    function createFilters() {
-        // Logic to create filters...
-        var column_filters = [];
-        const Table_selector = $("#StructureBrowserTable").DataTable();
-        // CreateColumnFilters --> CreateColumnFilters(datatable_selector,column_number, column_range, filter_type)
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,2,10,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,12,1,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,13,2,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,15,2,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,17,3,"Multi-select-exact"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,20,1,"Range-float-vertical"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,21,7,"Multi-select-exact-filter"));                
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,28,2,"Multi-select-exact"));            
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,30,2,"Multi-select-unspecific"));
-        column_filters = column_filters.concat(CreateColumnFilters(Table_selector,32,1,"Range-select-vertical"));
-        
-        
-        // // Create the filteres
-        createDropdownFilters(Table_selector,column_filters);
-    }
-
-    // ✅ Fetch data and initialize DataTable
-    fetch("/structure/data/")
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(structure_data => {
-
-        // Register custom filter with DataTables
-        $.fn.dataTable.ext.search.push(function(settings, data, dataIndex, rowData) {
-            if (!repFilterOn) return true;  // no filter → allow all rows
-            return rowData.rep === 1;       // only reps
-        });
-
-        // 1) Initialize the DataTable (unchanged)
-        initializeDataTable("#StructureBrowserTable", structure_data, columns, columnDefs);
-
-        // 2) Get the instance after init
-        const table = $("#StructureBrowserTable").DataTable();
-
-        // set export state
-        updateExportSelectedState();
-
-        // 3) Add the "Table Control" (colvis) button AFTER init
-        table.button().add(1, controlTableButtonWithGroups(table)); 
-        // ^ puts it right after "Reset filters". Use `null` to append at the end.
-
-        // when the ColVis popup opens, build our own menu
-        table.buttons('.btn-table-control').nodes().each(function () {
-        $(this).off('click.colvis8').on('click.colvis8', function () {
-            setTimeout(function () {
-            const $col  = $('div.dt-button-collection:visible');
-            const $menu = $col.find('> div[role="menu"]');
-            $col.find('.dt-button-collection-title').remove();
-            $col.addClass('columns-8');
-            buildColvisMenu($menu, table);   // <— new, stable builder
-            }, 0);
-        });
-        });
-
-        // keep it in sync on any column visibility toggle
-        table.on('column-visibility.dt', function(){
-            applyGroupBorders(table);
-        });
-
-        // 5) Create filters
-        createFilters();
-
-        // Your existing UI steps
-        $("#Init_loader").busyLoad("hide");
-        $("#Init_loader").hide();
-        $("#StructureBrowserTableContainer").show();
-        table.columns.adjust().draw(false)
-    })
-    .catch(error => {
-        console.error("Failed to fetch structure data:", error);
-        $("#StructureBrowserTable").after(`
-            <div class="alert alert-danger mt-3" role="alert">
-                Could not load structure data. Please try again later or check your network connection.
-            </div>
-        `);
-    });
-
-    function syncSelectAll(){
-        const table = $("#StructureBrowserTable").DataTable();
-        const $rows = $(table.rows({ search:'applied', page:'current' }).nodes());
-        const allSelected = $rows.length > 0 && $rows.filter('.row-selected').length === $rows.length;
-        $('#select-all').prop('checked', allSelected);
-    }
-
-    $('#StructureBrowserTable tbody').on('click', 'tr', function(e){
-        // ignore clicks on interactive elements
-        if ($(e.target).closest('a,button,input,label,.select2-container,.dt-button').length) return;
-        setRowSelected($(this), !$(this).hasClass('row-selected'));
-        syncSelectAll();
-    });
-
-
-    // Select All — paint rows + sync Set + checkboxes
-    $('#select-all').on('click', function () {
-        const table   = $("#StructureBrowserTable").DataTable();
-        const checked = this.checked;
-        table.rows({ search: 'applied', page: 'current' }).every(function () {
-            setRowSelected($(this.node()), checked);
-        });
-        syncSelectAll();
-        updateExportSelectedState();
-    });
-
-    // Individual checkbox — keep row highlight + Set in sync
-    $(document).on('change', '.select-row', function (e) {
-        setRowSelected($(this).closest('tr'), this.checked);
-        syncSelectAll();
-        updateExportSelectedState();
-        e.stopPropagation(); // don’t bubble to row click
-    });
-
-   // ====== EXPORT CONSTANTS ======
-
-// Exclude: checkbox (0), GPCRdb (1), hidden ID (now 5)
-const EXCLUDE_EXPORT_COLS = [0, 1, 5];
-
-// Superheader groups for export (still exclude checkbox; also exclude GPCRdb so merges look clean)
-const SUPER_GROUPS = [
-  { label: 'RECEPTOR',             idxs: [2,3,4] },          // Gene, UniProt, Protein
-  { label: 'CLASSIFICATION',       idxs: [6,7,8] },          // Family, Class, Species
-  { label: 'STRUCTURE',            idxs: [9,10,11,12,13,14,15,16] },
-  { label: 'SIGNAL PROTEIN',       idxs: [17,18,19,20] },
-  { label: 'AUXILIARY PROTEIN',    idxs: [21,22] },
-  { label: 'STRUCTURE LIGAND',     idxs: [23,24,25] },
-  { label: 'PHYSIOLOGICAL LIGAND', idxs: [26,27] },
-  { label: 'SODIUM ION SITE',      idxs: [28,29] },
-  { label: 'REFERENCE',            idxs: [30,31,32] }
-];
-
-
-// Column numbers used in export fixups (shifted +1)
-const REFINED_COL   = 11;
-const REFERENCE_COL = 31;
-
-// ====== UTILITIES ======
-
-// Robust visible column list (absolute indexes), minus excluded
-function getVisibleExportCols(table){
-  const all = table.columns().indexes();                   // Int32Array
-  const visible = [];
-  for (let i = 0; i < all.length; i++){
-    const idx = all[i];
-    if (table.column(idx).visible() && EXCLUDE_EXPORT_COLS.indexOf(idx) === -1){
-      visible.push(idx);
-    }
-  }
-  return visible;  // array of absolute indexes
-}
-
-// Strip HTML (keep <br> as newlines)
-function stripHTML(s){
-  return String(s ?? '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .trim();
-}
-
-// Extract href from an anchor tag
-function hrefFromAnchor(html){
-  const m = /<a [^>]*href=["']([^"']+)["'][^>]*>/i.exec(html || '');
-  return m ? m[1] : null;
-}
-
-// Normalize refined link to absolute URL
-function toAbsoluteRefined(href){
-  if (!href) return '';
-  if (/^https?:\/\//i.test(href)) return href;
-  const t = href.replace(/^\/+/, '');
-  if (/^structure\//i.test(t)) return 'https://gpcrdb.org/' + t;
-  if (/^refined\//i.test(t))   return 'https://gpcrdb.org/structure/' + t;
-  return 'https://gpcrdb.org/structure/' + t;
-}
-
-// Titles from the ORIGINAL titles row (second-last thead row)
-function getColTitle(table, ci){
-  // 1) Try column name if you set it in your `columns: [{ name: '...' }]`
-  const named = table.column(ci).name && table.column(ci).name();
-  if (named) return named;
-
-  // 2) Fallback to the original <thead> titles row (2nd last <tr>)
-  const $theadOrig = $('#StructureBrowserTable thead');
-  const $titleRow  = $theadOrig.find('tr').eq(-2);  // 👈 titles row
-  const th = $titleRow.children().eq(ci).get(0);
-  if (!th) return '';
-
-  const $th = $(th).clone();
-  $th.find('button, i, .glyphicon, .icon-button, .dt-column-order').remove();
-  return $th.text().replace(/\s+/g, ' ').trim();
-}
-
-// Build group row + merges for SheetJS using the absolute -> visible map
-function buildGroupRowAndMerges(visibleCols){
-  const row    = Array(visibleCols.length).fill(null);
-  const merges = [];
-
-  SUPER_GROUPS.forEach(g => {
-    const vis = visibleCols.filter(c => g.idxs.indexOf(c) !== -1);
-    if (!vis.length) return;
-
-    const cStart = visibleCols.indexOf(vis[0]);
-    const cEnd   = visibleCols.indexOf(vis[vis.length - 1]);
-
-    row[cStart] = g.label;
-    if (cEnd > cStart){
-      merges.push({ s:{ r:0, c:cStart }, e:{ r:0, c:cEnd } });
-    }
-  });
-
-  return { groupRow: row, merges };
-}
-
-// Get row indexes to export (all filtered vs selected)
-function getRowIndexes(table, mode){
-  if (mode === 'selected'){
-    const idxs = [];
-    table.rows({ search:'applied' }).every(function(){
-      const d = this.data();
-      if (d && globalSelectedIds.has(String(d.id))) idxs.push(this.index());
-    });
-    return idxs;
-  }
-  return table.rows({ search:'applied' }).indexes().toArray();
-}
-
-// --- Main export (robust titles + refined absolute URLs) --------------------
-function exportToXlsx(mode){
-  const table    = $('#StructureBrowserTable').DataTable();
-  const settings = table.settings()[0];
-
-  // Absolute DT indexes (from your columns[] definition)
-  const REFINED_COL   = 11; // "Refined structure"
-  const REFERENCE_COL = 31; // "Reference"
-
-  const REFINED_BASE  = 'https://gpcrdb.org/structure/';
-
-  // ---- helpers -------------------------------------------------------------
-  const htmlToText = (html) => {
-    // decode entities + drop tags, preserve <br> as newline
-    const el = document.createElement('div');
-    el.innerHTML = String(html ?? '').replace(/<br\s*\/?>/gi, '\n');
-    return (el.textContent || el.innerText || '').trim();
-  };
-
-  const hrefFromAnchor = (html) => {
-    const m = /<a [^>]*href=["']([^"']+)["'][^>]*>/i.exec(html || '');
-    return m ? m[1] : null;
-  };
-
-  const toAbsoluteRefined = (href) => {
-    if (!href) return '';
-    if (/^https?:\/\//i.test(href)) return href;                 // already absolute
-    const t = href.replace(/^\/+/, '');
-    if (/^structure\//i.test(t)) return 'https://gpcrdb.org/' + t;
-    if (/^refined\//i.test(t))   return REFINED_BASE + t;        // refined/XXXX
-    return REFINED_BASE + t;
-  };
-
-  // visible columns minus hard excludes
-  const visibleCols = table.columns(':visible').indexes().toArray()
-    .filter(i => EXCLUDE_EXPORT_COLS.indexOf(i) === -1);
-
-  if (!visibleCols.length){
-    alert('No visible columns to export.');
-    return;
-  }
-
-  // which rows: all (respecting filters) vs selected
-  const rowIdxs = (mode === 'selected')
-    ? (() => {
-        const idxs = [];
-        table.rows({ search:'applied' }).every(function(){
-          const d = this.data();
-          if (d && globalSelectedIds.has(String(d.id))) idxs.push(this.index());
-        });
-        return idxs;
-      })()
-    : table.rows({ search:'applied' }).indexes().toArray();
-
-  if (!rowIdxs.length){
-    alert(mode === 'selected' ? 'No selected rows.' : 'No rows to export.');
-    return;
-  }
-
-  // Row 0: Superheader with merges (uses absolute indexes)
-  const { groupRow, merges } = buildGroupRowAndMerges(visibleCols);
-
-  // Row 1: Column titles — robust:
-  // 1) prefer aoColumns[ci].sName (your "name" in columns[]), which never drifts
-  // 2) then try the second-last header row (titles row)
-  // 3) then fall back to DT header element
-  const $theadOrig = $('#StructureBrowserTable thead');
-  const $titleRow  = $theadOrig.find('tr').eq(-2); // second-last = titles
-  const getHeaderLabel = (ci) => {
-    const colCfg = settings.aoColumns[ci] || {};
-    if (colCfg.sName) return String(colCfg.sName);
-    const $ths = $titleRow.children('th');
-    if (ci < $ths.length) {
-      const $th = $($ths[ci]).clone();
-      $th.find('button, i, .glyphicon, .icon-button').remove();
-      const t = $th.text().replace(/\s+/g, ' ').trim();
-      if (t) return t;
-    }
-    const th = colCfg.nTh || table.column(ci).header();
-    return th ? $(th).text().replace(/\s+/g, ' ').trim() : `Column ${ci}`;
-  };
-  const headerTitles = visibleCols.map(getHeaderLabel);
-
-  // Body rows
-  const body = rowIdxs.map(ri =>
-    visibleCols.map(ci => {
-      const disp = table.cell(ri, ci).render('display'); // may be HTML
-      const exp  = table.cell(ri, ci).render('export');  // usually plain text
-
-      // Refined structure → absolute URL (plain text)
-      if (ci === REFINED_COL) {
-        let href = null;
-        if (typeof disp === 'string' && /<a\s/i.test(disp)) href = hrefFromAnchor(disp);
-        if (!href && typeof exp  === 'string' && /<a\s/i.test(exp))  href = hrefFromAnchor(exp);
-        if (href) return toAbsoluteRefined(href);
-        return htmlToText(exp);
-      }
-
-      // Reference → force plain text (no link)
-      if (ci === REFERENCE_COL) {
-        return htmlToText(exp);
-      }
-
-      // Everything else → plain text
-      return htmlToText(exp);
-    })
-  );
-
-  // Assemble worksheet
-  const aoa = [groupRow, headerTitles, ...body];
-  const ws  = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!merges'] = merges;
-
-  // Autosize-ish
-  ws['!cols'] = headerTitles.map((h, j) => {
-    const maxLen = Math.max(String(h||'').length, ...body.map(r => String(r[j]||'').length));
-    return { wch: Math.min(Math.max(10, maxLen + 2), 60) };
-  });
-
-  // Save
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Structures');
-
-  const stamp = new Date().toISOString().slice(0,10);
-  const fname = mode === 'selected'
-    ? `GPCRdb_structures_selected_${stamp}.xlsx`
-    : `GPCRdb_structures_full_${stamp}.xlsx`;
-
-  XLSX.writeFile(wb, fname);
-}
-
-
-});
-
-
-
-function reset_all() {
-  return new Promise((resolve) => {
-    // your existing reset
-    $('.select2').val(null).trigger('change');
-
-    // ensure we wait for the table to finish redrawing
-    const table = $("#StructureBrowserTable").DataTable();
-    table.one('draw.dt', () => resolve());
-    table.draw(false);
-
-    // fallback in case no draw fires (keeps UI snappy)
-    setTimeout(resolve, 200);
-  });
-}
-
-$('[data-toggle="popover"]').popover({
-  container: 'body',   // ✅ prevents clipping inside DT tbody
-  html: true,
-  sanitize: false,
-  template:
-    '<div class="popover popover-wide" role="tooltip">' +
-      '<div class="arrow"></div>' +
-      '<h3 class="popover-title"></h3>' +   // Bootstrap 3 uses "title"
-      '<div class="popover-content"></div>' +
-    '</div>'
-});
-
-// If you ever want to apply additional classes dynamically:
-$(document).on('shown.bs.popover', function () {
-  $('.popover').last().addClass('popover-wide');
-});
-
-
-function showBtnSpinner($btn){
-  if (!$btn.children('.btn-spinner').length){
-    $btn.append('<span class="btn-spinner" aria-hidden="true"></span>');
-  }
-  $btn.addClass('is-busy');
-}
-function hideBtnSpinner($btn){
-  $btn.removeClass('is-busy');
-}
-
-function runWithExportSpinner(dt, workFn){
-  // grab the main collection button by its name
-  const api   = dt.button('exportExcel:name');
-  const $main = api ? $(api.node()) : $();   // fallback: empty jQuery
-
-  if ($main.length && $main.hasClass('is-busy')) return; // prevent double clicks
-
-  if ($main.length) showBtnSpinner($main);
-
-  // let the spinner paint before we start the heavy work
-  return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)))
-    .then(() => Promise.resolve(workFn()))
-    // keep the spinner visible a touch so it doesn’t “blink”
-    .finally(() => setTimeout(() => { if ($main.length) hideBtnSpinner($main); }, 150));
-}
-
-</script>
+  <!-- vendor deps -->
+  <script src="{% static 'home/js/gpcrdb.js' %}"></script>
+  <script src="{% static 'home/js/alignment.js' %}"></script>
+  <script src="{% static 'home/js/browser_functions.js' %}"></script>
+  <script src="{% static 'home/js/jquery.powertip.js' %}"></script>
+  <script src="{% static 'home/js/xlsx.full.min.js' %}"></script>
+  <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
+  <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
+  <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
+  <script src="{% static 'home/js/BusyLoad.js' %}"></script>
+
+  <!-- our page logic (everything moved here) -->
+  <script src="{% static 'home/js/structure_browser_modern.js' %}"></script>
 {% endblock %}
-
-
