@@ -247,7 +247,7 @@ class StructureDataJsonView(View):
                     "id": s.id,
                     "uniprot_link": f"http://www.uniprot.org/uniprot/{pp.accession}",
                     "Gene": gene_name,
-                    "entry_short": pp.entry_name.split("_")[0].upper(),
+                    "entry_name": pp.entry_name,
                     "gpcrdb_link": gpcrdb_link,
                     "iuphar_link": iuphar_link,
                     "iuphar_index": iuphar_index,
