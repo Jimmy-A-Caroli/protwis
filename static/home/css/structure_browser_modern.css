@@ -133,6 +133,13 @@ div.dt-button-collection.columns-8 .cv-col > button.dt-button span {
   overflow-wrap: anywhere;
 }
 
+/* Don't break section headings in the ColVis grid */
+div.dt-button-collection.columns-8 .cv-col .dt-colvis-heading span {
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
 /* title across full grid width */
 div.dt-button-collection.columns-8 .dt-button-collection-title {
   grid-column: 1 / -1;

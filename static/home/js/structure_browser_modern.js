@@ -255,11 +255,17 @@
     equalize();
     $(window).off('resize.cvColvis').on('resize.cvColvis', equalize);
 
-    // Footer with "Show all"
+    // Footer with "Show all" + "Hide all"
+    // keep these columns hidden regardless of "Show all"
+    const ALWAYS_HIDDEN = [5]; // ID column
+
+    // Footer with "Show all" + "Hide all"
     $menu.siblings('.cv-footer').remove();
     const MANAGED = [].concat(...G.map(g => g.items.map(x => x.i)));
-    const $footer = $('<div class="cv-footer"></div>');
+    const $footer  = $('<div class="cv-footer"></div>');
     const $showAll = $('<button type="button" class="dt-button"><span>Show all columns</span></button>');
+    const $hideAll = $('<button type="button" class="dt-button"><span>Hide all columns</span></button>');
+
     const refreshStates = () => {
       syncHeadings();
       $menu.find('[data-dt-column]').each(function () {
@@ -268,14 +274,28 @@
       });
       applyGroupBorders(table);
     };
+
     $showAll.on('click', function (e) {
       e.preventDefault(); e.stopPropagation();
-      MANAGED.forEach(i => table.column(i).visible(true, false));
+      MANAGED.forEach(i => table.column(i).visible(true,  false));
+      // re-hide always-hidden columns
+      ALWAYS_HIDDEN.forEach(i => table.column(i).visible(false, false));
       table.columns.adjust().draw(false);
       refreshStates();
     });
-    $footer.append($showAll);
+
+    $hideAll.on('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      MANAGED.forEach(i => table.column(i).visible(false, false));
+      // also ensure always-hidden stay hidden (no-op but explicit)
+      ALWAYS_HIDDEN.forEach(i => table.column(i).visible(false, false));
+      table.columns.adjust().draw(false);
+      refreshStates();
+    });
+
+    $footer.append($hideAll, $showAll);
     $menu.after($footer);
+
 
     syncHeadings();
   }
