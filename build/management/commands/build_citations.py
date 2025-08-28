@@ -1,3 +1,4 @@
+# coding: utf8
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
 from django.conf import settings
@@ -19,8 +20,8 @@ from collections import OrderedDict
 
 
 class Command(ParseExcel):
-    help = 'Basic functions for build scripts'
-
+    help = 'Script for building citation references. ' + \
+    'References without DOI and with identic titles, journal name and year will be considered to be the same publication. '
     logger = logging.getLogger(__name__)
 
     def add_arguments(self, parser):
@@ -50,6 +51,7 @@ class Command(ParseExcel):
         self.write_yaml_refs(data)
         self.logger.info('Parsing {} and creating citation entries'.format(self.references_yaml))
         self.create_citations()
+        self.add_hardcoded_references()
         test_model_updates(self.all_models, self.tracker, check=True)
 
     def create_citations(self):
@@ -74,9 +76,15 @@ class Command(ParseExcel):
                 journal = ypub["Journal"]
                 created_pj = False
                 pubjournal = None
+
+                try:
+                    year = int(year)
+                except ValueError:
+                    year = None
+
                 if there_is_title and journal:
                     pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal, 'slug': slugify(ypub['Journal'])}, name__iexact=ypub["Journal"])
-                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,delete_pj=created_pj)
+                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,delete_pj=created_pj,title=title,year=year)
                 
                 #Add title and year if missing
                 edit = False
@@ -95,7 +103,6 @@ class Command(ParseExcel):
             dcit, created = DefaultCitation.objects.get_or_create(main=default_ref_name)
             for pub in pubs:
                 dcit.publication.add(pub)
-            dcit.save()
             self.logger.info('Created default citation: {}'.format(dcit))
 
         #Create Citation objects
@@ -124,10 +131,17 @@ class Command(ParseExcel):
                 pub = False
                 created_pj = False
                 pubjournal = None
+
+                try:
+                    year = int(year)
+                except ValueError:
+                    year = None
+
+
                 if there_is_title and journal:
                     pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal, 'slug': slugify(ypub['Journal'])}, name__iexact=ypub["Journal"])
 
-                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,delete_pj=created_pj)
+                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,delete_pj=created_pj,title=title,year=year)
 
                 #Add title and year if missing
                 edit = False
@@ -146,7 +160,6 @@ class Command(ParseExcel):
 
             for pub in pubs:
                 cit.publication.add(pub)
-            cit.save()
             self.logger.info('Created citation: {}'.format(cit))
 
     def purge_citations(self):
@@ -241,7 +254,7 @@ class Command(ParseExcel):
         else:
             return url.upper()
 
-    def create_publication(self, doi, wr, pubjournal,force=False,delete_pj=False):
+    def create_publication(self, doi, wr, pubjournal,force=False,delete_pj=False,title=None,year=None):
         '''Create WebLink and Publication objects'''
         if doi!='':
             try:
@@ -264,10 +277,32 @@ class Command(ParseExcel):
             return pub
         elif force:
             if pubjournal:
-                pub, create = Publication.objects.get_or_create(journal=pubjournal)
-            else:
-                pub = Publication.objects.create(journal=pubjournal)
-                create = True
+                pub, create = Publication.objects.get_or_create(journal=pubjournal,title=title,year=year)
             return pub
         else:
             return False
+        
+    def add_hardcoded_references(self):
+        '''Edit this function to add harcoded citation references.'''
+
+        # Add authors to ArrestinDb unpublished manuscript
+        ARRESTINDB_MANUSCRIP_AUTHORS = 'Jimmy Caroli, Gáspár Pándy-Szekeres, Alexander S. Hauser, György M. Keserű, Albert J. Kooistra and David E. Gloriam'
+        ARRESTINDB_MAIN = 'ArrestinDb'
+        ARRESTINDB_INPUT_FILE_PUB_DATA_FILTER = {'authors': None,
+                                'title': 'Manuscript',
+                                'journal': None,
+                                'year': None,
+                                'reference': None}
+        
+        filters_dict = ARRESTINDB_INPUT_FILE_PUB_DATA_FILTER
+        filters_dict['web_link_id'] = None
+        try:
+            dcit = DefaultCitation.objects.get(main__iexact=ARRESTINDB_MAIN)
+
+            pq = dcit.publication.filter(**filters_dict)
+            p = pq.order_by('id')[0]
+            p.authors = ARRESTINDB_MANUSCRIP_AUTHORS
+            p.save()
+            self.logger.info('Added harcoded author list to default citation: {}'.format(dcit))
+        except:
+            self.logger.warning('Cannot update "'+ARRESTINDB_MAIN+'" citation authors list with the harcoded authors list.')
