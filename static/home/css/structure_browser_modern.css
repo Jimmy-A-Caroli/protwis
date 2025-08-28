@@ -261,6 +261,7 @@ td.expand_1line:hover .expanded {
   --sel-bg: var(--bs-primary-bg-subtle, #e7f1ff);
   --sel-border: var(--bs-primary-border-subtle, #9ec5fe);
 }
+
 #StructureBrowserTable tbody tr { 
   cursor: pointer;
 }
