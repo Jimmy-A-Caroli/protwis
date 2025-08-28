@@ -287,8 +287,7 @@ class StructureDataJsonView(View):
                     "reference": (f'<a target="_blank" href="{pub_link}">{pub_ref}</a>'
                                   if pub_ref != "-" else "-"),
                     "pub_date":  (s.publication_date.strftime("%Y-%m-%d")
-                                  if s.publication_date else "-"),
-                    "annotated": "Yes" if s.annotated else "No",
+                                  if s.publication_date else "-")
                 })
 
             # t2 = perf_counter()
