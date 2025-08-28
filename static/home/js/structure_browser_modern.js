@@ -798,15 +798,28 @@
     $btn.addClass('is-busy');
   }
   function hideBtnSpinner($btn){ $btn.removeClass('is-busy'); }
-  function runWithExportSpinner(dt, workFn){
+  function runWithExportSpinner(dt, workFn) {
     const api   = dt.button('exportExcel:name');
     const $main = api ? $(api.node()) : $();
-    if ($main.length && $main.hasClass('is-busy')) return;
-    if ($main.length) showBtnSpinner($main);
+
+    if ($main.length && $main.hasClass('is-busy')) {
+      // Already busy: return a resolved promise so caller can still chain .then()
+      return Promise.resolve();
+    }
+
+    if ($main.length) {
+      showBtnSpinner($main);
+    }
+
     return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)))
       .then(() => Promise.resolve(workFn()))
-      .finally(() => setTimeout(() => { if ($main.length) hideBtnSpinner($main); }, 150));
+      .finally(() => {
+        setTimeout(() => {
+          if ($main.length) hideBtnSpinner($main);
+        }, 150);
+      });
   }
+
 
   // Expose a few needed funcs (used by DT button configs)
   window.handleAlignmentClick     = handleAlignmentClick;
