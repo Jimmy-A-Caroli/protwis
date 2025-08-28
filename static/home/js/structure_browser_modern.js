@@ -169,8 +169,6 @@
     { data: "pub_date", name: "Publication date" }
   ];
 
-
-
   // ===== 3) COLVIS (Table Control) ===========================================
   function controlTableButtonWithGroups(table) {
     const managedIdx = table.columns().indexes().toArray().filter(i => i >= 6); // lock 0..5
