@@ -158,7 +158,7 @@
     { data: "arrestin_coverage", name: "% of Seq" },
 
     // AUXILIARY PROTEIN
-    { data: "fusions", name: "Fusion", render: (d,t) => expand1LineRender(d,t) },
+    ({ data: "fusions", name: "Fusion", render: (d,t) => expand1LineRender(d,t) }),
     { data: "antibodies", name: "Antibodies", render: (d,t) => expand1LineRender(d,t) },
 
     // STRUCTURE LIGAND
