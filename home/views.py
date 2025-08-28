@@ -121,7 +121,7 @@ def citations_json(request):
     )
     response = JsonResponse(list(citations_q), safe=False)
     return response
-    
+
 def cite_us(request, site):
     context = {'site': site}
     return render(request, 'home/cite_us.html', context)
