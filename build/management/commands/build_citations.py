@@ -74,7 +74,6 @@ class Command(ParseExcel):
                 there_is_title = len(title) > 0
                 year = ypub['Year']
                 journal = ypub["Journal"]
-                created_pj = False
                 pubjournal = None
 
                 try:
@@ -82,10 +81,8 @@ class Command(ParseExcel):
                 except ValueError:
                     year = None
 
-                if there_is_title and journal:
-                    pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal, 'slug': slugify(ypub['Journal'])}, name__iexact=ypub["Journal"])
-                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,delete_pj=created_pj,title=title,year=year)
-                
+                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,title=title,year=year,journal_name=journal)
+
                 #Add title and year if missing
                 edit = False
                 if there_is_title and not pub.title:
@@ -129,7 +126,6 @@ class Command(ParseExcel):
                 journal = ypub["Journal"]
                 there_is_title = len(title) > 0
                 pub = False
-                created_pj = False
                 pubjournal = None
 
                 try:
@@ -137,11 +133,7 @@ class Command(ParseExcel):
                 except ValueError:
                     year = None
 
-
-                if there_is_title and journal:
-                    pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal, 'slug': slugify(ypub['Journal'])}, name__iexact=ypub["Journal"])
-
-                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,delete_pj=created_pj,title=title,year=year)
+                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,title=title,year=year,journal_name=journal)
 
                 #Add title and year if missing
                 edit = False
@@ -254,7 +246,7 @@ class Command(ParseExcel):
         else:
             return url.upper()
 
-    def create_publication(self, doi, wr, pubjournal,force=False,delete_pj=False,title=None,year=None):
+    def create_publication(self, doi, wr, pubjournal,force=False,title=None,year=None,journal_name=None):
         '''Create WebLink and Publication objects'''
         if doi!='':
             try:
@@ -262,23 +254,22 @@ class Command(ParseExcel):
             except Publication.DoesNotExist as e:
                 pub = Publication.get_or_create_from_doi(doi)
 
-                if not pub.journal and pubjournal:
+            if not pub.journal:
+                if journal_name:
+                    pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal_name, 'slug': slugify(journal_name)}, name__iexact=journal_name)
                     pub.journal = pubjournal
                     pub.save()
-                    delete_pj = False
+                    self.logger.info('Created Publication:'+str(pub))
 
-                self.logger.info('Created Publication:'+str(pub))
-            if not pub.journal and pubjournal:
-                pub.journal = pubjournal
-                pub.save()
-                delete_pj = False
-            if delete_pj:
-                pubjournal.delete()
+
             return pub
         elif force:
-            if pubjournal:
+            if journal_name:
+                pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal_name, 'slug': slugify(journal_name)}, name__iexact=journal_name)
                 pub, create = Publication.objects.get_or_create(journal=pubjournal,title=title,year=year)
-            return pub
+                return pub
+            else:
+                return False
         else:
             return False
         
