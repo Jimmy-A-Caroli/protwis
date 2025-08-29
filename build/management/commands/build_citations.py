@@ -210,14 +210,14 @@ class Command(ParseExcel):
                     pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal_name, 'slug': slugify(journal_name)}, name__iexact=journal_name)
                     pub.journal = pubjournal
                     pub.save()
-                    self.logger.info('Created Publication:'+str(pub))
 
-
+            self.logger.info('Created Publication:'+str(pub))
             return pub
         elif force:
             if journal_name:
                 pubjournal, created_pj = PublicationJournal.objects.get_or_create(defaults={"name": journal_name, 'slug': slugify(journal_name)}, name__iexact=journal_name)
                 pub, create = Publication.objects.get_or_create(journal=pubjournal,title=title,year=year)
+                self.logger.info('Created Publication:'+str(pub))
                 return pub
             else:
                 return False
