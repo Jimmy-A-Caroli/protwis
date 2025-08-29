@@ -289,8 +289,8 @@ class Command(ParseExcel):
         ARRESTINDB_MANUSCRIP_AUTHORS = 'Jimmy Caroli, Gáspár Pándy-Szekeres, Alexander S. Hauser, György M. Keserű, Albert J. Kooistra and David E. Gloriam'
         ARRESTINDB_MAIN = 'ArrestinDb'
         ARRESTINDB_INPUT_FILE_PUB_DATA_FILTER = {'authors': None,
-                                'title': 'Manuscript',
-                                'journal': None,
+                                'title': 'The arrestin database, ArrestinDb',
+                                'journal__name': 'Manuscript',
                                 'year': None,
                                 'reference': None}
         
