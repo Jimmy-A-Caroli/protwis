@@ -68,31 +68,7 @@ class Command(ParseExcel):
         for default_ref_name, vals in default_refs.items():
             pubs = []
             for ypub in sorted(vals, key = lambda x:x['Order']):
-                doi = ypub['DOI']
-                pub = False
-                title = ypub['Title']
-                there_is_title = len(title) > 0
-                year = ypub['Year']
-                journal = ypub["Journal"]
-                pubjournal = None
-
-                try:
-                    year = int(year)
-                except ValueError:
-                    year = None
-
-                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,title=title,year=year,journal_name=journal)
-
-                #Add title and year if missing
-                edit = False
-                if there_is_title and not pub.title:
-                    pub.title = title
-                    edit = True
-                if year and not pub.year:
-                    pub.year = year
-                    edit = True
-                if edit:
-                    pub.save()
+                pub = self._parse_publication_section_of_yaml_dict_and_create_publications(ypub, wr)
                 if pub:
                     pubs.append(pub)
 
@@ -120,31 +96,7 @@ class Command(ParseExcel):
                 default = vals['Menu']
             pubs = []
             for ypub in vals['Publication']:
-                doi = ypub['DOI']
-                title = ypub['Title']
-                year = ypub['Year']
-                journal = ypub["Journal"]
-                there_is_title = len(title) > 0
-                pub = False
-                pubjournal = None
-
-                try:
-                    year = int(year)
-                except ValueError:
-                    year = None
-
-                pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,title=title,year=year,journal_name=journal)
-
-                #Add title and year if missing
-                edit = False
-                if there_is_title and not pub.title:
-                    pub.title = title
-                    edit = True
-                if year and not pub.year:
-                    pub.year = year
-                    edit = True
-                if edit:
-                    pub.save()
+                pub = self._parse_publication_section_of_yaml_dict_and_create_publications(ypub, wr)
                 if pub:
                     pubs.append(pub)
 
@@ -168,7 +120,6 @@ class Command(ParseExcel):
             url = vals['URL']
             if url == 'broken':
                 continue
-
 
             nref_set = set()
             ref_header_dict = {}
@@ -273,6 +224,34 @@ class Command(ParseExcel):
         else:
             return False
         
+    def _parse_publication_section_of_yaml_dict_and_create_publications(self, ypub, wr):
+        doi = ypub['DOI']
+        title = ypub['Title']
+        year = ypub['Year']
+        journal = ypub["Journal"]
+        there_is_title = len(title) > 0
+        pub = False
+        pubjournal = None
+
+        try:
+            year = int(year)
+        except ValueError:
+            year = None
+
+        pub = self.create_publication(doi, wr, pubjournal,force=there_is_title,title=title,year=year,journal_name=journal)
+
+        #Add title and year if missing
+        edit = False
+        if there_is_title and not pub.title:
+            pub.title = title
+            edit = True
+        if year and not pub.year:
+            pub.year = year
+            edit = True
+        if edit:
+            pub.save()
+        return pub
+
     def add_hardcoded_references(self):
         '''Edit this function to add harcoded citation references.'''
 
