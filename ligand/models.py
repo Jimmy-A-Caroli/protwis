@@ -410,7 +410,7 @@ class AssayExperiment(models.Model):
     standard_activity_value = models.CharField(max_length=20, null=True)
     p_activity_value = models.CharField(max_length=100, null=True) #Only 1 value, median/max fot GTP (p activity)
     p_activity_ranges = models.CharField(max_length=40, null=True) #If we have ranges (GtP)
-    standard_relation = models.CharField(max_length=10)
+    standard_relation = models.CharField(max_length=10, null=True)
     value_type = models.CharField(max_length=50, null=True)
     source = models.CharField(max_length=50, null=True)
     publication = models.ManyToManyField(Publication)

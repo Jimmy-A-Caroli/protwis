@@ -66,6 +66,12 @@ def dump_checker(model_label, record_count=None):
                 latest_date, latest_n = dte, n
                 latest_path = os.path.join(dump_path, fname)
 
+    if not latest_path:
+        if model_label=='ligand.Ligand':
+            latest_path = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligand_reload_dump.csv'])
+        elif model_label=='ligand.LigandID':
+            latest_path = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligandid_reload_dump.csv'])
+
     # ---- count rows in latest dump (data lines only) ----
     latest_count = 0
     if latest_path and os.path.isfile(latest_path):

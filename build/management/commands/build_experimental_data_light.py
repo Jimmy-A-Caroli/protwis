@@ -53,6 +53,7 @@ class Command(BaseBuild):
     #id_dump = os.sep.join([dump_dir, 'ligandid_reload_dump.csv'])
     #######################################################################
     ligand_dump = dump_checker('ligand.Ligand')
+    print(ligand_dump['latest_dump'])
     ligand_csv = pd.read_csv(ligand_dump['latest_dump'], sep=';', index_col=0)
     id_dump = dump_checker('ligand.LigandID')
     id_csv = pd.read_csv(id_dump['latest_dump'], sep=';', index_col=0)
@@ -84,194 +85,194 @@ class Command(BaseBuild):
             print("Ended purging data")
 
 
-        print("\n\nRebuilding the Ligand Model based on latest dump")
-        self.reload_dump()
-        print("Ended reloading data from ligand dump")
+        # print("\n\nRebuilding the Ligand Model based on latest dump")
+        # self.reload_dump()
+        # print("Ended reloading data from ligand dump")
 
-        # Fetching all the Guide to Pharmacology data
-        print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
-        gtp_uniprot_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/GtP_to_UniProt_mapping.csv", 7 * 24 * 3600)
-        gtp_uniprot = pd.read_csv(gtp_uniprot_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_uniprot)
-        gtp_complete_ligands_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/ligands.csv", 7 * 24 * 3600)
-        gtp_complete_ligands = pd.read_csv(
-            gtp_complete_ligands_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_complete_ligands)
-        gtp_ligand_mapping_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.csv", 7 * 24 * 3600)
-        gtp_ligand_mapping = pd.read_csv(
-            gtp_ligand_mapping_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_ligand_mapping)
-        gtp_interactions_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/interactions.csv", 7 * 24 * 3600)
-        gtp_interactions = pd.read_csv(
-            gtp_interactions_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_interactions)
-        gtp_detailed_endogenous_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/endogenous_ligand_detailed.csv", 7 * 24 * 3600)
-        gtp_detailed_endogenous = pd.read_csv(
-            gtp_detailed_endogenous_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_detailed_endogenous)
-        gtp_peptides_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/peptides.csv", 7 * 24 * 3600)
-        gtp_peptides = pd.read_csv(gtp_peptides_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_peptides)
+        # # Fetching all the Guide to Pharmacology data
+        # print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
+        # gtp_uniprot_link = get_or_create_url_cache(
+        #     "https://www.guidetopharmacology.org/DATA/GtP_to_UniProt_mapping.csv", 7 * 24 * 3600)
+        # gtp_uniprot = pd.read_csv(gtp_uniprot_link, dtype=str, header=1)
+        # self.normalize_gtp_headers(gtp_uniprot)
+        # gtp_complete_ligands_link = get_or_create_url_cache(
+        #     "https://www.guidetopharmacology.org/DATA/ligands.csv", 7 * 24 * 3600)
+        # gtp_complete_ligands = pd.read_csv(
+        #     gtp_complete_ligands_link, dtype=str, header=1)
+        # self.normalize_gtp_headers(gtp_complete_ligands)
+        # gtp_ligand_mapping_link = get_or_create_url_cache(
+        #     "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.csv", 7 * 24 * 3600)
+        # gtp_ligand_mapping = pd.read_csv(
+        #     gtp_ligand_mapping_link, dtype=str, header=1)
+        # self.normalize_gtp_headers(gtp_ligand_mapping)
+        # gtp_interactions_link = get_or_create_url_cache(
+        #     "https://www.guidetopharmacology.org/DATA/interactions.csv", 7 * 24 * 3600)
+        # gtp_interactions = pd.read_csv(
+        #     gtp_interactions_link, dtype=str, header=1)
+        # self.normalize_gtp_headers(gtp_interactions)
+        # gtp_detailed_endogenous_link = get_or_create_url_cache(
+        #     "https://www.guidetopharmacology.org/DATA/endogenous_ligand_detailed.csv", 7 * 24 * 3600)
+        # gtp_detailed_endogenous = pd.read_csv(
+        #     gtp_detailed_endogenous_link, dtype=str, header=1)
+        # self.normalize_gtp_headers(gtp_detailed_endogenous)
+        # gtp_peptides_link = get_or_create_url_cache(
+        #     "https://www.guidetopharmacology.org/DATA/peptides.csv", 7 * 24 * 3600)
+        # gtp_peptides = pd.read_csv(gtp_peptides_link, dtype=str, header=1)
+        # self.normalize_gtp_headers(gtp_peptides)
 
-        # This gets all the info of the ligand and the interaction with the target
-        iuphar_ids = self.compare_proteins(gtp_uniprot)
-        bioactivity_ligands_ids = self.obtain_ligands(gtp_interactions, iuphar_ids, ['target_id', 'ligand_id'])
-        # Now I have all the data I need
-        bioactivity_data_gtp = self.get_ligands_data(
-            bioactivity_ligands_ids, gtp_complete_ligands, gtp_ligand_mapping, ligand_interactions=gtp_interactions, target_ids=iuphar_ids)
-        # Assess the assay type given info from affinity units and assay comments
-        bioactivity_data_gtp = self.classify_assay(bioactivity_data_gtp, 'affinity_units', 'assay_description')
-        bioactivity_data_gtp.fillna('None', inplace=True)
-        print("Ended parsing Guide to Pharmacology bioactivities data")
+        # # This gets all the info of the ligand and the interaction with the target
+        # iuphar_ids = self.compare_proteins(gtp_uniprot)
+        # bioactivity_ligands_ids = self.obtain_ligands(gtp_interactions, iuphar_ids, ['target_id', 'ligand_id'])
+        # # Now I have all the data I need
+        # bioactivity_data_gtp = self.get_ligands_data(
+        #     bioactivity_ligands_ids, gtp_complete_ligands, gtp_ligand_mapping, ligand_interactions=gtp_interactions, target_ids=iuphar_ids)
+        # # Assess the assay type given info from affinity units and assay comments
+        # bioactivity_data_gtp = self.classify_assay(bioactivity_data_gtp, 'affinity_units', 'assay_description')
+        # bioactivity_data_gtp.fillna('None', inplace=True)
+        # print("Ended parsing Guide to Pharmacology bioactivities data")
 
-        print("\n\nStarted building all Guide to Pharmacology ligands")
-        print('\n\nRetrieving IUPHAR ids from UniProt ids')
-        print('\n\nRetrieving ALL ligands from GTP associated to GPCRs')
-        endogenous_ligands_ids = self.obtain_ligands(gtp_detailed_endogenous, iuphar_ids, ['target_id', 'ligand_id'])
-        ligand_ids = list(set(bioactivity_ligands_ids + endogenous_ligands_ids))
+        # print("\n\nStarted building all Guide to Pharmacology ligands")
+        # print('\n\nRetrieving IUPHAR ids from UniProt ids')
+        # print('\n\nRetrieving ALL ligands from GTP associated to GPCRs')
+        # endogenous_ligands_ids = self.obtain_ligands(gtp_detailed_endogenous, iuphar_ids, ['target_id', 'ligand_id'])
+        # ligand_ids = list(set(bioactivity_ligands_ids + endogenous_ligands_ids))
 
-        print('\n\nCollating all info from GPCR related ligands in the GTP')
-        ligand_data = self.get_ligands_data(ligand_ids, gtp_complete_ligands, gtp_ligand_mapping)
+        # print('\n\nCollating all info from GPCR related ligands in the GTP')
+        # ligand_data = self.get_ligands_data(ligand_ids, gtp_complete_ligands, gtp_ligand_mapping)
 
-        #Solving duplicated issues
-        ligand_data["species"] = ligand_data["species"].fillna("")
-        ligand_data["uniprot_id"] = ligand_data["uniprot_id"].fillna("")
+        # #Solving duplicated issues
+        # ligand_data["species"] = ligand_data["species"].fillna("")
+        # ligand_data["uniprot_id"] = ligand_data["uniprot_id"].fillna("")
 
-        ligand_data["species_list"] = ligand_data["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
-        ligand_data["uniprot_list"] = ligand_data["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
+        # ligand_data["species_list"] = ligand_data["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
+        # ligand_data["uniprot_list"] = ligand_data["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
 
-        #Copy the same for gtp_peptides
-        gtp_peptides["species"] = gtp_peptides["species"].fillna("")
-        gtp_peptides["uniprot_id"] = gtp_peptides["uniprot_id"].fillna("")
+        # #Copy the same for gtp_peptides
+        # gtp_peptides["species"] = gtp_peptides["species"].fillna("")
+        # gtp_peptides["uniprot_id"] = gtp_peptides["uniprot_id"].fillna("")
 
-        gtp_peptides["species_list"] = gtp_peptides["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
-        gtp_peptides["uniprot_list"] = gtp_peptides["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
+        # gtp_peptides["species_list"] = gtp_peptides["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
+        # gtp_peptides["uniprot_list"] = gtp_peptides["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
 
-        # 2) Apply the helper to each row
-        ligand_expanded = []
-        peptides_expanded = []
-        for _, row in ligand_data.iterrows():
-            ligand_expanded.extend(self.expand_row(row))
-        for _, row in gtp_peptides.iterrows():
-            peptides_expanded.extend(self.expand_row(row))
+        # # 2) Apply the helper to each row
+        # ligand_expanded = []
+        # peptides_expanded = []
+        # for _, row in ligand_data.iterrows():
+        #     ligand_expanded.extend(self.expand_row(row))
+        # for _, row in gtp_peptides.iterrows():
+        #     peptides_expanded.extend(self.expand_row(row))
 
-        ligand_data = pd.DataFrame(ligand_expanded)
-        gtp_peptides = pd.DataFrame(peptides_expanded)
+        # ligand_data = pd.DataFrame(ligand_expanded)
+        # gtp_peptides = pd.DataFrame(peptides_expanded)
 
-        # Build mask: not NaN, and not empty/whitespace-only
-        mask_chembl = (
-            Command.helm_chembl['helm_notation'].notna()
-            & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
-        )
-        mask_cid = (
-            Command.helm_cid['helm_notation'].notna()
-        )
+        # # Build mask: not NaN, and not empty/whitespace-only
+        # mask_chembl = (
+        #     Command.helm_chembl['helm_notation'].notna()
+        #     & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
+        # )
+        # mask_cid = (
+        #     Command.helm_cid['helm_notation'].notna()
+        # )
 
-        # Apply mask
-        helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
-        helm_cid_clean = Command.helm_cid.loc[mask_cid]
-        # And clean CID data
-        helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
-            lambda x: str(int(x)) if pd.notna(x) else np.nan
-        )
+        # # Apply mask
+        # helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
+        # helm_cid_clean = Command.helm_cid.loc[mask_cid]
+        # # And clean CID data
+        # helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
+        #     lambda x: str(int(x)) if pd.notna(x) else np.nan
+        # )
 
-        # First Merge
-        ligand_data_merged = pd.merge(
-            ligand_data,
-            helm_chembl_clean,
-            left_on='chembl_id',
-            right_on='molecule_chembl_id',
-            how='left')
+        # # First Merge
+        # ligand_data_merged = pd.merge(
+        #     ligand_data,
+        #     helm_chembl_clean,
+        #     left_on='chembl_id',
+        #     right_on='molecule_chembl_id',
+        #     how='left')
 
-        # Second Merge
-        ligand_data_merged = pd.merge(
-            ligand_data_merged,
-            helm_cid_clean,
-            on='pubchem_cid',
-            how='left')
+        # # Second Merge
+        # ligand_data_merged = pd.merge(
+        #     ligand_data_merged,
+        #     helm_cid_clean,
+        #     on='pubchem_cid',
+        #     how='left')
 
-        ligand_data_merged['helm_notation'] = ligand_data_merged['helm_notation_x'].fillna(ligand_data_merged['helm_notation_y'])
-        ligand_data_merged = ligand_data_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
+        # ligand_data_merged['helm_notation'] = ligand_data_merged['helm_notation_x'].fillna(ligand_data_merged['helm_notation_y'])
+        # ligand_data_merged = ligand_data_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-        # First Merge
-        gtp_peptides_merged = pd.merge(
-            gtp_peptides,
-            helm_chembl_clean,
-            left_on='chembl_id',
-            right_on='molecule_chembl_id',
-            how='left')
+        # # First Merge
+        # gtp_peptides_merged = pd.merge(
+        #     gtp_peptides,
+        #     helm_chembl_clean,
+        #     left_on='chembl_id',
+        #     right_on='molecule_chembl_id',
+        #     how='left')
 
-        # Second Merge
-        gtp_peptides_merged = pd.merge(
-            gtp_peptides_merged,
-            helm_cid_clean,
-            on='pubchem_cid',
-            how='left')
+        # # Second Merge
+        # gtp_peptides_merged = pd.merge(
+        #     gtp_peptides_merged,
+        #     helm_cid_clean,
+        #     on='pubchem_cid',
+        #     how='left')
 
-        gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
-        gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
+        # gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
+        # gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-        #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
-        #GTP
-        print('\n\nStarted comparing GTP data to reloaded database')
-        small_to_update, peptide_to_update = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
-        print(f"Building {len(small_to_update)} small molecules and {len(peptide_to_update)} peptide from GTP that were missing from dump")
-        self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
-        #CHEMBL
-        print("\n\nStarted comparing ChEBML ligands")
-        self.build_chembl_ligands()
-        print("\n\nEnded building ChEMBL ligands")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
+        # #GTP
+        # print('\n\nStarted comparing GTP data to reloaded database')
+        # small_to_update, peptide_to_update = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
+        # print(f"Building {len(small_to_update)} small molecules and {len(peptide_to_update)} peptide from GTP that were missing from dump")
+        # self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #CHEMBL
+        # print("\n\nStarted comparing ChEBML ligands")
+        # self.build_chembl_ligands()
+        # print("\n\nEnded building ChEMBL ligands")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #BUILDING BIOACTIVITIES
-        #GTP bioactivity data
-        print("\n\nStarted building Guide to Pharmacology bioactivities")
-        # bioactivities_to_update = self.find_unmatched_bioactivities(Command.ligand_csv, bioactivity_data_gtp)
-        self.build_gtp_bioactivities(bioactivity_data_gtp)
-        print("Ended building Guide to Pharmacology bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #BUILDING BIOACTIVITIES
+        # #GTP bioactivity data
+        # print("\n\nStarted building Guide to Pharmacology bioactivities")
+        # # bioactivities_to_update = self.find_unmatched_bioactivities(Command.ligand_csv, bioactivity_data_gtp)
+        # self.build_gtp_bioactivities(bioactivity_data_gtp)
+        # print("Ended building Guide to Pharmacology bioactivities")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #ChEMBL bioactivity data
-        print("\n\nStarted building ChEMBL bioactivities")
-        self.build_chembl_bioactivities()
-        print("Ended building ChEMBL bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #ChEMBL bioactivity data
+        # print("\n\nStarted building ChEMBL bioactivities")
+        # self.build_chembl_bioactivities()
+        # print("Ended building ChEMBL bioactivities")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #ChEMBL/PubChem vendor data
-        print("\n\nStarted building PubChem vendor data")
-        self.build_pubchem_vendor_links()
-        print("Ended building PubChem vendor data")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #ChEMBL/PubChem vendor data
+        # print("\n\nStarted building PubChem vendor data")
+        # self.build_pubchem_vendor_links()
+        # print("Ended building PubChem vendor data")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #PDSP KiDatabase bioactivity data
-        print("\n\nStarted building PDSP KiDatabase bioactivities")
-        # to_update = self.comparePDSP(Command.ligand_csv)
-        # print(f"Building {len(to_update)} PDSP KiDatabase bioactivities missing from dump")
-        self.build_kidatabase_bioactivities()  # 14,562
-        print("Ended building PDSP KiDatabase bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #PDSP KiDatabase bioactivity data
+        # print("\n\nStarted building PDSP KiDatabase bioactivities")
+        # # to_update = self.comparePDSP(Command.ligand_csv)
+        # # print(f"Building {len(to_update)} PDSP KiDatabase bioactivities missing from dump")
+        # self.build_kidatabase_bioactivities()  # 14,562
+        # print("Ended building PDSP KiDatabase bioactivities")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #Drug Central bioactivity data
-        print("\n\nStarted building Drug Central bioactivities")
-        # to_update = self.compareDrugCentral(Command.ligand_csv)
-        # print(f"Building {len(to_update)}  Drug Central bioactivities missing from dump")
-        self.build_drugcentral_bioactivities()  # 5,844
-        print("Ended building Drug Central bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #Drug Central bioactivity data
+        # print("\n\nStarted building Drug Central bioactivities")
+        # # to_update = self.compareDrugCentral(Command.ligand_csv)
+        # # print(f"Building {len(to_update)}  Drug Central bioactivities missing from dump")
+        # self.build_drugcentral_bioactivities()  # 5,844
+        # print("Ended building Drug Central bioactivities")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         #Evolvus bioactivity data
         print("\n\nStarted building Evolvus bioactivities")
@@ -280,33 +281,33 @@ class Command(BaseBuild):
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #ENDOGENOUS LIGANDS
-        print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
-        print('\n#1 Preprocessing the data')
-        processed_data = self.data_preparation(gtp_detailed_endogenous, gtp_interactions, iuphar_ids)
-        print('\n#2 Labeling Principal and Secondary endogenous ligands')
-        endogenous_data, to_be_ranked = self.labeling_principals(processed_data)
-        print('\n#3 Adding potency ranking where required')
-        ranked_data = self.adding_potency_rankings(endogenous_data, to_be_ranked)
-        print('\n#4 Creating and filling the Endogenous_GTP model')
-        endogenous_dicts = self.convert_dataframe(ranked_data)
-        self.create_model(endogenous_dicts)
-        print("\n\nEnded building endogenous data")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #ENDOGENOUS LIGANDS
+        # print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
+        # print('\n#1 Preprocessing the data')
+        # processed_data = self.data_preparation(gtp_detailed_endogenous, gtp_interactions, iuphar_ids)
+        # print('\n#2 Labeling Principal and Secondary endogenous ligands')
+        # endogenous_data, to_be_ranked = self.labeling_principals(processed_data)
+        # print('\n#3 Adding potency ranking where required')
+        # ranked_data = self.adding_potency_rankings(endogenous_data, to_be_ranked)
+        # print('\n#4 Creating and filling the Endogenous_GTP model')
+        # endogenous_dicts = self.convert_dataframe(ranked_data)
+        # self.create_model(endogenous_dicts)
+        # print("\n\nEnded building endogenous data")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #AFTERMATH FIXES
-        print("\n\nStarted calculating potency and affinity indexes")
-        self.calculate_potency_and_affinity()
-        print("Potency and affinity indexes have been added to the model")
+        # #AFTERMATH FIXES
+        # print("\n\nStarted calculating potency and affinity indexes")
+        # self.calculate_potency_and_affinity()
+        # print("Potency and affinity indexes have been added to the model")
 
-        print("\n\nFixing mismatched LigandType definition")
-        n  = apply_canonical_ligand_types()
-        print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
+        # print("\n\nFixing mismatched LigandType definition")
+        # n  = apply_canonical_ligand_types()
+        # print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
-        print("\n\nRunning the Dump Checker and saving new dumps if needed")
-        ligand_dump = dump_checker('ligand.Ligand')
-        id_dump = dump_checker('ligand.LigandID')
+        # print("\n\nRunning the Dump Checker and saving new dumps if needed")
+        # ligand_dump = dump_checker('ligand.Ligand')
+        # id_dump = dump_checker('ligand.LigandID')
 
     @staticmethod
     def reset_pk_sequence(model):
@@ -707,14 +708,14 @@ class Command(BaseBuild):
 
         # --- PASS 1: create all compounds without parent ---
         # 1a) count rows
-        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as f:
+        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 1 (compounds): 0%")
         tick1 = _progress_printer(total, "Pass 1 (compounds)")
 
         # 1b) actual work
-        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as csvfile:
+        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 # print progress if needed
@@ -750,13 +751,13 @@ class Command(BaseBuild):
         print("Pass 1 (compounds): 100%")
 
         # --- PASS 2: set parent relationships ---
-        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as f:
+        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 2 (parents): 0%")
         tick2 = _progress_printer(total, "Pass 2 (parents)")
 
-        with open(Command.ligand_dump, newline='', encoding='utf-8-sig') as csvfile:
+        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick2(idx)
@@ -771,13 +772,13 @@ class Command(BaseBuild):
         print("Pass 2 (parents): 100%")
 
         # --- PASS 3: create all the LigandIDs ---
-        with open(Command.id_dump, newline='', encoding='utf-8-sig') as f:
+        with open(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 3 (IDs): 0%")
         tick3 = _progress_printer(total, "Pass 3 (IDs)")
 
-        with open(Command.id_dump, newline='', encoding='utf-8-sig') as idsfile:
+        with open(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as idsfile:
             reader = csv.DictReader(idsfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick3(idx)
@@ -2560,10 +2561,11 @@ class Command(BaseBuild):
                 ligand = get_or_create_ligand(name, ids, source='DrugBank')
                 ligand_cache[name] = ligand
 
-    @staticmethod
-    def build_evolvus_bioactivities():
-        protein_names = {}
-        ligand_cache = {}
+    # @staticmethod
+    def build_evolvus_bioactivities(self):
+        self.protein_names = {}
+        self.ligand_cache = {}
+        self.errors = {}
         new_columns = ['Reference',
                        'Fig/Table with data',
                        'Fig/Table no.',
@@ -2587,7 +2589,8 @@ class Command(BaseBuild):
                        'Reference ligand name',
                        'Reference ligand PubChem CID',
                        'Curator',
-                       'Remarks']
+                       'Remarks',
+                       'Errors']
 
         evolvus_data = os.path.join(settings.DATA_DIR, "ligand_data", "evolvus_data")
         class_a_data = Command.read_data(evolvus_data, 'Annotation_AB1.xlsx', 'cl_A')
@@ -2597,11 +2600,18 @@ class Command(BaseBuild):
         class_a_data.columns = new_columns
         class_b1_data.columns = new_columns
         print("\n===============\n#1 Start parsing Evolvus data")
-        Command.evolvus_main(class_a_data)
-        Command.evolvus_main(class_b1_data)
+        self.evolvus_main(class_a_data)
+        self.evolvus_main(class_b1_data)
+        import pprint
+        pprint.pprint(self.errors)
+        c = 0
+        for p, ligs in self.errors.items():
+            for l in ligs:
+                c+=1
+        print(c)
 
-    @staticmethod
-    def evolvus_main(data):
+    # @staticmethod
+    def evolvus_main(self, data):
         bioacts = []
         pub_links = []
         bio_entries = len(data)
@@ -2614,9 +2624,9 @@ class Command(BaseBuild):
             protein = str(row['UniProt']).lower() if pd.notna(row['UniProt']) else None
 
             if protein:
-                if protein not in protein_names:
-                    protein_names[protein] = Command.fetch_protein(protein, 'PDSP')  # may be None
-                receptor = protein_names[protein]
+                if protein not in self.protein_names:
+                    self.protein_names[protein] = Command.fetch_protein(protein, 'PDSP')  # may be None
+                receptor = self.protein_names[protein]
 
             if pd.notna(row['Sequence']):
                 helm = generate_helm_universal(sequence = row['Sequence'],
@@ -2627,28 +2637,32 @@ class Command(BaseBuild):
 
             ligand_label = f"{row['Ligand Name']}_{hash(helm)}"  # shorter/stable key
 
-            if ligand_label not in ligand_cache.keys():
+            if ligand_label not in self.ligand_cache.keys():
                 ids = {}
                 ligand = get_or_create_ligand(row['Ligand Name'], ids, lig_type='peptide', source='Evolvus', helm=helm)
-                ligand_cache[ligand_label] = ligand
+                self.ligand_cache[ligand_label] = ligand
 
-            if (receptor is not None) and (ligand_cache[ligand_label] is not None):
+            if (receptor is not None) and (self.ligand_cache[ligand_label] is not None):
                 exp = AssayExperiment()
-                exp.ligand_id = ligand_cache[ligand_label].id
+                exp.ligand_id = self.ligand_cache[ligand_label].id
                 exp.protein_id = receptor.id
                 exp.assay_type = assay_type
                 exp.assay_description = row['Assay Type']
 
                 exp.standard_activity_value = round(float(row['Value']), 2) if row['Activity Type'] != 'Emax' else round(float(row['Emax (%)']), 2)
                 exp.p_activity_value = round(-math.log10(float(row['Value']) * 1e-9), 2) if float(row['Value']) != 0 else None
+                if exp.standard_activity_value=='nan':
+                    exp.standard_activity_value = None
+                if exp.p_activity_value=='nan':
+                    exp.p_activity_value = None
 
                 exp.p_activity_ranges = None
-                exp.standard_relation = row['Sign']
-                exp.value_type = row['Activity Type']
+                exp.standard_relation = row['Sign'] if pd.notna(row['Sign']) else None
+                exp.value_type = row['Activity Type'] if pd.notna(row['Activity Type']) else None
                 exp.source = 'Evolvus'
                 exp.document_chembl_id = None
-                exp.reference_ligand = row['Reference ligand name']
-                exp.qualitative_activity = row['Qualitative activity']
+                exp.reference_ligand = row['Reference ligand name'] if pd.notna(row['Reference ligand name']) else None
+                exp.qualitative_activity = row['Qualitative activity'] if pd.notna(row['Qualitative activity']) else None
                 bioacts.append(exp)
 
                 # stash publication to attach later (after PKs exist)
@@ -2657,8 +2671,14 @@ class Command(BaseBuild):
                     # stash the publication for the current exp index within this batch
                     pub_links.append((len(bioacts) - 1, pub.id))
 
+            else:
+                if row['UniProt'] not in self.errors:
+                    self.errors[row['UniProt']] = [row['Ligand Name']]
+                else:
+                    self.errors[row['UniProt']].append(row['Ligand Name'])
+
             # if (len(bioacts) == Command.bulk_size) or (index == bio_entries - 1):
-            if (len(bioacts) == bulk_size) or (index == bio_entries - 1):
+            if (len(bioacts) == Command.bulk_size) or (index == bio_entries - 1):
                 created = AssayExperiment.objects.bulk_create(bioacts)
                 # Build through rows
                 Through = AssayExperiment.publication.through
@@ -2674,7 +2694,7 @@ class Command(BaseBuild):
                 bioacts = []
                 pub_links = []
 
-            Command.assign_ligand_target_pairing(ligand_cache[ligand_label], receptor, None, row['Activity Type'])
+            Command.assign_ligand_target_pairing(self.ligand_cache[ligand_label], receptor, None, row['Activity Type'])
 
     @staticmethod
     def calculate_potency_and_affinity():
@@ -2868,7 +2888,7 @@ class Command(BaseBuild):
             try:
                 effect = LigandEffect.objects.get(slug=effect_slug)
             except LigandEffect.DoesNotExist:
-                logger.warning("No LigandEffect with slug=%r found; leaving effect NULL", effect_slug)
+                print("No LigandEffect with slug=%r found; leaving effect NULL", effect_slug)
         # 3. Create + save
         with transaction.atomic():
             pairing = LigandTargetPairing(

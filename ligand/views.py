@@ -617,7 +617,7 @@ class LigandBulkSearch(TemplateView):
                     return result
                 return result
             else:
-                ligand_data_affinity, ligand_data_potency = get_ligand_details(
+                ligand_data_affinity, ligand_data_potency, ligand_data_qualitative = get_ligand_details(
                     mode, ps, ligand_search=True
                 )
             context = {}
@@ -631,6 +631,11 @@ class LigandBulkSearch(TemplateView):
             context["potency_data_json"] = (
                 json.dumps(ligand_data_potency, default=str)
                 if ligand_data_potency
+                else "[]"
+            )
+            context["qualitative_data_json"] = (
+                json.dumps(ligand_data_qualitative, default=str)
+                if ligand_data_qualitative
                 else "[]"
             )
             if len(ligand_data_potency) + len(ligand_data_affinity) > MAX_RECORDS:
@@ -934,7 +939,7 @@ class LigandStructuralSearch(TemplateView):
                 cache.touch(cache_key, 60 * 60 * 24 * 7)
                 return context
             else:
-                ligand_data_affinity, ligand_data_potency = get_ligand_details(
+                ligand_data_affinity, ligand_data_potency, ligand_data_qualitative = get_ligand_details(
                     mode, ps, ligand_search=True, ligand_similarities=similarities
                 )
             context = {}
@@ -949,6 +954,11 @@ class LigandStructuralSearch(TemplateView):
             context["potency_data_json"] = (
                 json.dumps(ligand_data_potency, default=str)
                 if ligand_data_potency
+                else "[]"
+            )
+            context["qualitative_data_json"] = (
+                json.dumps(ligand_data_qualitative, default=str)
+                if ligand_data_qualitative
                 else "[]"
             )
             if len(ligand_data_potency) + len(ligand_data_affinity) > MAX_RECORDS:
@@ -1377,7 +1387,8 @@ def get_extended_ligand_details(
             ligand_data_potency.append(processed_exp_data)
         # Other assay types are ignored for these lists, as per original logic implied
 
-    return ligand_data_affinity, ligand_data_potency
+    ligand_data_qualitative = ligand_data_affinity
+    return ligand_data_affinity, ligand_data_potency, ligand_data_qualitative
 
 
 # ===================================================
@@ -1389,6 +1400,7 @@ def get_compact_ligand_details(
 
     ligand_data_affinity = []
     ligand_data_potency = []
+    ligand_data_qualitative = []
 
     # assay_conversion
     assay_conversion = {
@@ -1550,7 +1562,8 @@ def get_compact_ligand_details(
                         elif assay_label == "Functional":
                             ligand_data_potency.append(ligand_record)
 
-    return ligand_data_affinity, ligand_data_potency
+    ligand_data_qualitative = ligand_data_affinity
+    return ligand_data_affinity, ligand_data_potency, ligand_data_qualitative
 
 
 # =====================================================
@@ -1618,7 +1631,7 @@ def TargetDetails(mode, request, **kwargs):
         if not assay_experiments and "slug" not in kwargs:
             return redirect("ligand_selection")
 
-        ligand_data_affinity, ligand_data_potency = get_ligand_details(
+        ligand_data_affinity, ligand_data_potency, ligand_data_qualitative = get_ligand_details(
             "extended", assay_experiments
         )
         context = {}
@@ -1630,6 +1643,11 @@ def TargetDetails(mode, request, **kwargs):
         context["potency_data_json"] = (
             json.dumps(ligand_data_potency, default=str)
             if ligand_data_potency
+            else "[]"
+        )
+        context["qualitative_data_json"] = (
+            json.dumps(ligand_data_qualitative, default=str)
+            if ligand_data_qualitative
             else "[]"
         )
         context["mode"] = mode
@@ -1649,7 +1667,7 @@ def TargetDetails(mode, request, **kwargs):
         if not assay_experiments:
             return redirect("ligand_selection")
 
-        ligand_data_affinity, ligand_data_potency = get_ligand_details(
+        ligand_data_affinity, ligand_data_potency, ligand_data_qualitative = get_ligand_details(
             "compact", assay_experiments
         )
         context = {}
@@ -1661,6 +1679,11 @@ def TargetDetails(mode, request, **kwargs):
         context["potency_data_json"] = (
             json.dumps(ligand_data_potency, default=str)
             if ligand_data_potency
+            else "[]"
+        )
+        context["qualitative_data_json"] = (
+            json.dumps(ligand_data_qualitative, default=str)
+            if ligand_data_qualitative
             else "[]"
         )
         context["mode"] = mode

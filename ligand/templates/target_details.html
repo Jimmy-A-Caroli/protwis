@@ -350,13 +350,16 @@
   var dataTables = {};
   var affinity_data; 
   var potency_data;  
+  var qualitative_data;
 
   var selectedRowsAffinity = new Set();
   var selectedRowsPotency = new Set();
+  var selectedRowsQualitative = new Set();
 
   var jsMode, jsLigandQuery, jsLigandSimilarity; 
   var affinityTableId = '#affinity_table';
   var potencyTableId = '#potency_table';
+  var qualitativeTableId = '#qualitative_table';
 
   function updateLoaderText(newText) {
       $(".custom-loader-text").text(newText);
@@ -797,36 +800,58 @@ function reset_all() {
                     return;
                 }
 
-                let tablesInitializedCount = 0;
-                const totalTablesToInitialize = 2;
-    
-                const onSingleTableInitComplete = function() {
-                    // console.log("[Debug] onSingleTableInitComplete called. tablesInitializedCount before increment:", tablesInitializedCount); 
-                    tablesInitializedCount++;
-                    // console.log("[Debug] onSingleTableInitComplete. tablesInitializedCount after increment:", tablesInitializedCount);
-                    if (tablesInitializedCount >= totalTablesToInitialize) {
-                        // console.log("[Debug] All tables initialized. Setting myTasksCompleted = true.");
-                        console.log("Event triggered: All my custom tasks are complete."); 
-                        myTasksCompleted = true;
-                        showPageContent();
-                    }
-                };
-    
-                updateLoaderText("Initializing affinity table...");
                 setTimeout(() => {
-                    var affinityTable = initializeTargetDetailsTable(
-                        affinityTableId, affinity_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
-                        'affinity', selectedRowsAffinity, onSingleTableInitComplete
-                    );
-                    dataTables['affinity_table'] = affinityTable;
-            
-                    updateLoaderText("Initializing potency table...");
+                    // console.log("[Debug] setTimeout for qualitative_data parsing.");
+                    try {
+                        qualitative_data = JSON.parse('{{ qualitative_data_json|escapejs }}');
+                        // console.log("[Debug] qualitative_data parsed successfully.");
+                    } catch (e) {
+                        console.error("[Debug] Error parsing qualitative_data_json:", e);
+                        $("#page_loader_placeholder").busyLoad("hide").hide();
+                        $("#main_content_wrapper").html("<p style='color:red; text-align:center;'>Error loading page data (qualitative). Please try refreshing.</p>").show();
+                        return;
+                    }
+
+                    let tablesInitializedCount = 0;
+                    const totalTablesToInitialize = 3;
+
+                    const onSingleTableInitComplete = function() {
+                        // console.log("[Debug] onSingleTableInitComplete called. tablesInitializedCount before increment:", tablesInitializedCount); 
+                        tablesInitializedCount++;
+                        // console.log("[Debug] onSingleTableInitComplete. tablesInitializedCount after increment:", tablesInitializedCount);
+                        if (tablesInitializedCount >= totalTablesToInitialize) {
+                            // console.log("[Debug] All tables initialized. Setting myTasksCompleted = true.");
+                            console.log("Event triggered: All my custom tasks are complete."); 
+                            myTasksCompleted = true;
+                            showPageContent();
+                        }
+                    };
+                    
+                    updateLoaderText("Initializing affinity table...");
                     setTimeout(() => {
-                        var potencyTable = initializeTargetDetailsTable(
-                            potencyTableId, potency_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
-                            'potency', selectedRowsPotency, onSingleTableInitComplete
+                        var affinityTable = initializeTargetDetailsTable(
+                            affinityTableId, affinity_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
+                            'affinity', selectedRowsAffinity, onSingleTableInitComplete
                         );
-                        dataTables['potency_table'] = potencyTable;
+                        dataTables['affinity_table'] = affinityTable;
+                
+                        updateLoaderText("Initializing potency table...");
+                        setTimeout(() => {
+                            var potencyTable = initializeTargetDetailsTable(
+                                potencyTableId, potency_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
+                                'potency', selectedRowsPotency, onSingleTableInitComplete
+                            );
+                            dataTables['potency_table'] = potencyTable;
+
+                            updateLoaderText("Initializing qualitative table...");
+                            setTimeout(() => {
+                                var qualitativeTable = initializeTargetDetailsTable(
+                                    qualitativeTableId, qualitative_data, jsMode, jsLigandQuery, jsLigandSimilarity, 
+                                    'qualitative', selectedRowsQualitative, onSingleTableInitComplete
+                                );
+                                dataTables['qualitative_table'] = qualitativeTable;
+                            }, 0);
+                        }, 0);
                     }, 0);
                 }, 0);
             }, 0);
@@ -865,6 +890,9 @@ function reset_all() {
             <li class="nav-item">
               <a class="nav-link" data-toggle="tab" href="#potency">Potency</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" data-toggle="tab" href="#qualitative">Qualitative</a>
+            </li>
           </ul>
           <div class="tab-content" style="margin-top: 20px;">
             <div class="tab-pane container active" id="affinity">
@@ -878,6 +906,12 @@ function reset_all() {
                    {% include '_target_details_table_header.html' %}
                   <tbody></tbody>
               </table>
+            </div>
+            <div class="tab-pane container" id="qualitative">
+                <table width="100%" class="display compact nowrap" id="qualitative_table">
+                    {% include '_target_details_table_header.html' %}
+                   <tbody></tbody>
+               </table>
             </div>
           </div>
       
@@ -898,6 +932,9 @@ function reset_all() {
            <li class="nav-item">
              <a class="nav-link" data-toggle="tab" href="#potency">Potency</a>
            </li>
+           <li class="nav-item">
+            <a class="nav-link" data-toggle="tab" href="#qualitative">Qualitative</a>
+          </li>
           </ul>
           <div class="tab-content" style="margin-top: 20px;">
            <div class="tab-pane container active" id="affinity">
@@ -912,6 +949,12 @@ function reset_all() {
                 <tbody></tbody>
               </table>
            </div>
+           <div class="tab-pane container" id="qualitative">
+            <table width="100%" class="display compact nowrap" id="qualitative_table">
+              {% include '_target_details_compact_header.html' with ligand_query=ligand_query ligand_similarity=ligand_similarity %}
+              <tbody></tbody>
+            </table>
+         </div>
           </div>
         {% endif %}
       </div>
