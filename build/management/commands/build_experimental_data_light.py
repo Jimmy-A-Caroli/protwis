@@ -2649,12 +2649,15 @@ class Command(BaseBuild):
                 exp.assay_type = assay_type
                 exp.assay_description = row['Assay Type']
 
-                exp.standard_activity_value = round(float(row['Value']), 2) if row['Activity Type'] != 'Emax' else round(float(row['Emax (%)']), 2)
-                exp.p_activity_value = round(-math.log10(float(row['Value']) * 1e-9), 2) if float(row['Value']) != 0 else None
-                if exp.standard_activity_value=='nan':
+                if pd.notna(row['Activity Type']) and pd.notna(row['Value']):
+                    exp.standard_activity_value = round(float(row['Value']), 2) if row['Activity Type'] != 'Emax' else round(float(row['Emax (%)']), 2)
+                else:
                     exp.standard_activity_value = None
-                if exp.p_activity_value=='nan':
-                    exp.p_activity_value = None
+                
+                if pd.notna(row['Value']):
+                    exp.p_activity_value = round(-math.log10(float(row['Value']) * 1e-9), 2) if float(row['Value']) != 0 else None
+                else:
+                    exp.p_activity_value = None    
 
                 exp.p_activity_ranges = None
                 exp.standard_relation = row['Sign'] if pd.notna(row['Sign']) else None
