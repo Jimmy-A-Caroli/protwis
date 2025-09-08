@@ -84,7 +84,6 @@ h4 {
 
 .selection-tree-box {
   width: 330px;
-  /* height: 350px; */
   overflow-x: scroll;
 }
 
@@ -334,6 +333,7 @@ a.external_link:link, a.external_link:visited, a.external_link:hover, a.external
     align-items: center;
     z-index: 9999;
 }
+
 #ref-modal-content {
     background: white;
     padding: 20px;
@@ -343,6 +343,7 @@ a.external_link:link, a.external_link:visited, a.external_link:hover, a.external
     /* max-width: 400px; */
     width: 60%;
 }
+
 #ref-modal-close-btn {
     position: absolute;
     top: 8px;
