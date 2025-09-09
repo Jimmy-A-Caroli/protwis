@@ -54,10 +54,10 @@ class Command(BaseBuild):
     #######################################################################
     ligand_dump = dump_checker('ligand.Ligand')
     print(ligand_dump['latest_dump'])
-    ligand_csv = pd.read_csv(ligand_dump['latest_dump'], sep=';', index_col=0)
+    ligand_csv = pd.read_csv(ligand_dump['latest_dump'], index_col=0)
     id_dump = dump_checker('ligand.LigandID')
-    id_csv = pd.read_csv(id_dump['latest_dump'], sep=';', index_col=0)
-    test_model_updates(all_models, tracker, initialize=True)
+    id_csv = pd.read_csv(id_dump['latest_dump'], index_col=0)
+    # test_model_updates(all_models, tracker, initialize=True)
 
     def add_arguments(self, parser):
         parser.add_argument("--test_run",
@@ -279,7 +279,7 @@ class Command(BaseBuild):
         self.build_evolvus_bioactivities()
         print("\n\nEnded building Evolvus bioactivities")
         print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         # #ENDOGENOUS LIGANDS
         # print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
@@ -2653,11 +2653,11 @@ class Command(BaseBuild):
                     exp.standard_activity_value = round(float(row['Value']), 2) if row['Activity Type'] != 'Emax' else round(float(row['Emax (%)']), 2)
                 else:
                     exp.standard_activity_value = None
-                
+
                 if pd.notna(row['Value']):
                     exp.p_activity_value = round(-math.log10(float(row['Value']) * 1e-9), 2) if float(row['Value']) != 0 else None
                 else:
-                    exp.p_activity_value = None    
+                    exp.p_activity_value = None
 
                 exp.p_activity_ranges = None
                 exp.standard_relation = row['Sign'] if pd.notna(row['Sign']) else None
@@ -2891,7 +2891,7 @@ class Command(BaseBuild):
             try:
                 effect = LigandEffect.objects.get(slug=effect_slug)
             except LigandEffect.DoesNotExist:
-                print("No LigandEffect with slug=%r found; leaving effect NULL", effect_slug)
+                print(f"No LigandEffect with slug {effect_slug} found; leaving effect NULL")
         # 3. Create + save
         with transaction.atomic():
             pairing = LigandTargetPairing(

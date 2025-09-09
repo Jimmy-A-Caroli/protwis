@@ -37,6 +37,7 @@ class Command(BaseCommand):
             'create_protein_segments',
             'create_residue_numbering_schemes',
             'create_anomalies',
+            'create_ligand_roles',
         ]
 
         # execute functions
