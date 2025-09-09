@@ -1140,6 +1140,7 @@ def build_ligand_record(
     ligand_search,
     ligand_similarities,
     record_count,
+    qualitative_activity=None,
 ):
 
     record_dict = {
@@ -1168,6 +1169,7 @@ def build_ligand_record(
         "reference": experiment_obj.reference_ligand if experiment_obj else None,
         "smiles_for_image": smiles_for_image,
         "record_count": record_count,
+        "qualitative_activity": qualitative_activity,
     }
 
     # Safely add species ...
@@ -1261,7 +1263,8 @@ def get_extended_ligand_details(
     """
     ligand_data_affinity = []
     ligand_data_potency = []
-
+    ligand_data_qualitative = []
+    
     total_tested_subquery = (
         AssayExperiment.objects.filter(ligand_id=OuterRef("ligand__id"))
         .values("ligand__id")  # Group by ligand
@@ -1317,6 +1320,7 @@ def get_extended_ligand_details(
         "reference_ligand",
         "total_tested_gpcrs_annotated",
         "purchasability_annotated",
+        "qualitative_activity",
     ]
 
     for exp_data in annotated_experiments_qs.values(*fields_to_select).iterator(
@@ -1559,6 +1563,7 @@ def get_compact_ligand_details(
                             ligand_search=ligand_search,
                             ligand_similarities=ligand_similarities,
                             record_count=record_count,
+                            qualitative_activity=representative_exp.qualitative_activity if representative_exp else None,
                         )
 
                         if vtype_label:
