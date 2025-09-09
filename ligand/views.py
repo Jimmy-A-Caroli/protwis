@@ -1297,7 +1297,7 @@ def get_extended_ligand_details(
         "ligand__id",
         "ligand__name",
         "ligand__ligand_type__name",
-        "ligand__sequence", 
+        "ligand__sequence",
         "ligand__mw",
         "ligand__logp",
         "ligand__rotatable_bonds",
@@ -1377,17 +1377,21 @@ def get_extended_ligand_details(
 
         # Process assay_type 'U'
         assay_type = processed_exp_data["assay_type"]
+        value_type = processed_exp_data["value_type"]
         if assay_type == "U":
             processed_exp_data["assay_type"] = "N/A"
 
         # Distribute to affinity/potency lists
-        if assay_type == "B":  # Binding
-            ligand_data_affinity.append(processed_exp_data)
-        elif assay_type == "F":  # Functional
-            ligand_data_potency.append(processed_exp_data)
-        # Other assay types are ignored for these lists, as per original logic implied
+        if value_type:
+            if assay_type == "B":  # Binding
+                ligand_data_affinity.append(processed_exp_data)
+            elif assay_type == "F":  # Functional
+                ligand_data_potency.append(processed_exp_data)
+            # Other assay types are ignored for these lists, as per original logic implied
+        else:
+            ligand_data_qualitative.append(processed_exp_data)
 
-    ligand_data_qualitative = ligand_data_affinity
+    # ligand_data_qualitative = ligand_data_affinity
     return ligand_data_affinity, ligand_data_potency, ligand_data_qualitative
 
 
@@ -1557,12 +1561,15 @@ def get_compact_ligand_details(
                             record_count=record_count,
                         )
 
-                        if assay_label == "Binding":
-                            ligand_data_affinity.append(ligand_record)
-                        elif assay_label == "Functional":
-                            ligand_data_potency.append(ligand_record)
+                        if vtype_label:
+                            if assay_label == "Binding":
+                                ligand_data_affinity.append(ligand_record)
+                            elif assay_label == "Functional":
+                                ligand_data_potency.append(ligand_record)
+                        else:
+                            ligand_data_qualitative.append(ligand_record)
 
-    ligand_data_qualitative = ligand_data_affinity
+    # ligand_data_qualitative = ligand_data_affinity
     return ligand_data_affinity, ligand_data_potency, ligand_data_qualitative
 
 
@@ -3295,7 +3302,7 @@ class LigandInformationView(TemplateView):
                     'x3_name': indication_0,
                     'x4_name': indication_name
                 }
-                
+
                 sankey['links'].append({"source": prot_node, "target": lig_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_name, "linkage_key": "primary","link_identifier": link_id})  # x1 -> x2 (Protein → Ligand)
                 link_id += 1
                 sankey['links'].append({"source": lig_node, "target": level_0_node, "value": 1, "ligtrace": protein_name, "prottrace": indication_0, "linkage_key": "primary","link_identifier": link_id})  # x2 -> x3 (Ligand → Level 0)
@@ -3305,7 +3312,7 @@ class LigandInformationView(TemplateView):
 
                 path_matrix.append(row)
                 row_id += 1
-                
+
             #Fixing redundancy in sankey['links']
             unique_combinations = {}
 
@@ -3433,7 +3440,7 @@ class LigandInformationView(TemplateView):
                 'Is_Phase_IV': 'sum',
                 'Is_Approved': 'max'
                 }).to_dict()
-            
+
             phase_counts['Is_Approved'] = 'Yes' if phase_counts['Is_Approved'] == 1 else 'No'
 
             context.update({
@@ -4175,7 +4182,7 @@ class PhysiologicalLigands(TemplateView):
                             'pdb_code',                                       #22 pdb_code (UniProt link)
                             'structure_type',                                 #23
                             'ligand__sequence'                                #24 Sequence
-                            ).distinct()  
+                            ).distinct()
 
         gtpidlinks = dict(list(LigandID.objects.filter(web_resource__slug='gtoplig').values_list(
                             "ligand",
