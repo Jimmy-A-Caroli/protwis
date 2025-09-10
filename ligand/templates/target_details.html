@@ -609,6 +609,9 @@ function reset_all() {
                     { data: "purchasability", name: "vendors", width: commonColumnWidths.vendors, render: function(data) { return data ? data : "0"; } },
                     { data: "protein__species__common_name", name: "species", width: commonColumnWidths.species, render: function(data) { return data ? data : "-"; } },
                     { data: "assay_type", name: "assay_type", width: commonColumnWidths.assay_type, render: function(data) { if (data === "B") return "Binding"; if (data === "F") return "Functional"; return data ? data : "-"; }},
+                    // MODIFICATION: Add the new columns
+                    { data: "value_type", name: "activity_type", width: commonColumnWidths.activity_type_extended, render: function(data) { return data ? data : "-"; } },
+                    { data: "assay_description", name: "assay_description", width: commonColumnWidths.assay_description_extended, render: function(data) { return data ? data : "-"; } },
                     { data: "qualitative_activity", name: "qualitative_information", width: "250px", render: function(data) { return data ? data : "-"; } },
                     { data: "source", name: "source", width: commonColumnWidths.source, render: function(data) { return data ? data : "-"; } },
                 ];
@@ -627,6 +630,9 @@ function reset_all() {
                     originalColumns.push({ data: "family", name: "family", width: commonColumnWidths.family_compact, defaultContent: "-" });
                 }
                 originalColumns.push({ data: "assay_type", name: "assay_type", width: commonColumnWidths.assay_type, render: function(data) { if (data === "B") return "Binding"; if (data === "F") return "Functional"; return data ? data : "-"; }});
+                // MODIFICATION: Add the new columns
+                originalColumns.push({ data: "value_type", name: "parameter", width: commonColumnWidths.parameter_compact, defaultContent: "-" });
+                originalColumns.push({ data: "record_count", name: "no_records", width: commonColumnWidths.no_records_compact, defaultContent: "-" });
                 originalColumns.push({ data: "qualitative_activity", name: "qualitative_information", width: "250px", defaultContent: "-" });
                 originalColumns.push({ data: "source", name: "source", width: commonColumnWidths.source, defaultContent: "-" });
             }
@@ -785,6 +791,7 @@ function reset_all() {
                 try {
                     if (foldSelectivityDataSource === 'qualitative') {
                         if (mode === 'extended') {
+                            // MODIFICATION: Update filter count for new columns
                             column_filters_config = [].concat(
                                 CreateColumnFilters(api, filter_col_idx_offset + 0, 1, "Multi-select-exact"), // Common name
                                 CreateColumnFilters(api, filter_col_idx_offset + 1, 1, "Multi-select-exact"), // GPCRdb ID
@@ -792,8 +799,10 @@ function reset_all() {
                                 CreateColumnFilters(api, filter_col_idx_offset + 3, 1, "Range-float-vertical"),// Vendors
                                 CreateColumnFilters(api, filter_col_idx_offset + 4, 1, "Multi-select-exact"), // Species
                                 CreateColumnFilters(api, filter_col_idx_offset + 5, 1, "Multi-select-exact"), // Assay Type
-                                CreateColumnFilters(api, filter_col_idx_offset + 6, 1, "Multi-select-exact"), // Qualitative Info
-                                CreateColumnFilters(api, filter_col_idx_offset + 7, 1, "Multi-select-exact")  // Source
+                                CreateColumnFilters(api, filter_col_idx_offset + 6, 1, "Multi-select-exact"), // Activity Type
+                                CreateColumnFilters(api, filter_col_idx_offset + 7, 1, "Multi-select-exact"), // Assay Desc
+                                CreateColumnFilters(api, filter_col_idx_offset + 8, 1, "Multi-select-exact"), // Qualitative Info
+                                CreateColumnFilters(api, filter_col_idx_offset + 9, 1, "Multi-select-exact")  // Source
                             );
                         } else { // 'compact' mode for qualitative
                         column_filters_config = []; let current_data_col_seq = 0; 
@@ -810,7 +819,10 @@ function reset_all() {
                             column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Class
                             column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Family
                             }
-                        column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Assay Type
+                            // MODIFICATION: Update filter count for new columns
+                            column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Assay Type
+                            column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Parameter
+                            column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Range-float-vertical")); // No. records
                         column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Qualitative Info
                         column_filters_config = column_filters_config.concat(CreateColumnFilters(api, filter_col_idx_offset + current_data_col_seq++, 1, "Multi-select-exact")); // Source
                         }

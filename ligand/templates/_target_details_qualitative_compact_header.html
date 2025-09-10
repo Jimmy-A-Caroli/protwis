@@ -16,7 +16,7 @@
         <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="1" data-dt-order="disable">Receptor</th>
       {% endif %}
 
-      <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="3" data-dt-order="disable">Activity</th>
+      <th style="text-align:center; border-left: 1px solid #cccccc;" colspan="5" data-dt-order="disable">Activity</th>
     </tr>
     <tr>
        <th style="width: 30px; text-align:center;"><input type="checkbox" class="select-all-checkbox" title="Select/Deselect All Rows"></th>
@@ -34,6 +34,8 @@
        <th>Family<br /><br /></th>
        {% endif %}
        <th class="border-left">Assay<br>Type</th>
+       <th>Parameter</th>
+       <th>No.<br />records</th>
        <th>Qualitative<br />Information</th>
        <th>Source<br /><br /></th>
     </tr>
@@ -45,6 +47,8 @@
         {% if ligand_query %}
         <td data-dt-order="disable"></td><td data-dt-order="disable"></td><td data-dt-order="disable"></td><td data-dt-order="disable"></td>
         {% endif %}
-        <td class="border-left" data-dt-order="disable"></td><td data-dt-order="disable"></td><td data-dt-order="disable"></td>
+        <td class="border-left" data-dt-order="disable"></td>
+        <td data-dt-order="disable"></td><td data-dt-order="disable"></td>
+        <td data-dt-order="disable"></td><td data-dt-order="disable"></td>
     </tr>
 </thead>
