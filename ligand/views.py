@@ -3604,70 +3604,129 @@ class LigandInformationView(TemplateView):
     def process_assay(assays):
         return_dict = dict()
         for i in assays:
-            name = str(i.protein) + '_' + str(i.source)
-            assay_type = i.value_type
-            if i.source == 'PDSP KiDatabase':
-                i.source = 'PDSP Ki database'
-            if i.source == 'Guide to Pharmacology':
+            name = str(i.protein) + "_" + str(i.source)
+
+            # ROBUST FIX 1: Ensure assay_type is ALWAYS a string.
+            assay_type = i.value_type if i.value_type is not None else "None"
+
+            if i.source == "PDSP KiDatabase":
+                i.source = "PDSP Ki database"
+
+            data_value = None  # Initialize data_value to None
+            if i.source == "Guide to Pharmacology":
                 data_value = i.p_activity_ranges
             else:
+                # ROBUST FIX 2: Safely handle p_activity_value before converting to float.
                 if i.p_activity_value is not None:
                     try:
                         data_value = float(i.p_activity_value)
                     except (ValueError, TypeError):
-                        # Handle cases where the value might be an empty string or non-numeric
-                        data_value = None 
-                else:
-                    data_value = None
+                        # This handles cases where the value might be an empty string '' or other non-numeric text.
+                        data_value = None
 
-            if name in return_dict:
-                if assay_type in return_dict[name]['data_type'].keys():
-                    return_dict[name]['data_type'][assay_type].append(data_value)
+            # Only process entries that have a valid value to add.
+            if data_value is not None:
+                if name in return_dict:
+                    if assay_type in return_dict[name]["data_type"]:
+                        return_dict[name]["data_type"][assay_type].append(data_value)
+                    else:
+                        return_dict[name]["data_type"][assay_type] = [data_value]
                 else:
-                    return_dict[name]['data_type'][assay_type] = [data_value]
-            else:
-                return_dict[name] = dict()
-                return_dict[name]['data_type'] = dict()
-                return_dict[name]['data_type'][assay_type] = [data_value]
-                return_dict[name]['receptor_gtp'] = i.protein.short()
-                return_dict[name]['receptor_uniprot'] = i.protein.entry_short()
-                return_dict[name]['receptor_species'] = i.protein.species.common_name
-                return_dict[name]['receptor_family'] = i.protein.family.parent.short()
-                return_dict[name]['receptor_class'] = i.protein.family.parent.parent.parent.shorter()
-                return_dict[name]['source'] = i.source
+                    return_dict[name] = dict()
+                    return_dict[name]["data_type"] = dict()
+                    return_dict[name]["data_type"][assay_type] = [data_value]
+                    return_dict[name]["receptor_gtp"] = i.protein.short()
+                    return_dict[name]["receptor_uniprot"] = i.protein.entry_short()
+                    return_dict[name]["receptor_species"] = i.protein.species.common_name
+                    return_dict[name]["receptor_family"] = i.protein.family.parent.short()
+                    return_dict[name][
+                        "receptor_class"
+                    ] = i.protein.family.parent.parent.parent.shorter()
+                    return_dict[name]["source"] = i.source
 
         for item in return_dict.keys():
-            for assay_type in return_dict[item]['data_type'].keys():
-                if return_dict[item]['source'] == 'Guide to Pharmacology':
-                    return_dict[item]['data_type'][assay_type] = LigandInformationView.return_splitted_ranges(return_dict[item]['data_type'][assay_type])
+            for assay_type in return_dict[item]["data_type"].keys():
+                if return_dict[item]["source"] == "Guide to Pharmacology":
+                    return_dict[item]["data_type"][assay_type] = (
+                        LigandInformationView.return_splitted_ranges(
+                            return_dict[item]["data_type"][assay_type]
+                        )
+                    )
                 else:
-                    return_dict[item]['data_type'][assay_type] = LigandInformationView.get_min_max_values(return_dict[item]['data_type'][assay_type])
-    	#Unpacking
+                    return_dict[item]["data_type"][assay_type] = (
+                        LigandInformationView.get_min_max_values(
+                            return_dict[item]["data_type"][assay_type]
+                        )
+                    )
+
+        # Unpacking section...
         unpacked_affinity = dict()
         unpacked_potency = dict()
-        potency_values = ['pKB', 'pKb', 'pEC50', 'pA2', 'A2', 'Kb', 'KB', 'EC50', 'Potency', 'IC50', 'pIC50']
-        affinity_values = ['pKi', 'pKd', 'Ki', 'Kd']
+        potency_values = [
+            "pKB",
+            "pKb",
+            "pEC50",
+            "pA2",
+            "A2",
+            "Kb",
+            "KB",
+            "EC50",
+            "Potency",
+            "IC50",
+            "pIC50",
+        ]
+        affinity_values = ["pKi", "pKd", "Ki", "Kd"]
+
+        # This part of the code should now be safe because 'data_type' keys are guaranteed to be strings.
         for key in return_dict.keys():
-            for data_type in return_dict[key]['data_type'].keys():
-                label = '_'.join([key,data_type])
+            for data_type in return_dict[key]["data_type"].keys():
+                if data_type == "None":  # Skip our placeholder
+                    continue
+
+                label = "_".join([key, data_type])
                 if data_type in potency_values:
                     unpacked_potency[label] = deepcopy(return_dict[key])
-                    unpacked_potency[label]['type'] = data_type if data_type.startswith('p') or data_type.startswith('P') or data_type == '-' else 'p'+data_type
-                    unpacked_potency[label]['min'] = return_dict[key]['data_type'][data_type][0]
-                    unpacked_potency[label]['avg'] = return_dict[key]['data_type'][data_type][1]
-                    unpacked_potency[label]['max'] = return_dict[key]['data_type'][data_type][2]
-                    unpacked_potency[label]['source'] = return_dict[key]['source']
-                    unpacked_potency[label].pop('data_type', None)
+                    unpacked_potency[label]["type"] = (
+                        data_type
+                        if data_type.startswith("p")
+                        or data_type.startswith("P")
+                        or data_type == "-"
+                        else "p" + data_type
+                    )
+                    unpacked_potency[label]["min"] = return_dict[key]["data_type"][
+                        data_type
+                    ][0]
+                    unpacked_potency[label]["avg"] = return_dict[key]["data_type"][
+                        data_type
+                    ][1]
+                    unpacked_potency[label]["max"] = return_dict[key]["data_type"][
+                        data_type
+                    ][2]
+                    unpacked_potency[label]["source"] = return_dict[key]["source"]
+                    unpacked_potency[label].pop("data_type", None)
                 elif data_type in affinity_values:
                     unpacked_affinity[label] = deepcopy(return_dict[key])
-                    unpacked_affinity[label]['type'] = data_type if data_type.startswith('p') or data_type.startswith('P') or data_type == '-' else 'p'+data_type
-                    unpacked_affinity[label]['min'] = return_dict[key]['data_type'][data_type][0]
-                    unpacked_affinity[label]['avg'] = return_dict[key]['data_type'][data_type][1]
-                    unpacked_affinity[label]['max'] = return_dict[key]['data_type'][data_type][2]
-                    unpacked_affinity[label]['source'] = return_dict[key]['source']
-                    unpacked_affinity[label].pop('data_type', None)
+                    unpacked_affinity[label]["type"] = (
+                        data_type
+                        if data_type.startswith("p")
+                        or data_type.startswith("P")
+                        or data_type == "-"
+                        else "p" + data_type
+                    )
+                    unpacked_affinity[label]["min"] = return_dict[key]["data_type"][
+                        data_type
+                    ][0]
+                    unpacked_affinity[label]["avg"] = return_dict[key]["data_type"][
+                        data_type
+                    ][1]
+                    unpacked_affinity[label]["max"] = return_dict[key]["data_type"][
+                        data_type
+                    ][2]
+                    unpacked_affinity[label]["source"] = return_dict[key]["source"]
+                    unpacked_affinity[label].pop("data_type", None)
 
         return list(unpacked_affinity.values()), list(unpacked_potency.values())
+
 
     @staticmethod
     def return_splitted_ranges(value):
