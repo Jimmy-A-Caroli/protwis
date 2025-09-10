@@ -1264,7 +1264,7 @@ def get_extended_ligand_details(
     ligand_data_affinity = []
     ligand_data_potency = []
     ligand_data_qualitative = []
-    
+
     total_tested_subquery = (
         AssayExperiment.objects.filter(ligand_id=OuterRef("ligand__id"))
         .values("ligand__id")  # Group by ligand
@@ -1381,12 +1381,12 @@ def get_extended_ligand_details(
 
         # Process assay_type 'U'
         assay_type = processed_exp_data["assay_type"]
-        value_type = processed_exp_data["value_type"]
+        qualitative_data = processed_exp_data["qualitative_activity"]
         if assay_type == "U":
             processed_exp_data["assay_type"] = "N/A"
 
         # Distribute to affinity/potency lists
-        if value_type:
+        if not qualitative_data:
             if assay_type == "B":  # Binding
                 ligand_data_affinity.append(processed_exp_data)
             elif assay_type == "F":  # Functional
@@ -1566,13 +1566,13 @@ def get_compact_ligand_details(
                             qualitative_activity=representative_exp.qualitative_activity if representative_exp else None,
                         )
 
-                        if vtype_label:
+                        if representative_exp and representative_exp.qualitative_activity:
+                            ligand_data_qualitative.append(ligand_record)
+                        else:
                             if assay_label == "Binding":
                                 ligand_data_affinity.append(ligand_record)
                             elif assay_label == "Functional":
                                 ligand_data_potency.append(ligand_record)
-                        else:
-                            ligand_data_qualitative.append(ligand_record)
 
     # ligand_data_qualitative = ligand_data_affinity
     return ligand_data_affinity, ligand_data_potency, ligand_data_qualitative
