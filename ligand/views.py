@@ -3611,7 +3611,14 @@ class LigandInformationView(TemplateView):
             if i.source == 'Guide to Pharmacology':
                 data_value = i.p_activity_ranges
             else:
-                data_value = float(i.p_activity_value)
+                if i.p_activity_value is not None:
+                    try:
+                        data_value = float(i.p_activity_value)
+                    except (ValueError, TypeError):
+                        # Handle cases where the value might be an empty string or non-numeric
+                        data_value = None 
+                else:
+                    data_value = None
 
             if name in return_dict:
                 if assay_type in return_dict[name]['data_type'].keys():
@@ -3725,6 +3732,16 @@ class LigandInformationView(TemplateView):
 
     @staticmethod
     def get_min_max_values(value):
+
+        # Filter out None values from the list to avoid TypeErrors.
+        numeric_values = [v for v in value if v is not None]
+
+        # Check if there are any valid numeric values left to process.
+        if not numeric_values:
+            # If the list is empty after filtering, return default placeholders.
+            return ['-', '-', '-']
+
+        # If there are valid numbers, proceed with calculations.
         maximum = max(value)
         minimum = min(value)
         avg = sum(value) / len(value)
