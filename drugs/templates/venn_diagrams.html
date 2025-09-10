@@ -71,6 +71,23 @@
         position: absolute;
         pointer-events: none;
     }
+    /* Button spinner (same as structure browser) */
+    .dt-button { position: relative; }
+    .dt-button > .btn-spinner {
+      display: none;
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      width: 16px; height: 16px;
+      border: 2px solid rgba(0,0,0,.25);
+      border-top-color: rgba(0,0,0,.7);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1;
+      animation: vennBtnSpin .8s linear infinite;
+    }
+    @keyframes vennBtnSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    .dt-button.is-busy > .btn-spinner { display: inline-block; }
+    .dt-button.is-busy > span { opacity: .45; }
 </style>
 {% endblock %}
 {% block content %}
@@ -286,6 +303,7 @@
 <script src="{% static 'home/js/compoundPreviewTooltip.js' %}"></script> <!-- Needed for the hover display of ligands-->
 <script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- Dependency for the hover display of ligands-->
 <script src="{% static 'home/js/PeptideLayoutEngine.js' %}"></script>
+<script src="{% static 'home/js/xlsx.full.min.js' %}"></script>
 
 <script>
   ! function($) {
@@ -342,6 +360,8 @@ $(document).ready(function () {
       table.push(lines[lindex].trim());
     } return (table);
   }
+
+  
 
   // Define the `table` variable globally so it's accessible in the `toggleGroupVisibility` function
   let table;
@@ -738,9 +758,42 @@ $(document).ready(function () {
         };
     }
 
+    function showBtnSpinner($btn){
+      if (!$btn.children('.btn-spinner').length){
+        $btn.append('<span class="btn-spinner" aria-hidden="true"></span>');
+      }
+      $btn.addClass('is-busy');
+    }
+    function hideBtnSpinner($btn){ $btn.removeClass('is-busy'); }
+
+    /** Exactly like on the other page: ensures the spinner is visible before work starts */
+    function runWithExportSpinner(dt, workFn) {
+      // Target our Export button by name
+      const api   = dt.button('exportExcel:name');
+      const $main = api ? $(api.node()) : $();
+
+      if ($main.length && $main.hasClass('is-busy')) return Promise.resolve();
+
+      if ($main.length) showBtnSpinner($main);
+
+      // Let the paint happen first so the spinner shows
+      return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)))
+        .then(() => Promise.resolve(workFn()))
+        .finally(() => {
+          setTimeout(() => { if ($main.length) hideBtnSpinner($main); }, 150);
+        });
+    }
+
     const buttonsArray = [
       { text: 'Reset filters', action: function () { reset_all(); } },
       controlTableButton(layout, hideColumns), // Use the new function to create the control table button
+       {
+        text: 'Export Excel',
+        name: 'exportExcel', // <-- so runWithExportSpinner can find it
+        action: function (e, dt) {
+          runWithExportSpinner(dt, () => exportVennToXlsx('#receptor_table', layout));
+        }
+      }
     ];
 
     // Initialize or reinitialize DataTable
@@ -1230,5 +1283,127 @@ String.prototype.parseTransform = function() {
       element.style.color = color;
       // element.style.textDecoration = 'underline';
   }
+
+  // ===== Excel Export (Venn) ================================================
+  // Build a workbook from the current DataTable state: visible cols, filtered+ordered rows.
+  // Adds a merged "super header" row that matches your complex headers.
+  // IMPORTANT: We do NOT exclude any columns besides those currently hidden by the page logic.
+  function exportVennToXlsx(tableSelector, layout) {
+  const dt = $(tableSelector).DataTable();
+  const settings = dt.settings()[0];
+
+  // --- helpers ---------------------------------------------------------------
+  const htmlToText = (html) => {
+    const div = document.createElement('div');
+    div.innerHTML = String(html ?? '').replace(/<br\s*\/?>/gi, '\n');
+    return (div.textContent || div.innerText || '').trim();
+  };
+  const coerceMaybeNumber = (s) => {
+    const x = s.replace(/,/g, '');
+    return (/^-?\d+(\.\d+)?$/.test(x)) ? Number(x) : s;
+  };
+  const isATCIndex = (layout, idx) =>
+    (layout === "drugs" ? [3, 4, 5] : [8, 9, 10]).includes(idx);
+
+  // rows first (filtered + ordered) so we can inspect column data
+  const rowIdxs = dt.rows({ search: 'applied', order: 'applied' }).indexes().toArray();
+
+  // start from currently visible columns
+  let visibleCols = dt.columns(':visible').indexes().toArray();
+
+  // drop ATC columns that are completely empty for the current filtered set
+  const colHasAnyData = (ci) => rowIdxs.some(ri => {
+    const exp = dt.cell(ri, ci).render('export');
+    const val = (exp != null && exp !== '') ? exp : dt.cell(ri, ci).render('display');
+    const s = htmlToText(val);
+    return s && s !== '-' && s !== 'Unknown';
+  });
+  visibleCols = visibleCols.filter(ci => !isATCIndex(layout, ci) || colHasAnyData(ci));
+
+  if (!visibleCols.length) { alert('No visible columns to export.'); return; }
+
+  // Group definitions (match your DT configs)
+  const GROUPS = (layout === "drugs")
+    ? [
+        { label: 'Agents/drugs', idxs: [ 0,1,2,3,4,5,6,7 ] },
+        { label: 'Targets',      idxs: [ 8,9,10,11,12 ] },
+        { label: 'Diseases',     idxs: [ 13,14,15,16,17 ] }
+      ]
+    : [
+        { label: 'Targets',      idxs: [ 0,1,2,3,4 ] },
+        { label: 'Agents/drugs', idxs: [ 5,6,7,8,9,10,11,12 ] },
+        { label: 'Diseases',     idxs: [ 13,14,15,16,17 ] }
+      ];
+
+  // Super-header row + merges, honoring the final visibleCols
+  const groupRow = Array(visibleCols.length).fill(null);
+  const merges = [];
+  GROUPS.forEach(g => {
+    const vis = visibleCols.filter(c => g.idxs.includes(c));
+    if (!vis.length) return;
+    const cStart = visibleCols.indexOf(vis[0]);
+    const cEnd   = visibleCols.indexOf(vis[vis.length - 1]);
+    groupRow[cStart] = g.label;
+    if (cEnd > cStart) merges.push({ s:{ r:0, c:cStart }, e:{ r:0, c:cEnd } });
+  });
+
+  // Pull “titles” header row from original THEAD (2nd from last row)
+  const $theadOrig = $('#receptor_table').closest('table').find('thead');
+  const $titleRow  = $theadOrig.find('tr').eq(-2);
+
+  const headerTitles = visibleCols.map(ci => {
+    const colCfg = settings.aoColumns[ci] || {};
+    if (colCfg.sName) return String(colCfg.sName);
+
+    const $ths = $titleRow.children('th');
+    if (ci < $ths.length) {
+      const $th = $($ths[ci]).clone();
+      $th.find('button, i, .glyphicon, .icon-button, .dt-column-order').remove();
+      const t = $th.text().replace(/\s+/g, ' ').trim();
+      if (t) return t;
+    }
+    const th = colCfg.nTh || dt.column(ci).header();
+    return th ? $(th).text().replace(/\s+/g, ' ').trim() : `Column ${ci}`;
+  });
+
+  // Build body AoA
+  const body = rowIdxs.map(ri =>
+    visibleCols.map(ci => {
+      const exp = dt.cell(ri, ci).render('export');
+      const val = (exp != null && exp !== '') ? exp : dt.cell(ri, ci).render('display');
+      return coerceMaybeNumber(htmlToText(val));
+    })
+  );
+
+  // Sheet
+  const aoa = [groupRow, headerTitles, ...body];
+  const ws  = XLSX.utils.aoa_to_sheet(aoa);
+  if (merges.length) ws['!merges'] = merges;
+
+  // Column widths from content
+  ws['!cols'] = headerTitles.map((h, j) => {
+    const maxLen = Math.max(String(h||'').length, ...body.map(r => String(r[j]||'').length));
+    return { wch: Math.min(Math.max(10, maxLen + 2), 60) };
+  });
+
+  // Excel sheet-name hygiene
+  function safeSheetName(name) {
+    const cleaned = String(name || 'Sheet')
+      .replace(/[:\\\/\?\*\[\]]/g, '–')
+      .slice(0, 31)
+      .trim();
+    return cleaned || 'Sheet';
+  }
+
+  const wb = XLSX.utils.book_new();
+  const rawSheetName = (layout === 'drugs' ? 'Agents-Drugs' : 'Targets');
+  XLSX.utils.book_append_sheet(wb, ws, safeSheetName(rawSheetName));
+
+  const stamp = new Date().toISOString().slice(0,10);
+  const fname = `Venn_${layout}_filtered_${stamp}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+
 </script>
 {% endblock %}
