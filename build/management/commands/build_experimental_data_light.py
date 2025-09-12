@@ -722,7 +722,7 @@ class Command(BaseBuild):
                 tick1(idx)
 
                 lig_type = (
-                    LigandType.objects.get(id=row['ligand_type_id'])
+                    LigandType.objects.get_or_create(id=row['ligand_type_id'])
                     if row.get('ligand_type_id')
                     else LigandType.objects.get(id=5)
                 )
@@ -1535,10 +1535,10 @@ class Command(BaseBuild):
                         keys["inchikey"] = head_inchi
                         optional_conditions |= Q(clean_inchikey=head_inchi)  # OR condition
 
-                sequence = row.get("sequence")
-                if pd.notna(sequence) and sequence:
-                    keys["sequence"] = sequence
-                    optional_conditions |= Q(sequence=sequence)  # OR condition
+                # sequence = row.get("sequence")
+                # if pd.notna(sequence) and sequence:
+                #     keys["sequence"] = sequence
+                #     optional_conditions |= Q(sequence=sequence)  # OR condition
 
                 name = row.get("pref_name")
                 if pd.notna(name) and name:
@@ -1750,9 +1750,9 @@ class Command(BaseBuild):
         print("\n#2 Building ChEMBL ligands cache", datetime.datetime.now())
         # ids = list(bioactivity_data["parent_molecule_chembl_id"].unique())  # not filtering is way faster
         # Why this was based on LigandID and not on Ligand?
-        ligands = list(Ligand.objects.filter(name__startswith="CHEMBL", parent__isnull=False).values_list("id", "name").distinct())
+        # ligands = list(Ligand.objects.filter(name__startswith="CHEMBL", parent__isnull=False).values_list("id", "name").distinct())
         # ligands = list(Ligand.objects.filter(name__startswith="CHEMBL").values_list("id", "name").distinct())
-        # ligands = list(LigandID.objects.filter(index__startswith="CHEMBL").values_list("ligand_id", "index"))
+        ligands = list(LigandID.objects.filter(index__startswith="CHEMBL", ligand_id__parent__isnull=False).values_list("ligand_id", "index"))
         lig_dict = {entry[1]: entry[0] for entry in ligands}
 
         print("\n#3 Building ChEMBL proteins cache", datetime.datetime.now())
@@ -2639,6 +2639,7 @@ class Command(BaseBuild):
 
             if ligand_label not in self.ligand_cache.keys():
                 ids = {}
+                ids['sequence'] = row['Sequence']
                 ligand = get_or_create_ligand(row['Ligand Name'], ids, lig_type='peptide', source='Evolvus', helm=helm)
                 self.ligand_cache[ligand_label] = ligand
 
