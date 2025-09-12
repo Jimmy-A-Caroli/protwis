@@ -271,6 +271,10 @@ class Command(BaseCommand):
         PEPTIDE, _        = LigandType.objects.get_or_create(slug='peptide', name='Peptide')
         PROTEIN, _        = LigandType.objects.get_or_create(slug='protein', name='Protein')
         UNKNOWN, _        = LigandType.objects.get_or_create(slug='na', name='Unknown')
+        NONE, _        = LigandType.objects.get_or_create(slug='none', name='None')
+        ION, _        = LigandType.objects.get_or_create(slug='ion', name='Ion')
+        AMINOACID, _        = LigandType.objects.get_or_create(slug='amino-acid', name='Amino-Acid')
+        LIPID, _        = LigandType.objects.get_or_create(slug='lipid', name='Lipid')
 
         test_model_updates(self.all_models, self.tracker, check=True)
         self.logger.info('COMPLETED CREATING LIGAND TYPES')
