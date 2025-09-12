@@ -38,6 +38,7 @@ class Command(BaseCommand):
             'create_residue_numbering_schemes',
             'create_anomalies',
             'create_ligand_roles',
+            'create_ligand_types',
         ]
 
         # execute functions
@@ -264,3 +265,12 @@ class Command(BaseCommand):
         LigandRole.objects.bulk_create(ligand_roles)
         test_model_updates(self.all_models, self.tracker, check=True)
         self.logger.info('COMPLETED CREATING LIGAND ROLES')
+
+    def create_ligand_types(self):
+        SMALL_MOLECULE, _ = LigandType.objects.get_or_create(slug='small-molecule', name='Small molecule')
+        PEPTIDE, _        = LigandType.objects.get_or_create(slug='peptide', name='Peptide')
+        PROTEIN, _        = LigandType.objects.get_or_create(slug='protein', name='Protein')
+        UNKNOWN, _        = LigandType.objects.get_or_create(slug='na', name='Unknown')
+
+        test_model_updates(self.all_models, self.tracker, check=True)
+        self.logger.info('COMPLETED CREATING LIGAND TYPES')

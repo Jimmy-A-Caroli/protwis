@@ -54,10 +54,10 @@ class Command(BaseBuild):
     #######################################################################
     ligand_dump = dump_checker('ligand.Ligand')
     print(ligand_dump['latest_dump'])
-    ligand_csv = pd.read_csv(ligand_dump['latest_dump'], index_col=0)
+    ligand_csv = pd.read_csv(ligand_dump['latest_dump'], sep=';', index_col=0)
     id_dump = dump_checker('ligand.LigandID')
-    id_csv = pd.read_csv(id_dump['latest_dump'], index_col=0)
-    # test_model_updates(all_models, tracker, initialize=True)
+    id_csv = pd.read_csv(id_dump['latest_dump'], sep=';', index_col=0)
+    test_model_updates(all_models, tracker, initialize=True)
 
     def add_arguments(self, parser):
         parser.add_argument("--test_run",
@@ -226,12 +226,13 @@ class Command(BaseBuild):
         # self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
         # print('Performing checks')
         # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
-        # #CHEMBL
+        #CHEMBL
         # print("\n\nStarted comparing ChEBML ligands")
         # self.build_chembl_ligands()
+
         # print("\n\nEnded building ChEMBL ligands")
         # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         # #BUILDING BIOACTIVITIES
         # #GTP bioactivity data
@@ -249,65 +250,65 @@ class Command(BaseBuild):
         # print('Performing checks')
         # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        # #ChEMBL/PubChem vendor data
-        # print("\n\nStarted building PubChem vendor data")
-        # self.build_pubchem_vendor_links()
-        # print("Ended building PubChem vendor data")
-        # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        #ChEMBL/PubChem vendor data
+        print("\n\nStarted building PubChem vendor data")
+        self.build_pubchem_vendor_links()
+        print("Ended building PubChem vendor data")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        # #PDSP KiDatabase bioactivity data
-        # print("\n\nStarted building PDSP KiDatabase bioactivities")
-        # # to_update = self.comparePDSP(Command.ligand_csv)
-        # # print(f"Building {len(to_update)} PDSP KiDatabase bioactivities missing from dump")
-        # self.build_kidatabase_bioactivities()  # 14,562
-        # print("Ended building PDSP KiDatabase bioactivities")
-        # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        #PDSP KiDatabase bioactivity data
+        print("\n\nStarted building PDSP KiDatabase bioactivities")
+        # to_update = self.comparePDSP(Command.ligand_csv)
+        # print(f"Building {len(to_update)} PDSP KiDatabase bioactivities missing from dump")
+        self.build_kidatabase_bioactivities()  # 14,562
+        print("Ended building PDSP KiDatabase bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        # #Drug Central bioactivity data
-        # print("\n\nStarted building Drug Central bioactivities")
-        # # to_update = self.compareDrugCentral(Command.ligand_csv)
-        # # print(f"Building {len(to_update)}  Drug Central bioactivities missing from dump")
-        # self.build_drugcentral_bioactivities()  # 5,844
-        # print("Ended building Drug Central bioactivities")
-        # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        #Drug Central bioactivity data
+        print("\n\nStarted building Drug Central bioactivities")
+        # to_update = self.compareDrugCentral(Command.ligand_csv)
+        # print(f"Building {len(to_update)}  Drug Central bioactivities missing from dump")
+        self.build_drugcentral_bioactivities()  # 5,844
+        print("Ended building Drug Central bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         #Evolvus bioactivity data
         print("\n\nStarted building Evolvus bioactivities")
         self.build_evolvus_bioactivities()
         print("\n\nEnded building Evolvus bioactivities")
         print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        # #ENDOGENOUS LIGANDS
-        # print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
-        # print('\n#1 Preprocessing the data')
-        # processed_data = self.data_preparation(gtp_detailed_endogenous, gtp_interactions, iuphar_ids)
-        # print('\n#2 Labeling Principal and Secondary endogenous ligands')
-        # endogenous_data, to_be_ranked = self.labeling_principals(processed_data)
-        # print('\n#3 Adding potency ranking where required')
-        # ranked_data = self.adding_potency_rankings(endogenous_data, to_be_ranked)
-        # print('\n#4 Creating and filling the Endogenous_GTP model')
-        # endogenous_dicts = self.convert_dataframe(ranked_data)
-        # self.create_model(endogenous_dicts)
-        # print("\n\nEnded building endogenous data")
-        # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        #ENDOGENOUS LIGANDS
+        print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
+        print('\n#1 Preprocessing the data')
+        processed_data = self.data_preparation(gtp_detailed_endogenous, gtp_interactions, iuphar_ids)
+        print('\n#2 Labeling Principal and Secondary endogenous ligands')
+        endogenous_data, to_be_ranked = self.labeling_principals(processed_data)
+        print('\n#3 Adding potency ranking where required')
+        ranked_data = self.adding_potency_rankings(endogenous_data, to_be_ranked)
+        print('\n#4 Creating and filling the Endogenous_GTP model')
+        endogenous_dicts = self.convert_dataframe(ranked_data)
+        self.create_model(endogenous_dicts)
+        print("\n\nEnded building endogenous data")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        # #AFTERMATH FIXES
-        # print("\n\nStarted calculating potency and affinity indexes")
-        # self.calculate_potency_and_affinity()
-        # print("Potency and affinity indexes have been added to the model")
+        #AFTERMATH FIXES
+        print("\n\nStarted calculating potency and affinity indexes")
+        self.calculate_potency_and_affinity()
+        print("Potency and affinity indexes have been added to the model")
 
-        # print("\n\nFixing mismatched LigandType definition")
-        # n  = apply_canonical_ligand_types()
-        # print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
+        print("\n\nFixing mismatched LigandType definition")
+        n  = apply_canonical_ligand_types()
+        print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
-        # print("\n\nRunning the Dump Checker and saving new dumps if needed")
-        # ligand_dump = dump_checker('ligand.Ligand')
-        # id_dump = dump_checker('ligand.LigandID')
+        print("\n\nRunning the Dump Checker and saving new dumps if needed")
+        ligand_dump = dump_checker('ligand.Ligand')
+        id_dump = dump_checker('ligand.LigandID')
 
     @staticmethod
     def reset_pk_sequence(model):
@@ -1481,38 +1482,36 @@ class Command(BaseBuild):
                         inchikey=row["standard_inchi_key"],
                         parent__isnull=False
                     )
-                except Ligand.DoesNotExist:
-                    # If no matching Ligand, skip to next row
-                    continue
-
-                # Before saving the new LigandID for the ChEMBL ID:
-                if not LigandID.objects.filter(
-                        ligand=ligand,
-                        index=chembl_id,
-                        web_resource=wr_chembl
-                    ).exists():
-                    LigandID(
-                        index=chembl_id,
-                        web_resource=wr_chembl,
-                        ligand=ligand
-                    ).save()
-
-                # Then link any PubChem CIDs, but only if they don’t already exist:
-                if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
-                    for cid in row["pubchem_cid"].split(";"):
-                        if not LigandID.objects.filter(
-                                ligand=ligand,
-                                index=cid,
-                                web_resource=wr_pubchem
+                    # Before saving the new LigandID for the ChEMBL ID:
+                    if not LigandID.objects.filter(
+                            ligand=ligand,
+                            index=chembl_id,
+                            web_resource=wr_chembl
                         ).exists():
-                            LigandID(
-                                index=cid,
-                                web_resource=wr_pubchem,
-                                ligand=ligand
-                            ).save()
+                        LigandID(
+                            index=chembl_id,
+                            web_resource=wr_chembl,
+                            ligand=ligand
+                        ).save()
 
-                insert = False
-
+                    # Then link any PubChem CIDs, but only if they don’t already exist:
+                    if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
+                        for cid in row["pubchem_cid"].split(";"):
+                            if not LigandID.objects.filter(
+                                    ligand=ligand,
+                                    index=cid,
+                                    web_resource=wr_pubchem
+                            ).exists():
+                                LigandID(
+                                    index=cid,
+                                    web_resource=wr_pubchem,
+                                    ligand=ligand
+                                ).save()
+                    insert = False
+                except Ligand.DoesNotExist:
+                    # If no matching Ligand, create ligand
+                    pass
+            print(insert)
             if insert:
                 parent = None
                 keys = {}
@@ -1535,10 +1534,10 @@ class Command(BaseBuild):
                         keys["inchikey"] = head_inchi
                         optional_conditions |= Q(clean_inchikey=head_inchi)  # OR condition
 
-                sequence = row.get("sequence")
-                if pd.notna(sequence) and sequence:
-                    keys["sequence"] = sequence
-                    optional_conditions |= Q(sequence=sequence)  # OR condition
+                # sequence = row.get("sequence")
+                # if pd.notna(sequence) and sequence:
+                #     keys["sequence"] = sequence
+                #     optional_conditions |= Q(sequence=sequence)  # OR condition
 
                 name = row.get("pref_name")
                 if pd.notna(name) and name:
@@ -1580,9 +1579,9 @@ class Command(BaseBuild):
                     ligand_type=smallmol,  # assuming smallmol is already defined
                     smiles=row.get('smiles'),
                     inchikey=row.get('standard_inchi_key'),
-                    sequence=row.get("sequence"),
+                    sequence=row.get("sequence") if pd.notna(row.get("sequence")) else None,
                     source="ChEMBL_sm",
-                    helm=row.get('helm_notation'),
+                    helm=row.get('helm_notation') if pd.notna(row.get("helm_notation")) else None,
                     parent=parent  # directly assign the parent (which was already created)
                 )
 
@@ -1614,7 +1613,8 @@ class Command(BaseBuild):
                             "link": LigandID(index=cid, web_resource=wr_pubchem),
                             "lig_idx": len(ligands) - 1
                         })
-
+                print(ligands)
+                print(len(ligands), Command.bulk_size)
                 # Bulk insert every X entries or on the last row
                 if len(ligands) == Command.bulk_size or (index == lig_entries - 1):
                     # 1) Insert all pending Ligand objects
@@ -1750,9 +1750,9 @@ class Command(BaseBuild):
         print("\n#2 Building ChEMBL ligands cache", datetime.datetime.now())
         # ids = list(bioactivity_data["parent_molecule_chembl_id"].unique())  # not filtering is way faster
         # Why this was based on LigandID and not on Ligand?
-        ligands = list(Ligand.objects.filter(name__startswith="CHEMBL", parent__isnull=False).values_list("id", "name").distinct())
+        # ligands = list(Ligand.objects.filter(name__startswith="CHEMBL", parent__isnull=False).values_list("id", "name").distinct())
         # ligands = list(Ligand.objects.filter(name__startswith="CHEMBL").values_list("id", "name").distinct())
-        # ligands = list(LigandID.objects.filter(index__startswith="CHEMBL").values_list("ligand_id", "index"))
+        ligands = list(LigandID.objects.filter(index__startswith="CHEMBL", ligand_id__parent__isnull=False).values_list("ligand_id", "index"))
         lig_dict = {entry[1]: entry[0] for entry in ligands}
 
         print("\n#3 Building ChEMBL proteins cache", datetime.datetime.now())
@@ -2639,6 +2639,7 @@ class Command(BaseBuild):
 
             if ligand_label not in self.ligand_cache.keys():
                 ids = {}
+                ids['sequence'] = row['Sequence'] if pd.notna(row['Sequence']) else None
                 ligand = get_or_create_ligand(row['Ligand Name'], ids, lig_type='peptide', source='Evolvus', helm=helm)
                 self.ligand_cache[ligand_label] = ligand
 

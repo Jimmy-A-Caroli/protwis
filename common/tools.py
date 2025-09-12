@@ -110,7 +110,7 @@ def dump_checker(model_label, record_count=None):
     qs = Model._default_manager.all().order_by(pk).values_list(*columns)
 
     with open(out_path, "w", encoding="utf-8", newline="") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, delimiter=';')
         w.writerow(columns)
         for row in qs.iterator():
             out_row = []
