@@ -69,6 +69,11 @@ class Command(BaseBuild):
                             dest='purge',
                             default=False,
                             help='Purge existing ligand records')
+        parser.add_argument('--make_dump',
+                            action='store_true',
+                            dest='purge',
+                            default=False,
+                            help='Create dump')
 
     def handle(self, *args, **options):
         if options["test_run"]:
@@ -85,170 +90,170 @@ class Command(BaseBuild):
             print("Ended purging data")
 
 
-        # print("\n\nRebuilding the Ligand Model based on latest dump")
-        # self.reload_dump()
-        # print("Ended reloading data from ligand dump")
+        print("\n\nRebuilding the Ligand Model based on latest dump")
+        self.reload_dump()
+        print("Ended reloading data from ligand dump")
 
-        # # Fetching all the Guide to Pharmacology data
-        # print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
-        # gtp_uniprot_link = get_or_create_url_cache(
-        #     "https://www.guidetopharmacology.org/DATA/GtP_to_UniProt_mapping.csv", 7 * 24 * 3600)
-        # gtp_uniprot = pd.read_csv(gtp_uniprot_link, dtype=str, header=1)
-        # self.normalize_gtp_headers(gtp_uniprot)
-        # gtp_complete_ligands_link = get_or_create_url_cache(
-        #     "https://www.guidetopharmacology.org/DATA/ligands.csv", 7 * 24 * 3600)
-        # gtp_complete_ligands = pd.read_csv(
-        #     gtp_complete_ligands_link, dtype=str, header=1)
-        # self.normalize_gtp_headers(gtp_complete_ligands)
-        # gtp_ligand_mapping_link = get_or_create_url_cache(
-        #     "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.csv", 7 * 24 * 3600)
-        # gtp_ligand_mapping = pd.read_csv(
-        #     gtp_ligand_mapping_link, dtype=str, header=1)
-        # self.normalize_gtp_headers(gtp_ligand_mapping)
-        # gtp_interactions_link = get_or_create_url_cache(
-        #     "https://www.guidetopharmacology.org/DATA/interactions.csv", 7 * 24 * 3600)
-        # gtp_interactions = pd.read_csv(
-        #     gtp_interactions_link, dtype=str, header=1)
-        # self.normalize_gtp_headers(gtp_interactions)
-        # gtp_detailed_endogenous_link = get_or_create_url_cache(
-        #     "https://www.guidetopharmacology.org/DATA/endogenous_ligand_detailed.csv", 7 * 24 * 3600)
-        # gtp_detailed_endogenous = pd.read_csv(
-        #     gtp_detailed_endogenous_link, dtype=str, header=1)
-        # self.normalize_gtp_headers(gtp_detailed_endogenous)
-        # gtp_peptides_link = get_or_create_url_cache(
-        #     "https://www.guidetopharmacology.org/DATA/peptides.csv", 7 * 24 * 3600)
-        # gtp_peptides = pd.read_csv(gtp_peptides_link, dtype=str, header=1)
-        # self.normalize_gtp_headers(gtp_peptides)
+        # Fetching all the Guide to Pharmacology data
+        print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
+        gtp_uniprot_link = get_or_create_url_cache(
+            "https://www.guidetopharmacology.org/DATA/GtP_to_UniProt_mapping.csv", 7 * 24 * 3600)
+        gtp_uniprot = pd.read_csv(gtp_uniprot_link, dtype=str, header=1)
+        self.normalize_gtp_headers(gtp_uniprot)
+        gtp_complete_ligands_link = get_or_create_url_cache(
+            "https://www.guidetopharmacology.org/DATA/ligands.csv", 7 * 24 * 3600)
+        gtp_complete_ligands = pd.read_csv(
+            gtp_complete_ligands_link, dtype=str, header=1)
+        self.normalize_gtp_headers(gtp_complete_ligands)
+        gtp_ligand_mapping_link = get_or_create_url_cache(
+            "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.csv", 7 * 24 * 3600)
+        gtp_ligand_mapping = pd.read_csv(
+            gtp_ligand_mapping_link, dtype=str, header=1)
+        self.normalize_gtp_headers(gtp_ligand_mapping)
+        gtp_interactions_link = get_or_create_url_cache(
+            "https://www.guidetopharmacology.org/DATA/interactions.csv", 7 * 24 * 3600)
+        gtp_interactions = pd.read_csv(
+            gtp_interactions_link, dtype=str, header=1)
+        self.normalize_gtp_headers(gtp_interactions)
+        gtp_detailed_endogenous_link = get_or_create_url_cache(
+            "https://www.guidetopharmacology.org/DATA/endogenous_ligand_detailed.csv", 7 * 24 * 3600)
+        gtp_detailed_endogenous = pd.read_csv(
+            gtp_detailed_endogenous_link, dtype=str, header=1)
+        self.normalize_gtp_headers(gtp_detailed_endogenous)
+        gtp_peptides_link = get_or_create_url_cache(
+            "https://www.guidetopharmacology.org/DATA/peptides.csv", 7 * 24 * 3600)
+        gtp_peptides = pd.read_csv(gtp_peptides_link, dtype=str, header=1)
+        self.normalize_gtp_headers(gtp_peptides)
 
-        # # This gets all the info of the ligand and the interaction with the target
-        # iuphar_ids = self.compare_proteins(gtp_uniprot)
-        # bioactivity_ligands_ids = self.obtain_ligands(gtp_interactions, iuphar_ids, ['target_id', 'ligand_id'])
-        # # Now I have all the data I need
-        # bioactivity_data_gtp = self.get_ligands_data(
-        #     bioactivity_ligands_ids, gtp_complete_ligands, gtp_ligand_mapping, ligand_interactions=gtp_interactions, target_ids=iuphar_ids)
-        # # Assess the assay type given info from affinity units and assay comments
-        # bioactivity_data_gtp = self.classify_assay(bioactivity_data_gtp, 'affinity_units', 'assay_description')
-        # bioactivity_data_gtp.fillna('None', inplace=True)
-        # print("Ended parsing Guide to Pharmacology bioactivities data")
+        # This gets all the info of the ligand and the interaction with the target
+        iuphar_ids = self.compare_proteins(gtp_uniprot)
+        bioactivity_ligands_ids = self.obtain_ligands(gtp_interactions, iuphar_ids, ['target_id', 'ligand_id'])
+        # Now I have all the data I need
+        bioactivity_data_gtp = self.get_ligands_data(
+            bioactivity_ligands_ids, gtp_complete_ligands, gtp_ligand_mapping, ligand_interactions=gtp_interactions, target_ids=iuphar_ids)
+        # Assess the assay type given info from affinity units and assay comments
+        bioactivity_data_gtp = self.classify_assay(bioactivity_data_gtp, 'affinity_units', 'assay_description')
+        bioactivity_data_gtp.fillna('None', inplace=True)
+        print("Ended parsing Guide to Pharmacology bioactivities data")
 
-        # print("\n\nStarted building all Guide to Pharmacology ligands")
-        # print('\n\nRetrieving IUPHAR ids from UniProt ids')
-        # print('\n\nRetrieving ALL ligands from GTP associated to GPCRs')
-        # endogenous_ligands_ids = self.obtain_ligands(gtp_detailed_endogenous, iuphar_ids, ['target_id', 'ligand_id'])
-        # ligand_ids = list(set(bioactivity_ligands_ids + endogenous_ligands_ids))
+        print("\n\nStarted building all Guide to Pharmacology ligands")
+        print('\n\nRetrieving IUPHAR ids from UniProt ids')
+        print('\n\nRetrieving ALL ligands from GTP associated to GPCRs')
+        endogenous_ligands_ids = self.obtain_ligands(gtp_detailed_endogenous, iuphar_ids, ['target_id', 'ligand_id'])
+        ligand_ids = list(set(bioactivity_ligands_ids + endogenous_ligands_ids))
 
-        # print('\n\nCollating all info from GPCR related ligands in the GTP')
-        # ligand_data = self.get_ligands_data(ligand_ids, gtp_complete_ligands, gtp_ligand_mapping)
+        print('\n\nCollating all info from GPCR related ligands in the GTP')
+        ligand_data = self.get_ligands_data(ligand_ids, gtp_complete_ligands, gtp_ligand_mapping)
 
-        # #Solving duplicated issues
-        # ligand_data["species"] = ligand_data["species"].fillna("")
-        # ligand_data["uniprot_id"] = ligand_data["uniprot_id"].fillna("")
+        #Solving duplicated issues
+        ligand_data["species"] = ligand_data["species"].fillna("")
+        ligand_data["uniprot_id"] = ligand_data["uniprot_id"].fillna("")
 
-        # ligand_data["species_list"] = ligand_data["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
-        # ligand_data["uniprot_list"] = ligand_data["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
+        ligand_data["species_list"] = ligand_data["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
+        ligand_data["uniprot_list"] = ligand_data["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
 
-        # #Copy the same for gtp_peptides
-        # gtp_peptides["species"] = gtp_peptides["species"].fillna("")
-        # gtp_peptides["uniprot_id"] = gtp_peptides["uniprot_id"].fillna("")
+        #Copy the same for gtp_peptides
+        gtp_peptides["species"] = gtp_peptides["species"].fillna("")
+        gtp_peptides["uniprot_id"] = gtp_peptides["uniprot_id"].fillna("")
 
-        # gtp_peptides["species_list"] = gtp_peptides["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
-        # gtp_peptides["uniprot_list"] = gtp_peptides["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
+        gtp_peptides["species_list"] = gtp_peptides["species"].apply(lambda x: [s.strip() for s in x.split(",") if s.strip()])
+        gtp_peptides["uniprot_list"] = gtp_peptides["uniprot_id"].apply(lambda x: [u.strip() for u in x.split("|") if u.strip()])
 
-        # # 2) Apply the helper to each row
-        # ligand_expanded = []
-        # peptides_expanded = []
-        # for _, row in ligand_data.iterrows():
-        #     ligand_expanded.extend(self.expand_row(row))
-        # for _, row in gtp_peptides.iterrows():
-        #     peptides_expanded.extend(self.expand_row(row))
+        # 2) Apply the helper to each row
+        ligand_expanded = []
+        peptides_expanded = []
+        for _, row in ligand_data.iterrows():
+            ligand_expanded.extend(self.expand_row(row))
+        for _, row in gtp_peptides.iterrows():
+            peptides_expanded.extend(self.expand_row(row))
 
-        # ligand_data = pd.DataFrame(ligand_expanded)
-        # gtp_peptides = pd.DataFrame(peptides_expanded)
+        ligand_data = pd.DataFrame(ligand_expanded)
+        gtp_peptides = pd.DataFrame(peptides_expanded)
 
-        # # Build mask: not NaN, and not empty/whitespace-only
-        # mask_chembl = (
-        #     Command.helm_chembl['helm_notation'].notna()
-        #     & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
-        # )
-        # mask_cid = (
-        #     Command.helm_cid['helm_notation'].notna()
-        # )
+        # Build mask: not NaN, and not empty/whitespace-only
+        mask_chembl = (
+            Command.helm_chembl['helm_notation'].notna()
+            & Command.helm_chembl['helm_notation'].astype(str).str.strip().ne('')
+        )
+        mask_cid = (
+            Command.helm_cid['helm_notation'].notna()
+        )
 
-        # # Apply mask
-        # helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
-        # helm_cid_clean = Command.helm_cid.loc[mask_cid]
-        # # And clean CID data
-        # helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
-        #     lambda x: str(int(x)) if pd.notna(x) else np.nan
-        # )
+        # Apply mask
+        helm_chembl_clean = Command.helm_chembl.loc[mask_chembl]
+        helm_cid_clean = Command.helm_cid.loc[mask_cid]
+        # And clean CID data
+        helm_cid_clean['pubchem_cid'] = helm_cid_clean['pubchem_cid'].apply(
+            lambda x: str(int(x)) if pd.notna(x) else np.nan
+        )
 
-        # # First Merge
-        # ligand_data_merged = pd.merge(
-        #     ligand_data,
-        #     helm_chembl_clean,
-        #     left_on='chembl_id',
-        #     right_on='molecule_chembl_id',
-        #     how='left')
+        # First Merge
+        ligand_data_merged = pd.merge(
+            ligand_data,
+            helm_chembl_clean,
+            left_on='chembl_id',
+            right_on='molecule_chembl_id',
+            how='left')
 
-        # # Second Merge
-        # ligand_data_merged = pd.merge(
-        #     ligand_data_merged,
-        #     helm_cid_clean,
-        #     on='pubchem_cid',
-        #     how='left')
+        # Second Merge
+        ligand_data_merged = pd.merge(
+            ligand_data_merged,
+            helm_cid_clean,
+            on='pubchem_cid',
+            how='left')
 
-        # ligand_data_merged['helm_notation'] = ligand_data_merged['helm_notation_x'].fillna(ligand_data_merged['helm_notation_y'])
-        # ligand_data_merged = ligand_data_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
+        ligand_data_merged['helm_notation'] = ligand_data_merged['helm_notation_x'].fillna(ligand_data_merged['helm_notation_y'])
+        ligand_data_merged = ligand_data_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-        # # First Merge
-        # gtp_peptides_merged = pd.merge(
-        #     gtp_peptides,
-        #     helm_chembl_clean,
-        #     left_on='chembl_id',
-        #     right_on='molecule_chembl_id',
-        #     how='left')
+        # First Merge
+        gtp_peptides_merged = pd.merge(
+            gtp_peptides,
+            helm_chembl_clean,
+            left_on='chembl_id',
+            right_on='molecule_chembl_id',
+            how='left')
 
-        # # Second Merge
-        # gtp_peptides_merged = pd.merge(
-        #     gtp_peptides_merged,
-        #     helm_cid_clean,
-        #     on='pubchem_cid',
-        #     how='left')
+        # Second Merge
+        gtp_peptides_merged = pd.merge(
+            gtp_peptides_merged,
+            helm_cid_clean,
+            on='pubchem_cid',
+            how='left')
 
-        # gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
-        # gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
+        gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
+        gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-        # #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
-        # #GTP
-        # print('\n\nStarted comparing GTP data to reloaded database')
-        # small_to_update, peptide_to_update = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
-        # print(f"Building {len(small_to_update)} small molecules and {len(peptide_to_update)} peptide from GTP that were missing from dump")
-        # self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
-        # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
-        #CHEMBL
-        # print("\n\nStarted comparing ChEBML ligands")
-        # self.build_chembl_ligands()
+        #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
+        #GTP
+        print('\n\nStarted comparing GTP data to reloaded database')
+        small_to_update, peptide_to_update = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
+        print(f"Building {len(small_to_update)} small molecules and {len(peptide_to_update)} peptide from GTP that were missing from dump")
+        self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        CHEMBL
+        print("\n\nStarted comparing ChEBML ligands")
+        self.build_chembl_ligands()
 
-        # print("\n\nEnded building ChEMBL ligands")
-        # print('Performing checks')
-        # # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
-
-        # #BUILDING BIOACTIVITIES
-        # #GTP bioactivity data
-        # print("\n\nStarted building Guide to Pharmacology bioactivities")
-        # # bioactivities_to_update = self.find_unmatched_bioactivities(Command.ligand_csv, bioactivity_data_gtp)
-        # self.build_gtp_bioactivities(bioactivity_data_gtp)
-        # print("Ended building Guide to Pharmacology bioactivities")
-        # print('Performing checks')
+        print("\n\nEnded building ChEMBL ligands")
+        print('Performing checks')
         # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        # #ChEMBL bioactivity data
-        # print("\n\nStarted building ChEMBL bioactivities")
-        # self.build_chembl_bioactivities()
-        # print("Ended building ChEMBL bioactivities")
-        # print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        #BUILDING BIOACTIVITIES
+        #GTP bioactivity data
+        print("\n\nStarted building Guide to Pharmacology bioactivities")
+        # bioactivities_to_update = self.find_unmatched_bioactivities(Command.ligand_csv, bioactivity_data_gtp)
+        self.build_gtp_bioactivities(bioactivity_data_gtp)
+        print("Ended building Guide to Pharmacology bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #ChEMBL bioactivity data
+        print("\n\nStarted building ChEMBL bioactivities")
+        self.build_chembl_bioactivities()
+        print("Ended building ChEMBL bioactivities")
+        print('Performing checks')
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         #ChEMBL/PubChem vendor data
         print("\n\nStarted building PubChem vendor data")
@@ -306,9 +311,10 @@ class Command(BaseBuild):
         n  = apply_canonical_ligand_types()
         print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
-        print("\n\nRunning the Dump Checker and saving new dumps if needed")
-        ligand_dump = dump_checker('ligand.Ligand')
-        id_dump = dump_checker('ligand.LigandID')
+        if options["make_dump"]:
+            print("\n\nRunning the Dump Checker and saving new dumps if needed")
+            ligand_dump = dump_checker('ligand.Ligand')
+            id_dump = dump_checker('ligand.LigandID')
 
     @staticmethod
     def reset_pk_sequence(model):
