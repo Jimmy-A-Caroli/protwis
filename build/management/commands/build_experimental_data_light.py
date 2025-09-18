@@ -43,7 +43,7 @@ class Command(BaseBuild):
     tracker = {}
     all_models = django.apps.apps.get_models()[6:]
     data_dir = os.sep.join([settings.DATA_DIR, 'ligand_data'])
-    dump_dir = os.sep.join([settings.DATA_DIR, 'model_snapshots'])
+    dump_dir = os.sep.join([settings.DATA_DIR, 'ligand_data', 'model_snapshots'])
     helm_chembl_filepath = os.sep.join([data_dir, 'HELM_CHEMBL.csv'])
     helm_cid_filepath = os.sep.join([data_dir, 'HELM_CID.csv'])
     helm_chembl = pd.read_csv(helm_chembl_filepath, index_col=0)
