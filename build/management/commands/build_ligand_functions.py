@@ -633,6 +633,16 @@ def try_get_parent(query_params):
     try:
         parent_obj = Ligand.objects.get(**query_params)
         return parent_obj
+    except Ligand.MultipleObjectsReturned:
+        if 'name__iexact' in query_params:
+            query_params['name'] = query_params.pop('name__iexact')
+            try:
+                parent_obj = Ligand.objects.get(**query_params)
+                return parent_obj
+            except Ligand.DoesNotExist:
+                return None
+        else:
+            return None
     except Ligand.DoesNotExist:
         return None
 
