@@ -69,6 +69,11 @@ class Command(BaseBuild):
                             dest='purge',
                             default=False,
                             help='Purge existing ligand records')
+        parser.add_argument('--make_dump',
+                            action='store_true',
+                            dest='purge',
+                            default=False,
+                            help='Create dump')
 
     def handle(self, *args, **options):
         if options["test_run"]:
@@ -312,9 +317,10 @@ class Command(BaseBuild):
         n  = apply_canonical_ligand_types()
         print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
-        print("\n\nRunning the Dump Checker and saving new dumps if needed")
-        ligand_dump = dump_checker('ligand.Ligand')
-        id_dump = dump_checker('ligand.LigandID')
+        if options["make_dump"]:
+            print("\n\nRunning the Dump Checker and saving new dumps if needed")
+            ligand_dump = dump_checker('ligand.Ligand')
+            id_dump = dump_checker('ligand.LigandID')
 
     @staticmethod
     def reset_pk_sequence(model):
