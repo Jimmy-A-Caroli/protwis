@@ -231,13 +231,19 @@ class Command(BaseBuild):
         self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
-        CHEMBL
+
+        #CHEMBL
         print("\n\nStarted comparing ChEBML ligands")
         self.build_chembl_ligands()
 
         print("\n\nEnded building ChEMBL ligands")
         print('Performing checks')
-        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+
+        #DrugBank
+        print('\n\nFetching Drug Bank ligands and saving to model')
+        self.build_drugbank_ligands()
+        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         #BUILDING BIOACTIVITIES
         #GTP bioactivity data
@@ -1536,7 +1542,7 @@ class Command(BaseBuild):
                 except Ligand.DoesNotExist:
                     # If no matching Ligand, create ligand
                     pass
-            print(insert)
+
             if insert:
                 parent = None
                 keys = {}
@@ -1559,7 +1565,7 @@ class Command(BaseBuild):
                         keys["inchikey"] = head_inchi
                         optional_conditions |= Q(clean_inchikey=head_inchi)  # OR condition
 
-                # sequence = row.get("sequence")
+                sequence = row.get("sequence")
                 # if pd.notna(sequence) and sequence:
                 #     keys["sequence"] = sequence
                 #     optional_conditions |= Q(sequence=sequence)  # OR condition
@@ -2627,13 +2633,12 @@ class Command(BaseBuild):
         print("\n===============\n#1 Start parsing Evolvus data")
         self.evolvus_main(class_a_data)
         self.evolvus_main(class_b1_data)
-        import pprint
-        pprint.pprint(self.errors)
+
         c = 0
         for p, ligs in self.errors.items():
             for l in ligs:
                 c+=1
-        print(c)
+        print('Evolvus error count: ', c)
 
     # @staticmethod
     def evolvus_main(self, data):
@@ -2727,7 +2732,7 @@ class Command(BaseBuild):
 
     @staticmethod
     def calculate_potency_and_affinity():
-        ligand_target_couples = AssayExperiment.objects.exclude(p_activity_value='None').values_list('ligand_id',
+        ligand_target_couples = AssayExperiment.objects.exclude(p_activity_value='None').exclude(value_type=None).exclude(p_activity_value=None).values_list('ligand_id',
                                                                                                      'protein_id',
                                                                                                      'value_type',
                                                                                                      'p_activity_value').distinct()
