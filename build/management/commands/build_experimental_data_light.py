@@ -344,6 +344,23 @@ class Command(BaseBuild):
             ''')
 
     @staticmethod
+    def sync_sequence_to_max(model, column):
+        """
+        Sync the PostgreSQL sequence for `column` on `model` to MAX(column).
+        Use after imports that set the column explicitly.
+        Works for serial or identity columns.
+        """
+        table = model._meta.db_table
+        with connection.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT setval(
+                    pg_get_serial_sequence('"{table}"','{column}'),
+                    COALESCE((SELECT MAX("{column}") FROM "{table}"), 0),
+                    true
+                );
+            ''')
+
+    @staticmethod
     def purge_data():
         delete_experimental = AssayExperiment.objects.all()  # New Model Biased Data
         delete_experimental.delete()
@@ -735,7 +752,7 @@ class Command(BaseBuild):
                 )
 
                 compound = Ligand.objects.create(
-                    id=int(row['id']),
+                    # id=int(row['id']),
                     name=row['name'],
                     pdbe=row.get('pdbe') or None,
                     ambiguous_alias=row.get('ambiguous_alias') or None,
@@ -752,6 +769,7 @@ class Command(BaseBuild):
                     uniprot=row.get('uniprot') or None,
                     source=row.get('source') or None,
                     helm=row.get('helm') or None,
+                    gpcrdb_id=int(row['id']),
                     parent=None
                 )
                 compounds[compound.id] = compound
@@ -802,7 +820,8 @@ class Command(BaseBuild):
         print("Pass 3 (IDs): 100%")
 
         print("Syncing the MAX id values")
-        Command.sync_pk_sequence_to_max(Ligand)
+        Command.sync_sequence_to_max(Ligand, 'gpcrdb_id')
+        # Command.sync_pk_sequence_to_max(Ligand)
         Command.sync_pk_sequence_to_max(LigandID)
 
     @staticmethod

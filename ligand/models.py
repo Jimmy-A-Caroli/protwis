@@ -41,6 +41,7 @@ class Ligand(models.Model):
     source = models.TextField(max_length=20, null=True)
     # Parent structure addition with a unique related_name
     parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE, related_name='children')
+    gpcrdb_id = models.BigIntegerField(unique=True, editable=False, null=True)
 
     def __str__(self):
         return self.name
