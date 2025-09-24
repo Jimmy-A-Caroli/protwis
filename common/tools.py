@@ -34,7 +34,7 @@ def dump_checker(model_label, record_count=None):
       1) Finds the latest dump in `dump_path` for `model_label`.
       2) Compares latest dump's data-row count vs `record_count`.
          - If `record_count` is None, it will query the DB count.
-      3) If grown, writes a new CSV: {app_model}_{YYYY_MM_DD}.csv (overwrites same-day).
+      3) If grown, writes a new CSV.GZ: {app_model}_{YYYY_MM_DD}.csv.gz (overwrites same-day).
     Returns:
       {
         'latest_dump': <str|None>,
@@ -47,13 +47,17 @@ def dump_checker(model_label, record_count=None):
     dump_path = os.sep.join([settings.DATA_DIR, 'model_snapshots'])
     safe = model_label.replace('.', '_').lower()
 
-    # ---- find latest dump ----
+    # ---- find latest dump (prefer .csv.gz, but accept legacy .csv) ----
     latest_path, latest_date, latest_n = None, None, -1
     if os.path.isdir(dump_path):
         for fname in os.listdir(dump_path):
-            if not (fname.startswith(safe + "_") and fname.endswith(".csv")):
+            if not (fname.startswith(safe + "_") and (fname.endswith(".csv.gz") or fname.endswith(".csv"))):
                 continue
-            m = re.match(r'^' + re.escape(safe) + r'_(\d{4})[-_](\d{2})[-_](\d{2})(?:__(\d+))?\.csv$', fname)
+            # match date + optional __n, with either .csv.gz or .csv
+            m = re.match(
+                r'^' + re.escape(safe) + r'_(\d{4})[-_](\d{2})[-_](\d{2})(?:__(\d+))?\.csv(?:\.gz)?$',
+                fname
+            )
             if not m:
                 continue
             y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
@@ -66,20 +70,29 @@ def dump_checker(model_label, record_count=None):
                 latest_date, latest_n = dte, n
                 latest_path = os.path.join(dump_path, fname)
 
+    # Optional hardcoded fallbacks (try gzip first, then legacy csv)
     if not latest_path:
-        if model_label=='ligand.Ligand':
-            latest_path = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligand_reload_dump.csv'])
-        elif model_label=='ligand.LigandID':
-            latest_path = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligandid_reload_dump.csv'])
+        if model_label == 'ligand.Ligand':
+            gz = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligand_reload_dump.csv.gz'])
+            legacy = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligand_reload_dump.csv'])
+            latest_path = gz if os.path.isfile(gz) else legacy
+        elif model_label == 'ligand.LigandID':
+            gz = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligandid_reload_dump.csv.gz'])
+            legacy = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligandid_reload_dump.csv'])
+            latest_path = gz if os.path.isfile(gz) else legacy
 
-    # ---- count rows in latest dump (data lines only) ----
+    # ---- count rows in latest dump (data lines only; header is line 0) ----
     latest_count = 0
     if latest_path and os.path.isfile(latest_path):
-        with open(latest_path, "r", encoding="utf-8", newline="") as fh:
+        if latest_path.endswith(".gz"):
+            opener = lambda p: gzip.open(p, "rt", encoding="utf-8", newline="")
+        else:
+            opener = lambda p: open(p, "r", encoding="utf-8", newline="")
+        with opener(latest_path) as fh:
             line_no = -1
             for line_no, _ in enumerate(fh, 0):
                 pass
-            latest_count = max(line_no, 0)  # minus header -> we started at 0, so header is line 0
+            latest_count = max(line_no, 0)
 
     # ---- get current count if not provided ----
     if record_count is None:
@@ -97,10 +110,10 @@ def dump_checker(model_label, record_count=None):
             "new_dump": None,
         }
 
-    # ---- write fresh dump (overwrite same-day) ----
+    # ---- write fresh dump (gzip; overwrite same-day) ----
     os.makedirs(dump_path, exist_ok=True)
     today = dt.date.today().strftime("%Y_%m_%d")
-    out_path = os.path.join(dump_path, f"{safe}_{today}.csv")
+    out_path = os.path.join(dump_path, f"{safe}_{today}.csv.gz")
 
     app_label, model_name = model_label.split(".", 1)
     Model = apps.get_model(app_label, model_name)
@@ -109,7 +122,7 @@ def dump_checker(model_label, record_count=None):
     pk = Model._meta.pk.attname
     qs = Model._default_manager.all().order_by(pk).values_list(*columns)
 
-    with open(out_path, "w", encoding="utf-8", newline="") as fh:
+    with gzip.open(out_path, "wt", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, delimiter=';')
         w.writerow(columns)
         for row in qs.iterator():
