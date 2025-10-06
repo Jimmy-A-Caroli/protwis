@@ -57,11 +57,14 @@
 .has-spinner[data-spinner-size="sm"]  {
   --ui-spinner-size: 12px;
   --ui-spinner-border: 2px;
+
 }
+
 .has-spinner[data-spinner-size="lg"]  {
   --ui-spinner-size: 20px;
   --ui-spinner-border: 3px;
 }
+
 .has-spinner[data-spinner-size="xl"]  {
   --ui-spinner-size: 24px;
   --ui-spinner-border: 3px;
@@ -73,7 +76,9 @@
   --ui-spinner-head:  rgba(255, 255, 255, 0.95);
 }
 
-@keyframes uiSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes uiSpin { 
+  to { transform: translate(-50%, -50%) rotate(360deg); } 
+}
 
 /* ---- Friendly defaults for DataTables buttons ---- */
 /* DT buttons already wrap their label in <span>, so the generic dimming works */
