@@ -24,8 +24,7 @@
   pointer-events: none;
   z-index: 1;
   animation: uiSpin var(--ui-spinner-speed) linear infinite;
-  /* positioning defaults to centered overlay; variants below */
-  position: absolute;
+  position: absolute; /* positioning defaults to centered overlay; variants below */
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -55,9 +54,18 @@
 }
 
 /* Size variants (opt-in) */
-.has-spinner[data-spinner-size="sm"]  { --ui-spinner-size: 12px; --ui-spinner-border: 2px; }
-.has-spinner[data-spinner-size="lg"]  { --ui-spinner-size: 20px; --ui-spinner-border: 3px; }
-.has-spinner[data-spinner-size="xl"]  { --ui-spinner-size: 24px; --ui-spinner-border: 3px; }
+.has-spinner[data-spinner-size="sm"]  {
+  --ui-spinner-size: 12px;
+  --ui-spinner-border: 2px;
+}
+.has-spinner[data-spinner-size="lg"]  {
+  --ui-spinner-size: 20px;
+  --ui-spinner-border: 3px;
+}
+.has-spinner[data-spinner-size="xl"]  {
+  --ui-spinner-size: 24px;
+  --ui-spinner-border: 3px;
+}
 
 /* Dark theme variant (optional) */
 .has-spinner[data-spinner-theme="light"] {
@@ -68,5 +76,5 @@
 @keyframes uiSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
 /* ---- Friendly defaults for DataTables buttons ---- */
-.dt-button { position: relative; }
 /* DT buttons already wrap their label in <span>, so the generic dimming works */
+.dt-button { position: relative; }
