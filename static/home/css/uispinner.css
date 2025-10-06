@@ -57,7 +57,6 @@
 .has-spinner[data-spinner-size="sm"]  {
   --ui-spinner-size: 12px;
   --ui-spinner-border: 2px;
-
 }
 
 .has-spinner[data-spinner-size="lg"]  {
