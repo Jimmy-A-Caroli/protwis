@@ -752,7 +752,7 @@ $(document).ready(function () {
           UiSpinner.runWithDtButtonSpinner(
             dt,
             'exportExcel:name',
-            () => ExportDataTablesToXlsx('#receptor_table', 'Targets', 'GPCRdb_VennDiagram_Export.xlsx'),
+            () => ExportDataTablesToXlsx('#receptor_table', 'Targets', layout === "drugs" ? "GPCRdb_DrugsVenn.xlsx" : "GPCRdb_TargetsVenn.xlsx"),
             { hideDelayMs: 150 }
           );
         }
