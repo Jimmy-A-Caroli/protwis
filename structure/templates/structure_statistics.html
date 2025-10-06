@@ -61,7 +61,7 @@
 
 
 {% block content %}
-{% if page == 'structure' %}
+{% if page == 'gpcr' %}
 
 <!-- GPCRDB GPCROME SECTION -->
 
@@ -405,7 +405,7 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
 
 {% endif %}
 
-{% if page == 'structure' %}
+{% if page == 'gpcr' %}
 
 <!-- GPCRDB HISTOGRAMS SECTION -->
 
@@ -809,7 +809,7 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
 </style>
 {% endif %}
 
-  {% if page != 'structure' %}
+  {% if page != 'gpcr' %}
     {% if page == 'gprot' %}
     <div id="class_a" class="text-center">
     <h4>Class A<br />(Rhodopsin)</h4>
@@ -1312,7 +1312,7 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
 <script src="{% static 'home/js/saveSvgAsPng.js' %}"></script>
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/phylo_tree.js' %}"></script>
-{% if page == 'structure' %}
+{% if page == 'gpcr' %}
 <script src="{% static 'home/js/datamapper.js' %}"></script>
 <script src="{% static 'home/js/popper.min.js' %}"></script>
 <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
@@ -1438,7 +1438,7 @@ const GPCRomeWheelValues_odorant = extractDataValues(Odorant_data)
   const GPCRomeMin_Odo = GPCRomeWheelValues_odorant.length > 0 ? Math.min(...GPCRomeWheelValues_odorant) : null;
   const GPCRomeMax_Odo = GPCRomeWheelValues_odorant.length > 0 ? Math.max(...GPCRomeWheelValues_odorant) : null;
   const GPCRomeAvg_Odo = GPCRomeWheelValues_odorant.length > 0 ? (GPCRomeMin_Odo + GPCRomeMax_Odo) / 2 : null;
-  
+
   function determineDecimalPlaces(minValue, maxValue) {
     const allValues = [minValue, maxValue];
     let maxDecimals = 0;
