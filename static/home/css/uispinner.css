@@ -81,4 +81,6 @@
 
 /* ---- Friendly defaults for DataTables buttons ---- */
 /* DT buttons already wrap their label in <span>, so the generic dimming works */
-.dt-button { position: relative; }
+.dt-button {
+  position: relative;
+}
