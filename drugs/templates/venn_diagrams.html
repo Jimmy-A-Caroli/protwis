@@ -752,7 +752,7 @@ $(document).ready(function () {
           UiSpinner.runWithDtButtonSpinner(
             dt,
             'exportExcel:name',
-            () => exportVennToXlsx('#receptor_table', layout), // use your local exporter
+            () => ExportDataTablesToXlsx('#receptor_table', 'Targets', 'Venn_targets.xlsx'),
             { hideDelayMs: 150 }
           );
         }
