@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="{% static 'home/css/structure_browser.css' %}" type="text/css">
 <link rel="stylesheet" href="{% static 'home/css/NewDrugsBrowser_datatables.min.css' %}" type="text/css"/>
 <link rel="stylesheet" href="{% static 'home/css/struct_tooltip.css' %}" type="text/css" />
+<link rel="stylesheet" href="{% static 'home/css/uispinner.css' %}">
 <style type="text/css">
   textarea {
     resize: none;
@@ -71,23 +72,6 @@
         position: absolute;
         pointer-events: none;
     }
-    /* Button spinner (same as structure browser) */
-    .dt-button { position: relative; }
-    .dt-button > .btn-spinner {
-      display: none;
-      position: absolute; left: 50%; top: 50%;
-      transform: translate(-50%, -50%) rotate(0deg);
-      width: 16px; height: 16px;
-      border: 2px solid rgba(0,0,0,.25);
-      border-top-color: rgba(0,0,0,.7);
-      border-radius: 50%;
-      pointer-events: none;
-      z-index: 1;
-      animation: vennBtnSpin .8s linear infinite;
-    }
-    @keyframes vennBtnSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-    .dt-button.is-busy > .btn-spinner { display: inline-block; }
-    .dt-button.is-busy > span { opacity: .45; }
 </style>
 {% endblock %}
 {% block content %}
@@ -298,12 +282,12 @@
 <script src="{% static 'home/js/select2_4.1.0-rc.0_full.js' %}"></script>
 <script src="{% static 'home/js/NewDrugsBrowser_datatables.min.js' %}"></script>
 <script src="{% static 'home/js/NorgesDTFilterBuilder.js' %}"></script>
-<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
 <script src="{% static 'home/js/selection.js' %}"></script>
 <script src="{% static 'home/js/compoundPreviewTooltip.js' %}"></script> <!-- Needed for the hover display of ligands-->
 <script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- Dependency for the hover display of ligands-->
 <script src="{% static 'home/js/PeptideLayoutEngine.js' %}"></script>
 <script src="{% static 'home/js/xlsx.full.min.js' %}"></script>
+<script src="{% static 'home/js/uiSpinner.js' %}"></script>
 
 <script>
   ! function($) {
@@ -361,8 +345,6 @@ $(document).ready(function () {
     } return (table);
   }
 
-  
-
   // Define the `table` variable globally so it's accessible in the `toggleGroupVisibility` function
   let table;
 
@@ -410,8 +392,6 @@ $(document).ready(function () {
                         const picVal    = row.picture || "Not_available";
                         const ligID     = row.LigandID;
                         const sequenceValue = row.sequence || "";
-
-
                         if (row['Drug type'] && typeof row['Drug type'] === 'string' && row['Drug type'].toLowerCase() === 'peptide') {
                             if (!sequenceValue) {
                                 console.warn("Venn Peptide ligand " + data + " (LigandID: " + ligID + ") has no sequence!");
@@ -440,14 +420,14 @@ $(document).ready(function () {
                 return data;
             }
         },
-        { data: "Drug type", name: "Drug type" },
+        { data: "Drug type", name: "Type" },
         { data: "Modality", name: "Modality" },
-        { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
-        { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
-        { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
+        { data: 'ATC Parent Name', name: 'Indication area (ATC)', visible: !hideColumns },
+        { data: "ATC Name", name: "Indication (ATC)", visible: !hideColumns},
+        { data: 'ATC Code', name: 'Indication code (ATC)', visible: !hideColumns },
         { data: "In trial", name: "In trial" },
         { data: "Approved", name: "Approved" },
-        { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
+        { data: "Gene name", name: "Gene", render: function (data, type, row, meta) {
             if (type === 'display') {
                 const originalData = data; 
                 const transformedData = data.replace('_human', '').toUpperCase(); 
@@ -457,12 +437,12 @@ $(document).ready(function () {
             }
             return data;
         }},
-        { data: "Protein name", name: "Protein name", width: "125px", render: function (data) { return data.replace(' receptor', ''); }},
+        { data: "Protein name", name: "Protein", width: "125px", render: function (data) { return data.replace(' receptor', ''); }},
         {data: "Receptor family", name: "Receptor family", width: "150px", render: function (data) { return data.replace('receptors', ''); }},
         { data: "Ligand type", name: "Ligand type", render: function (data) { return data.replace('receptors', ''); }},
         { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0].replace(/^Class /i, '').trim(); }},
-        { data: "Master Indication", name: "Master Indication" },
-        { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
+        { data: "Master Indication", name: "Disease area (ICD11)" },
+        { data: "Indication name", name: "Disease (ICD11)", render: function (data, type, row, meta) {
             if (type === 'display') {
                 if (row && row.ICD11) {
                     const transformedData = data || 'Unknown'; 
@@ -476,13 +456,13 @@ $(document).ready(function () {
             }
             return data;
         }},
-        { data: 'ICD11', name: 'ICD11' },
-        { data: "Phase", name: "Max" },
+        { data: 'ICD11', name: 'Disease code (ICD11)' },
+        { data: "Phase", name: "Max phase" },
         { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
     ];
 
     const targetsColumns = [
-        { data: "Gene name", name: "Gene name", render: function (data, type, row, meta) {
+        { data: "Gene name", name: "Gene", render: function (data, type, row, meta) {
             if (type === 'display') {
                 const originalData = data; 
                 const transformedData = data.replace('_human', '').toUpperCase(); 
@@ -492,7 +472,7 @@ $(document).ready(function () {
             }
             return data;
         }},
-        { data: "Protein name", name: "Protein name" },
+        { data: "Protein name", name: "Protein" },
         { data: "Receptor family", name: "Receptor family" },
         { data: "Ligand type", name: "Ligand type" },
         { data: "Class", name: "Class", render: function (data) { return data.split(' (')[0]; }},
@@ -504,7 +484,6 @@ $(document).ready(function () {
                       const picVal    = row.picture || "Not_available";
                       const ligID     = row.LigandID;
                       const sequenceValue = row.sequence || "";
-
                       if (row['Drug type'] && typeof row['Drug type'] === 'string' && row['Drug type'].toLowerCase() === 'peptide') {
                            if (!sequenceValue) {
                               console.warn("Venn Peptide ligand " + data + " (LigandID: " + ligID + ") has no sequence!");
@@ -533,15 +512,15 @@ $(document).ready(function () {
               return data;
           }
       },
-        { data: "Drug type", name: "Drug type" },
+        { data: "Drug type", name: "Type" },
         { data: "Modality", name: "Modality" },
-        { data: 'ATC Parent Name', name: 'ATC Parent Name', visible: !hideColumns },
-        { data: "ATC Name", name: "ATC Name", visible: !hideColumns},
-        { data: 'ATC Code', name: 'ATC Code', visible: !hideColumns },
+        { data: 'ATC Parent Name', name: 'Indication area (ATC)', visible: !hideColumns },
+        { data: "ATC Name", name: "Indication (ATC)", visible: !hideColumns},
+        { data: 'ATC Code', name: 'Indication code (ATC)', visible: !hideColumns },
         { data: "In trial", name: "In trial" },
         { data: "Approved", name: "Approved" },
-        { data: "Master Indication", name: "Master Indication" },
-        { data: "Indication name", name: "Indication", render: function (data, type, row, meta) {
+        { data: "Master Indication", name: "Disease area (ICD11)" },
+        { data: "Indication name", name: "Disease (ICD11)", render: function (data, type, row, meta) {
             if (type === 'display') {
                 if (row && row.ICD11) {
                     const transformedData = data || 'Unknown'; 
@@ -555,8 +534,8 @@ $(document).ready(function () {
             }
             return data;
         }},
-        { data: 'ICD11', name: 'ICD11' },
-        { data: "Phase", name: "Max" },
+        { data: 'ICD11', name: 'Disease code (ICD11)' },
+        { data: "Phase", name: "Max pahse" },
         { data: 'Association score', name: "Association score", render: function (data) { return data === "" || data === null ? data : parseFloat(data).toFixed(4); }}
     ];
 
@@ -758,40 +737,24 @@ $(document).ready(function () {
         };
     }
 
-    function showBtnSpinner($btn){
-      if (!$btn.children('.btn-spinner').length){
-        $btn.append('<span class="btn-spinner" aria-hidden="true"></span>');
-      }
-      $btn.addClass('is-busy');
-    }
-    function hideBtnSpinner($btn){ $btn.removeClass('is-busy'); }
-
-    /** Exactly like on the other page: ensures the spinner is visible before work starts */
-    function runWithExportSpinner(dt, workFn) {
-      // Target our Export button by name
-      const api   = dt.button('exportExcel:name');
-      const $main = api ? $(api.node()) : $();
-
-      if ($main.length && $main.hasClass('is-busy')) return Promise.resolve();
-
-      if ($main.length) showBtnSpinner($main);
-
-      // Let the paint happen first so the spinner shows
-      return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)))
-        .then(() => Promise.resolve(workFn()))
-        .finally(() => {
-          setTimeout(() => { if ($main.length) hideBtnSpinner($main); }, 150);
-        });
-    }
-
     const buttonsArray = [
-      { text: 'Reset filters', action: function () { reset_all(); } },
-      controlTableButton(layout, hideColumns), // Use the new function to create the control table button
-       {
+      {
+        text: 'Reset filters',
+        action: function (e, dt, node) {
+          UiSpinner.runWithButtonSpinner(node, () => reset_all(), { hideDelayMs: 150 });
+        }
+      },
+      controlTableButton(layout, hideColumns),
+      {
         text: 'Export Excel',
-        name: 'exportExcel', // <-- so runWithExportSpinner can find it
-        action: function (e, dt) {
-          runWithExportSpinner(dt, () => exportVennToXlsx('#receptor_table', layout));
+        name: 'exportExcel', // keep this so the helper can find the DT button
+        action: function (e, dt /*, node */) {
+          UiSpinner.runWithDtButtonSpinner(
+            dt,
+            'exportExcel:name',
+            () => exportVennToXlsx('#receptor_table', layout), // use your local exporter
+            { hideDelayMs: 150 }
+          );
         }
       }
     ];
