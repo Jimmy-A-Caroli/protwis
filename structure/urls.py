@@ -24,8 +24,6 @@ urlpatterns = [
     url(r'^template_browser', TemplateBrowser.as_view(), name='structure_browser'),
     url(r'^template_selection', TemplateTargetSelection.as_view(), name='structure_browser'),
     url(r'^template_segment_selection', TemplateSegmentSelection.as_view(), name='structure_browser'),
-    url(r'^gprot_statistics$', cache_page(60*60*24)(StructureStatistics.as_view(origin='gprot')), name='structure_statistics'),
-    url(r'^arrestin_statistics$', cache_page(60*60*24)(StructureStatistics.as_view(origin='arrestin')), name='structure_statistics'),
     url(r'^statistics$', cache_page(60*60*24)(StructureStatistics.as_view()), name='structure_statistics'),
     url(r'^homology_models$', cache_page(60*60*24)(ServeHomologyModels.as_view()), name='homology_models'),
     path('ligand_complex_models', LigandComplexModels.as_view(), name='ligand_complex_models'),
@@ -36,7 +34,6 @@ urlpatterns = [
     # url(r'^homology_models$', ServeHomologyModels.as_view(), name='homology_models'),
     url(r'^complex_models$', cache_page(60*60*24)(ServeComplexModels.as_view()), name='complex_models'),
     url(r'^arrestin_models$', cache_page(60*60*24)(ServeComplexModels.as_view(signalling_protein='af-arrestin')), name='arrestin_complex_models'),
-
     # url(r'^complex_models$', ServeComplexModels.as_view(), name='complex_models'),
     url(r'^model_statistics$', cache_page(60*60*24)(ServeModelStatistics.as_view()), name='model_statistics'),
     url(r'^pdb_segment_selection', PDBSegmentSelection.as_view(), name='pdb_download'),
@@ -74,4 +71,7 @@ urlpatterns = [
     url(r'^pdb/(?P<pdbname>\w+)/ligand/(?P<ligand>.+)$', ServePdbLigandDiagram, name='structure_serve_pdb_ligand'),
     url(r'^complex_models/(?P<header>\w+)$',cache_page(60*60*24*7)(ComplexModelDetails), name='complex_model_details'),
     url(r'^complex_models/view/(?P<modelname>\w+)$', ServeComplexModDiagram, name='complexmod_serve_view'),
+    ### LEGACY LINKS ###
+    url(r'^gprot_statistics$', cache_page(60*60*24)(StructureStatistics.as_view(origin='gprotein')), name='structure_statistics'),
+    url(r'^arrestin_statistics$', cache_page(60*60*24)(StructureStatistics.as_view(origin='arrestin')), name='structure_statistics'),
 ]

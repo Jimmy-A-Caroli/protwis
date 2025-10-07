@@ -231,7 +231,7 @@
   </div>
   </div>
 
-{% elif page == 'gprot' %}
+{% elif page == 'gprotein' %}
 
 <!-- GPROTEIN TABLES SECTION -->
 <h4>Number of G protein structures</h4>
@@ -677,7 +677,7 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
 </div></p>
 <br />-->
 
-{% elif page == 'gprot' %}
+{% elif page == 'gprotein' %}
 <style type="text/css">
   .gprot_blue {
     color: blue;
@@ -810,7 +810,7 @@ The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }
 {% endif %}
 
   {% if page != 'gpcr' %}
-    {% if page == 'gprot' %}
+    {% if page == 'gprotein' %}
     <div id="class_a" class="text-center">
     <h4>Class A<br />(Rhodopsin)</h4>
     <br />
@@ -1591,7 +1591,7 @@ function updateGPCRome(Data, location, styling) {
 }
 
 </script>
-{% elif page == 'gprot' %}
+{% elif page == 'gprotein' %}
 <script type="text/javascript" charset="utf-8">
     maxLeafNodeLenght = 46;
     conversion = {"Gs":"#0000FF", "Gi/o":"#FF0000", "Gq/11":"#000000", "G12/13":"#008000", "GPa1 family":"#FFC0CB"};

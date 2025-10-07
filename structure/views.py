@@ -1689,6 +1689,7 @@ class NotDisordered(Select):
                 atom.disordered_flag = 0
         return True
 
+
 class StructureStatistics(TemplateView):
     """
     So not ready that EA wanted to publish it.
@@ -1696,8 +1697,15 @@ class StructureStatistics(TemplateView):
     template_name = 'structure_statistics.html'
     origin = 'gpcr'
 
-    def get_context_data (self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_context_data (self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+
+        ### Default origin is set to gpcr, this could be overwritten when using legacy links 'gprot_statistics' and 'arrestin_statistics'
+        ### Only check current domain when the generic 'statitics' url is used e.g. self.origin='gpcr'
+        ### In development mode, overriding the DEFAULT_SITE variable in settings.py can be used to view each statistics site
+        if self.origin=='gpcr':
+            domain = current_site(self.request)
+            self.origin = domain['current_site']
         context["page"] = self.origin
         families = ProteinFamily.objects.all()
         lookup = {}
@@ -1741,7 +1749,6 @@ class StructureStatistics(TemplateView):
         # GPROT Complex information
         all_gprots = StructureExtraProteins.objects.filter(category='G alpha').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
         # all_gprots = all_structs.filter(id__in=SignprotComplex.objects.filter(protein__family__slug__startswith='100').values_list("structure__id", flat=True))
-        print(self.origin)
         ###### these are query sets for G-Prot Structure Statistics
         if self.origin != 'arrestin':
             all_g_A_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='001')
@@ -1790,7 +1797,7 @@ class StructureStatistics(TemplateView):
             context['unique_gprots_by_class'] = self.count_by_class(unique_gprots, lookup, extra=True)
 
             #GPROT
-            if self.origin == 'gprot':
+            if self.origin == 'gprotein':
                 noncomplex_gprots = SignprotStructure.objects.filter(protein__family__slug__startswith='100').exclude(structure_type__slug__startswith='af-').prefetch_related("protein")
                 context['noncomplex_gprots_by_gclass'] = self.count_by_effector_class(noncomplex_gprots, lookup, nc=True)
                 context['noncomplex_gprots'] = len(noncomplex_gprots)
@@ -1869,7 +1876,7 @@ class StructureStatistics(TemplateView):
             context['all_structures_by_class'][key.replace('Class','')] = context['all_structures_by_class'].pop(key)
 
         #if not structure coverage, then generate the trees
-        if self.origin == 'gprot':
+        if self.origin == 'gprotein':
 
             tree = PhylogeneticTreeGenerator()
             class_a_data = tree.get_tree_data(ProteinFamily.objects.get(name='Class A (Rhodopsin)'))

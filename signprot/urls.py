@@ -13,8 +13,6 @@ urlpatterns = [
     path('couplings_venn', views.VennHandler, name='venn_handler'),
     path('couplings_tree', views.TreeHandler, name='tree_handler'),
     path('couplings_browser', views.CouplingHandler, name='couplimngs_handler'),
-    #path('statistics',  views.GProtein, name='gprotein'),
-    path('statistics',  views.CouplingProfiles, name='coupling_profiles'),
     path('phosphorylation_sites', cache_page(60*60*24*7)(views.PhosphorylationBrowser.as_view()), name='phosphorylation_sites'), #####
     path('coupling_datasets', views.CouplingDatasets, name='coupling_datasets'),
     path('coupling_biosensors', views.CouplingBiosensors, name='coupling_biosensors'),
@@ -38,6 +36,8 @@ urlpatterns = [
     path('statistics_tree',  views.TreeHandler, name='gprotein'),
     path('arrestin_venn',  views.VennHandler, name='gprotein'),
     path('arrestin_tree',  views.TreeHandler, name='gprotein'),
+    #path('statistics',  views.GProtein, name='gprotein'),
+    path('statistics',  views.CouplingProfiles, name='coupling_profiles'),
     path('couplings', cache_page(60*60*24*7)(CouplingBrowser.as_view()), name='coupling_browser'),
     # path('arrestincouplings', cache_page(60*60*24*7)(CouplingBrowser_deprecated.as_view(subunit_filter = "200_000_001", families = ["Beta"], page='arrestin')), name='arrestin_coupling'),
     path('arrestincouplings', CouplingBrowser_deprecated.as_view(subunit_filter = "200_000_001", families = ["Beta"], page='arrestin'), name='arrestin_coupling'),

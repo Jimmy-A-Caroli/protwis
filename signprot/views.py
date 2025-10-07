@@ -2,7 +2,7 @@
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.cache import cache
 from django.db.models import F, Q, Count, Prefetch
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.utils.html import format_html
@@ -1454,11 +1454,16 @@ def CouplingProfiles(request, render_part="both", signalling_data="empty"):
 
 def TreeHandler(request):
     domain = current_site(request)
+    print(domain)
     origin = domain['current_site']
+    print(origin)
     if origin == 'gprotein':
         return CouplingProfiles(request, "tree", "gprot")
     elif origin == 'arrestin':
         return CouplingProfiles(request, "tree", "arrestin")
+    else:
+        ### Development mode DEFAULT_SITE set to gpcr
+        return HttpResponseRedirect('/')
 
 def VennHandler(request):
     domain = current_site(request)
@@ -1467,6 +1472,9 @@ def VennHandler(request):
         return CouplingProfiles(request, "venn", "gprot")
     elif origin == 'arrestin':
         return CouplingProfiles(request, "venn", "arrestin")
+    else:
+        ### Development mode DEFAULT_SITE set to gpcr
+        return HttpResponseRedirect('/')
 
 #@cache_page(60*60*24*7)
 def familyDetail(request, slug):
