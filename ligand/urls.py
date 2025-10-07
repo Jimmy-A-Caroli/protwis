@@ -16,7 +16,6 @@ urlpatterns = [
     path('target_detail', views.CachedTargetDetailsExtended, name='ligand_target_detail'),
     path('targets_compact', views.CachedTargetDetailsCompact, name='ligand_target_detail_compact'),
     url(r'^targets_purchasable', views.TargetPurchasabilityDetails, name='ligand_target_detail_purchasable'),
-    url(r'^(?P<ligand_id>[-\w]+)/details$', views.LigandDetails, name='ligand_detail'),
     url(r'^coverage', views.LigandStatistics.as_view(), name='ligand_statistics'),
 
     # BIASED LIGANDS
@@ -80,8 +79,13 @@ urlpatterns = [
     path('path_preference_emax_path_profiles_selection', views.BiasedSignallingSelection.as_view(pathway=True, way='EmaxPathProfilePathway'), name='ema_pathpref_pathprof_selection'),
     path('path_preference_emax_path_profiles', views.BiasedSignallingOnTheFlyCalculation.as_view(page='pathwayprofiles', pathway=True), name='biased_rank_order'),
 
-    url(r'^(?P<pk>[-\w]+)/info$', views.LigandInformationView.as_view()),
-    url(r'^(?P<pk>[-\w]+)/gtp_info$', views.LigandGtoPInfoView.as_view()),
+    url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/info$', views.LigandInformationView.as_view(), name='ligand-info'),
+    url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/gtp_info$', views.LigandInformationView.as_view(), name='ligand-gtp-info'),
+    url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/details$', views.LigandDetails, name='ligand_detail'),
+
+    url(r'^(?P<pk>[-\w]+)/info$', views.LigandInfoLegacyRedirect.as_view(), name='ligand-info-legacy'),
+    url(r'^(?P<pk>[-\w]+)/gtp_info$', views.LigandGtoPLegacyRedirect.as_view(), name='ligand-gtp-info-legacy'),
+    url(r'^(?P<pk>[-\w]+)/details$', views.LigandDetailsLegacyRedirect.as_view(), name='ligand-detail-legacy'),
     #Browsers Cached
     path('userbiased/', views.CachedOTFBiasBrowserUser, name='bias_browser-list'),
     path('userbiasedsubtypes/',views.CachedOTFBiasSubtypeBrowserUser, name='bias_browser-list'),

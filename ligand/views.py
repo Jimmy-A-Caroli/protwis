@@ -17,18 +17,17 @@ from copy import deepcopy
 from collections import defaultdict, OrderedDict
 
 from django.middleware.csrf import get_token
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, HttpResponseServerError, JsonResponse
-from django.views.generic import TemplateView, DetailView, View
+from django.views.generic import TemplateView, DetailView, View, RedirectView
 from django.db import connection
 from django.http import HttpResponseRedirect
-
+from django.urls import reverse
 from django.db.models import Q, Count, Subquery, OuterRef
 from django.db.models.functions import Coalesce
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 from django_rdkit.models import *
-
 from django.core.cache import cache
 
 from common.views import AbsReferenceSelectionTable, getReferenceTable, getLigandTable, getLigandCountTable, AbsTargetSelection
@@ -1050,12 +1049,12 @@ class LigandTargetSelection(AbsReferenceSelectionTable):
         return context
 
 
-def LigandDetails(request, ligand_id):
+def LigandDetails(request, gpcrdb_id):
     """
     The details of a ligand record. Lists all the assay experiments for a given ligand.
     """
     ligand_records = AssayExperiment.objects.filter(
-        ligand__ids__index=ligand_id
+        ligand__gpcrdb_id=gpcrdb_id
     ).order_by("protein__entry_name")
 
     record_count = (
@@ -1108,7 +1107,7 @@ def LigandDetails(request, ligand_id):
                 }
             )
 
-    context = {"ligand_data": ligand_data, "ligand": ligand_id}
+    context = {"ligand_data": ligand_data, "ligand": gpcrdb_id}
 
     return render(request, "ligand_details.html", context)
 
@@ -3158,43 +3157,91 @@ class BiasVendorBrowser(TemplateView):
 
         return context
 
-class LigandGtoPInfoView(TemplateView):
-    # Tunnel view from Guide to Pharmacology, gets their GtoP ID and
-    # return the associated GPCRdb ligand info page
-    # calls function from LigandInformationView because this is simply a head copy
-    template_name = 'ligand_info.html'
+# class LigandGtoPInfoView(TemplateView):
+#     # Tunnel view from Guide to Pharmacology, gets their GtoP ID and
+#     # return the associated GPCRdb ligand info page
+#     # calls function from LigandInformationView because this is simply a head copy
+#     template_name = 'ligand_info.html'
+#
+#     def get_context_data(self, *args, **kwargs):
+#         context = super(LigandGtoPInfoView, self).get_context_data(**kwargs)
+#         ligand_id = self.kwargs['gpcrdb_id']
+#         ligand_conversion = LigandID.objects.filter(index=ligand_id, web_resource_id__slug="gtoplig").values_list('ligand_id')[0][0]
+#         ligand_data = Ligand.objects.get(gpcrdb_id=ligand_conversion)
+#         endogenous_ligands =  Endogenous_GTP.objects.all().values_list("ligand_id", flat=True)
+#         assay_data = list(AssayExperiment.objects.filter(ligand=ligand_conversion).prefetch_related(
+#             'ligand', 'protein', 'protein__family',
+#             'protein__family__parent', 'protein__family__parent__parent__parent',
+#             'protein__family__parent__parent', 'protein__family', 'protein__species'))
+#         context = dict()
+#         structures = LigandInformationView.get_structure(ligand_data)
+#         ligand_data = LigandInformationView.process_ligand(ligand_data, endogenous_ligands)
+#         assay_data_affinity, assay_data_potency = LigandInformationView.process_assay(assay_data)
+#         mutations = LigandInformationView.get_mutations(ligand_data)
+#
+#         context.update({'structure': structures})
+#         context.update({'ligand': ligand_data})
+#         context.update({'assay_affinity': assay_data_affinity})
+#         context.update({'assay_potency': assay_data_potency})
+#         context.update({'mutations': mutations})
+#         return context
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(LigandGtoPInfoView, self).get_context_data(**kwargs)
-        ligand_id = self.kwargs['pk']
-        ligand_conversion = LigandID.objects.filter(index=ligand_id, web_resource_id__slug="gtoplig").values_list('ligand_id')[0][0]
-        ligand_data = Ligand.objects.get(id=ligand_conversion)
-        endogenous_ligands =  Endogenous_GTP.objects.all().values_list("ligand_id", flat=True)
-        assay_data = list(AssayExperiment.objects.filter(ligand=ligand_conversion).prefetch_related(
-            'ligand', 'protein', 'protein__family',
-            'protein__family__parent', 'protein__family__parent__parent__parent',
-            'protein__family__parent__parent', 'protein__family', 'protein__species'))
-        context = dict()
-        structures = LigandInformationView.get_structure(ligand_data)
-        ligand_data = LigandInformationView.process_ligand(ligand_data, endogenous_ligands)
-        assay_data_affinity, assay_data_potency = LigandInformationView.process_assay(assay_data)
-        mutations = LigandInformationView.get_mutations(ligand_data)
+class _GpcrdbRedirectGTOP(RedirectView):
+    permanent = False
+    query_string = True
+    legacy_kwarg = 'pk'          # override per-URL if needed
+    target_pattern_name = None   # e.g. 'ligand:ligand-info'
 
-        context.update({'structure': structures})
-        context.update({'ligand': ligand_data})
-        context.update({'assay_affinity': assay_data_affinity})
-        context.update({'assay_potency': assay_data_potency})
-        context.update({'mutations': mutations})
-        return context
+    def _resolve_gpcrdb(self, raw):
+        # Try legacy PK first; if not found, treat the raw id as gpcrdb_id
+        try:
+            return LigandID.objects.filter(index=raw).values_list('ligand__gpcrdb_id', flat=True).get()
+        except LigandID.DoesNotExist:
+            return get_object_or_404(LigandID.objects.filter(index=raw).values_list('ligand__gpcrdb_id', flat=True).get())
 
+    def get_redirect_url(self, *args, **kwargs):
+        raw = kwargs[self.legacy_kwarg]
+        gpcrdb = self._resolve_gpcrdb(raw)
+        return reverse(self.target_pattern_name, kwargs={'gpcrdb_id': gpcrdb})
+
+
+class _GpcrdbRedirectBase(RedirectView):
+    permanent = False
+    query_string = True
+    legacy_kwarg = 'pk'          # override per-URL if needed
+    target_pattern_name = None   # e.g. 'ligand:ligand-info'
+
+    def _resolve_gpcrdb(self, raw):
+        # Try legacy PK first; if not found, treat the raw id as gpcrdb_id
+        try:
+            return Ligand.objects.only('gpcrdb_id').get(pk=raw).gpcrdb_id
+        except Ligand.DoesNotExist:
+            return get_object_or_404(Ligand.objects.only('gpcrdb_id'), gpcrdb_id=raw).gpcrdb_id
+
+    def get_redirect_url(self, *args, **kwargs):
+        raw = kwargs[self.legacy_kwarg]
+        gpcrdb = self._resolve_gpcrdb(raw)
+        return reverse(self.target_pattern_name, kwargs={'gpcrdb_id': gpcrdb})
+
+class LigandInfoLegacyRedirect(_GpcrdbRedirectBase):
+    target_pattern_name = 'ligand-info'
+    legacy_kwarg = 'pk'
+
+class LigandGtoPLegacyRedirect(_GpcrdbRedirectGTOP):
+    target_pattern_name = 'ligand-gtp-info'
+    legacy_kwarg = 'pk'
+
+class LigandDetailsLegacyRedirect(_GpcrdbRedirectBase):
+    target_pattern_name = 'ligand_detail'
+    legacy_kwarg = 'pk'
 
 class LigandInformationView(TemplateView):
     template_name = 'ligand_info.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super(LigandInformationView, self).get_context_data(**kwargs)
-        ligand_id = self.kwargs['pk']
-        ligand_data = Ligand.objects.get(id=ligand_id)
+        ligand_id = self.kwargs['gpcrdb_id']
+        ligand_data = Ligand.objects.get(gpcrdb_id=ligand_id)
         endogenous_ligands =  Endogenous_GTP.objects.all().values_list("ligand_id", flat=True)
         assay_data = list(AssayExperiment.objects.filter(ligand=ligand_id).prefetch_related(
             'ligand', 'protein', 'protein__family',
@@ -3616,7 +3663,7 @@ class LigandInformationView(TemplateView):
                         data_value = float(i.p_activity_value)
                     except (ValueError, TypeError):
                         # Handle cases where the value might be an empty string or non-numeric
-                        data_value = None 
+                        data_value = None
                 else:
                     data_value = None
 
