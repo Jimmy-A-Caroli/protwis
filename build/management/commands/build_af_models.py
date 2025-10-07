@@ -883,7 +883,7 @@ class Command(BaseBuild):
             try:
                 if 'ligand' in sd and sd['ligand'] and sd['ligand']!='None':
                     ligand = sd['ligand'][0]
-                    l = Ligand.objects.get(id=ligand['gpcrdb id'])
+                    l = Ligand.objects.get(gpcrdb_id=ligand['gpcrdb id'])
                 else:
                     l = None
                     print('No ligand inserted in the complex {}.'.format(sd['protein'].lower()))
@@ -946,7 +946,7 @@ class Command(BaseBuild):
                         else:
                             ligand_title = ligand['name']
 
-                        l = Ligand.objects.get(id=ligand['gpcrdb id'])
+                        l = Ligand.objects.get(gpcrdb_id=ligand['gpcrdb id'])
 
                         # Create LigandPeptideStructure object to store chain ID for peptide ligands - supposed to b TEMP
                         if ligand['type'] in ['peptide','protein']:

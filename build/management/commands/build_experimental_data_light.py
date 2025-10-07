@@ -53,7 +53,6 @@ class Command(BaseBuild):
     #id_dump = os.sep.join([dump_dir, 'ligandid_reload_dump.csv'])
     #######################################################################
     ligand_dump = dump_checker('ligand.Ligand')
-    print(ligand_dump['latest_dump'])
     ligand_csv = pd.read_csv(ligand_dump['latest_dump'], sep=';', index_col=0)
     id_dump = dump_checker('ligand.LigandID')
     id_csv = pd.read_csv(id_dump['latest_dump'], sep=';', index_col=0)
@@ -350,6 +349,23 @@ class Command(BaseBuild):
             ''')
 
     @staticmethod
+    def sync_sequence_to_max(model, column):
+        """
+        Sync the PostgreSQL sequence for `column` on `model` to MAX(column).
+        Use after imports that set the column explicitly.
+        Works for serial or identity columns.
+        """
+        table = model._meta.db_table
+        with connection.cursor() as cursor:
+            cursor.execute(f'''
+                SELECT setval(
+                    pg_get_serial_sequence('"{table}"','{column}'),
+                    COALESCE((SELECT MAX("{column}") FROM "{table}"), 0),
+                    true
+                );
+            ''')
+
+    @staticmethod
     def purge_data():
         delete_experimental = AssayExperiment.objects.all()  # New Model Biased Data
         delete_experimental.delete()
@@ -361,7 +377,7 @@ class Command(BaseBuild):
         # Reset primary key ID sequences
         Command.reset_pk_sequence(AssayExperiment)
         Command.reset_pk_sequence(Endogenous_GTP)
-        Command.reset_pk_sequence(Ligand)
+        # Command.reset_pk_sequence(Ligand)
         Command.reset_pk_sequence(LigandID)
 
     @staticmethod
@@ -706,7 +722,7 @@ class Command(BaseBuild):
     @staticmethod
     def reload_dump():
         compounds = {}
-
+        opener = gzip.open if path.endswith(".gz") else open
         # --- Helper to print progress every 10% ---
         def _progress_printer(total, prefix):
             """Returns a closure that you can call with current index to print at 10% intervals."""
@@ -721,14 +737,14 @@ class Command(BaseBuild):
 
         # --- PASS 1: create all compounds without parent ---
         # 1a) count rows
-        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
+        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 1 (compounds): 0%")
         tick1 = _progress_printer(total, "Pass 1 (compounds)")
 
         # 1b) actual work
-        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
+        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 # print progress if needed
@@ -741,7 +757,7 @@ class Command(BaseBuild):
                 )
 
                 compound = Ligand.objects.create(
-                    id=int(row['id']),
+                    # id=int(row['id']),
                     name=row['name'],
                     pdbe=row.get('pdbe') or None,
                     ambiguous_alias=row.get('ambiguous_alias') or None,
@@ -758,26 +774,27 @@ class Command(BaseBuild):
                     uniprot=row.get('uniprot') or None,
                     source=row.get('source') or None,
                     helm=row.get('helm') or None,
+                    gpcrdb_id=int(row['gpcrdb_id']),
                     parent=None
                 )
-                compounds[compound.id] = compound
+                compounds[compound.gpcrdb_id] = compound
         print("Pass 1 (compounds): 100%")
 
         # --- PASS 2: set parent relationships ---
-        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
+        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 2 (parents): 0%")
         tick2 = _progress_printer(total, "Pass 2 (parents)")
 
-        with open(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
+        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick2(idx)
                 parent_id = row.get('parent_id')
                 if parent_id:
                     try:
-                        compound = compounds[int(row['id'])]
+                        compound = compounds[int(row['gpcrdb_id'])]
                         compound.parent = compounds.get(int(parent_id))
                         compound.save()
                     except KeyError:
@@ -785,13 +802,13 @@ class Command(BaseBuild):
         print("Pass 2 (parents): 100%")
 
         # --- PASS 3: create all the LigandIDs ---
-        with open(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
+        with opener(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 3 (IDs): 0%")
         tick3 = _progress_printer(total, "Pass 3 (IDs)")
 
-        with open(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as idsfile:
+        with opener(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as idsfile:
             reader = csv.DictReader(idsfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick3(idx)
@@ -799,7 +816,7 @@ class Command(BaseBuild):
                     record = LigandID(
                         id=int(row['id']),
                         index=row['index'],
-                        ligand=Ligand.objects.get(id=row['ligand_id']),
+                        ligand=Ligand.objects.get(gpcrdb_id=row['ligand_id']),
                         web_resource=WebResource.objects.get(id=row['web_resource_id'])
                     )
                     record.save()
@@ -808,7 +825,8 @@ class Command(BaseBuild):
         print("Pass 3 (IDs): 100%")
 
         print("Syncing the MAX id values")
-        Command.sync_pk_sequence_to_max(Ligand)
+        Command.sync_sequence_to_max(Ligand, 'gpcrdb_id')
+        # Command.sync_pk_sequence_to_max(Ligand)
         Command.sync_pk_sequence_to_max(LigandID)
 
     @staticmethod
