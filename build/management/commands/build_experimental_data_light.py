@@ -722,9 +722,6 @@ class Command(BaseBuild):
 
     @staticmethod
     def reload_dump():
-        compounds = {}
-        opener_ligand = gzip.open if Command.ligand_dump['latest_dump'].endswith(".gz") else open
-        opener_ligand_id = gzip.open if Command.id_dump['latest_dump'].endswith(".gz") else open
         # --- Helper to print progress every 10% ---
         def _progress_printer(total, prefix):
             """Returns a closure that you can call with current index to print at 10% intervals."""
@@ -737,6 +734,20 @@ class Command(BaseBuild):
                     percent += 10
             return tick
 
+        # --- Setting up the opened for gzip or not ---
+        if Command.ligand_dump['latest_dump'].endswith(".gz"):
+            opener_ligand = lambda path, **kw: gzip.open(path, mode="rt", **kw)
+        else:
+            opener_ligand = lambda path, **kw: open(path, mode="r", **kw)
+        if Command.id_dump['latest_dump'].endswith(".gz"):
+            opener_ligand_id = lambda path, **kw: gzip.open(path, mode="rt", **kw)
+        else:
+            opener_ligand_id = lambda path, **kw: open(path, mode="r", **kw)
+
+        # opener_ligand = gzip.open if Command.ligand_dump['latest_dump'].endswith(".gz") else open
+        # opener_ligand_id = gzip.open if Command.id_dump['latest_dump'].endswith(".gz") else open
+
+        compounds = {}
         # --- PASS 1: create all compounds without parent ---
         # 1a) count rows
         with opener_ligand(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
