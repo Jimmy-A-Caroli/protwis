@@ -18,6 +18,7 @@ import os
 import csv
 import re
 import time
+import gzip
 import statistics
 import datamol as dm
 import datetime
@@ -722,7 +723,8 @@ class Command(BaseBuild):
     @staticmethod
     def reload_dump():
         compounds = {}
-        opener = gzip.open if path.endswith(".gz") else open
+        opener_ligand = gzip.open if Command.ligand_dump['latest_dump'].endswith(".gz") else open
+        opener_ligand_id = gzip.open if Command.id_dump['latest_dump'].endswith(".gz") else open
         # --- Helper to print progress every 10% ---
         def _progress_printer(total, prefix):
             """Returns a closure that you can call with current index to print at 10% intervals."""
@@ -737,14 +739,14 @@ class Command(BaseBuild):
 
         # --- PASS 1: create all compounds without parent ---
         # 1a) count rows
-        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
+        with opener_ligand(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 1 (compounds): 0%")
         tick1 = _progress_printer(total, "Pass 1 (compounds)")
 
         # 1b) actual work
-        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
+        with opener_ligand(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 # print progress if needed
@@ -781,13 +783,13 @@ class Command(BaseBuild):
         print("Pass 1 (compounds): 100%")
 
         # --- PASS 2: set parent relationships ---
-        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
+        with opener_ligand(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 2 (parents): 0%")
         tick2 = _progress_printer(total, "Pass 2 (parents)")
 
-        with opener(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
+        with opener_ligand(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick2(idx)
@@ -802,13 +804,13 @@ class Command(BaseBuild):
         print("Pass 2 (parents): 100%")
 
         # --- PASS 3: create all the LigandIDs ---
-        with opener(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
+        with opener_ligand_id(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as f:
             total = sum(1 for _ in f) - 1
 
         print("Pass 3 (IDs): 0%")
         tick3 = _progress_printer(total, "Pass 3 (IDs)")
 
-        with opener(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as idsfile:
+        with opener_ligand_id(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as idsfile:
             reader = csv.DictReader(idsfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick3(idx)
