@@ -117,10 +117,22 @@ def dump_checker(model_label, record_count=None):
 
     app_label, model_name = model_label.split(".", 1)
     Model = apps.get_model(app_label, model_name)
-    fields = list(Model._meta.concrete_fields)
-    columns = [getattr(f, "attname", f.name) for f in fields]
     pk = Model._meta.pk.attname
-    qs = Model._default_manager.all().order_by(pk).values_list(*columns)
+    if model_label == "ligand.LigandID":
+        # Use a join to pull the related field from the "index" relation
+        # Adjust "ligand_id" to the actual FK name if different.
+        columns = ["id", "ligand_id__gpcrdb_id", "index", "web_resource_id"]
+        qs = (
+            Model._default_manager
+            .select_related("index")                # speeds up the join
+            .order_by(pk)
+            .values_list(*columns)
+        )
+    else:
+        # default: dump all concrete fields
+        fields = list(Model._meta.concrete_fields)
+        columns = [getattr(f, "attname", f.name) for f in fields]
+        qs = Model._default_manager.all().order_by(pk).values_list(*columns)
 
     with gzip.open(out_path, "wt", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, delimiter=';')

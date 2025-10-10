@@ -829,7 +829,7 @@ class Command(BaseBuild):
                     record = LigandID(
                         id=int(row['id']),
                         index=row['index'],
-                        ligand=Ligand.objects.get(gpcrdb_id=row['ligand_id']),
+                        ligand=Ligand.objects.get(gpcrdb_id=int(row['ligand_id__gpcrdb_id'])),
                         web_resource=WebResource.objects.get(id=row['web_resource_id'])
                     )
                     record.save()
