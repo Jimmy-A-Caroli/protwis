@@ -124,15 +124,35 @@ def dump_checker(model_label, record_count=None):
         columns = ["id", "ligand_id__gpcrdb_id", "index", "web_resource_id"]
         qs = (
             Model._default_manager
-            .select_related("index")                # speeds up the join
+            .select_related("ligand_id")                # speeds up the join
             .order_by(pk)
             .values_list(*columns)
         )
     else:
-        # default: dump all concrete fields
+        # default: dump all concrete fields, but replace parent_id with parent_id__gpcrdb_id
         fields = list(Model._meta.concrete_fields)
-        columns = [getattr(f, "attname", f.name) for f in fields]
-        qs = Model._default_manager.all().order_by(pk).values_list(*columns)
+        base_columns = [getattr(f, "attname", f.name) for f in fields]
+
+        header_columns = []
+        values_columns = []
+        for c in base_columns:
+            if c == "parent_id":
+                # Header name you want:
+                header_columns.append("parent_id__gpcrdb_id")
+                # Values path to actually fetch from the FK:
+                values_columns.append("parent__gpcrdb_id")
+            else:
+                header_columns.append(c)
+                values_columns.append(c)
+
+        # select_related speeds up the FK read; harmless if parent is NULL
+        qs = (
+            Model._default_manager
+            .select_related("parent")
+            .order_by(pk)
+            .values_list(*values_columns)
+        )
+        columns = header_columns
 
     with gzip.open(out_path, "wt", encoding="utf-8", newline="") as fh:
         w = csv.writer(fh, delimiter=';')
