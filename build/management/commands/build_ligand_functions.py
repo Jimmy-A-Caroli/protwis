@@ -363,11 +363,17 @@ def match_id_via_unichem(type, id):
     return results
 
 
-def get_ligand_by_id(type, id, uniprot = None):
-    if uniprot is None:
-        result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, parent__isnull=False)
+def get_ligand_by_id(type, id, uniprot = None, forced=True):
+    if forced:
+        if uniprot is None:
+            result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, parent__isnull=False)
+        else:
+            result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper(), parent__isnull=False)
     else:
-        result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper(), parent__isnull=False)
+        if uniprot is None:
+            result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type)
+        else:
+            result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper())        
 
     if result.count() > 0:
         # For drugs we allow multiple entries because of stereochemistry if drug is racemic
