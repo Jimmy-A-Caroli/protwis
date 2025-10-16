@@ -1159,8 +1159,9 @@ class Command(BaseBuild):
                 row['target_id'], 'GtoP', row['interaction_species'])
 
             # TODO Handle multiple matches (uniprot filter?)
-            ligand = get_ligand_by_id("gtoplig", row['ligand_id'])
+            ligand = get_ligand_by_id("gtoplig", row['ligand_id'], forced=False)
             if ligand is not None:
+                print(ligand)
                 # Process stereoisomers when not specified:
                 if ligand is not None and ligand.smiles is not None and row['ligand_id'] not in stereo_ligs:
                     stereo_ligs[row['ligand_id']] = []
