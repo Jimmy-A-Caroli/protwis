@@ -1796,7 +1796,7 @@ class Command(BaseBuild):
         # Why this was based on LigandID and not on Ligand?
         # ligands = list(Ligand.objects.filter(name__startswith="CHEMBL", parent__isnull=False).values_list("id", "name").distinct())
         # ligands = list(Ligand.objects.filter(name__startswith="CHEMBL").values_list("id", "name").distinct())
-        ligands = list(LigandID.objects.filter(index__startswith="CHEMBL", ligand_id__parent__isnull=False).values_list("ligand_id", "index"))
+        ligands = list(LigandID.objects.filter(index__startswith="CHEMBL").values_list("ligand_id", "index"))
         lig_dict = {entry[1]: entry[0] for entry in ligands}
 
         print("\n#3 Building ChEMBL proteins cache", datetime.datetime.now())
@@ -2196,7 +2196,7 @@ class Command(BaseBuild):
             receptor = Command.fetch_protein(
                 row['target_id'], 'GtoP', row['target_species'])
             # TODO Handle multiple matches (uniprot filter?)
-            ligand = get_ligand_by_id("gtoplig", row['ligand_id'])
+            ligand = get_ligand_by_id("gtoplig", row['ligand_id'], forced=False)
 
             try:
                 low_value = "{:.2f}".format(float(row['affinity_low']))
