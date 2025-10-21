@@ -764,7 +764,7 @@ class Command(BaseBuild):
                 tick1(idx)
 
                 lig_type = (
-                    LigandType.objects.get(id=row['ligand_type_id'])
+                    LigandType.objects.get(slug=row['ligand_type_id__slug'])
                     if row.get('ligand_type_id')
                     else LigandType.objects.get(id=5)
                 )
@@ -830,7 +830,7 @@ class Command(BaseBuild):
                         id=int(row['id']),
                         index=row['index'],
                         ligand=Ligand.objects.get(gpcrdb_id=int(row['ligand_id__gpcrdb_id'])),
-                        web_resource=WebResource.objects.get(id=row['web_resource_id'])
+                        web_resource=WebResource.objects.get(slug=row['web_resource_id__slug'])
                     )
                     record.save()
                 except Exception as e:
