@@ -1,6 +1,6 @@
 #from django.db import connection
 #from django.db import IntegrityError
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Max
 from django.utils.text import slugify
 from django.db import transaction, IntegrityError
 
@@ -189,6 +189,9 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 if helm:
                     ligand.helm = helm
                 ligand.save()
+
+                ensure_gpcrdb_id(ligand)
+
                 return ligand
     else:
         # Try to find ligand via PubChem ID, Guide to Pharmacology ID, ChEMBL ID
@@ -259,6 +262,7 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     if type in ids:
                         ligand = create_ligand_from_id(name, type, ids[type], lig_type)
                         if ligand is not None:
+                            ensure_gpcrdb_id(ligand)
                             break
 
             # Create empty ligand
@@ -288,6 +292,8 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     if helm:
                         ligand.helm = helm
                     ligand.ambiguous_alias = True
+                    ligand.save()
+                    ensure_gpcrdb_id(ligand)
 
         # Add missing IDs via (web)links to the ligand object
         if ligand is not None:
@@ -314,7 +320,10 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 ligand.source = source
             if helm:
                 ligand.helm = helm
+
             ligand.save()
+
+            ensure_gpcrdb_id(ligand)
 
             # Create list of existing weblinks
             current_ids = []
@@ -373,7 +382,7 @@ def get_ligand_by_id(type, id, uniprot = None, forced=True):
         if uniprot is None:
             result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type)
         else:
-            result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper())        
+            result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper())
 
     if result.count() > 0:
         # For drugs we allow multiple entries because of stereochemistry if drug is racemic
@@ -597,6 +606,25 @@ def standardize_smiles(smiles):
 # std_smiles1 = Chem.MolToSmiles(std_mol1, isomericSmiles=False)
 # std_smiles2 = Chem.MolToSmiles(std_mol2, isomericSmiles=False)
 
+def allocate_next_gpcrdb_id():
+    """
+    Returns the next incremental gpcrdb_id (max + 1) under a row-level lock.
+    Requires a DB that supports SELECT ... FOR UPDATE (most do).
+    """
+    with transaction.atomic():
+        # Lock all rows touched by the aggregate to serialize concurrent writers
+        # (Most DBs will lock the index range under the hood.)
+        current_max = (
+            Ligand.objects.select_for_update()
+            .aggregate(m=Max("gpcrdb_id"))["m"]
+        ) or 0
+        return current_max + 1
+
+def ensure_gpcrdb_id(ligand):
+    if ligand is not None and ligand.gpcrdb_id is None:
+        ligand.gpcrdb_id = allocate_next_gpcrdb_id()
+        ligand.save(update_fields=["gpcrdb_id"])
+
 def generate_parent(name, ids, lig_type):
     ligand = Ligand()
     ligand.name = name
@@ -632,6 +660,10 @@ def generate_parent(name, ids, lig_type):
             ligand.logp = dm.descriptors.clogp(input_mol)
 
     ligand.parent = None
+
+    # >>> NEW: assign gpcrdb_id here
+    ligand.gpcrdb_id = allocate_next_gpcrdb_id()
+
     ligand.save()
     return ligand
 
