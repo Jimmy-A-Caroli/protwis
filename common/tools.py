@@ -121,10 +121,10 @@ def dump_checker(model_label, record_count=None):
     if model_label == "ligand.LigandID":
         # Use a join to pull the related field from the "index" relation
         # Adjust "ligand_id" to the actual FK name if different.
-        columns = ["id", "ligand_id__gpcrdb_id", "index", "web_resource_id"]
+        columns = ["id", "ligand_id__gpcrdb_id", "index", "web_resource_id__slug"]
         qs = (
             Model._default_manager
-            .select_related("ligand_id")                # speeds up the join
+            .select_related("ligand_id", "web_resource_id")                # speeds up the join
             .order_by(pk)
             .values_list(*columns)
         )
@@ -141,6 +141,11 @@ def dump_checker(model_label, record_count=None):
                 header_columns.append("parent_id__gpcrdb_id")
                 # Values path to actually fetch from the FK:
                 values_columns.append("parent__gpcrdb_id")
+            elif c == "ligand_type_id":
+                # Header name you want:
+                header_columns.append("ligand_type_id__slug")
+                # Values path to actually fetch from the FK:
+                values_columns.append("ligand_type__slug")
             else:
                 header_columns.append(c)
                 values_columns.append(c)
@@ -148,7 +153,7 @@ def dump_checker(model_label, record_count=None):
         # select_related speeds up the FK read; harmless if parent is NULL
         qs = (
             Model._default_manager
-            .select_related("parent")
+            .select_related("parent", "ligand_type")
             .order_by(pk)
             .values_list(*values_columns)
         )
