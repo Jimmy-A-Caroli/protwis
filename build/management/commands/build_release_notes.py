@@ -100,7 +100,7 @@ class Command(BaseCommand):
             ['Compounds in trial GPCRdb', Drugs.objects.exclude(drug_status='Approved').values("ligand_id").distinct().count(), 'GPCRdb'],
             ['Drug targets GPCRdb', Drugs.objects.filter(drug_status='Approved').values('target_id').distinct().count(), 'GPCRdb'],
             ['Disease indications GPCRdb', Drugs.objects.values('indication_id').distinct().count(), 'GPCRdb'],
-            ['Ligands GPCRdb', Ligand.objects.all().count(), 'GPCRdb'],
+            ['Ligands GPCRdb', Ligand.objects.filter(parent__isnull=True).count(), 'GPCRdb'],
             ['Physiological ligands GPCRdb', Endogenous_GTP.objects.values('ligand_id').distinct().count(), 'GPCRdb'],
             ['Ligand bioactivities GPCRdb', AssayExperiment.objects.all().count(), 'GPCRdb'],
             ['Ligand site mutations GPCRdb', MutationExperiment.objects.all().count(), 'GPCRdb'],

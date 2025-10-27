@@ -44,7 +44,7 @@ def dump_checker(model_label, record_count=None):
       }
     """
     # ---- config & naming ----
-    dump_path = os.sep.join([settings.DATA_DIR, 'model_snapshots'])
+    dump_path = os.sep.join([settings.DATA_DIR, 'ligand_data', 'model_snapshots'])
     safe = model_label.replace('.', '_').lower()
 
     # ---- find latest dump (prefer .csv.gz, but accept legacy .csv) ----

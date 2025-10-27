@@ -113,6 +113,15 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         head_inchi = ids["inchikey"].split('-')[0]
         parent = try_get_parent({"clean_inchikey":head_inchi, "parent__isnull":True})
 
+    # Attemp generating and checking clean inchikey if only smiles is provided
+    if not parent and "smiles" in ids and "inchikey" not in ids:
+        std_smiles = standardize_smiles(ids["smiles"])
+        if std_smiles:
+            input_mol = dm.to_mol(std_smiles, sanitize=True)
+            inchi = dm.to_inchikey(input_mol)
+            head_inchi = inchi.split('-')[0]
+            parent = try_get_parent({"clean_inchikey":head_inchi, "parent__isnull":True})
+
     # # Attempt using sequence if still not found
     # if not parent and "sequence" in ids:
     #     parent = try_get_parent({"sequence":ids["sequence"], "parent__isnull":True})
@@ -262,6 +271,7 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                     if type in ids:
                         ligand = create_ligand_from_id(name, type, ids[type], lig_type)
                         if ligand is not None:
+                            ligand.save()
                             ensure_gpcrdb_id(ligand)
                             break
 

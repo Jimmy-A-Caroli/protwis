@@ -71,13 +71,21 @@ class Command(BaseBuild):
                             help='Purge existing ligand records')
         parser.add_argument('--make_dump',
                             action='store_true',
-                            dest='purge',
+                            dest='make_dump',
                             default=False,
                             help='Create dump')
+        parser.add_argument('--only_make_dump',
+                            action='store_true',
+                            dest='only_make_dump',
+                            default=False,
+                            help='Create dump, then quit')
 
     def handle(self, *args, **options):
         if options["test_run"]:
             print("Skipping in test run")
+            return
+
+        if options["only_make_dump"]:
             return
 
         if options['purge']:
@@ -88,7 +96,6 @@ class Command(BaseBuild):
             self.tracker = {}
             test_model_updates(self.all_models, self.tracker, initialize=True)
             print("Ended purging data")
-
 
         print("\n\nRebuilding the Ligand Model based on latest dump")
         self.reload_dump()
@@ -318,7 +325,7 @@ class Command(BaseBuild):
         print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
 
         if options["make_dump"]:
-            print("\n\nRunning the Dump Checker and saving new dumps if needed")
+            print("\n\nRunning the Dump Checker and saving new csvs")
             ligand_dump = dump_checker('ligand.Ligand')
             id_dump = dump_checker('ligand.LigandID')
 
@@ -759,19 +766,25 @@ class Command(BaseBuild):
         # 1b) actual work
         with opener_ligand(Command.ligand_dump['latest_dump'], newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile, delimiter=';')
+            ligand_objects = []
+            ligand_types = {'none': LigandType.objects.get(slug='none')}
             for idx, row in enumerate(reader, start=1):
                 # print progress if needed
                 tick1(idx)
+                if row.get('gpcrdb_id')=='':
+                    continue
+                if row['ligand_type_id__slug'] in ligand_types:
+                    lig_type = ligand_types[row['ligand_type_id__slug']]
+                else:
+                    try:
+                        lig_type = LigandType.objects.get(slug=row['ligand_type_id__slug'])
+                        ligand_types[lig_type.slug] = lig_type
+                    except LigandType.DoesNotExist:
+                        lig_type = ligand_types['none']
 
-                lig_type = (
-                    LigandType.objects.get(slug=row['ligand_type_id__slug'])
-                    if row.get('ligand_type_id')
-                    else LigandType.objects.get(id=5)
-                )
-
-                compound = Ligand.objects.create(
+                compound = Ligand(
                     # id=int(row['id']),
-                    name=row['name'],
+                    name=row.get('name'),
                     pdbe=row.get('pdbe') or None,
                     ambiguous_alias=row.get('ambiguous_alias') or None,
                     clean_inchikey=row.get('clean_inchikey') or None,
@@ -787,10 +800,12 @@ class Command(BaseBuild):
                     uniprot=row.get('uniprot') or None,
                     source=row.get('source') or None,
                     helm=row.get('helm') or None,
-                    gpcrdb_id=int(row['gpcrdb_id']),
+                    gpcrdb_id=int(row.get('gpcrdb_id')),
                     parent=None
                 )
                 compounds[compound.gpcrdb_id] = compound
+                ligand_objects.append(compound)
+            Ligand.objects.bulk_create(ligand_objects)
         print("Pass 1 (compounds): 100%")
 
         # --- PASS 2: set parent relationships ---
@@ -804,10 +819,12 @@ class Command(BaseBuild):
             reader = csv.DictReader(csvfile, delimiter=';')
             for idx, row in enumerate(reader, start=1):
                 tick2(idx)
-                parent_id = row.get('parent_id')
+                if row.get('gpcrdb_id')=='':
+                    continue
+                parent_id = row.get('parent_id__gpcrdb_id')
                 if parent_id:
                     try:
-                        compound = compounds[int(row['gpcrdb_id'])]
+                        compound = compounds[int(row.get('gpcrdb_id'))]
                         compound.parent = compounds.get(int(parent_id))
                         compound.save()
                     except KeyError:
@@ -823,18 +840,26 @@ class Command(BaseBuild):
 
         with opener_ligand_id(Command.id_dump['latest_dump'], newline='', encoding='utf-8-sig') as idsfile:
             reader = csv.DictReader(idsfile, delimiter=';')
+            web_resources = {}
+            ligandid_objects = []
             for idx, row in enumerate(reader, start=1):
                 tick3(idx)
+                if row['web_resource_id__slug'] in web_resources:
+                    wr = web_resources[row['web_resource_id__slug']]
+                else:
+                    wr = WebResource.objects.get(slug=row['web_resource_id__slug'])
+                    web_resources[row['web_resource_id__slug']] = wr
                 try:
                     record = LigandID(
                         id=int(row['id']),
                         index=row['index'],
                         ligand=Ligand.objects.get(gpcrdb_id=int(row['ligand_id__gpcrdb_id'])),
-                        web_resource=WebResource.objects.get(slug=row['web_resource_id__slug'])
+                        web_resource=wr
                     )
-                    record.save()
+                    ligandid_objects.append(record)
                 except Exception as e:
                     print(f"Impossible to import LigandID {row['index']}: {e!r}")
+            LigandID.objects.bulk_create(ligandid_objects)
         print("Pass 3 (IDs): 100%")
 
         print("Syncing the MAX id values")

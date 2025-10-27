@@ -576,7 +576,7 @@ class Command(BaseBuild):
                         continue
 
                 if r['ligand_class']:
-                    lr = find_role(r['ligand_class'][:50]) #getting from previous code, althought should not be needed
+                    l_role = find_role(r['ligand_class'][:50])[0] #getting from previous code, althought should not be needed
                     # try:
                     #     l_role, created = LigandRole.objects.get_or_create(name=r['ligand_class'],
                     #         defaults={'slug': slugify(r['ligand_class'])[:50]}) # FIXME this should not be needed
