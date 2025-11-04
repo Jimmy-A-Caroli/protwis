@@ -715,7 +715,7 @@ class Command(BaseBuild):
             except:
                 print('error with mutation record')
                 traceback.print_exc()
-                exit(0)
+                # exit(0)
 
             #print(diff)
 

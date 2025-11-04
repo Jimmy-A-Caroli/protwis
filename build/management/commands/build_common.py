@@ -35,6 +35,7 @@ class Command(BaseCommand):
         functions = [
             'create_resources',
             'create_protein_segments',
+            'create_protein_sites',
             'create_residue_numbering_schemes',
             'create_anomalies',
             'create_ligand_roles',

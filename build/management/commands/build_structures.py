@@ -305,10 +305,9 @@ class Command(BaseBuild):
                 if chain[wt_2x50.sequence_number].get_resname()=='ASP' and chain[wt_3x39.sequence_number].get_resname()=='SER':
                     v_2x50 = chain[wt_2x50.sequence_number]['OD1'].get_vector()
                     v_3x39 = chain[wt_3x39.sequence_number]['OG'].get_vector()
-                    all_resis = uniqueify(chain)
-                    for r in all_resis:
+                    for r in chain:
                         id_ = r.get_id()
-                        if id_[0]=='H_ NA':
+                        if id_[0]=='H_NA':
                             v_na = r['NA'].get_vector()
                             d_2x50 = (v_na-v_2x50).norm()
                             d_3x39 = (v_na-v_3x39).norm()
@@ -741,6 +740,14 @@ class Command(BaseBuild):
             temp_seq = temp_seq[:565]+temp_seq[566:]
         elif structure.pdb_code.index=='9IVM':
             temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
+        elif structure.pdb_code.index=='8RVW':
+            ref_seq = ref_seq[:206]+'L'+ref_seq[206:249]+ref_seq[250:]
+        elif structure.pdb_code.index=='8XQE':
+            temp_seq = temp_seq[:54]+'R'+temp_seq[54:61]+temp_seq[62:]
+        elif structure.pdb_code.index in ['9II2','9II3']:
+            temp_seq = temp_seq[:48]+'E'+temp_seq[48:55]+temp_seq[56:]
+        elif structure.pdb_code.index=='9JVM':
+            temp_seq = temp_seq[:209]+'R'+temp_seq[209:221]+temp_seq[222:]
 
         # --- [END OF LEGACY PIPELINE] ---
 
@@ -931,7 +938,8 @@ class Command(BaseBuild):
                                     elif residue.sequence_number!=wt_r.sequence_number:
                                         # print('WT pos not same pos, mismatch',residue.sequence_number,residue.amino_acid,wt_r.sequence_number,wt_r.amino_acid)
                                         wt_pdb_lookup.append(OrderedDict([('WT_POS',wt_r.sequence_number), ('PDB_POS',residue.sequence_number), ('AA',wt_r.amino_acid)]))
-                                        if structure.pdb_code.index not in ['4GBR','6C1R','6C1Q','7XBX','7F1Q','7ZLY','8JWY','8JWZ','8JMT','8TB7','8ITM','9D3G','9D3E','8YNS','8YNT']:
+                                        if structure.pdb_code.index not in ['4GBR','6C1R','6C1Q','7XBX','7F1Q','7ZLY','8JWY','8JWZ','8JMT','8TB7','8ITM','9D3G','9D3E','8YNS','8YNT','8WWJ','8WWK','8WWH',
+                                                                            '8WWM','8WWN','8WSS','8WWI','8WWL']:
                                             if residue.sequence_number in unmapped_ref:
                                                 # print('residue.sequence_number',residue.sequence_number,'not mapped though')
                                                 if residue.amino_acid == wt_lookup[residue.sequence_number].amino_acid:
@@ -1758,7 +1766,7 @@ class Command(BaseBuild):
 
                     # structure-ligand interaction
                     if l and ligand['role']:
-                        lr = find_role(ligand['role'])
+                        lr = find_role(ligand['role'])[0]
                         # role_slug = slugify(ligand['role'])
                         # try:
                         #     lr, created = LigandRole.objects.get_or_create(slug=role_slug,
