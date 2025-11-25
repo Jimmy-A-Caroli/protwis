@@ -98,7 +98,10 @@ def calculate_interactions(pdb, session=None, peptide=None, file_input=False):
     sortedresults = []
     summary_results = {}
     new_results = {}
-    projectdir = '/tmp/interactions/'
+    if not session:
+        projectdir = '/tmp/interactions/'
+    else:
+        projectdir = os.sep.join(['/tmp', 'interactions', session,])+'/'
     tempdir = projectdir + 'temp/'
     if not os.path.exists(tempdir):
         os.makedirs(tempdir)
