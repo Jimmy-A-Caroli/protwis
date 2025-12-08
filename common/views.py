@@ -1076,56 +1076,150 @@ class AbsSegmentSelection(TemplateView):
     amino_acid_groups_old = definitions.AMINO_ACID_GROUPS_OLD
     amino_acid_group_names_old = definitions.AMINO_ACID_GROUP_NAMES_OLD
 
-    def get_context_data(self, **kwargs):
-        """get context from parent class
-
-        (really only relevant for child classes of this class, as TemplateView
-        does not have any context variables).
+    # --- helper: decide color class for one segment ---
+    def _get_segment_color_class(self, seg):
         """
+        Decide which UI color class to use based on category/slug/name.
+        """
+        slug = (seg.slug or '').upper()
+        name = (seg.name or '')
+        category = (seg.category or '').lower()
 
+        # Terminus: split into N-term / C-term
+        if category == 'terminus':
+            if slug.startswith('N') or 'N-term' in name or 'N-terminus' in name:
+                return 'seg-nterm'
+            return 'seg-cterm'
+
+        # Helix 8 explicitly
+        if slug == 'H8' or name.startswith('Helix 8'):
+            return 'seg-h8'
+
+        # Transmembrane helices (TM1–TM7 etc.)
+        if slug.startswith('TM'):
+            return 'seg-tm'
+
+        # Extracellular loops
+        if slug.startswith('ECL') or 'Extracellular loop' in name:
+            return 'seg-ecl'
+
+        # Intracellular loops
+        if slug.startswith('ICL') or 'Intracellular loop' in name:
+            return 'seg-icl'
+
+        # Fallback
+        return 'seg-default'
+
+    def _assign_segment_colors(self, segments):
+        """
+        Attach ui_color_class attribute to each segment.
+        """
+        for seg in segments:
+            seg.ui_color_class = self._get_segment_color_class(seg)
+        return segments
+
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # get selection from session and add to context
-        # get simple selection from session
+        # load selection from session
         simple_selection = self.request.session.get('selection', False)
-
-        # create full selection and import simple selection (if it exists)
         selection = Selection()
         if simple_selection:
             selection.importer(simple_selection)
 
-        # context['selection'] = selection
+        # base selection dict
         context['selection'] = {}
         context['selection']['site_residue_groups'] = selection.site_residue_groups
         context['selection']['active_site_residue_group'] = selection.active_site_residue_group
+
         for selection_box, include in self.selection_boxes.items():
             if include:
-                context['selection'][selection_box] = selection.dict(selection_box)['selection'][selection_box]
+                context['selection'][selection_box] = (
+                    selection.dict(selection_box)['selection'][selection_box]
+                )
+
+        # detect class types
+        has_class_b2 = False
+        has_class_d1 = False
+
+        def get_class_name(f):
+            if f.type == 'family':
+                return get_gpcr_class(f.item).name
+            elif f.type == 'protein':
+                return f.item.family.parent.parent.parent.name
+            return ""
+            
 
         for f in selection.targets:
-            if f.type=='family':
-                family = get_gpcr_class(f.item)
-                if family.name.startswith('Class D1'):
-                    self.ss = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='ECD').prefetch_related('generic_numbers')
-                    self.ss_cats = self.ss.values_list('category').order_by('category').distinct('category')
-                elif family.name.startswith('Class B'):
-                    self.ss = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='Class D1').prefetch_related('generic_numbers')
-                    self.ss_cats = self.ss.values_list('category').order_by('category').distinct('category')
-            elif f.type=='protein':
-                if f.item.family.parent.parent.parent.name.startswith('Class D1'):
-                    self.ss = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='ECD').prefetch_related('generic_numbers')
-                    self.ss_cats = self.ss.values_list('category').order_by('category').distinct('category')
-                elif f.item.family.parent.parent.parent.name.startswith('Class B'):
-                    self.ss = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='Class D1').prefetch_related('generic_numbers')
-                    self.ss_cats = self.ss.values_list('category').order_by('category').distinct('category')
+            fname = get_class_name(f)
 
-        # get attributes of this class and add them to the context
-        attributes = inspect.getmembers(self, lambda a:not(inspect.isroutine(a)))
+            if fname.startswith("Class B2"):
+                has_class_b2 = True
+            if fname.startswith("Class D1"):
+                has_class_d1 = True
+
+        # === 1. ALL-GPCR SEGMENTS (excluding GAIN and D1) ===
+        all_gpcr_segments = list(
+            ProteinSegment.objects.filter(
+                partial=False,
+                proteinfamily='GPCR'
+            )
+            .exclude(name__startswith='Fungal')
+            .exclude(name__startswith='ECD')
+            .exclude(domain='GAIN')          # keep GAIN separate
+            .exclude(slug__startswith='D1')  # keep D1 sheets/turns separate
+            .order_by('id')
+            .prefetch_related('generic_numbers')
+        )
+
+
+        # === 2. CLASS-SPECIFIC: GAIN DOMAIN (Class B2 only) ===
+        gain_segments = list(
+            ProteinSegment.objects.filter(
+                partial=False,
+                proteinfamily='GPCR',
+                domain='GAIN'
+            )
+            .order_by('id')
+            .prefetch_related('generic_numbers')
+        )
+
+
+        # === 3. CLASS-SPECIFIC: D1 SHEETS AND TURNS ===
+        d1_segments = list(
+            ProteinSegment.objects.filter(
+                partial=False,
+                proteinfamily='GPCR',
+                slug__startswith='D1'    # catches D1S1, D1S2, D1T1, D1e1, etc.
+            )
+            .order_by('id')
+            .prefetch_related('generic_numbers')
+        )
+
+        # expose to template
+        all_gpcr_segments = self._assign_segment_colors(all_gpcr_segments)
+        gain_segments     = self._assign_segment_colors(gain_segments)
+        d1_segments       = self._assign_segment_colors(d1_segments)
+
+        # EXPOSE THESE LISTS TO THE VIEW (important!)
+        self.all_gpcr_segments = all_gpcr_segments
+        self.gain_segments = gain_segments
+        self.d1_segments = d1_segments
+
+        context['has_gain_segments'] = has_class_b2
+        context['has_class_d1_target'] = has_class_d1
+
+        # put class flags so JS can use it too
+        self.has_gain_segments = has_class_b2
+        self.has_class_d1_target = has_class_d1
+
+        # expose all view attributes
+        attributes = inspect.getmembers(self, lambda a: not inspect.isroutine(a))
         for a in attributes:
-            if not(a[0].startswith('__') and a[0].endswith('__')):
+            if not (a[0].startswith("__") and a[0].endswith("__")):
                 context[a[0]] = a[1]
 
-        # Set segment selection check if not set
+        # set default onclick for buttons if not set
         for button in context["buttons"]:
             if "onclick" not in context["buttons"][button]:
                 context["buttons"][button]["onclick"] = 'return VerifyMinSegmentSelection()'
@@ -2918,3 +3012,38 @@ def get_reference(request):
         'html': html_content,
         'message': f"Data received for keys: {keys}"
     }, safe=False)
+
+def check_selection_status(request):
+    try:
+        simple = request.session.get('selection', False)
+        selection = Selection()
+        if simple:
+            selection.importer(simple)
+
+        has_b2 = False
+        has_d1 = False
+
+        for t in selection.targets:
+            if t.type == 'family':
+                name = get_gpcr_class(t.item).name
+            elif t.type == 'protein':
+                name = t.item.family.parent.parent.parent.name
+            else:
+                continue
+
+            if name.startswith("Class B2"):
+                has_b2 = True
+            if name.startswith("Class D1"):
+                has_d1 = True
+
+        return JsonResponse({
+            "has_class_b2": has_b2,
+            "has_class_d1": has_d1,
+        })
+
+    except Exception as e:
+        import traceback
+        print("ERROR IN check_selection_status:")
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
+
