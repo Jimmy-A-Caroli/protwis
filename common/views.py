@@ -1699,7 +1699,52 @@ def SelectAlignableResidues(request):
     if simple_selection:
         selection.importer(simple_selection)
 
+    # ------------------------------------------------------------------
+    # Helper: get underlying Protein object from a SelectionItem
+    # ------------------------------------------------------------------
+    def get_protein_from_selection_item(sel_item):
+        """
+        Given a SelectionItem (family/protein/structure/structure_model/signprot),
+        return the corresponding Protein instance, or None.
+        """
+        try:
+            if sel_item.type == 'family':
+                proteins = Protein.objects.filter(
+                    family__slug__startswith=sel_item.item.slug
+                )
+                return proteins[0] if proteins else None
+
+            elif sel_item.type == 'protein':
+                return sel_item.item
+
+            elif sel_item.type in ('structure', 'structure_model'):
+                # Many structures/models store the protein directly
+                prot = getattr(sel_item.item, 'protein', None)
+                if prot is not None:
+                    return prot
+
+                # Others store it under a conformation object
+                try:
+                    return sel_item.item.protein_conformation.protein
+                except AttributeError:
+                    pass
+
+            elif sel_item.type == 'signprot':
+                try:
+                    return sel_item.item.protein_conformation.protein
+                except AttributeError:
+                    return sel_item.item.protein
+
+        except AttributeError:
+            pass
+
+        return None
+
+    # ------------------------------------------------------------------
+    # 1) Build the base list of segments
+    # ------------------------------------------------------------------
     if "protein_type" in request.GET:
+        # G protein / arrestin case (unchanged behaviour)
         if request.GET['protein_type'] == 'gprotein':
             segmentlist = definitions.G_PROTEIN_SEGMENTS
             pfam = 'Gprotein'
@@ -1707,94 +1752,113 @@ def SelectAlignableResidues(request):
             segmentlist = definitions.ARRESTIN_SEGMENTS
             pfam = 'Arrestin'
 
-        preserved = Case(*[When(slug=pk, then=pos)
-                           for pos, pk in enumerate(segmentlist['Structured'])])
+        preserved = Case(*[
+            When(slug=pk, then=pos)
+            for pos, pk in enumerate(segmentlist['Structured'])
+        ])
         segments = ProteinSegment.objects.filter(
             slug__in=segmentlist['Structured'],
             partial=False,
             proteinfamily=pfam
         ).order_by(preserved)
+
+        has_b2 = False
+        has_d1 = False
+
     else:
-        # start from all GPCR segments
+        # GPCR case: start from all GPCR segments
         segments = ProteinSegment.objects.filter(
             proteinfamily='GPCR'
         ).order_by('pk')
 
-        # --- NEW: detect Class B2 / Class D1 (targets + reference, incl. structures) ---
+        # ------------------------------------------------------------------
+        # 2) Collect all underlying proteins from REFERENCE + TARGETS
+        # ------------------------------------------------------------------
+        proteins_for_filter = []
+
+        if simple_selection:
+            for group_name in ('reference', 'targets'):
+                for sel_item in getattr(simple_selection, group_name, []):
+                    prot = get_protein_from_selection_item(sel_item)
+                    if prot and prot not in proteins_for_filter:
+                        proteins_for_filter.append(prot)
+
+        # ------------------------------------------------------------------
+        # 3) Detect whether any Class B2 / Class D1 is present
+        # ------------------------------------------------------------------
         has_b2 = False
         has_d1 = False
 
-        all_items = list(getattr(selection, 'targets', [])) + \
-                    list(getattr(selection, 'reference', []))
-
-        for f in all_items:
-            fname = get_gpcr_class_name_for_item(f)
-            if not fname:
+        for prot in proteins_for_filter:
+            try:
+                cname = prot.family.parent.parent.parent.name
+            except AttributeError:
                 continue
-            if fname.startswith('Class D1'):
-                has_d1 = True
-            if fname.startswith('Class B2'):
-                has_b2 = True
 
-        # If NO Class D1 → drop D1-specific segments
+            if cname.startswith('Class B2'):
+                has_b2 = True
+            if cname.startswith('Class D1'):
+                has_d1 = True
+
+        # ------------------------------------------------------------------
+        # 4) Drop segments that are not relevant:
+        #    - remove D1 segments if no Class D1
+        #    - remove GAIN if no Class B2
+        # ------------------------------------------------------------------
         if not has_d1:
             segments = segments.exclude(slug__startswith='D1')
 
-        # If NO Class B2 → drop GAIN
         if not has_b2:
             segments = segments.exclude(domain='GAIN')
 
+    # ----------------------------------------------------------------------
+    # 5) Work out numbering schemes & segment ids with generic numbers
+    # ----------------------------------------------------------------------
     numbering_scheme_slug = 'false'
-
-    # find the relevant numbering scheme (based on target selection)
     cgn = False
     seg_ids_all = []
     numbering_schemes = []
 
     if numbering_scheme_slug == 'cgn':
         cgn = True
-    elif numbering_scheme_slug == 'false':
-        if simple_selection and simple_selection.reference:
-            if simple_selection.reference[0].type == 'family':
-                proteins = Protein.objects.filter(
-                    family__slug__startswith=simple_selection.reference[0].item.slug)
-                r_prot = proteins[0]
-            elif simple_selection.reference[0].type == 'protein':
-                r_prot = simple_selection.reference[0].item
-            elif simple_selection.reference[0].type == 'structure':
-                r_prot = simple_selection.reference[0].item.protein_conformation.protein
-            elif simple_selection.reference[0].type == 'signprot':
-                r_prot = simple_selection.reference[0].item.protein
 
-            seg_ids_all = get_protein_segment_ids(r_prot, seg_ids_all)
-            if r_prot.residue_numbering_scheme not in numbering_schemes:
-                numbering_schemes.append(r_prot.residue_numbering_scheme)
+    if numbering_scheme_slug == 'false':
+        # Use REFERENCE + TARGETS to determine which segments / schemes
+        if simple_selection:
+            # Reference items
+            if simple_selection.reference:
+                ref_item = simple_selection.reference[0]
+                r_prot = get_protein_from_selection_item(ref_item)
+                if r_prot:
+                    seg_ids_all = get_protein_segment_ids(r_prot, seg_ids_all)
+                    if r_prot.residue_numbering_scheme not in numbering_schemes:
+                        numbering_schemes.append(r_prot.residue_numbering_scheme)
 
-        if simple_selection and simple_selection.targets:
+            # Target items
             for t in simple_selection.targets:
-                if t.type == 'family':
-                    proteins = Protein.objects.filter(
-                        family__slug__startswith=t.item.slug)
-                    t_prot = proteins[0]
-                elif t.type == 'protein':
-                    t_prot = t.item
-                elif t.type == 'structure':
-                    t_prot = t.item.protein_conformation.protein
-                elif t.type == 'structure_model':
-                    t_prot = t.item.protein
-                elif t.type == 'signprot':
-                    try:
-                        t_prot = t.item.protein_conformation.protein
-                    except AttributeError:
-                        t_prot = t.item.protein
+                t_prot = get_protein_from_selection_item(t)
+                if not t_prot:
+                    continue
 
                 seg_ids_all = get_protein_segment_ids(t_prot, seg_ids_all)
                 if t_prot.residue_numbering_scheme not in numbering_schemes:
                     numbering_schemes.append(t_prot.residue_numbering_scheme)
 
-        # Filter based on reference and target proteins
-        filtered_segments = [s for s in segments if s.id in seg_ids_all]
+        # ------------------------------------------------------------------
+        # 5a) Filter segments by seg_ids_all, BUT:
+        #     - never drop GAIN if Class B2 present
+        #     - never drop D1   if Class D1 present
+        # ------------------------------------------------------------------
+        filtered_segments = []
+        for s in segments:
+            if s.id in seg_ids_all:
+                filtered_segments.append(s)
+            elif has_b2 and s.domain == 'GAIN':
+                filtered_segments.append(s)
+            elif has_d1 and s.slug.startswith('D1'):
+                filtered_segments.append(s)
 
+        # Fallback: if nothing matches, use gpcrdba + all segments (post-filter)
         if len(numbering_schemes) == 0 and len(filtered_segments) == 0:
             numbering_schemes.append(
                 ResidueNumberingScheme.objects.get(slug="gpcrdba")
@@ -1802,18 +1866,21 @@ def SelectAlignableResidues(request):
             filtered_segments = list(segments)
 
         segments = filtered_segments
+
     else:
         numbering_schemes = [
             ResidueNumberingScheme.objects.get(slug=numbering_scheme_slug)
         ]
 
-    # build selection
+    # ----------------------------------------------------------------------
+    # 6) Build final selection (fully aligned or "only_aligned_residues")
+    # ----------------------------------------------------------------------
     for segment in segments:
         if segment.fully_aligned:
             selection_object = SelectionItem(segment.category, segment)
             selection.add(selection_type, segment.category, selection_object)
         else:
-            # not fully aligned, but maybe has generic numbers in one of the schemes
+            # not fully aligned, but has generic numbers in one of the schemes
             if ResidueGenericNumberEquivalent.objects.filter(
                 default_generic_number__protein_segment=segment,
                 scheme__in=numbering_schemes
@@ -1826,11 +1893,15 @@ def SelectAlignableResidues(request):
                 )
                 selection.add(selection_type, segment.category, selection_object)
 
+    # Save back to session
     simple_selection = selection.exporter()
     request.session['selection'] = simple_selection
 
-    return render(request, 'common/selection_lists.html',
-                  selection.dict('segments'))
+    return render(
+        request,
+        'common/selection_lists.html',
+        selection.dict('segments')
+    )
 
 
 def get_protein_segment_ids(protein, seg_ids_all):
