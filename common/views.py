@@ -1138,20 +1138,17 @@ class AbsSegmentSelection(TemplateView):
                     selection.dict(selection_box)['selection'][selection_box]
                 )
 
-        # detect class types
+        # ---------- detect which GPCR classes are present ----------
         has_class_b2 = False
         has_class_d1 = False
 
-        def get_class_name(f):
-            if f.type == 'family':
-                return get_gpcr_class(f.item).name
-            elif f.type == 'protein':
-                return f.item.family.parent.parent.parent.name
-            return ""
-            
+        # look at both reference and targets – works for “normal” and structure workflows
+        all_items = list(getattr(selection, 'targets', [])) + list(getattr(selection, 'reference', []))
 
-        for f in selection.targets:
-            fname = get_class_name(f)
+        for f in all_items:
+            fname = get_gpcr_class_name_for_item(f)
+            if not fname:
+                continue
 
             if fname.startswith("Class B2"):
                 has_class_b2 = True
@@ -1172,8 +1169,7 @@ class AbsSegmentSelection(TemplateView):
             .prefetch_related('generic_numbers')
         )
 
-
-        # === 2. CLASS-SPECIFIC: GAIN DOMAIN (Class B2 only) ===
+        # === 2. GAIN domain ===
         gain_segments = list(
             ProteinSegment.objects.filter(
                 partial=False,
@@ -1184,47 +1180,45 @@ class AbsSegmentSelection(TemplateView):
             .prefetch_related('generic_numbers')
         )
 
-
-        # === 3. CLASS-SPECIFIC: D1 SHEETS AND TURNS ===
+        # === 3. D1 sheets/turns ===
         d1_segments = list(
             ProteinSegment.objects.filter(
                 partial=False,
                 proteinfamily='GPCR',
-                slug__startswith='D1'    # catches D1S1, D1S2, D1T1, D1e1, etc.
+                slug__startswith='D1'
             )
             .order_by('id')
             .prefetch_related('generic_numbers')
         )
 
-        # expose to template
+        # color classes
         all_gpcr_segments = self._assign_segment_colors(all_gpcr_segments)
         gain_segments     = self._assign_segment_colors(gain_segments)
         d1_segments       = self._assign_segment_colors(d1_segments)
 
-        # EXPOSE THESE LISTS TO THE VIEW (important!)
         self.all_gpcr_segments = all_gpcr_segments
-        self.gain_segments = gain_segments
-        self.d1_segments = d1_segments
+        self.gain_segments     = gain_segments
+        self.d1_segments       = d1_segments
 
-        context['has_gain_segments'] = has_class_b2
-        context['has_class_d1_target'] = has_class_d1
+        # flags for templates + JS
+        context['has_gain_segments']      = has_class_b2
+        context['has_class_d1_target']    = has_class_d1
+        self.has_gain_segments            = has_class_b2
+        self.has_class_d1_target          = has_class_d1
 
-        # put class flags so JS can use it too
-        self.has_gain_segments = has_class_b2
-        self.has_class_d1_target = has_class_d1
-
-        # expose all view attributes
+        # dump attributes into context (unchanged)
         attributes = inspect.getmembers(self, lambda a: not inspect.isroutine(a))
         for a in attributes:
             if not (a[0].startswith("__") and a[0].endswith("__")):
                 context[a[0]] = a[1]
 
-        # set default onclick for buttons if not set
+        # button onclick default
         for button in context["buttons"]:
             if "onclick" not in context["buttons"][button]:
                 context["buttons"][button]["onclick"] = 'return VerifyMinSegmentSelection()'
 
         return context
+
 
 
 class AbsMiscSelection(TemplateView):
@@ -1581,33 +1575,51 @@ def SelectFullSequence(request):
             segmentlist = definitions.ARRESTIN_SEGMENTS
             pfam = 'Arrestin'
 
-        preserved = Case(*[When(slug=pk, then=pos) for pos, pk in enumerate(segmentlist['Full'])])
-        segments = ProteinSegment.objects.filter(slug__in=segmentlist['Full'], partial=False, proteinfamily=pfam).order_by(preserved)
+        preserved = Case(*[When(slug=pk, then=pos)
+                           for pos, pk in enumerate(segmentlist['Full'])])
+        segments = ProteinSegment.objects.filter(
+            slug__in=segmentlist['Full'],
+            partial=False,
+            proteinfamily=pfam
+        ).order_by(preserved)
 
     else:
-        add_class_b, add_class_d = False, False
-        for f in selection.targets:
-            if f.type=='family':
-                family = get_gpcr_class(f.item)
-                if family.name.startswith('Class D1'):
-                    add_class_d = True
-                elif family.name.startswith('Class B1'):
-                    add_class_b = True
-            elif f.type=='protein':
-                if f.item.family.parent.parent.parent.name.startswith('Class D1'):
-                    add_class_d = True
-                elif f.item.family.parent.parent.parent.name.startswith('Class B1'):
-                    add_class_b = True
-        if add_class_d:
-            segments = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='ECD')
-        elif add_class_b:
-            segments = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='Class D1')
-        else:
-            segments = ProteinSegment.objects.filter(partial=False, proteinfamily='GPCR').exclude(name__startswith='Class D1').exclude(name__startswith='ECD')
+        # --- NEW: detect presence of Class B2 / Class D1,
+        #          using BOTH reference & targets (incl. structures) ---
+        has_b2 = False
+        has_d1 = False
 
+        all_items = list(getattr(selection, 'targets', [])) + \
+                    list(getattr(selection, 'reference', []))
+
+        for f in all_items:
+            fname = get_gpcr_class_name_for_item(f)
+            if not fname:
+                continue
+            if fname.startswith('Class D1'):
+                has_d1 = True
+            if fname.startswith('Class B2'):
+                has_b2 = True
+
+        # base GPCR segments
+        segments_qs = ProteinSegment.objects.filter(
+            partial=False,
+            proteinfamily='GPCR'
+        ).exclude(name__startswith='ECD')  # always exclude ECD
+
+        # If NO Class D1 in selection → exclude D1-specific segments
+        if not has_d1:
+            segments_qs = segments_qs.exclude(slug__startswith='D1')
+
+        # If NO Class B2 in selection → exclude GAIN domain segments
+        if not has_b2:
+            segments_qs = segments_qs.exclude(domain='GAIN')
+
+        segments = segments_qs
+
+    # add segments to selection
     for segment in segments:
         selection_object = SelectionItem(segment.category, segment)
-        # add the selected item to the selection
         selection.add(selection_type, segment.category, selection_object)
 
     # export simple selection that can be serialized
@@ -1616,7 +1628,9 @@ def SelectFullSequence(request):
     # add simple selection to session
     request.session['selection'] = simple_selection
 
-    return render(request, 'common/selection_lists.html', selection.dict(selection_type))
+    return render(request, 'common/selection_lists.html',
+                  selection.dict(selection_type))
+
 
 def SetTreeSelection(request):
     """Adds all alignable segments to the selection"""
@@ -1684,6 +1698,7 @@ def SelectAlignableResidues(request):
     selection = Selection()
     if simple_selection:
         selection.importer(simple_selection)
+
     if "protein_type" in request.GET:
         if request.GET['protein_type'] == 'gprotein':
             segmentlist = definitions.G_PROTEIN_SEGMENTS
@@ -1692,24 +1707,57 @@ def SelectAlignableResidues(request):
             segmentlist = definitions.ARRESTIN_SEGMENTS
             pfam = 'Arrestin'
 
-        preserved = Case(*[When(slug=pk, then=pos) for pos, pk in enumerate(segmentlist['Structured'])])
-        segments = ProteinSegment.objects.filter(slug__in=segmentlist['Structured'], partial=False, proteinfamily=pfam).order_by(preserved)
+        preserved = Case(*[When(slug=pk, then=pos)
+                           for pos, pk in enumerate(segmentlist['Structured'])])
+        segments = ProteinSegment.objects.filter(
+            slug__in=segmentlist['Structured'],
+            partial=False,
+            proteinfamily=pfam
+        ).order_by(preserved)
     else:
-        segments = ProteinSegment.objects.filter(proteinfamily='GPCR').order_by('pk')
+        # start from all GPCR segments
+        segments = ProteinSegment.objects.filter(
+            proteinfamily='GPCR'
+        ).order_by('pk')
+
+        # --- NEW: detect Class B2 / Class D1 (targets + reference, incl. structures) ---
+        has_b2 = False
+        has_d1 = False
+
+        all_items = list(getattr(selection, 'targets', [])) + \
+                    list(getattr(selection, 'reference', []))
+
+        for f in all_items:
+            fname = get_gpcr_class_name_for_item(f)
+            if not fname:
+                continue
+            if fname.startswith('Class D1'):
+                has_d1 = True
+            if fname.startswith('Class B2'):
+                has_b2 = True
+
+        # If NO Class D1 → drop D1-specific segments
+        if not has_d1:
+            segments = segments.exclude(slug__startswith='D1')
+
+        # If NO Class B2 → drop GAIN
+        if not has_b2:
+            segments = segments.exclude(domain='GAIN')
 
     numbering_scheme_slug = 'false'
 
     # find the relevant numbering scheme (based on target selection)
-
     cgn = False
     seg_ids_all = []
     numbering_schemes = []
+
     if numbering_scheme_slug == 'cgn':
         cgn = True
     elif numbering_scheme_slug == 'false':
         if simple_selection and simple_selection.reference:
             if simple_selection.reference[0].type == 'family':
-                proteins = Protein.objects.filter(family__slug__startswith=simple_selection.reference[0].item.slug)
+                proteins = Protein.objects.filter(
+                    family__slug__startswith=simple_selection.reference[0].item.slug)
                 r_prot = proteins[0]
             elif simple_selection.reference[0].type == 'protein':
                 r_prot = simple_selection.reference[0].item
@@ -1725,7 +1773,8 @@ def SelectAlignableResidues(request):
         if simple_selection and simple_selection.targets:
             for t in simple_selection.targets:
                 if t.type == 'family':
-                    proteins = Protein.objects.filter(family__slug__startswith=t.item.slug)
+                    proteins = Protein.objects.filter(
+                        family__slug__startswith=t.item.slug)
                     t_prot = proteins[0]
                 elif t.type == 'protein':
                     t_prot = t.item
@@ -1744,40 +1793,45 @@ def SelectAlignableResidues(request):
                     numbering_schemes.append(t_prot.residue_numbering_scheme)
 
         # Filter based on reference and target proteins
-        filtered_segments = []
-        for segment in segments:
-            if segment.id in seg_ids_all:
-                filtered_segments.append(segment)
+        filtered_segments = [s for s in segments if s.id in seg_ids_all]
 
         if len(numbering_schemes) == 0 and len(filtered_segments) == 0:
-            numbering_schemes.append(ResidueNumberingScheme.objects.get(slug="gpcrdba"))
-            filtered_segments = segments
+            numbering_schemes.append(
+                ResidueNumberingScheme.objects.get(slug="gpcrdba")
+            )
+            filtered_segments = list(segments)
 
         segments = filtered_segments
     else:
-        numbering_schemes = [ResidueNumberingScheme.objects.get(slug=numbering_scheme_slug)]
+        numbering_schemes = [
+            ResidueNumberingScheme.objects.get(slug=numbering_scheme_slug)
+        ]
 
+    # build selection
     for segment in segments:
         if segment.fully_aligned:
             selection_object = SelectionItem(segment.category, segment)
-            # add the selected item to the selection
             selection.add(selection_type, segment.category, selection_object)
         else:
-            #if not fully aligned
-
+            # not fully aligned, but maybe has generic numbers in one of the schemes
             if ResidueGenericNumberEquivalent.objects.filter(
-            default_generic_number__protein_segment=segment,
-            scheme__in=numbering_schemes).exists():
+                default_generic_number__protein_segment=segment,
+                scheme__in=numbering_schemes
+            ).exists():
                 segment.only_aligned_residues = True
-                selection_object = SelectionItem(segment.category, segment, properties={'only_aligned_residues':True})
+                selection_object = SelectionItem(
+                    segment.category,
+                    segment,
+                    properties={'only_aligned_residues': True}
+                )
                 selection.add(selection_type, segment.category, selection_object)
 
-
     simple_selection = selection.exporter()
-    # add simple selection to session
     request.session['selection'] = simple_selection
 
-    return render(request, 'common/selection_lists.html', selection.dict('segments'))
+    return render(request, 'common/selection_lists.html',
+                  selection.dict('segments'))
+
 
 def get_protein_segment_ids(protein, seg_ids_all):
     seg_ids = Residue.objects.filter(protein_conformation__protein=protein).order_by('protein_segment__id').distinct('protein_segment__id').values_list('protein_segment', flat=True)
@@ -3014,36 +3068,59 @@ def get_reference(request):
     }, safe=False)
 
 def check_selection_status(request):
+    simple_selection = request.session.get('selection', False)
+    selection = Selection()
+    if simple_selection:
+        selection.importer(simple_selection)
+
+    has_class_b2 = False
+    has_class_d1 = False
+
+    # Look at BOTH reference & targets
+    all_items = list(getattr(selection, 'targets', [])) \
+              + list(getattr(selection, 'reference', []))
+
+    for f in all_items:
+        fname = get_gpcr_class_name_for_item(f)
+        if not fname:
+            continue
+
+        if fname.startswith("Class B2"):
+            has_class_b2 = True
+        if fname.startswith("Class D1"):
+            has_class_d1 = True
+
+    return JsonResponse({
+        'has_class_b2': has_class_b2,
+        'has_class_d1': has_class_d1,
+    })
+
+def get_gpcr_class_name_for_item(sel_item):
+    """
+    Return GPCR class name (e.g. 'Class A', 'Class B2', 'Class D1')
+    for a SelectionItem, or '' if not a GPCR receptor.
+    """
     try:
-        simple = request.session.get('selection', False)
-        selection = Selection()
-        if simple:
-            selection.importer(simple)
+        if sel_item.type == 'family':
+            # eg. Family node selected
+            return get_gpcr_class(sel_item.item).name
 
-        has_b2 = False
-        has_d1 = False
+        elif sel_item.type == 'protein':
+            # eg. Specific receptor selected
+            return sel_item.item.family.parent.parent.parent.name
 
-        for t in selection.targets:
-            if t.type == 'family':
-                name = get_gpcr_class(t.item).name
-            elif t.type == 'protein':
-                name = t.item.family.parent.parent.parent.name
-            else:
-                continue
+        elif sel_item.type == 'structure':
+            # PDB structure -> underlying protein
+            prot = sel_item.item.protein_conformation.protein
+            return prot.family.parent.parent.parent.name
 
-            if name.startswith("Class B2"):
-                has_b2 = True
-            if name.startswith("Class D1"):
-                has_d1 = True
+        elif sel_item.type == 'structure_model':
+            # Model – sometimes has .protein, sometimes .protein_conformation
+            prot = getattr(sel_item.item, 'protein', None)
+            if prot is None:
+                prot = sel_item.item.protein_conformation.protein
+            return prot.family.parent.parent.parent.name
+    except AttributeError:
+        pass
 
-        return JsonResponse({
-            "has_class_b2": has_b2,
-            "has_class_d1": has_d1,
-        })
-
-    except Exception as e:
-        import traceback
-        print("ERROR IN check_selection_status:")
-        traceback.print_exc()
-        return JsonResponse({"error": str(e)}, status=500)
-
+    return ""

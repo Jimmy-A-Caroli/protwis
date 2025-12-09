@@ -143,64 +143,56 @@
 
 <div id="sequence_segments" style="display:none">
 
-    <h5 style="text-align:center; font-weight:600; margin-top:0; margin-bottom:10px;">
-        Sequence segment groups
-    </h5>
-
     <!-- ========================= -->
     <!--     ALL-GPCR SEGMENTS     -->
     <!-- ========================= -->
-    <a href="javascript:void(0)"
-        id="all-gpcr-toggle"
-        onclick="ToggleSubGroup('all-gpcr')"
-        class="btn btn-info btn-sm btn-block selection_buttons sub-dropdown-toggle">
+    <h5 style="text-align:center; font-weight:600; margin-top:0; margin-bottom:10px;">
         All-GPCR segments
-        <span class="glyphicon glyphicon-arrow-down pull-right"></span>
-    </a>
+    </h5>
 
-    <div id="all-gpcr" class="sub-dropdown-panel" style="display:none">
+    <div id="all-gpcr" class="sub-dropdown-panel">
 
         {% for s in all_gpcr_segments %}
         <div class="btn-group" role="group">
 
             <!-- main button: TOGGLE -->
             <a href="javascript:void(0)"
-                onclick="ToggleSegmentSelection(this)"
-                class="btn btn-xs segment-btn {{ s.ui_color_class }}"
-                data-segment-id="{{ s.id }}"
-                data-segment-domain="{{ s.domain }}"
-                data-selection-subtype="{{ s.category }}">
-                    {{ s.slug }}
+               onclick="ToggleSegmentSelection(this)"
+               class="btn btn-xs segment-btn {{ s.ui_color_class }}"
+               data-segment-id="{{ s.id }}"
+               data-segment-domain="{{ s.domain }}"
+               data-selection-subtype="{{ s.category }}">
+                {{ s.slug }}
             </a>
 
             <!-- expand arrow -->
             {% if not ignore_residue_selection and s.generic_numbers.all %}
             <a href="javascript:void(0)"
-                onclick="ExpandSegment('{{ s.id }}', '{{ position_type }}')"
-                class="btn btn-xs segment-btn arrow-btn {{ s.ui_color_class }}"
-                data-segment-id="{{ s.id }}"
-                data-segment-domain="{{ s.domain }}">
-                    <span class="glyphicon glyphicon-arrow-down"></span>
+               onclick="ExpandSegment('{{ s.id }}', '{{ position_type }}')"
+               class="btn btn-xs segment-btn arrow-btn {{ s.ui_color_class }}"
+               data-segment-id="{{ s.id }}"
+               data-segment-domain="{{ s.domain }}">
+                <span class="glyphicon glyphicon-arrow-down"></span>
             </a>
             {% endif %}
 
         </div>
         {% endfor %}
 
-
     </div>
+
+    <hr>
 
     <!-- =============================== -->
     <!--     CLASS-SPECIFIC SEGMENTS     -->
     <!-- =============================== -->
     <a href="javascript:void(0)"
-        id="class-specific-toggle"
-        onclick="ToggleSubGroup('class-specific')"
-        class="btn btn-info btn-sm btn-block selection_buttons sub-dropdown-toggle">
+       id="class-specific-toggle"
+       onclick="ToggleSubGroup('class-specific')"
+       class="btn btn-info btn-sm btn-block selection_buttons sub-dropdown-toggle">
         Class-specific segments
         <span class="glyphicon glyphicon-arrow-down pull-right"></span>
     </a>
-
 
     <div id="class-specific" class="sub-dropdown-panel" style="display:none">
 
@@ -214,23 +206,22 @@
             <div class="btn-group" role="group">
 
                 <a href="javascript:void(0)"
-                    onclick="ToggleSegmentSelection(this)"
-                    class="btn btn-xs segment-btn gain-segment {{ s.ui_color_class }}{% if not has_gain_segments %} segment-disabled{% endif %}"
-                    data-segment-id="{{ s.id }}"
-                    data-segment-domain="GAIN"
-                    data-selection-subtype="{{ s.category }}">
-                        {{ s.slug }}
+                   onclick="ToggleSegmentSelection(this)"
+                   class="btn btn-xs segment-btn gain-segment {{ s.ui_color_class }}{% if not has_gain_segments %} segment-disabled{% endif %}"
+                   data-segment-id="{{ s.id }}"
+                   data-segment-domain="GAIN"
+                   data-selection-subtype="{{ s.category }}">
+                    {{ s.slug }}
                 </a>
 
-
                 {% if not ignore_residue_selection and s.generic_numbers.all %}
-                    <a href="javascript:void(0)"
-                    onclick="ExpandSegment('{{ s.id }}', '{{ position_type }}')"
-                    class="btn btn-xs segment-btn arrow-btn gain-segment {{ s.ui_color_class }}{% if not has_gain_segments %} segment-disabled{% endif %}"
-                    data-segment-id="{{ s.id }}"
-                    data-segment-domain="GAIN">
-                        <span class="glyphicon glyphicon-arrow-down"></span>
-                    </a>
+                <a href="javascript:void(0)"
+                   onclick="ExpandSegment('{{ s.id }}', '{{ position_type }}')"
+                   class="btn btn-xs segment-btn arrow-btn gain-segment {{ s.ui_color_class }}{% if not has_gain_segments %} segment-disabled{% endif %}"
+                   data-segment-id="{{ s.id }}"
+                   data-segment-domain="GAIN">
+                    <span class="glyphicon glyphicon-arrow-down"></span>
+                </a>
                 {% endif %}
 
             </div>
@@ -249,19 +240,18 @@
             <div class="btn-group" role="group">
 
                 <a href="javascript:void(0)"
-                    onclick="ToggleSegmentSelection(this)"
-                    class="btn btn-xs segment-btn {{ s.ui_color_class }}{% if not has_class_d1_target %} segment-disabled{% endif %}"
-                    data-segment-id="{{ s.id }}"
-                    data-segment-domain="D1"
-                    data-selection-subtype="{{ s.category }}">
-                        {{ s.slug }}
+                   onclick="ToggleSegmentSelection(this)"
+                   class="btn btn-xs segment-btn {{ s.ui_color_class }}{% if not has_class_d1_target %} segment-disabled{% endif %}"
+                   data-segment-id="{{ s.id }}"
+                   data-segment-domain="D1"
+                   data-selection-subtype="{{ s.category }}">
+                    {{ s.slug }}
                 </a>
-
 
                 {% if not ignore_residue_selection and s.generic_numbers.all %}
                 <a href="javascript:void(0)"
                    onclick="ExpandSegment('{{ s.id }}', '{{ position_type }}')"
-                   class="btn btn-xs segment-btn {{ s.ui_color_class }}{% if not has_class_d1_target %} segment-disabled{% endif %}"
+                   class="btn btn-xs segment-btn arrow-btn {{ s.ui_color_class }}{% if not has_class_d1_target %} segment-disabled{% endif %}"
                    data-segment-id="{{ s.id }}"
                    data-segment-domain="D1">
                     <span class="glyphicon glyphicon-arrow-down"></span>
@@ -272,7 +262,6 @@
         {% endfor %}
         </div>
 
-
     </div>
 
     <!-- ========================= -->
@@ -280,7 +269,6 @@
     <!-- ========================= -->
 
     <p><div id="segment-generic-numbers"></div></p>
-
 
     {% if not ignore_residue_selection %}
     <hr>
@@ -293,8 +281,6 @@
     {% endif %}
 
 </div>
-
-
 
 {% if not ignore_residue_selection %}
     <a href="javascript:void(0)" onclick="ToggleResidueSets()" class="btn btn-info btn-md btn-block selection_buttons"> Residue sets<span class="glyphicon glyphicon-arrow-down pull-right"></span></a>

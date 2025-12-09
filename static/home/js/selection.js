@@ -35,22 +35,7 @@ function toggleButtonClass(button_id) {
 }
 
 function ToggleSegments() {
-    var panel = $('#sequence_segments');
-    var wasVisible = panel.is(':visible');
-
-    panel.slideToggle("fast", function () {
-
-        // Only when opening the panel, and only the FIRST time
-        if (!wasVisible && !$('#all-gpcr').data('openedOnce')) {
-
-            // Trigger the real toggle click for All-GPCR
-            // so arrow + display state stay synced
-            $('#all-gpcr-toggle')[0].click();
-
-            // Mark as auto-opened
-            $('#all-gpcr').data('openedOnce', true);
-        }
-    });
+    $('#sequence_segments').slideToggle("fast");
 }
 
 function ToggleResidueSets() {
@@ -134,6 +119,8 @@ function SelectFullSequence(selection_type) {
         'type': 'GET',
         'success': function(data) {
             $("#selection-" + selection_type).html(data);
+            updateSegmentAvailability();
+            syncSegmentButtonSelectionState();
         },
     });
 }
@@ -189,9 +176,12 @@ function SelectAlignableResidues(selection_type) {
         'type': 'GET',
         'success': function(data) {
             $("#selection-" + selection_type).html(data);
+            updateSegmentAvailability();
+            syncSegmentButtonSelectionState();
         },
     });
 }
+
 
 function ToggleFamilyTreeNode(action, type_of_selection, node_id, tree_indent_level) {
     $.ajax({
