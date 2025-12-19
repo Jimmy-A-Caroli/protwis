@@ -8,7 +8,6 @@ from io import BytesIO
 from string import Template
 from Bio import Entrez, Medline
 from http.client import HTTPException
-from pathlib import Path
 from urllib.parse import quote
 from urllib.request import urlopen
 from urllib.error import HTTPError
@@ -25,7 +24,6 @@ import json
 import gzip
 import csv
 import datetime as dt
-import math
 import xml.etree.ElementTree as etree
 
 def dump_checker(model_label, record_count=None):
