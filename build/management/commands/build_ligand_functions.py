@@ -173,6 +173,7 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
         # DEBUGGING
         elif results.count() > 1:
             print("Ambiguous name (", name,") as it has ", results.count(), " corresponding entries")
+            ligand = results.first()
         else:
             # Longer names could be non-ambiguous compounds
             results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = True, parent__isnull = False)
