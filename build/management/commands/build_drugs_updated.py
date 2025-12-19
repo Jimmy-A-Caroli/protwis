@@ -554,7 +554,7 @@ class Command(BaseCommand):
         lr = None
         if action in conversion.keys():
             query = conversion[action]
-            lr = find_role(query)
+            lr = find_role(query)[0]
             # role_slug = slugify(query)
             # lr, _ = LigandRole.objects.get_or_create(slug=role_slug, defaults={'name': query})
         return lr

@@ -313,7 +313,7 @@ class Command(BaseCommand):
             if pdb in xtal_ligands_list:
                 l = xtal_ligands_list[pdb][0]
                 ligand = get_or_create_ligand(l[2])
-                lr = find_role(l[3])
+                lr = find_role(l[3])[0]
                 # ligand = get_or_create_ligand(l[7],l[6],l[2])
                 # role_slug = slugify(l[3])
                 # try:
