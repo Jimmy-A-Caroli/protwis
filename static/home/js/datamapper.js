@@ -1283,7 +1283,7 @@ function Data_resorter(data) {
     }
 
     // Build the sorted Class list (only include it if Layer1 is checked)
-    let sortedClasses = Layer1_isChecked ? naturalSort(Object.keys(data)) : [];
+    let sortedClasses = Layer1_isChecked ? Object.keys(data).sort(naturalSort) : [];
 
     // Iterate over sorted Classes and handle layers accordingly
     for (const classKey of sortedClasses) {
@@ -1307,7 +1307,7 @@ function Data_resorter(data) {
         }
 
         // Sort LigandTypes if Layer2 is checked, otherwise skip LigandTypes
-        let sortedLigandTypes = Layer2_isChecked ? naturalSort(Object.keys(ligandTypeDict)) : [];
+        let sortedLigandTypes = Layer2_isChecked ? Object.keys(ligandTypeDict).sort(naturalSort) : [];
 
         // For each LigandType, process its ReceptorFamilies and Receptors
         sortedLigandTypes.forEach(ligandKey => {
@@ -1380,7 +1380,7 @@ function Data_resorter(data) {
             }
         }
 
-        let sortedLigandTypes = naturalSort(Object.keys(allLigandTypes));
+        let sortedLigandTypes = Object.keys(allLigandTypes).sort(naturalSort);
 
         sortedLigandTypes.forEach(ligandKey => {
             final_array.push(ligandKey); // Add LigandType
@@ -1416,15 +1416,18 @@ function Data_resorter(data) {
             }
         }
 
-        let sortedLigandTypes = naturalSort(Object.keys(allLigandTypes));
+        let sortedLigandTypes = Object.keys(allLigandTypes).sort(naturalSort);
 
         sortedLigandTypes.forEach(ligandKey => {
             final_array.push(ligandKey); // Add LigandType
             category_array.push("LigandType"); // Add "LigandType" category
 
-            naturalSort(allLigandTypes[ligandKey]).forEach(receptor => {
+            allLigandTypes[ligandKey]
+            .slice()                      // optional: clone to avoid mutating original
+            .sort(naturalSort)
+            .forEach(receptor => {
                 final_array.push(receptor);
-                category_array.push("Receptor"); // Add "Receptor" category
+                category_array.push("Receptor");
             });
         });
     }
@@ -1464,17 +1467,18 @@ function Data_resorter(data) {
         for (const classKey in data) {
             for (const ligandKey in data[classKey]) {
                 for (const receptorFamilyKey in data[classKey][ligandKey]) {
-                    // Access receptors directly and sort them
-                    naturalSort(data[classKey][ligandKey][receptorFamilyKey]).forEach(receptor => {
-                        final_array.push(receptor); // Add sorted Receptors
-                        category_array.push("Receptor"); // Add "Receptor" category
-                    });
+                    const receptors = data[classKey][ligandKey][receptorFamilyKey];
+                    receptors
+                        .slice()               // optional defensive copy
+                        .sort(naturalSort)
+                        .forEach(receptor => {
+                            final_array.push(receptor);
+                            category_array.push("Receptor");
+                        });
                 }
             }
         }
     }
-
-
     return { final_array, category_array };
 }
 
