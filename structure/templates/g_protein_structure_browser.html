@@ -466,15 +466,35 @@
 
                     <!-- Receptor block -->
                     {% if structure.protein_conformation %}
-                        <td><span><a href="http://www.uniprot.org/uniprot/{{ structure.protein_conformation.protein.parent.accession }}">{{ structure.protein_conformation.protein.parent.entry_short|safe }}</a></span></td>
-                        <td class='uniprot'><a href="/protein/{{ structure.protein_conformation.protein.parent.entry_name }}">{{ structure.protein_conformation.protein.parent.short|safe }}</a></td>
+                        <td>
+                            <span><a href="http://www.uniprot.org/uniprot/{{ structure.protein_conformation.protein.parent.accession }}">{{ structure.protein_conformation.protein.parent.entry_short|safe }}</a></span>
+                        </td>
                     {% else %}
                         <td>-</td>
+                    {% endif %}
+
+
+                    {% if structure.protein_conformation %}
+                        <td class='uniprot'>
+                            <a href="/protein/{{ structure.protein_conformation.protein.parent.entry_name }}">{{ structure.protein_conformation.protein.parent.short|safe }}</a>
+                        </td>
+                    {% else %}
                         <td>-</td>
                     {% endif %}
-                    <td><span>{{ structure.protein_conformation.protein.family.parent.short|safe|dashwhenempty }}</span></td>
-                    <td class='expand'><span>{{ structure.protein_conformation.protein.family.parent.parent.parent.short|safe|dashwhenempty }}</span></td>
-                    <td class='expand'>{{ structure.protein_conformation.protein.species.common_name|dashwhenempty }}</td>
+
+                    <td>
+                        <span>{{ structure.protein_conformation.protein.family.parent.short|safe|dashwhenempty }}</span>
+                    </td>
+
+
+                    <td class='expand'>
+                        <span>{{ structure.protein_conformation.protein.family.parent.parent.parent.short|safe|dashwhenempty }}</span>
+                    </td>
+
+                    <td class='expand'>
+                        {{ structure.protein_conformation.protein.species.common_name|dashwhenempty }}
+                    </td>
+
 
                     <!-- Arrestin block -->
                     {% if structure.protein %}
