@@ -114,6 +114,8 @@ def only_one_subunit ( objs, arg ):
             return elements[0].wt_protein.family.parent.name
         elif value=='coverage':
             return elements[0].wt_coverage
+        elif value=='chain':
+            return elements[0].chain
         else:
             return '-'
     else:
