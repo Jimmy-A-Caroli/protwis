@@ -1137,7 +1137,7 @@ class DataMapperHome(TemplateView):
                                                     break
 
                                             if TreeNonEmptyEntryCounter > 200:
-                                                Incorrect_values['Error'] = "Detected more than 200 entries. The Tree can not handle that many GPCRs to be able to visualize them in one plot."
+                                                Incorrect_values.setdefault('Error', {})['General'] = ("Detected more than 200 entries. The Tree can not handle that many GPCRs to be able to visualize them in one plot.")
                                             else:
                                                 # If sheet is not empty then start handling the data
                                                 # Iterate through the rows and validate the data
@@ -1158,7 +1158,7 @@ class DataMapperHome(TemplateView):
                                                         if receptor in (None, ""):
                                                             pass
                                                         else:
-                                                            Incorrect_values['GPCRs'][index] = '"{}" is a invalid entry for the Tree plot.'.format(receptor)
+                                                            Incorrect_values.setdefault('GPCRs', {})[index] = '"{}" is a invalid entry for the Tree plot.'.format(receptor)
                                                     else:
                                                         # Check if data row is in data and/or initialize it
                                                         if receptor not in Data:
@@ -1226,7 +1226,7 @@ class DataMapperHome(TemplateView):
                                                             else:
                                                                 Data[receptor]['ColorValue'] = "Black"
                                                         else:
-                                                            Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                                            Incorrect_values.setdefault('Errors', {})['General'] = ('Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.')
                                         # Check if any values are incorrect #
                                         status = 'Success'
 
@@ -1318,7 +1318,7 @@ class DataMapperHome(TemplateView):
                                                             if row[2] not in (None, ""):
                                                                 Incorrect_values.setdefault('GPCR Value (Column B & C)', {})[index] = 'You have Spacial position (Column C) without a value assign (Column B), Please assign a value to this row in Column B.'
                                                     else:
-                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
+                                                        Incorrect_values.setdefault('Errors', {})['General'] = ('Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.')
                                                 else:
                                                     # Check datatype -> Numeric
                                                     if Plot_type == 'Numeric':
@@ -1329,7 +1329,7 @@ class DataMapperHome(TemplateView):
                                                             except ValueError:
                                                                 Incorrect_values.setdefault('GPCR Value (Column B)', {})[index] = 'Non-numeric Value.'
                                                     else:
-                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.'
+                                                        Incorrect_values.setdefault('Errors', {})['General'] = ('Incorrect datatype: Was unable to determine datatype to be Numeric. Template might have been changed to something that the DataMapper can not handle.')
 
                                         # Check if any values are incorrect #
                                         status = 'Success'
@@ -1477,7 +1477,7 @@ class DataMapperHome(TemplateView):
                                                     else:
                                                         Data[receptor]['ColorValue'] = "Black"
                                                 else:
-                                                    Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.'
+                                                    Incorrect_values.setdefault('Errors', {})['General'] = ('Incorrect datatype: Was unable to determine datatype to be either Numeric or Text. Template might have been changed to something that the DataMapper cannot handle.')
 
                                         # Check if any values are incorrect #
                                         status = 'Success'
@@ -1530,7 +1530,7 @@ class DataMapperHome(TemplateView):
                                                     break
 
                                             if HeatmapNonEmptyEntryCounter > 50:
-                                                Incorrect_values['Error'] = "Detected more than 50 entries. The Heatmap can not handle that many GPCRs to be able to visualize them in one plot."
+                                                Incorrect_values.setdefault('Error', {})['General'] = ("Detected more than 50 entries. The Heatmap can not handle that many GPCRs to be able to visualize them in one plot.")
                                             else:
                                                 # If sheet is not empty then start handling the data
                                                 # Iterate through the rows and validate the data
@@ -1568,7 +1568,7 @@ class DataMapperHome(TemplateView):
                                                                     except ValueError:
                                                                         Incorrect_values.setdefault(col_label, {})[index] = 'Non-numeric Value'
                                                     else:
-                                                        Incorrect_values['Errors'] = 'Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.'
+                                                        Incorrect_values.setdefault('Errors', {})['General'] = ('Incorrect datatype: Was unable to determine datatype to be either Numeric or text. Template might have been changed to something that the DataMapper can not handle.')
                                                 # Check if any values are incorrect #
                                                 status = 'Success'
 

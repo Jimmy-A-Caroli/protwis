@@ -121,7 +121,7 @@
     ({ data: "id", name: "Select", orderable: false, searchable: false, render: (data) => `<input type="checkbox" class="select-row" value="${data}">` }),
     ({ data: "gpcrdb_link", name: "GPCRdb", orderable: false, searchable: false, render: (d,t) => (t === 'display' && d ? `<a href="${d}" target="_blank" rel="noopener"><img class="gpcrdb-link" src="/static/home/logo/gpcr/main.png" width="12" height="12" alt="GPCRdb"></a>` : '') }),
     { data: "Gene", name: "Gene" },
-    ({ data: "entry_name", name: "UniProt", render: (d,t,r) => t!=='display' ? d : (r && r.uniprot_link ? `<a href="${r.uniprot_link}" target="_blank">${d ? d.split("_")[0].toUpperCase() : "-"}</a>` : (d ? d.split("_")[0].toUpperCase() : "-")) }),
+    ({ data:"entry_name", name:"UniProt", render:(d,t,r)=> t==="display" ? (r?.uniprot_link ? `<a href="${r.uniprot_link}" target="_blank" rel="noopener">${d?d.split("_")[0].toUpperCase():"-"}</a>` : (d?d.split("_")[0].toUpperCase():"-")) : (t==="filter"||t==="sort" ? (d?d.split("_")[0].toUpperCase():"") : (d||"")) }),
     ({ data: "iuphar_name", name: "Protein", render: (d,t,r) => { if (t !== 'display') return d; const url = r && r.iuphar_link; return (url && url !== "-") ? `<a href="${url}" target="_blank" rel="noopener">${d}</a>` : d; } }),
     { data: "id", name: "ID", visible: false },
 
