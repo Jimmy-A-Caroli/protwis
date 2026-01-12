@@ -2,7 +2,7 @@
   <br/>
   <br/>
   <div class="col-md-12 text-center">
-    {% if structure_type.slug == "af-arrestin" %}
+    {% if is_arrestin_complex or structure_type.slug == "af-arrestin" %}
     <h2>GPCR - Arrestin interface interactions <i style="color:black; font-size:16px;" id="wide-popover" class="fas fa-info-circle" data-html="true" data-container="body" data-toggle="popover" data-trigger="click hover" data-placement="bottom" data-html="true" data-content="
               <table id='interaction-cutoffs'>
                 <thead>
@@ -87,7 +87,7 @@
     <div class="tab-pane container active" id="circles">
 
       <div>
-        {% if structure_type.slug == "af-arrestin" %}
+        {% if is_arrestin_complex or structure_type.slug == "af-arrestin" %}
         <p>The biflare plot is a modified version of a flareplot, where lines are drawn between an <b>inner concentric circle</b>
           <i>(arrestin residues)</i>
         {% else %}
@@ -127,7 +127,7 @@
         </div>
         <div class="col-md-9" style="padding-left: 90px">
           <div class="container">
-            {% if structure_type.slug == "af-arrestin" %}
+            {% if is_arrestin_complex or structure_type.slug == "af-arrestin" %}
             <p style="display: inline-block; vertical-align: middle;"><b>GPCR-Arrestin backbone (bb) or sidechain (sc):</b></p>
             {% else %}
             <p style="display: inline-block; vertical-align: middle;"><b>GPCR-G protein backbone (bb) or sidechain (sc):</b></p>
@@ -263,7 +263,7 @@
 
     </div>
     <div class="tab-pane container" id="3dview">
-      {% if structure_type.slug == "af-arrestin" %}
+      {% if is_arrestin_complex or structure_type.slug == "af-arrestin" %}
       <p class="inline" style='font-size: 18px;'><span style="color:#50C878;">Arrestin</span>,
       {% else %}
       <p class="inline" style='font-size: 18px;'><span style="color:#fc660ff0;">G&alpha;</span>,
@@ -298,7 +298,7 @@
                           <th align="center"> <br>AA</th>
                           <th align="center"> <br>Number</th>
                           <th style='border-right: 1px solid;' align="center">Generic<br>number</th>
-                          {% if structure_type.slug == "af-arrestin" %}
+                          {% if is_arrestin_complex or structure_type.slug == "af-arrestin" %}
                           <th align="center">Arrestin<br>segment</th>
                           {% else %}
                           <th align="center">G&alpha;<br>segment</th>

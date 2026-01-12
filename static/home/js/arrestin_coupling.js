@@ -10,6 +10,32 @@ function rankedRangeFiltert1(filterVal, columnVal, rowValues, stateVal) {
 }
 
 $(document).ready(function() {
+  function enableTopScroller(table_id) {
+    // Put top scroller
+    // https://stackoverflow.com/questions/35147038/how-to-place-the-datatables-horizontal-scrollbar-on-top-of-the-table
+    let $table = $(table_id);
+    if ($table.length === 0) {
+      return;
+    }
+
+    let $wrapper = $table.closest(".dataTables_wrapper");
+    let $scrollHead = $wrapper.find(".dataTables_scrollHead");
+    if ($scrollHead.length === 0) {
+      return;
+    }
+
+    $scrollHead.css({
+      "overflow-x": "scroll"
+    }).off("scroll.topscroller").on("scroll.topscroller", function() {
+      let scrollBody = $(this).parent().find(".dataTables_scrollBody").get(0);
+      if (!scrollBody) {
+        return;
+      }
+      scrollBody.scrollLeft = this.scrollLeft;
+      $(scrollBody).trigger("scroll");
+    });
+  }
+
   // Activate tooltips and popovers from Bootstrap
   $("[data-toggle='tooltip']").tooltip();
   $("[data-toggle='popover']").popover();
@@ -35,6 +61,9 @@ $(document).ready(function() {
     autoWidth: true,
     bInfo: true,
   });
+
+  // Enable top horizontal scrollbar (in the header section)
+  enableTopScroller("#arrestintable");
 
   let column_filters = [];
   // Selector column
@@ -114,17 +143,6 @@ $(document).ready(function() {
       $(".alt").parent().parent().find("td").removeClass("highlight");
     }
   });
-
-  // Put top scroller
-  // https://stackoverflow.com/questions/35147038/how-to-place-the-datatables-horizontal-scrollbar-on-top-of-the-table
-  //    console.time("scroll to top");
-  // $(".dataTables_scrollHead").css({
-  //   "overflow-x": "scroll"
-  // }).on("scroll", function(e) {
-  //   var scrollBody = $(this).parent().find(".dataTables_scrollBody").get(0);
-  //   scrollBody.scrollLeft = this.scrollLeft;
-  //   $(scrollBody).trigger("scroll");
-  // });
 
   // Enable columns overlay
   initFixedColumnsOverlay("arrestintable");

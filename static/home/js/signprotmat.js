@@ -565,53 +565,6 @@ var signprotmat = {
         .attr("rx", 3)
         .attr("ry", 3);
       svg.select(".legendOrdinal").selectAll("text").attr("class", "legend");
-
-      // * ADDING Interaction Type LEGEND
-      let size = 2;
-      let window_starts = _.range(0, colScale.domain().length + 1, size);
-
-      let i = 0;
-      for (let windo of window_starts) {
-        let start = windo;
-        let stop = windo + size;
-        let element_ids = _.range(start, stop);
-        let filter_elements = _.pullAt(colScale.domain(), element_ids);
-
-        svg
-          .append("g")
-          .attr("class", "legendOrdinal" + i)
-          .attr(
-            "transform",
-            "translate(" +
-              // (xScale.step() / 2 + i * 10 * xScale.step()) + ","
-              (10 + i * 160) +
-              "," +
-              65 +
-              ")"
-          );
-
-        let legendOrdinal = d3
-          .legendColor()
-          .cellFilter(function (d) {
-            return filter_elements.includes(d.label);
-          })
-          .orient("vertical")
-          .labelAlign("start")
-          .shapePadding(2)
-          .scale(colScale);
-        svg
-          .select(".legendOrdinal" + i)
-          .call(legendOrdinal)
-          .selectAll("rect")
-          .attr("rx", 3)
-          .attr("ry", 3);
-        svg
-          .select(".legendOrdinal" + i)
-          .selectAll("text")
-          .attr("class", "legend");
-
-        i += 1;
-      }
     },
 
     fScaleColor(f) {

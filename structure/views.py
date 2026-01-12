@@ -1233,9 +1233,29 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
         translation = sv.translation
         center_axis = sv.center_axis
 
-    # Check if the structure is in complex with a signaling protein
-    ### Modified to filter out arrestins for now
-    signaling_complex = SignprotComplex.objects.filter(structure=crystal, protein__family__slug__startswith='100').count() > 0
+    # Check if the structure is in complex with a signaling protein (G protein or Arrestin).
+    signprot_complex = getattr(crystal, "signprot_complex", None)
+    signprot_family_slug = None
+    try:
+        signprot_family_slug = signprot_complex.protein.family.slug
+    except Exception:
+        signprot_family_slug = None
+
+    is_gprotein_complex = bool(signprot_family_slug and signprot_family_slug.startswith('100'))
+    is_arrestin_complex = bool(signprot_family_slug and signprot_family_slug.startswith('200'))
+    has_transducer_complex = is_gprotein_complex or is_arrestin_complex
+    # Backwards-compatible flag used by older templates/logic.
+    # Treat BOTH G protein (100*) and arrestin (200*) as "signaling complex".
+    signaling_complex = has_transducer_complex
+
+    # Only load the interface module if we actually have interface interaction records.
+    has_interface_interactions = False
+    if has_transducer_complex:
+        has_interface_interactions = Interaction.objects.filter(
+            Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='100') |
+            Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='200'),
+            interacting_pair__referenced_structure=crystal
+        ).exists()
 
     # GN list
     only_gns = list(crystal.protein_conformation.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label','display_generic_number__label').all())
@@ -1245,7 +1265,7 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
     if len(filter_tm1) > 0:
         ref_tm1 = filter_tm1[0]
 
-    if signaling_complex:
+    if has_interface_interactions:
     #Adding all the section for the tabs stuff. Add also a different render so they don't mix
         (chains, gpcr_aminoacids, gprot_aminoacids, protein_interactions, gpcr_aminoacids_strict, gprot_aminoacids_strict, protein_interactions_strict,
          residues_browser, interactions_metadata, gprot_order, receptor_order, matching_dict, matching_dict_strict, residues_lookup,
@@ -1266,6 +1286,9 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
                                                        'gn_list': gn_list,
                                                        'ref_tm1': ref_tm1,
                                                        'signaling_complex': signaling_complex,
+                                                       'has_transducer_complex': has_transducer_complex,
+                                                       'has_interface_interactions': has_interface_interactions,
+                                                       'is_arrestin_complex': is_arrestin_complex,
                                                        'outer': json.dumps(gpcr_aminoacids),
                                                        'inner': json.dumps(gprot_aminoacids),
                                                        'interactions': json.dumps(protein_interactions),
@@ -1290,10 +1313,17 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
                                                        'display_res_gpcr_loose': display_res_gpcr_loose, 'display_res_gprot_loose': display_res_gprot_loose})
 
     else:
-        return render(request,'structure_details.html',{'pdbname': pdbname, 'structures': structures, 'crystal': crystal, 'protein':p, 'residues':residues, 'annotated_resn': resn_list, 'main_ligand': main_ligand, 'ligands': ligands, 'translation': translation, 'center_axis': center_axis, 'gn_list': gn_list, 'ref_tm1': ref_tm1, 'signaling_complex': signaling_complex})
+        return render(request,'structure_details.html',{'pdbname': pdbname, 'structures': structures, 'crystal': crystal, 'protein':p, 'residues':residues, 'annotated_resn': resn_list, 'main_ligand': main_ligand, 'ligands': ligands, 'translation': translation, 'center_axis': center_axis, 'gn_list': gn_list, 'ref_tm1': ref_tm1, 'signaling_complex': signaling_complex, 'has_transducer_complex': has_transducer_complex, 'has_interface_interactions': has_interface_interactions, 'is_arrestin_complex': is_arrestin_complex})
 
 def complex_interactions(model):
     ### Gathering interaction info and structuring JS data
+    # Experimental arrestin complexes should use arrestin semantics, not only AF arrestin models.
+    try:
+        is_arrestin_complex = (model.structure_type.slug == "af-arrestin") or (
+            model.signprot_complex and model.signprot_complex.protein.family.slug.startswith("200")
+        )
+    except Exception:
+        is_arrestin_complex = (model.structure_type.slug == "af-arrestin")
     interactions = Interaction.objects.filter(
                                               Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='100') |
                                               Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='200'),
@@ -1411,7 +1441,7 @@ def complex_interactions(model):
     arrestin_segments = ['ns1', 'S1', 's1s2', 'S2', 's2s3', 'S3', 's3s4', 'S4', 's4s5', 'S5', 's5s6', 'S6', 's6h1', 'H1', 'h1s7', 'S7', 's7s8', 'S8', 's8s9', 'S9', 's9s10', 'S10', 's10s11', 'S11', 's11s12', 'S12', 's12s13', 'S13', 's13s14', 'S14', 's14s15', 'S15', 's15s16', 'S16', 's16s17', 'S17', 's17s18', 'S18', 's18s19', 'S19', 's19s20', 'S20', 's20c']
     # Create a dictionary that maps segments to their positions in the custom order
     order_gpcr = {segment: index for index, segment in enumerate(segments_order)}
-    if model.structure_type.slug == "af-arrestin":
+    if is_arrestin_complex:
         order_gprot = {segment: index for index, segment in enumerate(arrestin_segments)}
     else:
         order_gprot = {segment: index for index, segment in enumerate(gprot_segments)}
@@ -1488,7 +1518,7 @@ def complex_interactions(model):
     gpcr_aminoacids_strict, gprot_aminoacids_strict, matching_dict_strict = sort_and_update(to_push_gpcr_strict, gpcr_aminoacids_strict, to_push_gprot_strict, gprot_aminoacids_strict, protein_interactions_strict)
 
     ### Interaction Matrix copy/paste
-    if model.structure_type.slug == "af-arrestin":
+    if is_arrestin_complex:
         gprotein_order = ProteinSegment.objects.filter(proteinfamily='Arrestin').values('id', 'slug')
         fam_slug = '200'
     else:
@@ -1552,7 +1582,7 @@ def complex_interactions(model):
 
     chains = [gpcr_chain, gprot_chain]
 
-    if model.structure_type.slug == "af-arrestin":
+    if is_arrestin_complex:
         chain_color_palette = ['grey', '#50C878']
     else:
         chain_color_palette = ['grey', '#fc660f']
