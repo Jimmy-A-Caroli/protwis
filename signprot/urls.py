@@ -29,7 +29,7 @@ urlpatterns = [
     path('matrix/sigmat/', views.IMSignatureMatch, name='SignatureMatch'),
     path('matrix/render_sigmat/', views.render_IMSigMat, name='renderSignatureMatch'),
     path('pdbtabledata', PdbTableData, name='pdbtreedata'),
-    path('matrix/AJAX_Interactions/', views.AJAX_Interactions, name='ajaxInteractions'),
+    path('matrix/AJAX_Interactions/<include_non_gns>', views.AJAX_Interactions, name='ajaxInteractions'),
     path('<slug>/', views.signprotdetail, name='signprotdetail'),
     ### LEGACY LINKS ###
     path('statistics_venn',  views.VennHandler, name='gprotein'),

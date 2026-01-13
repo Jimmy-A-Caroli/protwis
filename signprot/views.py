@@ -1984,7 +1984,7 @@ def interface_dataset():
     return list(conf_ids), list(interactions)
 
 @method_decorator(csrf_exempt)
-def AJAX_Interactions(request):
+def AJAX_Interactions(request, include_non_gns):
     t1 = time.time()
     selected_pdbs = request.POST.getlist("selected_pdbs[]")
     effector = request.POST.get('effector')
@@ -2024,9 +2024,10 @@ def AJAX_Interactions(request):
 
     interactions = InteractingResiduePair.objects.filter(
         Q(res1__in=prot_residues) | Q(res2__in=prot_residues),
-        referenced_structure__in=complex_struc_ids
-    # ).exclude(res1__generic_number__isnull=True
-    ).exclude(
+        referenced_structure__in=complex_struc_ids)
+    if include_non_gns=='True':
+        interactions = interactions.exclude(res1__generic_number__isnull=True)
+    interactions = interactions.exclude(
         Q(res1__in=prot_residues) & Q(res2__in=prot_residues)
     ).prefetch_related(
         'interaction__interaction_type',
