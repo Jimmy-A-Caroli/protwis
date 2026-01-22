@@ -1297,9 +1297,9 @@ class AbsParseStructureCSV():
                 self.pdb_ids.append(s)
                 self.structures[s] = custom_info
             with open(custom_input.replace('.json','.yaml'), 'r') as custom_segend_file:
-                segends = yaml.load(custom_segend_file)
+                segends = yaml.safe_load(custom_segend_file)
                 self.xtal_seg_ends[s] = segends
-        
+
 
 class ParseStructureCSV(AbsParseStructureCSV):
     def __init__(self):
