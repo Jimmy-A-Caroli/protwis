@@ -2041,8 +2041,8 @@ def AJAX_Interactions(request, include_non_gns):
         'res2__sequence_number',
         'res2__generic_number__label',
     ).order_by(
-        'res1__generic_number__label',
-        'res2__generic_number__label'
+        'res1__sequence_number',
+        'res2__sequence_number'
     ).values(
         int_id=F('id'),
         int_ty=ArrayAgg(
@@ -2066,6 +2066,9 @@ def AJAX_Interactions(request, include_non_gns):
 
     conf_ids = set()
     for i in interactions:
+        ### Using res pos instead of GN for residues with no GN
+        if not i['rec_gn']:
+            i['rec_gn'] = i['rec_pos']
         i['int_ty'] = sort_a_by_b(i['int_ty'], interaction_sort_order)
         conf_ids.update([i['conf_id']])
 

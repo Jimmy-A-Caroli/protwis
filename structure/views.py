@@ -29,6 +29,7 @@ from common.selection import Selection, SelectionItem
 from common.extensions import MultiFileField
 from common.models import ReleaseNotes, WebLink
 from common.alignment import Alignment, GProteinAlignment
+from common.definitions import G_PROTEIN_DISPLAY_NAME, ARRESTIN_DISPLAY_NAME
 from residue.models import Residue, ResidueNumberingScheme, ResiduePositionSet
 from contactnetwork.models import Interaction
 from mapper.views import DataMapperHome
@@ -1537,11 +1538,13 @@ def complex_interactions(model):
         'structure__protein_conformation__protein__family__parent__parent__parent__parent',
         'structure__stabilizing_agents',
         'structure__signprot_complex__protein__family__parent__parent__parent__parent',
+        'protein',
     )
 
     complex_info = []
     for s in struc:
         r = {}
+        si = s
         s = s.structure
         r['pdb_id'] = s.pdb_code.index
         try:
@@ -1557,7 +1560,10 @@ def complex_interactions(model):
         r['conf_id'] = s.protein_conformation.id
         r['organism'] = s.protein_conformation.protein.species.common_name
         try:
-            r['gprot'] = s.get_stab_agents_gproteins()
+            if is_arrestin_complex:
+                r['gprot'] = ARRESTIN_DISPLAY_NAME[si.protein.entry_name]
+            else:
+                r['gprot'] = G_PROTEIN_DISPLAY_NAME[si.protein.entry_name]
         except Exception:
             r['gprot'] = ''
         try:
@@ -4278,17 +4284,7 @@ def RenderTrees(request):
 #           elif key.startswith(('deletion_single', 'insert_pos_single')):
 #               if key.startswith('insert_pos_single'):
 #                   deletions.append({'pos':value, 'origin':'insertion'+key.replace('insert_pos_single',''), 'type':'single'})
-ARRESTIN_DISPLAY_NAME = {'arrc_human': 'Arrestin-C',
-                         'arrs_human': 'S-arrestin',
-                         'arrs_mouse':'S-arrestin',
-                         'arrs_bovin':'S-arrestin',
-                         'arrb1_human':'Beta-arrestin-1',
-                         'arrb1_rat':'Beta-arrestin-1',
-                         'arrb2_human':'Beta-arrestin-2',
-                         'arrs':'S-arrestin',
-                         'arrb1':'Beta-arrestin-1',
-                         'arrb2':'Beta-arrestin-2',
-                         'arrc':'Arrestin-C'}#                   data.pop(key.replace('insert_pos_single',''), None)
+#                   data.pop(key.replace('insert_pos_single',''), None)
 #               else:
 #                   deletions.append({'pos':value, 'origin':'user', 'type':'single'})
 #               data.pop(key, None)
