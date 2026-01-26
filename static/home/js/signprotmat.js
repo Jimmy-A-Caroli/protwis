@@ -175,7 +175,6 @@ var signprotmat = {
       data_gap.push(...data_non, ...data_receptor);
       // data_non.push(...data_receptor)
       // data_gap = data_non
-      // console.log(data_gap)
 
       return data_gap;
     },
@@ -199,7 +198,7 @@ var signprotmat = {
       data = _.orderBy(data, ["rec_tm", "rec_gn"]);
       var seq = data.map((x) => x.rec_aa).join("");
 
-      return entry_name.concat(">\n", seq);
+      return ">".concat(entry_name, "\n", seq);
     },
 
     combine_fasta(array_of_fasta) {
