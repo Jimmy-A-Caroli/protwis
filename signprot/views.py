@@ -2041,8 +2041,8 @@ def AJAX_Interactions(request, include_non_gns):
         'res2__sequence_number',
         'res2__generic_number__label',
     ).order_by(
-        'res1__sequence_number',
-        'res2__sequence_number'
+        'res1__generic_number__label',
+        'res2__generic_number__label'
     ).values(
         int_id=F('id'),
         int_ty=ArrayAgg(
@@ -2054,6 +2054,7 @@ def AJAX_Interactions(request, include_non_gns):
         conf_id=F('referenced_structure__protein_conformation_id'),
         gprot=F('referenced_structure__signprot_complex__protein__entry_name'),
         entry_name=F('referenced_structure__protein_conformation__protein__parent__entry_name'),
+        model_entry_name=F('referenced_structure__protein_conformation__protein__entry_name'),
 
         rec_aa=F('res1__amino_acid'),
         rec_pos=F('res1__sequence_number'),
@@ -2071,6 +2072,8 @@ def AJAX_Interactions(request, include_non_gns):
             i['rec_gn'] = i['rec_pos']
         i['int_ty'] = sort_a_by_b(i['int_ty'], interaction_sort_order)
         conf_ids.update([i['conf_id']])
+        if not i['entry_name']:
+            i['entry_name'] = i['model_entry_name']
 
     prot_conf_ids = list(conf_ids)
     remaining_residues = Residue.objects.filter(

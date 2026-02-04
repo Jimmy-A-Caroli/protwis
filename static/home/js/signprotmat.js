@@ -269,33 +269,62 @@ var signprotmat = {
 
     // * SETTING THE X/Y SCALE
     xScale(data, receptor) {
-      var domain = d3
-        .map(data, function (d) {
-          return d.rec_gn;
+      var pdb_ids = [];
+      data.forEach(function(d) {
+        if (!pdb_ids.includes(d.pdb_id)) {
+          pdb_ids.push(d.pdb_id);
+        }
+      })
+      var domain = [];
+      if (pdb_ids.length === 1) {
+        // Sorting based on res_pos for single entry
+        var rec_posis = [];
+        data.forEach(function(d) {
+          if (!rec_posis.includes(d.rec_pos)) {
+            rec_posis.push(parseInt(d.rec_pos))
+          }
+        });
+        // Actual sorting
+        rec_posis.sort(function(a, b) {
+          return a - b;
+        });
+        // Number lookup
+        const recPosByGn = new Map(
+          data.map(d => [d.rec_pos, d.rec_gn])
+        );
+        rec_posis.forEach(function(o) {
+          domain.push(recPosByGn.get(o))
         })
-        .keys()
-        // .sort(function (a, b) {
-        //   var a_patt = /(\d*)x/g;
-        //   var b_patt = /(\d*)x/g;
-        //   var a_match = a_patt.exec(a);
-        //   var b_match = b_patt.exec(b);
-        //   var a_obj = _.findIndex(receptor, function (d) {
-        //     if (a_match){
-        //       return d === a_match[1];
-        //     } else if (a === '-'){
-        //       return d === a;
-        //     }
-        //   });
-        //   var b_obj = _.findIndex(receptor, function (d) {
-        //     if (b_match){
-        //       return d === b_match[1];
-        //     } else if (b === '-'){
-        //       return d === b;
-        //     }
-        //   });
-        //   // console.log(a_obj);
-        //   return d3.ascending(a_obj, b_obj);
-        // });
+      } else {
+        // Sorting based on gns for multiple entries
+        domain = d3
+          .map(data, function (d) {
+            return d.rec_gn;
+          })
+          .keys()
+          .sort(function (a, b) {
+            var a_patt = /(\d*)x/g;
+            var b_patt = /(\d*)x/g;
+            var a_match = a_patt.exec(a);
+            var b_match = b_patt.exec(b);
+            var a_obj = _.findIndex(receptor, function (d) {
+              if (a_match){
+                return d === a_match[1];
+              } else if (a === '-'){
+                return d === a;
+              }
+            });
+            var b_obj = _.findIndex(receptor, function (d) {
+              if (b_match){
+                return d === b_match[1];
+              } else if (b === '-'){
+                return d === b;
+              }
+            });
+            // console.log(a_obj);
+            return d3.ascending(a_obj, b_obj);
+          });
+      }
       var xScale = d3
         .scaleBand()
         .domain(domain)
