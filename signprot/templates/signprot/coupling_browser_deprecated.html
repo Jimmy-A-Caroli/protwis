@@ -488,39 +488,42 @@
     </div>
     <br><br>
 
-      <div style='width:100%; display:inline;'>
-          <!-- Dropdown button -->
-          <!--<div class="btn-group">
-              <button type="button" class="btn btn-primary btn-sm">Supporting datasets</button>
-              <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown"
-                      aria-haspopup="true" aria-expanded="false">
-                  <span class="caret"></span>
-                  <span class="sr-only">Toggle Dropdown</span>
-              </button>
-              <ul class="dropdown-menu">
-                  <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 1]]);">1</a></li>
-                  <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 2]]);">2 (default)</a></li>
-                  <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 3]]);">3</a></li>
-                  <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 4]]);">4</a></li>
-              </ul>
-          </div>-->
+        <div style='width:100%; display:inline;'>
+            <!-- Dropdown button -->
+            <!--<div class="btn-group">
+                <button type="button" class="btn btn-primary btn-sm">Supporting datasets</button>
+                <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 1]]);">1</a></li>
+                    <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 2]]);">2 (default)</a></li>
+                    <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 3]]);">3</a></li>
+                    <li><a href="#" onclick="yadcf.exFilterColumn(oTable3, [[22, 4]]);">4</a></li>
+                </ul>
+            </div>-->
 
-          <div class="btn-group" style="padding-left:10px;">
-              <a id="dlink" style="display:none;"></a>
-              <div id="excel_table" style="display:none;"></div>
-              <!--<input class="btn btn-primary btn-sm" type="button" id="toggle_fixed_btn3" value="Disable fixed columns"
-                     href="javascript:void(0)" data-toggle="buttons">-->
-              <input class="btn btn-primary btn-sm" type="button" onclick="resetHiddenColumns(oTable1)" id="toggle"
-                     value="Show hidden columns">
-          </div>
+            <div class="btn-group" style="padding-left:10px;">
+                <a id="dlink" style="display:none;"></a>
+                <div id="excel_table" style="display:none;"></div>
+                <!--<input class="btn btn-primary btn-sm" type="button" id="toggle_fixed_btn3" value="Disable fixed columns"
+                        href="javascript:void(0)" data-toggle="buttons">-->
+                <input class="btn btn-primary btn-sm" type="button" onclick="resetHiddenColumns(oTable1)" id="toggle"
+                        value="Show hidden columns">
+            </div>
 
-          <div class="btn-group" style="padding-left:10px;">
-              <input class="btn btn-primary btn-sm" type="button"
-                     onclick="GlobalTableToExcel('arrestintable', 'Arrestin coupling data', 'ArrestinDb_arrestin_coupling.xls')"
-                     value="Export Excel">
-              <input class="btn btn-primary btn-sm" type="button" onclick="reset_tab(oTable1);" value="Reset All">
-          </div>
-      </div>
+            <div class="btn-group" style="padding-left:10px;">
+                <input class="btn btn-primary btn-sm" type="button"
+                        onclick="GlobalTableToExcel('arrestintable', 'Arrestin coupling data', 'ArrestinDb_arrestin_coupling.xls')"
+                        value="Export Excel">
+                <input class="btn btn-primary btn-sm" type="button" onclick="reset_tab(oTable1);" value="Reset All">
+            </div>
+            <div class="btn-group" style="padding-left:10px;">
+                <a href="https://files.gpcrdb.org/GPCR-G_protein_couplings.xlsx" class="btn btn-primary btn-sm" type="button">Download raw data</a>
+            </div>
+        </div>
 
 
       <table class="compact display" id="arrestintable" style="display:none; float:left;">
