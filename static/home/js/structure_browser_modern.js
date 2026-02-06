@@ -74,7 +74,7 @@
 
     const first = arr[0];
     const firstHref = (first.id != null && first.id !== '-' && first.id !== '')
-      ? (hrefBuilder ? hrefBuilder(first.id, first) : `https://gpcrdb.org/ligand/${first.id}/info`)
+      ? (hrefBuilder ? hrefBuilder(first.id, first) : `/ligand/${first.id}/info`)
       : null;
 
     const collapsed = firstHref
@@ -87,7 +87,7 @@
     const expanded = arr.map(x => {
       const nm = x.name || '';
       if (x.id == null || x.id === '' || x.id === '-') return nm;
-      const href = hrefBuilder ? hrefBuilder(x.id, x) : `https://gpcrdb.org/ligand/${x.id}/info`;
+      const href = hrefBuilder ? hrefBuilder(x.id, x) : `/ligand/${x.id}/info`;
       return `<a href="${href}" target="_blank" rel="noopener">${nm}</a>`;
     }).join('<br>');
 
@@ -132,7 +132,7 @@
 
     // STRUCTURE
     { data: "method", name: "Method" },
-    ({ data: "pdb", name: "PDB", render: (d,t) => t!=='display' ? d : (d && d!=="-" ? `<a href="https://gpcrdb.org/structure/${d}" target="_blank" rel="noopener">${d}</a>` : d) }),
+    ({ data: "pdb", name: "PDB", render: (d,t) => t!=='display' ? d : (d && d!=="-" ? `<a href="/structure/${d}" target="_blank" rel="noopener">${d}</a>` : d) }),
     ({ data: "refined", name: "Refined structure", render: (d,t) => d === "-" ? "-" : (t === 'display' ? `<a href="${d}" target="_blank">${d.replace("refined/", "").toUpperCase()}_refined</a>` : d.replace("refined/", "").toUpperCase() + "_refined") }),
     ({ data: "resolution", name: "Resolution", render: d => d ? parseFloat(d).toFixed(1) : "-" }),
     { data: "preferred_chain", name: "Preferred chain" },
@@ -142,7 +142,7 @@
 
     // SIGNAL PROTEIN
     { data: "arrestin_family", name: "Family" },
-    ({ data: "arrestin_name", name: "Subtype", render: (d,t,r) => t!=='display' ? d : (r?.arrestin_entry && r.arrestin_entry!=="-" ? `<a href="https://gpcrdb.org/signprot/${r.arrestin_entry}/" target="_blank" rel="noopener">${d}</a>` : d) }),
+    ({ data: "arrestin_name", name: "Subtype", render: (d,t,r) => t!=='display' ? d : (r?.arrestin_entry && r.arrestin_entry!=="-" ? `<a href="/signprot/${r.arrestin_entry}/" target="_blank" rel="noopener">${d}</a>` : d) }),
     { data: "arrestin_note", name: "Note" },
     { data: "arrestin_coverage", name: "% of Seq" },
 
@@ -151,12 +151,12 @@
     ({ data: "antibodies", name: "Antibodies", render: (d,t) => expand1LineRender(d,t) }),
 
     // STRUCTURE LIGAND
-    ({ data: "ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `https://gpcrdb.org/ligand/${id}/info`, { showCountHint: true }) }),
+    ({ data: "ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `/ligand/${id}/info`, { showCountHint: true }) }),
     ({ data: "ligand_type", name: "Type", render: (d,t) => expand1LineRender(d,t) }),
     ({ data: "ligand_role", name: "Modality", render: (d,t) => expand1LineRender(d,t) }),
 
     // PHYSIOLOGICAL LIGAND
-    ({ data: "endo_ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `https://gpcrdb.org/ligand/${id}/info`, { showCountHint: true }) }),
+    ({ data: "endo_ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `/ligand/${id}/info`, { showCountHint: true }) }),
     ({ data: "endo_type", name: "Type", render: (d,t) => expand1LineRender(d,t) }),
 
     // SODIUM ION SITE
@@ -496,7 +496,7 @@
   function exportToXlsx(mode) {
     const table    = $('#StructureBrowserTable').DataTable();
     const settings = table.settings()[0];
-    const REFINED_BASE  = 'https://gpcrdb.org/structure/';
+    const REFINED_BASE  = '/structure/';
 
     const visibleCols = table.columns(':visible').indexes().toArray()
       .filter(i => EXCLUDE_EXPORT_COLS.indexOf(i) === -1);
@@ -527,7 +527,7 @@
       if (!href) return '';
       if (/^https?:\/\//i.test(href)) return href;
       const t = href.replace(/^\/+/, '');
-      if (/^structure\//i.test(t)) return 'https://gpcrdb.org/' + t;
+      if (/^structure\//i.test(t)) return '/' + t;
       if (/^refined\//i.test(t))   return REFINED_BASE + t;
       return REFINED_BASE + t;
     };
