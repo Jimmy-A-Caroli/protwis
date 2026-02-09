@@ -375,7 +375,7 @@
                                     {% for ex in ligand.wl %}
                                     <li><a href="{{ ex.link }}" target="_blank">{{ ex.name }}</a></li>
                                     {% endfor %}
-                                    <li><a href="https://gpcrdb.org/ligand/{{ ligand.ligand_id }}/info" target="_blank">GPCRdb</a></li>
+                                    <li><a href="/ligand/{{ ligand.ligand_id }}/info" target="_blank">GPCRdb</a></li>
                                 </ul>
                             </td>
                         </tr>
@@ -384,7 +384,7 @@
                             <td>Structure pdb</td>
                             <td>
                                 {% for data in structure %}
-                                <a href="https://gpcrdb.org/interaction/{{ data.structure_pdb }}" target="_blank">{{ data.structure_pdb }}</a>
+                                <a href="/interaction/{{ data.structure_pdb }}" target="_blank">{{ data.structure_pdb }}</a>
                                 {% endfor %}
                             </td>
                         </tr>
@@ -583,7 +583,7 @@
                                     {% for ex in ligand.wl %}
                                     <li><a href="{{ ex.link }}" target="_blank">{{ ex.name }}</a></li>
                                     {% endfor %}
-                                    <li><a href="https://gpcrdb.org/ligand/{{ ligand.ligand_id }}/info" target="_blank">GPCRdb</a></li>
+                                    <li><a href="/ligand/{{ ligand.ligand_id }}/info" target="_blank">GPCRdb</a></li>
                                 </ul>
                             </td>
                         </tr>
@@ -592,7 +592,7 @@
                             <td>Structure pdb</td>
                             <td>
                                 {% for data in structure %}
-                                <a href="https://gpcrdb.org/interaction/{{ data.structure_pdb }}" target="_blank">{{ data.structure_pdb }}</a>
+                                <a href="/interaction/{{ data.structure_pdb }}" target="_blank">{{ data.structure_pdb }}</a>
                                 {% endfor %}
                             </td>
                         </tr>
