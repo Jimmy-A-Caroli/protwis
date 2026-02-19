@@ -280,7 +280,7 @@
                         <!-- ligand block -->
                         <td style="text-align:left" class="expand">
                             {% with ligand_name_val=value.5 ligand_id_val=value.19 molecule_type_val=value.9 sequence_s_val=value.26 smiles_s_val=value.24 picture_s_val=value.25 %}
-                                {% if molecule_type_val and molecule_type_val|lower == 'peptide' %}
+                                {% if molecule_type_val and molecule_type_val|lower == 'peptide' or molecule_type_val|lower == 'protein' %}
                                     <a class="struct"
                                        href='/ligand/{{ ligand_id_val }}/info'  {# Use the Ligand ID from value.19 #}
                                        target='_blank'
