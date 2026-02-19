@@ -51,7 +51,7 @@ class Command(BaseCommand):
             ['build_blast_database'],
             ['build_links'],
             ['build_construct_proteins'],
-            ['build_experimental_data', {'test_run': options['test']}],
+            ['build_experimental_data_light', {'test_run': options['test']}],
             # ['build_all_gtp_ligands', {'test_run': options['test']}],
             # ['build_endogenous_data_from_gtp_source', {'test_run': options['test']}],
             ['build_bias_preprocess_data', {'test_run': options['test']}],
