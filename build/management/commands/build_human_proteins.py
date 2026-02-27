@@ -259,10 +259,28 @@ class Command(BaseBuild):
                 self.logger.error('Failed creating protein alias ' + a.name + ' for protein ' + p.name)
 
         # genes
+        #There should generally be one gene name and one entrez gene id per protein, 
+        #but edge cases exist where there are multiple gene names and/or entrez ids.
         for i, gene in enumerate(uniprot['genes']):
             g = False
+            entrez_geneid_use = None
+            entrez_link = None
+            
             try:
-                g, created = Gene.objects.get_or_create(name=gene, species=species, position=i)
+                if 'entrez_geneids' in uniprot.keys():
+                    if len(uniprot['genes']) == len(uniprot['entrez_geneids']):
+                        entrez_geneid_use = uniprot['entrez_geneids'][i] #take index matched id
+                    else:
+                        if len(uniprot['entrez_geneids']) > 0:
+                            entrez_geneid_use = sorted(uniprot['entrez_geneids'])[0] #take the lowest (earliest) id
+                    
+                    if entrez_geneid_use is not None:
+                        resource = WebResource.objects.get(slug='entrez_gene')
+                        entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid_use)
+
+                g, created = Gene.objects.get_or_create(name=gene, species=species, position=i, 
+                                                        entrez_id=entrez_geneid_use, entrez_weblink=entrez_link)                    
+                
                 if created:
                     self.logger.info('Created gene ' + g.name + ' for protein ' + p.name)
             except IntegrityError:
@@ -330,6 +348,7 @@ class Command(BaseBuild):
         up['genes'] = []
         up['names'] = []
         up['accessions'] = []
+        up['entrez_geneids'] = []
 
 
         read_sequence = False
@@ -410,6 +429,17 @@ class Command(BaseBuild):
                             for gene_name in split_segment:
                                 split_gene_name = gene_name.split('{')
                                 up['genes'].append(split_gene_name[0].strip())
+
+                # NCBI IDs
+                elif line.startswith('DR'):
+                    line_tagless = line[5:]                    
+                    split_dr_line = line_tagless.split(';')
+                    if split_dr_line[0].strip() == 'GeneID':
+                        id = split_dr_line[1].strip()
+                        if (id.isdecimal()):
+                            up['entrez_geneids'].append(id)
+                        else:
+                            self.logger.info('Encountered non-numeric entrez gene id :' + id + ' for protein ' + up['entry_name'] + ', skipping')
 
                 # sequence
                 elif line.startswith('SQ'):

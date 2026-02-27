@@ -248,6 +248,8 @@ class Gene(models.Model):
     species = models.ForeignKey('Species', on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     position = models.SmallIntegerField()
+    entrez_id = models.IntegerField(null=True)
+    entrez_weblink = models.ForeignKey('common.WebLink', null=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
