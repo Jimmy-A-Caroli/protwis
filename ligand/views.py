@@ -3235,9 +3235,123 @@ class LigandDetailsLegacyRedirect(_GpcrdbRedirectBase):
     target_pattern_name = 'ligand_detail'
     legacy_kwarg = 'pk'
 
-class LigandInformationView(TemplateView):
-    template_name = 'ligand_info.html'
+class AbsLigand(TemplateView):
 
+    @staticmethod
+    def get_related_ligands(ligand_id):
+        this_ligand = Ligand.objects.filter(gpcrdb_id=ligand_id).prefetch_related('ligand_type').annotate(assay_count=Count('assayexperiment'), structure_count=Count('structureligandinteraction'))
+        if this_ligand[0].parent:
+            parent_ligand = Ligand.objects.filter(id=this_ligand[0].parent.id).prefetch_related('ligand_type').annotate(assay_count=Count('assayexperiment'), structure_count=Count('structureligandinteraction'))[0]
+        else:
+            parent_ligand = this_ligand[0]
+        children = Ligand.objects.filter(parent=parent_ligand).prefetch_related('ligand_type').annotate(assay_count=Count('assayexperiment'), structure_count=Count('structureligandinteraction'))
+        ligands = [parent_ligand]+list(children)
+
+        return this_ligand, ligands
+
+class LigandGroup(AbsLigand):
+    template_name = 'ligand_group.html'
+
+    def get(self, request, *args, **kwargs):
+        ligand_id = self.kwargs['gpcrdb_id']
+        self.this_ligand, self.ligands = AbsLigand.get_related_ligands(ligand_id)
+
+        # if len(self.ligands) <= 2:
+        #     return redirect(f"/ligand/gpcrdb_id/{ligand_id}/info")
+
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        ligands_parsed = []
+        for l in self.ligands:
+            ids = LigandID.objects.filter(ligand=l).count()
+            if ids>0:
+                ids = f"<b>{ids}</b>"
+            mutations = MutationExperiment.objects.filter(ligand=l).count()
+            if mutations>0:
+                mutations = f"<b>{mutations}</b>"
+            assay_count = l.assay_count
+            if assay_count>0:
+                assay_count = f"<b>{assay_count}</b>"
+            structure_count = l.structure_count
+            if structure_count>0:
+                structure_count = f"<b>{structure_count}</b>"
+            drug_indications = l.drugs_set.all().count()
+            if drug_indications>0:
+                drug_indications = f"<b>{drug_indications}</b>"
+            lig_dict = {'ligand_object':None, 'chemical_properties':0, 'chemical_identifiers':0, 'bioactivities':assay_count, 
+                        'structures':structure_count, 'sequence':None, 'gpcrdb_id':l.gpcrdb_id, 'db_ids':ids, 'drug_indications':drug_indications, 'mutations':mutations}
+            if l.hacc:
+                lig_dict['chemical_properties']+=1
+            if l.hdon:
+                lig_dict['chemical_properties']+=1
+            ### logp not shown on ligand info page, commented out for now
+            # if l.logp:
+            #     lig_dict['chemical_properties_count']+=1
+            if l.mw:
+                lig_dict['chemical_properties']+=1
+            if l.rotatable_bonds:
+                lig_dict['chemical_properties']+=1
+            if l.inchikey:
+                lig_dict['chemical_identifiers']+=1
+            if l.smiles:
+                lig_dict['chemical_identifiers']+=1
+            if l.helm:
+                lig_dict['chemical_identifiers']+=1
+            if l.sequence:
+                lig_dict['sequence'] = l.sequence
+            if lig_dict['chemical_properties']>0:
+                lig_dict['chemical_properties'] = f"<b>{lig_dict['chemical_properties']}</b>"
+            if lig_dict['chemical_identifiers']>0:
+                lig_dict['chemical_identifiers'] = f"<b>{lig_dict['chemical_identifiers']}</b>"
+            ligands_parsed.append(lig_dict)
+
+            if l.smiles and l.smiles != "-":
+                _, smiles_for_image, picture_flag = standardize_smiles(l.smiles, None)
+            else:
+                smiles_for_image = ""
+                picture_flag = "Not_available"
+            lig_dict['smiles_for_image'] = smiles_for_image
+            lig_dict['picture'] = picture_flag
+
+            if not l.parent:
+                goldstar = '<i class="bi bi-star-fill" style="color: gold;-webkit-text-stroke: 1px black;paint-order: stroke fill;font-size: 12px;"data-html="true" data-toggle="popover" data-trigger="hover" data-placement="right" data-content="Parent entry of ligand group"></i>'
+            else:
+                goldstar = ''
+            if l.ligand_type.slug in ['peptide', 'protein'] and l.sequence:
+                lig_dict['ligand_object'] = f"""{goldstar}<a class="struct"
+                                                    href='/ligand/{l.gpcrdb_id}/info'
+                                                    data-ligand-type="peptide"
+                                                    data-sequence="{l.sequence}">
+                                                    {l.name}
+                                                </a>"""
+            else:
+                if l.smiles:
+                    lig_dict['ligand_object'] = f"""{goldstar}<a class="struct"
+                                                        href='/ligand/{l.gpcrdb_id}/info'
+                                                        data-smiles="{smiles_for_image}"
+                                                        rel="{picture_flag}">
+                                                        {l.name}
+                                                    </a>"""
+                else:
+                    lig_dict['ligand_object'] = f"""{goldstar}<a class="struct"
+                                                        href='/ligand/{l.gpcrdb_id}/info'
+                                                        data-smiles=""
+                                                        rel="Not_available">
+                                                        {l.name}
+                                                    </a>"""
+
+        context.update({'ligands': json.dumps(ligands_parsed)})
+        context.update({'this_ligand': self.this_ligand[0]})
+
+        return context
+
+
+class LigandInformationView(AbsLigand):
+    template_name = 'ligand_info.html'
+    
     def get_context_data(self, *args, **kwargs):
         context = super(LigandInformationView, self).get_context_data(**kwargs)
         ligand_id = self.kwargs['gpcrdb_id']
@@ -3277,7 +3391,7 @@ class LigandInformationView(TemplateView):
         else:
             context['assay_potency_json'] = "[]"
 
-        if context['assay_affinity_json'] == "[]" or context['assay_potency_json'] == "[]":
+        if context['assay_affinity_json'] == "[]" and context['assay_potency_json'] == "[]":
             context['assay_existence'] = 'no'
         else:
             context['assay_existence'] = 'yes'
@@ -3650,8 +3764,8 @@ class LigandInformationView(TemplateView):
     @staticmethod
     def process_assay(assays):
         return_dict = dict()
-        for i in assays:
-            name = str(i.protein) + '_' + str(i.source)
+        for c, i in enumerate(assays):
+            name = str(i.protein) + '_' + str(i.source) + '_' + str(c)
             assay_type = i.value_type
             if i.source == 'PDSP KiDatabase':
                 i.source = 'PDSP Ki database'
@@ -3692,7 +3806,7 @@ class LigandInformationView(TemplateView):
     	#Unpacking
         unpacked_affinity = dict()
         unpacked_potency = dict()
-        potency_values = ['pKB', 'pKb', 'pEC50', 'pA2', 'A2', 'Kb', 'KB', 'EC50', 'Potency', 'IC50', 'pIC50']
+        potency_values = ['pKB', 'pKb', 'pEC50', 'pA2', 'A2', 'Kb', 'KB', 'EC50', 'Potency', 'IC50', 'pIC50', 'AC50']
         affinity_values = ['pKi', 'pKd', 'Ki', 'Kd']
         for key in return_dict.keys():
             for data_type in return_dict[key]['data_type'].keys():
@@ -3814,6 +3928,7 @@ class LigandInformationView(TemplateView):
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
         ld['ligand_smiles'], ld['ligand_smiles_for_image'], ld['picture'] = standardize_smiles(ligand_data.smiles, ld['mw'])
+        ld['related_ids'] = list()
 
         #Sorting links if ligand is endogenous
         if ligand_data.id in endogenous_ligands:
@@ -3827,6 +3942,10 @@ class LigandInformationView(TemplateView):
         else:
             for i in ligand_data.ids.all():
                 ld['wl'].append({'name': i.web_resource.name, "link": str(i)})
+        #Adding related ligand object links
+        _, related_ligand_objects = AbsLigand.get_related_ligands(ligand_data.id)
+        for r in related_ligand_objects:
+            ld['related_ids'].append(r.gpcrdb_id)
         return ld
 
     # @staticmethod

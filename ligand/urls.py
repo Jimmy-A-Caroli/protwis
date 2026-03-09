@@ -79,6 +79,7 @@ urlpatterns = [
     path('path_preference_emax_path_profiles_selection', views.BiasedSignallingSelection.as_view(pathway=True, way='EmaxPathProfilePathway'), name='ema_pathpref_pathprof_selection'),
     path('path_preference_emax_path_profiles', views.BiasedSignallingOnTheFlyCalculation.as_view(page='pathwayprofiles', pathway=True), name='biased_rank_order'),
 
+    url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/group$', views.LigandGroup.as_view(), name='ligand-group'),
     url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/info$', views.LigandInformationView.as_view(), name='ligand-info'),
     url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/gtp_info$', views.LigandInformationView.as_view(), name='ligand-gtp-info'),
     url(r'^gpcrdb_id/(?P<gpcrdb_id>[-\w]+)/details$', views.LigandDetails, name='ligand_detail'),
