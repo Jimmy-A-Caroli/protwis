@@ -7,7 +7,7 @@ from build.management.commands.build_human_proteins import Command as BuildHuman
 from residue.functions import *
 from structure.functions import BlastSearch, ParseStructureCSV
 from protein.models import Protein, ProteinFamily, Gene
-from common.tools import test_model_updates
+from common.tools import test_model_updates, parse_uniprot_file
 
 import django.apps
 import logging
@@ -57,10 +57,12 @@ class Command(BuildHumanProteins):
     ref_position_source_dir = os.sep.join([settings.DATA_DIR, 'residue_data', 'reference_positions'])
     auto_ref_position_source_dir = os.sep.join([settings.DATA_DIR, 'residue_data', 'auto_reference_positions'])
     uniprot_url = 'http://www.uniprot.org/uniprot/?query={}&columns=id&format=tab'
-
+    entrezid_source_file = os.sep.join([settings.DATA_DIR, 'gene_data', 'entrez_id_lookup.txt'])
 
 
     def handle(self, *args, **options):
+        self.entrez_lookup = self.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
+        
         if options['purge']:
             try:
                 self.purge_orthologs()
@@ -130,7 +132,8 @@ class Command(BuildHumanProteins):
                 if extension != 'txt':
                     continue
 
-                up = self.parse_uniprot_file(accession)
+                up = parse_uniprot_file(accession=accession, logger=self.logger, 
+                                        local_uniprot_dir=self.local_uniprot_dir, excel_sequences=self.excel_sequences)
                 # Skip TREMBL on first loop, and SWISSPROT on second
                 if 'source' in up:
                     if reviewed != up['source']:

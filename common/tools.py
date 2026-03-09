@@ -284,3 +284,143 @@ def urlopen_with_retry(url, data = None, retries = 5, sleeptime = 5):
             return response
         elif retry == retries:
             return False
+
+def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot_dir=None, remote_uniprot_dir='http://www.uniprot.org/uniprot/', excel_sequences=None):
+    filename = accession + '.txt'
+    if not path_to_file:
+        local_file_path = os.sep.join([local_uniprot_dir, filename])
+    else:
+        local_file_path = path_to_file
+    remote_file_path = remote_uniprot_dir + filename
+
+    up = {
+        'genes': [],
+        'names': [],            
+        'accessions': [],
+        'structures': [],
+        'entrez_geneids': []
+    }
+
+    read_sequence = False
+    remote = False
+
+    # record whether organism has been read
+    os_read = False
+
+    # should local file be written?
+    local_file = False
+
+    try:
+        if os.path.isfile(local_file_path):
+            uf = open(local_file_path, 'r')
+            if logger is not None: logger.info('Reading local file ' + local_file_path)
+        else:
+            uf = urlopen_with_retry(remote_file_path)
+            if uf == False:
+                if logger is not None: logger.warning(f'ERROR: UNIPROT file could not be obtained for {accession}')
+                return False
+
+            remote = True
+            if logger is not None: logger.info('Reading remote file ' + remote_file_path)
+            local_file = open(local_file_path, 'w')
+
+        for raw_line in uf:
+            # line format
+            if remote:
+                line = raw_line.decode('UTF-8')
+            else:
+                line = raw_line
+
+            # write to local file if appropriate
+            if local_file:
+                local_file.write(line)
+
+            # end of file
+            if line.startswith('//'):
+                break
+
+            # entry name and review status
+            if line.startswith('ID'):
+                split_id_line = line.split()
+                up['entry_name'] = split_id_line[1].lower()
+                review_status = split_id_line[2].strip(';')
+                if review_status == 'Unreviewed':
+                    up['source'] = 'TREMBL'
+                elif review_status == 'Reviewed':
+                    up['source'] = 'SWISSPROT'
+
+            # species
+            elif line.startswith('OS') and not os_read:
+                species_full = line[2:].strip().strip('.')
+                species_split = species_full.split('(')
+                up['species_latin_name'] = species_split[0].strip()
+                if len(species_split) > 1:
+                    up['species_common_name'] = species_split[1].strip().strip(')')
+                else:
+                    up['species_common_name'] = up['species_latin_name']
+                os_read = True
+
+            # accessions
+            elif line.startswith('AC'):
+                sline = line.split()
+                for ac in sline:
+                    up['accessions'].append(ac.strip(';'))
+
+            # names
+            elif line.startswith('DE'):
+                split_de_line = line.split('=')
+                if len(split_de_line) > 1:
+                    split_segment = split_de_line[1].split('{')
+                    up['names'].append(split_segment[0].strip().strip(';'))
+
+            # genes
+            elif line.startswith('GN'):
+                split_gn_line = line.split(';')
+                for segment in split_gn_line:
+                    if '=' in segment:
+                        split_segment = segment.split('=')
+                        split_segment = split_segment[1].split(',')
+                        for gene_name in split_segment:
+                            split_gene_name = gene_name.split('{')
+                            up['genes'].append(split_gene_name[0].strip())
+
+            # # structures
+            # elif line.startswith('DR') and 'PDB;' in line:
+            #     split_gn_line = line.split(';')
+            #     up['structures'].append([split_gn_line[1].lstrip(), split_gn_line[3].lstrip().split(" A")[0]])
+
+
+            # NCBI IDs
+            elif line.startswith('DR'):
+                line_tagless = line[5:]                    
+                split_dr_line = line_tagless.split(';')
+                if split_dr_line[0].strip() == 'GeneID':
+                    id = split_dr_line[1].strip()
+                    if (id.isdecimal()):
+                        up['entrez_geneids'].append(id)
+                    else:
+                        if logger is not None: logger.info('Encountered non-numeric entrez gene id :' + id + ' for protein ' + up['entry_name'] + ', skipping')
+
+            # sequence
+            elif line.startswith('SQ'):
+                split_sq_line = line.split()
+                seq_len = int(split_sq_line[2])
+                read_sequence = True
+                up['sequence'] = ''
+            elif read_sequence == True:
+                up['sequence'] += line.strip().replace(' ', '')
+
+        # close the Uniprot file
+        uf.close()
+        try:
+            up['sequence'] = excel_sequences[up['entry_name']]['Sequence']
+        except:
+            pass
+    except:
+        return False
+
+    # close the local file if appropriate
+    if local_file:
+        local_file.close()
+
+    return up

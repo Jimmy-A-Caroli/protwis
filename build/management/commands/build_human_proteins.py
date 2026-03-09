@@ -8,7 +8,7 @@ from protein.models import (Protein, ProteinConformation, ProteinState, ProteinF
         ProteinSequenceType, Species, Gene, ProteinSource, ProteinSegment)
 from common.models import WebResource, WebLink
 from residue.models import ResidueNumberingScheme
-from common.tools import test_model_updates
+from common.tools import test_model_updates, parse_uniprot_file
 
 import django.apps
 import shlex
@@ -25,6 +25,7 @@ class Command(BaseBuild):
     help = 'Reads source data and creates protein families, proteins, and associated tables'
 
     protein_source_file = os.sep.join([settings.DATA_DIR, 'protein_data', 'proteins_and_families.txt'])
+    entrezid_source_file = os.sep.join([settings.DATA_DIR, 'gene_data', 'entrez_id_lookup.txt'])
     local_uniprot_dir = os.sep.join([settings.DATA_DIR, 'protein_data', 'uniprot'])
     with open(os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'sequences.yaml']), 'r') as f:
         excel_sequences = yaml.load(f, Loader=yaml.FullLoader)
@@ -35,6 +36,8 @@ class Command(BaseBuild):
     test_model_updates(all_models, tracker, initialize=True)
 
     def handle(self, *args, **options):
+        self.entrez_lookup = self.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
+
         # use a smaller protein file if in test mode
         if options['test']:
             self.protein_source_file = os.sep.join([settings.DATA_DIR, 'protein_data',
@@ -174,7 +177,8 @@ class Command(BaseBuild):
 
                         # parse uniprot file for this protein
                         self.logger.info('Parsing uniprot file for protein ' + protein_name)
-                        up = self.parse_uniprot_file(protein_accession)
+                        up = parse_uniprot_file(accession= protein_accession, logger=self.logger, 
+                                                local_uniprot_dir=self.local_uniprot_dir, excel_sequences=self.excel_sequences)
                         if not up:
                             self.logger.error('Failed parsing uniprot file for protein ' + protein_name + ', skipping')
                             continue
@@ -267,16 +271,24 @@ class Command(BaseBuild):
             entrez_link = None
             
             try:
-                if 'entrez_geneids' in uniprot.keys():
+                if 'entrez_geneids' in uniprot.keys() and len(uniprot['entrez_geneids']) > 0: 
                     if len(uniprot['genes']) == len(uniprot['entrez_geneids']):
                         entrez_geneid_use = uniprot['entrez_geneids'][i] #take index matched id
                     else:
                         if len(uniprot['entrez_geneids']) > 0:
                             entrez_geneid_use = sorted(uniprot['entrez_geneids'])[0] #take the lowest (earliest) id
-                    
-                    if entrez_geneid_use is not None:
-                        resource = WebResource.objects.get(slug='entrez_gene')
-                        entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid_use)
+                elif "genes" in uniprot.keys(): #gene name present but no entrez gene id in uniprot file
+                    entrez_list = []
+                    for gene in uniprot["genes"]:
+                        #lookup entrez gene id using the gene symbol and species name in the lookup file
+                        if uniprot['species_latin_name'] in self.entrez_lookup["by_species_name"].keys():
+                            if gene in self.entrez_lookup["by_species_name"][uniprot['species_latin_name']].keys():
+                                entrez_list.append(self.entrez_lookup["by_species_name"][species.latin_name][gene])
+                    entrez_geneid_use = entrez_list[0] if len(entrez_list) > 0 else None #Prioritise the first entry as this hopefully corresponds to the official symbol match
+                
+                if entrez_geneid_use is not None:
+                    resource = WebResource.objects.get(slug='entrez_gene')
+                    entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid_use)
 
                 g, created = Gene.objects.get_or_create(name=gene, species=species, position=i, 
                                                         entrez_id=entrez_geneid_use, entrez_weblink=entrez_link)                    
@@ -336,131 +348,45 @@ class Command(BaseBuild):
             'level_family_counter': level_family_counter,
         }
 
-    def parse_uniprot_file(self, accession, path_to_file=False):
-        filename = accession + '.txt'
-        if not path_to_file:
-            local_file_path = os.sep.join([self.local_uniprot_dir, filename])
-        else:
-            local_file_path = path_to_file
-        remote_file_path = self.remote_uniprot_dir + filename
+    @staticmethod
+    def build_entrezgeneid_lookup_dict(entrez_lookup_file, logger, keep_only_lowest_id=True):
+        entrez_lookup_dict = dict()
+        entrez_lookup_dict["by_species_name"] = dict()
+        entrez_lookup_dict["by_taxon_id"] = dict()
 
-        up = {}
-        up['genes'] = []
-        up['names'] = []
-        up['accessions'] = []
-        up['entrez_geneids'] = []
+        with open(entrez_lookup_file, 'r') as f:
+            for line in f:
+                split_line = line.strip().split('\t')
+                if len(split_line) == 4:
+                    if split_line[0] != 'gene_symbol': #skip header line
+                        gene_symbol, taxon_id, entrez_gene_id, species_name = split_line
+                        
+                        #Lookup by species
+                        if not species_name in entrez_lookup_dict["by_species_name"].keys():
+                            entrez_lookup_dict["by_species_name"][species_name] = dict()
+                        
+                        if not gene_symbol in entrez_lookup_dict["by_species_name"][species_name].keys():
+                            entrez_lookup_dict["by_species_name"][species_name][gene_symbol] = []
+                        
+                        entrez_lookup_dict["by_species_name"][species_name][gene_symbol].append(entrez_gene_id) 
 
-
-        read_sequence = False
-        remote = False
-
-        # record whether organism has been read
-        os_read = False
-
-        # should local file be written?
-        local_file = False
-
-        try:
-            if os.path.isfile(local_file_path):
-                uf = open(local_file_path, 'r')
-                self.logger.info('Reading local file ' + local_file_path)
-            else:
-                uf = urlopen(remote_file_path)
-                remote = True
-                self.logger.info('Reading remote file ' + remote_file_path)
-                local_file = open(local_file_path, 'w')
-
-            for raw_line in uf:
-                # line format
-                if remote:
-                    line = raw_line.decode('UTF-8')
+                        #Lookup by taxon id
+                        if not taxon_id in entrez_lookup_dict["by_taxon_id"].keys():
+                            entrez_lookup_dict["by_taxon_id"][taxon_id] = dict()
+                        
+                        if not gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id].keys():
+                            entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = []
+                        
+                        entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol].append(entrez_gene_id) 
                 else:
-                    line = raw_line
+                    logger.error('Unexpected format in entrez gene id lookup file for line: ' + line)
 
-                # write to local file if appropriate
-                if local_file:
-                    local_file.write(line)
+        if keep_only_lowest_id:
+            for species in entrez_lookup_dict["by_species_name"].keys():
+                for gene_symbol in entrez_lookup_dict["by_species_name"][species].keys():
+                    entrez_lookup_dict["by_species_name"][species][gene_symbol] = sorted(entrez_lookup_dict["by_species_name"][species][gene_symbol])[0]
 
-                # end of file
-                if line.startswith('//'):
-                    break
-
-                # entry name and review status
-                if line.startswith('ID'):
-                    split_id_line = line.split()
-                    up['entry_name'] = split_id_line[1].lower()
-                    review_status = split_id_line[2].strip(';')
-                    if review_status == 'Unreviewed':
-                        up['source'] = 'TREMBL'
-                    elif review_status == 'Reviewed':
-                        up['source'] = 'SWISSPROT'
-
-                # species
-                elif line.startswith('OS') and not os_read:
-                    species_full = line[2:].strip().strip('.')
-                    species_split = species_full.split('(')
-                    up['species_latin_name'] = species_split[0].strip()
-                    if len(species_split) > 1:
-                        up['species_common_name'] = species_split[1].strip().strip(')')
-                    else:
-                        up['species_common_name'] = up['species_latin_name']
-                    os_read = True
-
-                # accessions
-                elif line.startswith('AC'):
-                    sline = line.split()
-                    for ac in sline:
-                        up['accessions'].append(ac.strip(';'))
-
-                # names
-                elif line.startswith('DE'):
-                    split_de_line = line.split('=')
-                    if len(split_de_line) > 1:
-                        split_segment = split_de_line[1].split('{')
-                        up['names'].append(split_segment[0].strip().strip(';'))
-
-                # genes
-                elif line.startswith('GN'):
-                    split_gn_line = line.split(';')
-                    for segment in split_gn_line:
-                        if '=' in segment:
-                            split_segment = segment.split('=')
-                            split_segment = split_segment[1].split(',')
-                            for gene_name in split_segment:
-                                split_gene_name = gene_name.split('{')
-                                up['genes'].append(split_gene_name[0].strip())
-
-                # NCBI IDs
-                elif line.startswith('DR'):
-                    line_tagless = line[5:]                    
-                    split_dr_line = line_tagless.split(';')
-                    if split_dr_line[0].strip() == 'GeneID':
-                        id = split_dr_line[1].strip()
-                        if (id.isdecimal()):
-                            up['entrez_geneids'].append(id)
-                        else:
-                            self.logger.info('Encountered non-numeric entrez gene id :' + id + ' for protein ' + up['entry_name'] + ', skipping')
-
-                # sequence
-                elif line.startswith('SQ'):
-                    split_sq_line = line.split()
-                    seq_len = int(split_sq_line[2])
-                    read_sequence = True
-                    up['sequence'] = ''
-                elif read_sequence == True:
-                    up['sequence'] += line.strip().replace(' ', '')
-
-            # close the Uniprot file
-            uf.close()
-            try:
-                up['sequence'] = self.excel_sequences[up['entry_name']]['Sequence']
-            except:
-                pass
-        except:
-            return False
-
-        # close the local file if appropriate
-        if local_file:
-            local_file.close()
-
-        return up
+            for taxon_id in entrez_lookup_dict["by_taxon_id"].keys():
+                for gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id].keys():
+                    entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = sorted(entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol])[0]
+        return entrez_lookup_dict
