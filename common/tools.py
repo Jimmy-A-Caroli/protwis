@@ -71,12 +71,12 @@ def dump_checker(model_label, record_count=None):
     # Optional hardcoded fallbacks (try gzip first, then legacy csv)
     if not latest_path:
         if model_label == 'ligand.Ligand':
-            gz = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligand_reload_dump.csv.gz'])
-            legacy = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligand_reload_dump.csv'])
+            gz = os.sep.join([settings.DATA_DIR, 'ligand_data', 'model_snapshots', 'ligand_reload_dump.csv.gz'])
+            legacy = os.sep.join([settings.DATA_DIR, 'ligand_data', 'model_snapshots', 'ligand_reload_dump.csv'])
             latest_path = gz if os.path.isfile(gz) else legacy
         elif model_label == 'ligand.LigandID':
-            gz = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligandid_reload_dump.csv.gz'])
-            legacy = os.sep.join([settings.DATA_DIR, 'model_snapshots', 'ligandid_reload_dump.csv'])
+            gz = os.sep.join([settings.DATA_DIR, 'ligand_data', 'model_snapshots', 'ligandid_reload_dump.csv.gz'])
+            legacy = os.sep.join([settings.DATA_DIR, 'ligand_data', 'model_snapshots', 'ligandid_reload_dump.csv'])
             latest_path = gz if os.path.isfile(gz) else legacy
 
     # ---- count rows in latest dump (data lines only; header is line 0) ----
