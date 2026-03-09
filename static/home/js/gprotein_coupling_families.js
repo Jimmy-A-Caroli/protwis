@@ -5,6 +5,32 @@
 let oTable1 = [];
 
 $(document).ready(function() {
+  function enableTopScroller(table_id) {
+    // Put top scroller
+    // https://stackoverflow.com/questions/35147038/how-to-place-the-datatables-horizontal-scrollbar-on-top-of-the-table
+    let $table = $(table_id);
+    if ($table.length === 0) {
+      return;
+    }
+
+    let $wrapper = $table.closest(".dataTables_wrapper");
+    let $scrollHead = $wrapper.find(".dataTables_scrollHead");
+    if ($scrollHead.length === 0) {
+      return;
+    }
+
+    $scrollHead.css({
+      "overflow-x": "scroll"
+    }).off("scroll.topscroller").on("scroll.topscroller", function() {
+      let scrollBody = $(this).parent().find(".dataTables_scrollBody").get(0);
+      if (!scrollBody) {
+        return;
+      }
+      scrollBody.scrollLeft = this.scrollLeft;
+      $(scrollBody).trigger("scroll");
+    });
+  }
+
   // Activate tooltips and popovers from Bootstrap
   $("[data-toggle='tooltip']").tooltip();
   $("[data-toggle='popover']").popover();
@@ -30,6 +56,9 @@ $(document).ready(function() {
     autoWidth: true,
     bInfo: true,
   });
+
+  // Enable top horizontal scrollbar (in the header section)
+  enableTopScroller("#familiestabletab");
 
   let column_filters = [];
   // Selector column

@@ -8,11 +8,13 @@ from django import forms
 from time import perf_counter          # used for quick dev profiling
 
 from django.core.serializers.json import DjangoJSONEncoder
-from django.shortcuts import redirect
 
+from django.shortcuts import redirect
+from django.core.cache import cache
+from protwis.context_processors import current_site
 from common.phylogenetic_tree import PhylogeneticTreeGenerator
 from protein.models import ProteinSegment
-from structure.models import Structure, StructureModel, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureModelRMSD, StructureModelpLDDT, StructureAFScores, StructureRFAAScores, StructureStabilizingAgent
+from structure.models import Structure, StructureModel, StructureComplexModel, StructureExtraProteins, StructureVectors, StructureModelRMSD, StructureModelpLDDT, StructureAFScores, StructureRFAAScores
 from structure.functions import CASelector, SelectionParser, GenericNumbersSelector, SubstructureSelector, ModelRotamer
 from structure.assign_generic_numbers_gpcr import GenericNumbering, GenericNumberingFromDB
 from structure.structural_superposition import ProteinSuperpose, FragmentSuperpose, ConvertSuperpose
@@ -27,6 +29,7 @@ from common.selection import Selection, SelectionItem
 from common.extensions import MultiFileField
 from common.models import ReleaseNotes, WebLink
 from common.alignment import Alignment, GProteinAlignment
+from common.definitions import G_PROTEIN_DISPLAY_NAME, ARRESTIN_DISPLAY_NAME
 from residue.models import Residue, ResidueNumberingScheme, ResiduePositionSet
 from contactnetwork.models import Interaction
 from mapper.views import DataMapperHome
@@ -38,6 +41,7 @@ from django.contrib.postgres.aggregates import StringAgg, ArrayAgg
 
 import io
 import numpy as np
+import hashlib
 from scipy.optimize import linear_sum_assignment
 from Bio.PDB.vectors import Vector, rotmat
 
@@ -87,6 +91,7 @@ class StructureBrowser(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         return context
+
 
 class StructureDataJsonView(View):
     """Fast JSON endpoint for the structure browser."""
@@ -300,6 +305,39 @@ class StructureDataJsonView(View):
             traceback.print_exc()
             return JsonResponse({"error": str(exc)}, status=500)
 
+def DomainBrowser(request):
+    domain = current_site(request)
+    origin = domain['current_site']
+    cache_key = "structure_browser_" + origin + "_" + hashlib.md5("_".join(origin).encode('utf-8')).hexdigest()
+    return_html = cache.get(cache_key)
+    # return_html = None #testing
+    if return_html == None:
+        if origin == 'gprotein':
+            return_html = EffectorStructureBrowser.as_view(effector='gprot')(request).render()
+        elif origin == 'arrestin':
+            return_html = EffectorStructureBrowser.as_view(effector='arrestin')(request).render()
+        else:
+            return_html = StructureBrowser.as_view()(request).render()
+        cache.set(cache_key, return_html, 60*60*24*7)
+    return return_html
+
+def ModelsRedirect(request):
+    domain = current_site(request)
+    origin = domain['current_site']
+    cache_key = "structure_models_" + origin + "_" + hashlib.md5("_".join(origin).encode('utf-8')).hexdigest()
+    return_html = cache.get(cache_key)
+    return_html = None #testing
+    if return_html == None:
+        if origin == 'gprotein':
+            return_html = ServeComplexModels.as_view()(request).render()
+        elif origin == 'arrestin':
+            return_html = ServeComplexModels.as_view(signalling_protein = 'af-arrestin')(request).render()
+        else:
+            return_html = ServeHomologyModels.as_view()(request).render()
+        cache.set(cache_key, return_html, 60*60*24*7)
+    return return_html
+
+
 class EffectorStructureBrowser(TemplateView):
     """
     Fetching Structure data for browser
@@ -382,6 +420,7 @@ class ServeHomologyModels(TemplateView):
 class ServeComplexModels(TemplateView):
 
     template_name = "complex_models.html"
+    signalling_protein = 'af-signprot'
     def get_context_data(self, **kwargs):
         context = super(ServeComplexModels, self).get_context_data(**kwargs)
         # try:
@@ -418,7 +457,7 @@ class ServeComplexModels(TemplateView):
         # model.signprot_complex.protein.family.name
         # model.signprot_complex.protein.entry_name
         try:
-            complex_models = list(Structure.objects.filter(structure_type__slug='af-signprot').prefetch_related(
+            complex_models = list(Structure.objects.filter(structure_type__slug=self.signalling_protein).prefetch_related(
                 "protein_conformation__protein",
                 "protein_conformation__protein__parent",
                 "protein_conformation__protein__family",
@@ -447,7 +486,7 @@ class ServeComplexModels(TemplateView):
                                                                     "signprot_complex__protein__entry_name",
                                                                     "pk"))
 
-            sep = StructureExtraProteins.objects.filter(structure__structure_type__slug='af-signprot').prefetch_related("structure__pdb_code").values("structure__pdb_code__index").annotate(sepcount=Count("structure__pdb_code__index")).order_by()
+            sep = StructureExtraProteins.objects.filter(structure__structure_type__slug=self.signalling_protein).prefetch_related("structure__pdb_code").values("structure__pdb_code__index").annotate(sepcount=Count("structure__pdb_code__index")).order_by()
             sep_dict = {}
             for s in sep:
                 sep_dict[s["structure__pdb_code__index"]] = s["sepcount"]
@@ -489,6 +528,13 @@ class ServeComplexModels(TemplateView):
                                 cm["Roth"] = coupling["logemaxec50"]
 
             context['structure_complex_model'] = complex_models
+            context['signalling_protein'] = self.signalling_protein
+            if self.signalling_protein == 'af-arrestin':
+                context['sign_header'] = 'ARRESTIN'  # the key probably needs to be changed
+            else:
+                context['sign_header'] = 'G PROTEIN'
+
+
 
         except StructureComplexModel.DoesNotExist as e:
             pass
@@ -780,12 +826,36 @@ def ComplexModelDetails(request, header, refined=False):
         main_template = Structure.objects.get(pdb_code__index=header.upper())
         header = header.upper()+'_refined'
     model = Structure.objects.get(pdb_code__index=header)
-
     if not refined:
         scores = StructureAFScores.objects.get(structure=model)
         #Need to build the plDDT colors
         model_plddt = StructureModelpLDDT.objects.filter(structure=model).order_by('residue__protein_conformation__protein__id').prefetch_related('residue','residue__protein_conformation__protein','residue__protein_segment')
-        avg_plddt = model_plddt.aggregate(Avg('pLDDT'))
+        chain_scores = model_plddt.values('residue__protein_conformation__protein__name').annotate(average_score=Avg('pLDDT'))
+    for score in chain_scores:
+        original_name = score['residue__protein_conformation__protein__name']
+
+        # Regular expressions for matching "alpha", "beta", or "gamma" and capturing the following part
+        patterns = {
+            # r'.*([a-zA-Z])\s*alpha[-\s]*(\d*).*': 'Gα\\1\\2',
+            r'.*\(([a-zA-Z]+)\).*alpha[-\s]*(\d*).*': 'Gα\\1\\2',
+            # r'.*alpha[-\s]*(\d+).*': 'Gα\\1',
+            r'.*beta[-\s]*(\d+).*': 'Gβ\\1',
+            r'.*gamma[-\s]*(\d+).*': 'Gγ\\1',
+        }
+
+        # Initialize modified_name with the original name in case no patterns match
+        modified_name = original_name.replace('receptor', '').replace('-adrenoceptor', "").strip()
+
+        # Attempt to find and replace based on the defined patterns
+        for pattern, replacement in patterns.items():
+            if re.search(pattern, original_name, re.IGNORECASE):
+                modified_name = re.sub(pattern, replacement, original_name, flags=re.IGNORECASE)
+                break  # Stop after the first match to avoid multiple replacements
+
+        # Update the score dictionary with the modified name
+        score['chain'] = modified_name
+
+        # avg_plddt = model_plddt.aggregate(Avg('pLDDT'))
         residues_plddt = {}
         for item in model_plddt:
             if item.residue.protein_conformation.protein not in residues_plddt:
@@ -865,7 +935,8 @@ def ComplexModelDetails(request, header, refined=False):
                                                              'residues_lookup': residues_lookup,
                                                              'display_res_gpcr_strict': display_res_gpcr_strict, 'display_res_gprot_strict': display_res_gprot_strict,
                                                              'display_res_gpcr_loose': display_res_gpcr_loose, 'display_res_gprot_loose': display_res_gprot_loose, 'residue_number_labels':conversion_dict_residue_numbers,
-                                                             'chain_colors': json.dumps(chain_colors), 'chain_color_palette': chain_color_palette
+                                                             'chain_colors': json.dumps(chain_colors), 'chain_color_palette': chain_color_palette,
+                                                             'signalling_protein': model.structure_type.slug
                                                              })
 
     else:
@@ -884,7 +955,9 @@ def ComplexModelDetails(request, header, refined=False):
                                                              'residues': len(protein_interactions),
                                                              'residues_browser': residues_browser,
                                                              'structure_type': model.structure_type,
-                                                             'plddt_avg': avg_plddt['pLDDT__avg'],
+                                                             'signalling_protein': model.structure_type.slug,
+                                                             'plddt_avg': chain_scores,
+                                                            #  'plddt_avg': avg_plddt['pLDDT__avg'],
                                                              'interactions_metadata': interactions_metadata,
                                                              'gprot': gprot_order,
                                                              'receptor': receptor_order,
@@ -1161,9 +1234,29 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
         translation = sv.translation
         center_axis = sv.center_axis
 
-    # Check if the structure is in complex with a signaling protein
-    ### Modified to filter out arrestins for now
-    signaling_complex = SignprotComplex.objects.filter(structure=crystal, protein__family__slug__startswith='100').count() > 0
+    # Check if the structure is in complex with a signaling protein (G protein or Arrestin).
+    signprot_complex = getattr(crystal, "signprot_complex", None)
+    signprot_family_slug = None
+    try:
+        signprot_family_slug = signprot_complex.protein.family.slug
+    except Exception:
+        signprot_family_slug = None
+
+    is_gprotein_complex = bool(signprot_family_slug and signprot_family_slug.startswith('100'))
+    is_arrestin_complex = bool(signprot_family_slug and signprot_family_slug.startswith('200'))
+    has_transducer_complex = is_gprotein_complex or is_arrestin_complex
+    # Backwards-compatible flag used by older templates/logic.
+    # Treat BOTH G protein (100*) and arrestin (200*) as "signaling complex".
+    signaling_complex = has_transducer_complex
+
+    # Only load the interface module if we actually have interface interaction records.
+    has_interface_interactions = False
+    if has_transducer_complex:
+        has_interface_interactions = Interaction.objects.filter(
+            Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='100') |
+            Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='200'),
+            interacting_pair__referenced_structure=crystal
+        ).exists()
 
     # GN list
     only_gns = list(crystal.protein_conformation.residue_set.exclude(generic_number=None).values_list('protein_segment__slug','sequence_number','generic_number__label','display_generic_number__label').all())
@@ -1173,7 +1266,7 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
     if len(filter_tm1) > 0:
         ref_tm1 = filter_tm1[0]
 
-    if signaling_complex:
+    if has_interface_interactions:
     #Adding all the section for the tabs stuff. Add also a different render so they don't mix
         (chains, gpcr_aminoacids, gprot_aminoacids, protein_interactions, gpcr_aminoacids_strict, gprot_aminoacids_strict, protein_interactions_strict,
          residues_browser, interactions_metadata, gprot_order, receptor_order, matching_dict, matching_dict_strict, residues_lookup,
@@ -1194,6 +1287,9 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
                                                        'gn_list': gn_list,
                                                        'ref_tm1': ref_tm1,
                                                        'signaling_complex': signaling_complex,
+                                                       'has_transducer_complex': has_transducer_complex,
+                                                       'has_interface_interactions': has_interface_interactions,
+                                                       'is_arrestin_complex': is_arrestin_complex,
                                                        'outer': json.dumps(gpcr_aminoacids),
                                                        'inner': json.dumps(gprot_aminoacids),
                                                        'interactions': json.dumps(protein_interactions),
@@ -1218,12 +1314,21 @@ def StructureDetails(request, pdbname):  ###JIMMY CHECKPOINT
                                                        'display_res_gpcr_loose': display_res_gpcr_loose, 'display_res_gprot_loose': display_res_gprot_loose})
 
     else:
-        return render(request,'structure_details.html',{'pdbname': pdbname, 'structures': structures, 'crystal': crystal, 'protein':p, 'residues':residues, 'annotated_resn': resn_list, 'main_ligand': main_ligand, 'ligands': ligands, 'translation': translation, 'center_axis': center_axis, 'gn_list': gn_list, 'ref_tm1': ref_tm1, 'signaling_complex': signaling_complex})
+        return render(request,'structure_details.html',{'pdbname': pdbname, 'structures': structures, 'crystal': crystal, 'protein':p, 'residues':residues, 'annotated_resn': resn_list, 'main_ligand': main_ligand, 'ligands': ligands, 'translation': translation, 'center_axis': center_axis, 'gn_list': gn_list, 'ref_tm1': ref_tm1, 'signaling_complex': signaling_complex, 'has_transducer_complex': has_transducer_complex, 'has_interface_interactions': has_interface_interactions, 'is_arrestin_complex': is_arrestin_complex})
 
 def complex_interactions(model):
     ### Gathering interaction info and structuring JS data
-    interactions = Interaction.objects.filter(interacting_pair__referenced_structure=model,
-                                              interacting_pair__res2__protein_conformation__protein__family__slug__startswith='100').prefetch_related(
+    # Experimental arrestin complexes should use arrestin semantics, not only AF arrestin models.
+    try:
+        is_arrestin_complex = (model.structure_type.slug == "af-arrestin") or (
+            model.signprot_complex and model.signprot_complex.protein.family.slug.startswith("200")
+        )
+    except Exception:
+        is_arrestin_complex = (model.structure_type.slug == "af-arrestin")
+    interactions = Interaction.objects.filter(
+                                              Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='100') |
+                                              Q(interacting_pair__res2__protein_conformation__protein__family__slug__startswith='200'),
+                                              interacting_pair__referenced_structure=model).prefetch_related(
                                                                              'interacting_pair__res1', 'interacting_pair__res2',
                                                                              'interacting_pair__res1__display_generic_number', 'interacting_pair__res2__display_generic_number',
                                                                              'interacting_pair__res1__protein_segment', 'interacting_pair__res2__protein_segment')
@@ -1334,9 +1439,13 @@ def complex_interactions(model):
 
     segments_order = ['TM1','ICL1', 'TM2', 'ICL2', 'TM3', 'ICL3', 'TM4', 'TM5', 'TM6', 'TM7', 'ICL4', 'H8', 'C-term']
     gprot_segments = ['G.HN','G.hns1','G.S1','G.s1h1','G.H1','G.h1ha','H.HA','H.hahb','H.HB','H.hbhc','H.HC','H.hchd','H.HD','H.hdhe','H.HE','H.hehf','H.HF','G.hfs2','G.S2','G.s2s3','G.S3','G.s3h2','G.H2','G.h2s4','G.S4','G.s4h3','G.H3','G.h3s5','G.S5','G.s5hg','G.HG','G.hgh4','G.H4','G.h4s6','G.S6','G.s6h5','G.H5']
+    arrestin_segments = ['ns1', 'S1', 's1s2', 'S2', 's2s3', 'S3', 's3s4', 'S4', 's4s5', 'S5', 's5s6', 'S6', 's6h1', 'H1', 'h1s7', 'S7', 's7s8', 'S8', 's8s9', 'S9', 's9s10', 'S10', 's10s11', 'S11', 's11s12', 'S12', 's12s13', 'S13', 's13s14', 'S14', 's14s15', 'S15', 's15s16', 'S16', 's16s17', 'S17', 's17s18', 'S18', 's18s19', 'S19', 's19s20', 'S20', 's20c']
     # Create a dictionary that maps segments to their positions in the custom order
     order_gpcr = {segment: index for index, segment in enumerate(segments_order)}
-    order_gprot = {segment: index for index, segment in enumerate(gprot_segments)}
+    if is_arrestin_complex:
+        order_gprot = {segment: index for index, segment in enumerate(arrestin_segments)}
+    else:
+        order_gprot = {segment: index for index, segment in enumerate(gprot_segments)}
 
     # Sort the list of dictionaries based on the custom order
     gprot_aminoacids = sorted(gprot_aminoacids, key=lambda x: (order_gprot.get(x['segment'], 9999), int(x['generic_number'].split('.')[-1])))
@@ -1410,8 +1519,12 @@ def complex_interactions(model):
     gpcr_aminoacids_strict, gprot_aminoacids_strict, matching_dict_strict = sort_and_update(to_push_gpcr_strict, gpcr_aminoacids_strict, to_push_gprot_strict, gprot_aminoacids_strict, protein_interactions_strict)
 
     ### Interaction Matrix copy/paste
-    gprotein_order = ProteinSegment.objects.filter(proteinfamily='Alpha').values('id', 'slug')
-    fam_slug = '100'
+    if is_arrestin_complex:
+        gprotein_order = ProteinSegment.objects.filter(proteinfamily='Arrestin').values('id', 'slug')
+        fam_slug = '200'
+    else:
+        gprotein_order = ProteinSegment.objects.filter(proteinfamily='Alpha').values('id', 'slug')
+        fam_slug = '100'
 
     receptor_order = ['N', '1', '12', '2', '23', '3', '34', '4', '45', '5', '56', '6', '67', '7', '78', '8', 'C', '-']
 
@@ -1425,11 +1538,13 @@ def complex_interactions(model):
         'structure__protein_conformation__protein__family__parent__parent__parent__parent',
         'structure__stabilizing_agents',
         'structure__signprot_complex__protein__family__parent__parent__parent__parent',
+        'protein',
     )
 
     complex_info = []
     for s in struc:
         r = {}
+        si = s
         s = s.structure
         r['pdb_id'] = s.pdb_code.index
         try:
@@ -1445,7 +1560,10 @@ def complex_interactions(model):
         r['conf_id'] = s.protein_conformation.id
         r['organism'] = s.protein_conformation.protein.species.common_name
         try:
-            r['gprot'] = s.get_stab_agents_gproteins()
+            if is_arrestin_complex:
+                r['gprot'] = ARRESTIN_DISPLAY_NAME[si.protein.entry_name]
+            else:
+                r['gprot'] = G_PROTEIN_DISPLAY_NAME[si.protein.entry_name]
         except Exception:
             r['gprot'] = ''
         try:
@@ -1467,15 +1585,19 @@ def complex_interactions(model):
             lookup[r.generic_number.label] = r.sequence_number
             residues_lookup[r.sequence_number] = r.amino_acid +str(r.sequence_number)+ " "+ r.generic_number.label
 
-    chain_color_palette = ['grey', '#fc660f']
 
     chains = [gpcr_chain, gprot_chain]
-    if model.signprot_complex.beta_chain:
-        chains.append(model.signprot_complex.beta_chain)
-        chain_color_palette.append('#f79862')
-    if model.signprot_complex.gamma_chain:
-        chains.append(model.signprot_complex.gamma_chain)
-        chain_color_palette.append('#ffbf00')
+
+    if is_arrestin_complex:
+        chain_color_palette = ['grey', '#50C878']
+    else:
+        chain_color_palette = ['grey', '#fc660f']
+        if model.signprot_complex.beta_chain:
+            chains.append(model.signprot_complex.beta_chain)
+            chain_color_palette.append('#f79862')
+        if model.signprot_complex.gamma_chain:
+            chains.append(model.signprot_complex.gamma_chain)
+            chain_color_palette.append('#ffbf00')
 
     chain_colors = []
     for i,c in enumerate(chains):
@@ -1603,21 +1725,29 @@ class NotDisordered(Select):
                 atom.disordered_flag = 0
         return True
 
+
 class StructureStatistics(TemplateView):
     """
     So not ready that EA wanted to publish it.
     """
     template_name = 'structure_statistics.html'
-    origin = 'structure'
+    origin = 'gpcr'
 
-    def get_context_data (self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_context_data (self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+
+        ### Default origin is set to gpcr, this could be overwritten when using legacy links 'gprot_statistics' and 'arrestin_statistics'
+        ### Only check current domain when the generic 'statitics' url is used e.g. self.origin='gpcr'
+        ### In development mode, overriding the DEFAULT_SITE variable in settings.py can be used to view each statistics site
+        if self.origin=='gpcr':
+            domain = current_site(self.request)
+            self.origin = domain['current_site']
         context["page"] = self.origin
         families = ProteinFamily.objects.all()
         lookup = {}
+
         for f in families:
             lookup[f.slug] = f.name
-
         #GENERIC
         all_structs = Structure.objects.all().exclude(structure_type__slug__startswith='af-').prefetch_related('protein_conformation__protein__family')
         all_complexes = all_structs.exclude(ligands=None)
@@ -1655,7 +1785,6 @@ class StructureStatistics(TemplateView):
         # GPROT Complex information
         all_gprots = StructureExtraProteins.objects.filter(category='G alpha').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
         # all_gprots = all_structs.filter(id__in=SignprotComplex.objects.filter(protein__family__slug__startswith='100').values_list("structure__id", flat=True))
-        print(self.origin)
         ###### these are query sets for G-Prot Structure Statistics
         if self.origin != 'arrestin':
             all_g_A_complexes = all_gprots.filter(structure__protein_conformation__protein__family__slug__startswith='001')
@@ -1704,7 +1833,7 @@ class StructureStatistics(TemplateView):
             context['unique_gprots_by_class'] = self.count_by_class(unique_gprots, lookup, extra=True)
 
             #GPROT
-            if self.origin == 'gprot':
+            if self.origin == 'gprotein':
                 noncomplex_gprots = SignprotStructure.objects.filter(protein__family__slug__startswith='100').exclude(structure_type__slug__startswith='af-').prefetch_related("protein")
                 context['noncomplex_gprots_by_gclass'] = self.count_by_effector_class(noncomplex_gprots, lookup, nc=True)
                 context['noncomplex_gprots'] = len(noncomplex_gprots)
@@ -1783,7 +1912,8 @@ class StructureStatistics(TemplateView):
             context['all_structures_by_class'][key.replace('Class','')] = context['all_structures_by_class'].pop(key)
 
         #if not structure coverage, then generate the trees
-        if self.origin == 'gprot':
+        if self.origin == 'gprotein':
+
             tree = PhylogeneticTreeGenerator()
             class_a_data = tree.get_tree_data(ProteinFamily.objects.get(name='Class A (Rhodopsin)'))
             context['class_a_options'] = deepcopy(tree.d3_options)
@@ -1821,7 +1951,9 @@ class StructureStatistics(TemplateView):
             context['class_f_options']['label_free'] = [1,]
             #json.dump(class_f_data.get_nodes_dict('crystalized'), open('tree_test.json', 'w'), indent=4)
             context['class_f'] = json.dumps(class_f_data.get_nodes_dict('crystals'))
+
             class_t2_data = tree.get_tree_data(ProteinFamily.objects.get(name='Class T2 (Taste 2)'))
+
             context['class_t2_options'] = deepcopy(tree.d3_options)
             context['class_t2_options']['anchor'] = 'class_t2'
             context['class_t2_options']['label_free'] = [1,]
@@ -2061,6 +2193,7 @@ class StructureStatistics(TemplateView):
                 gpcr_data_odorant = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Odorant")
                 Odorant_updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data_odorant["Data"], updated_odorant_struct_dict)
                 context['GPCRome_data_odorant'] = json.dumps(Odorant_updated_data)
+
 
         return context
 
@@ -3725,7 +3858,10 @@ def ConvertStructureComplexSignprotToProteins(request):
     # add simple selection to session
     request.session['selection'] = simple_selection
 
-    return HttpResponseRedirect('/alignment/segmentselectiongprot')
+    if prot.family.parent.parent.name=='Arrestin':
+        return HttpResponseRedirect('/alignment/segmentselectionarrestin')
+    else:
+        return HttpResponseRedirect('/alignment/segmentselectiongprot')
 
 
 def HommodDownload(request):
@@ -4350,6 +4486,7 @@ def RenderTrees(request):
 #   response['Content-Disposition'] = 'attachment; filename="{}"'.format(file)
 #   response.write(out_stream)
 #   return response
+
 
 # SEMAPHORE WRAPPER
 #-------------------
@@ -5066,3 +5203,4 @@ def LigandComplexDetails(request, header, refined=False):
                                                             # 'chain_colors': json.dumps(chain_colors),
                                                             # 'residue_number_labels':conversion_dict_residue_numbers
                                                             })
+
