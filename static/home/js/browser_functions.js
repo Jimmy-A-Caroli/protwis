@@ -200,6 +200,11 @@ function direct_superposition(oTable, source="gpcr", structure_column_index, sel
 
 function updateSuperpositionButtonConfiguration() {
     const button = document.getElementById("superpose_template_btn");
+    
+    // Return early if button doesn't exist (e.g., on arrestin page)
+    if (!button) {
+        return;
+    }
 
     switch (window.location.hash) {
         case "#keepselectionreference":

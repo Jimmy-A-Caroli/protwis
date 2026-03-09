@@ -38,6 +38,7 @@ import numpy
 import json
 import yaml
 from urllib.request import urlopen, Request
+from datetime import datetime
 import re
 
 
@@ -79,6 +80,16 @@ class BlastSearch(object):
             blast = Popen('%s -db %s -outfmt 5' % (self.blast_path, self.blastdb), universal_newlines=True, shell=True,
                 stdin=PIPE, stdout=PIPE, stderr=PIPE)
             (blast_out, blast_err) = blast.communicate(input=str(input_seq))
+
+            # Log the BLAST output and errors for inspection
+            logger.debug("BLAST Output: {}".format(blast_out))
+            if blast_err:
+                logger.error("BLAST Error: {}".format(blast_err))
+
+            # Check if BLAST output is empty
+            if not blast_out.strip():
+                logger.error("No output returned from BLAST command.")
+                return []
 
         if len(blast_err) != 0:
             logger.debug(blast_err)
@@ -1195,25 +1206,33 @@ class ParseAFComplexModels():
                 peptide_id = parts[1]
                 peptide = "-" + peptide_id
                 signprot = parts[2]
-                model = 'af-signprot-peptide'
                 chain_e_sequence = self.get_ligand_sequence(location, 'E')
-
             else:  # Case without peptide
                 peptide = None
                 signprot = parts[1]
-                model = 'af-signprot'
                 chain_e_sequence = None
 
             # Grab model date/version from pdb file
             with open(location, 'r') as model_file:
                 line = model_file.readlines()[0]
                 date_re = re.search('HEADER[A-Z\S\D]+(\d{4}-\d{2}-\d{2})', line)
-                model_date = date_re.group(1)
+                try:
+                    model_date = date_re.group(1)
+                except AttributeError:
+                    current_date = datetime.now().date()
+                    model_date = current_date.strftime('%Y-%m-%d')
 
-            # Check if model has full heterotrimer
-            if 'gbb1_human' in f:
-                signprot = signprot.split('_')[0]+'_human'
-                beta_gamma = True
+            # Check signprot type
+
+            if signprot.startswith('gna'):
+
+                # Check if model has full heterotrimer
+                if 'gbb1_human' in f:
+                    signprot = signprot.split('_')[0]+'_human'
+                    beta_gamma = True
+                else:
+                    beta_gamma = False
+
             else:
                 beta_gamma = False
 
@@ -1221,16 +1240,31 @@ class ParseAFComplexModels():
                 'receptor': receptor,
                 'peptide': peptide,
                 'signprot': signprot,
-                'beta_gamma': beta_gamma,
                 'publication_date': model_date,
                 'location': location,
-                'model': model,
+                'model': 'af-signprot',
                 'preferred_chain': 'A',
                 'PTM': metrics['ptm'],
                 'iPTM': metrics['iptm'],
                 'PAE_mean': metrics['pae_mean'],
                 'chain_e_sequence': chain_e_sequence
             }
+
+            # Check for type of signprot
+            if signprot.startswith('gna'):
+                # Check if model has full heterotrimer
+                if 'gbb1_human' in f:
+                    signprot = signprot.split('_')[0] + '_human'
+                    beta_gamma = True
+                else:
+                    beta_gamma = False
+            else:
+                self.complexes[f'{receptor}{peptide}-{signprot}']['model'] = 'af-arrestin'
+                beta_gamma = False
+
+            self.complexes[f'{receptor}{peptide}-{signprot}']['beta_gamma'] = beta_gamma
+
+            # self.complexes[f'{receptor}{peptide}-{signprot}'] = complex_info
 
     def get_ligand_sequence(self, pdb_file, chain_id):
         sequence = ""
@@ -1242,7 +1276,6 @@ class ParseAFComplexModels():
                     if len(sequence) < res_seq:
                         sequence += self.residue_to_one_letter.get(residue, 'X')
         return sequence
-
 
 class ParseRFAAModels():
     def __init__(self):
@@ -1280,11 +1313,30 @@ class ParseRFAAModels():
                 }
 
 
-class ParseStructureCSV():
+class AbsParseStructureCSV():
     def __init__(self):
         self.pdb_ids = []
         self.structures = {}
         self.parent_segends = {}
+        self.fusion_proteins = []
+        self.xtal_seg_ends = {}
+
+    def parse_files(self, files):
+        for custom_input in files:
+            print(custom_input)
+            with open(custom_input, 'r') as custom_file:
+                custom_info = json.load(custom_file)
+                s = custom_info['name']
+                self.pdb_ids.append(s)
+                self.structures[s] = custom_info
+            with open(custom_input.replace('.json','.yaml'), 'r') as custom_segend_file:
+                segends = yaml.safe_load(custom_segend_file)
+                self.xtal_seg_ends[s] = segends
+
+
+class ParseStructureCSV(AbsParseStructureCSV):
+    def __init__(self):
+        AbsParseStructureCSV.__init__(self)
         with open(os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'structures.csv']), newline='') as csvfile:
             structures = csv.reader(csvfile, delimiter='\t')
             next(structures, None)
@@ -1294,7 +1346,6 @@ class ParseStructureCSV():
                 if '.' in s[5]:
                     s[5] = s[5][0]
                 self.structures[s[0]]= {'protein':s[1], 'name':s[0].lower(), 'state':s[4], 'preferred_chain':s[5], 'resolution':s[3], 'date_from_file':s[7], 'method_from_file':s[2]}
-        self.fusion_proteins = []
 
     def __str__(self):
         return '<ParsedStructures: {} entries>'.format(len(self.pdb_ids))

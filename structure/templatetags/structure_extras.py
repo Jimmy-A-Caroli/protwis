@@ -1,5 +1,6 @@
 from django import template
 from common.definitions import G_PROTEIN_DISPLAY_NAME as g_prot_dict
+from common.definitions import ARRESTIN_DISPLAY_NAME as arr_dict
 
 import re
 
@@ -113,6 +114,8 @@ def only_one_subunit ( objs, arg ):
             return elements[0].wt_protein.family.parent.name
         elif value=='coverage':
             return elements[0].wt_coverage
+        elif value=='chain':
+            return elements[0].chain
         else:
             return '-'
     else:
@@ -183,6 +186,10 @@ def entry_short ( objs ):
 @register.filter
 def gprot_short ( objs ):
     return g_prot_dict[objs]
+
+@register.filter
+def arr_short ( objs ):
+    return arr_dict[objs]
 
 @register.filter
 def receptor_short ( objs ):
