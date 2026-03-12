@@ -74,7 +74,7 @@
 
     const first = arr[0];
     const firstHref = (first.id != null && first.id !== '-' && first.id !== '')
-      ? (hrefBuilder ? hrefBuilder(first.id, first) : `/ligand/gpcrdb_id/${first.id}/group`)
+      ? (hrefBuilder ? hrefBuilder(first.id, first) : `/ligand/${first.id}/group`)
       : null;
 
     const collapsed = firstHref
@@ -87,7 +87,7 @@
     const expanded = arr.map(x => {
       const nm = x.name || '';
       if (x.id == null || x.id === '' || x.id === '-') return nm;
-      const href = hrefBuilder ? hrefBuilder(x.id, x) : `/ligand/gpcrdb_id/${x.id}/group`;
+      const href = hrefBuilder ? hrefBuilder(x.id, x) : `/ligand/${x.id}/group`;
       return `<a href="${href}" target="_blank" rel="noopener">${nm}</a>`;
     }).join('<br>');
 
@@ -151,12 +151,12 @@
     ({ data: "antibodies", name: "Antibodies", render: (d,t) => expand1LineRender(d,t) }),
 
     // STRUCTURE LIGAND
-    ({ data: "ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `/ligand/gpcrdb_id/${id}/group`, { showCountHint: true }) }),
+    ({ data: "ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `/ligand/${id}/group`, { showCountHint: true }) }),
     ({ data: "ligand_type", name: "Type", render: (d,t) => expand1LineRender(d,t) }),
     ({ data: "ligand_role", name: "Modality", render: (d,t) => expand1LineRender(d,t) }),
 
     // PHYSIOLOGICAL LIGAND
-    ({ data: "endo_ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `/ligand/gpcrdb_id/${id}/group`, { showCountHint: true }) }),
+    ({ data: "endo_ligands", name: "Name", render: (d,t) => expandFirstThenHoverLinkList(d,t,id => `/ligand/${id}/group`, { showCountHint: true }) }),
     ({ data: "endo_type", name: "Type", render: (d,t) => expand1LineRender(d,t) }),
 
     // SODIUM ION SITE

@@ -375,7 +375,7 @@
                                     {% for ex in ligand.wl %}
                                     <li><a href="{{ ex.link }}" target="_blank">{{ ex.name }}</a></li>
                                     {% endfor %}
-                                    <li><a href="/ligand/gpcrdb_id/{{ ligand.ligand_id }}/group">
+                                    <li><a href="/ligand/{{ ligand.ligand_id }}/group">
 									{% if ligand.related_ids|length > 2 %}
 									GPCRdb related ligands
 									{% else %}
@@ -589,7 +589,7 @@
                                     {% for ex in ligand.wl %}
                                     <li><a href="{{ ex.link }}" target="_blank">{{ ex.name }}</a></li>
                                     {% endfor %}
-                                    <li><a href="/ligand/gpcrdb_id/{{ ligand.ligand_id }}/group">
+                                    <li><a href="/ligand/{{ ligand.ligand_id }}/group">
 									{% if ligand.related_ids|length > 2 %}
 									GPCRdb related ligands
 									{% else %}

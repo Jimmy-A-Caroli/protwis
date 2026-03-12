@@ -282,7 +282,7 @@
                             {% with ligand_name_val=value.5 ligand_id_val=value.19 molecule_type_val=value.9 sequence_s_val=value.26 smiles_s_val=value.24 picture_s_val=value.25 %}
                                 {% if molecule_type_val and molecule_type_val|lower == 'peptide' or molecule_type_val|lower == 'protein' %}
                                     <a class="struct"
-                                       href='/ligand/gpcrdb_id/{{ ligand_id_val }}/group'  {# Use the Ligand ID from value.19 #}
+                                       href='/ligand/{{ ligand_id_val }}/group'  {# Use the Ligand ID from value.19 #}
                                        target='_blank'
                                        data-ligand-type="peptide"
                                        data-sequence="{{ sequence_s_val|default_if_none:''|escapejs }}">
@@ -290,7 +290,7 @@
                                     </a>
                                 {% else %}
                                     <a class="struct"
-                                       href='/ligand/gpcrdb_id/{{ ligand_id_val }}/group'  {# Use the Ligand ID from value.19 #}
+                                       href='/ligand/{{ ligand_id_val }}/group'  {# Use the Ligand ID from value.19 #}
                                        target='_blank'
                                        data-smiles="{{ smiles_s_val|default_if_none:''|escapejs }}"
                                        rel="{{ picture_s_val|default_if_none:'Not_available' }}">
@@ -418,7 +418,7 @@ $('#references').on('show.bs.modal', function(e) {
         bSortCellsTop: false, //prevent sort arrows going on bottom row
         aaSorting: [],
         autoWidth: false,
-        b : true,
+        bInfo: true,
         order: [[2, "asc"]],
       });
         // columns to hide: 3,14,15,18,19,22,23,26,27,28,31,32,33,36,37,38,41,42,43,46,47,48,51,52,53,56,57,58

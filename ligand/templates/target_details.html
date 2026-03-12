@@ -569,7 +569,7 @@ function reset_all() {
                     if (ligandType === 'Peptide' && sequence) {
 
                         return `<a class="${tableSpecificClass}" 
-                                href="/ligand/gpcrdb_id/${ligId}/group" 
+                                href="/ligand/${ligId}/group" 
                                 target="_blank"
                                 data-ligand-type="peptide"
                                 data-sequence="${sequence}">
@@ -585,7 +585,7 @@ function reset_all() {
                                 rel="${pictureRel}" 
                                 data-smiles="${smiles}"
                                 data-ligand-type="smiles"
-                                href="/ligand/gpcrdb_id/${ligId}/group" 
+                                href="/ligand/${ligId}/group" 
                                 target="_blank">
                                 ${displayName}
                                 </a>`;
