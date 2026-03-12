@@ -3355,9 +3355,13 @@ class LigandInformationView(AbsLigand):
     def get_context_data(self, *args, **kwargs):
         context = super(LigandInformationView, self).get_context_data(**kwargs)
         ligand_id = self.kwargs['gpcrdb_id']
-        ligand_data = Ligand.objects.get(gpcrdb_id=ligand_id)
+        info_type = self.kwargs['info_type']
+        if info_type=='info':
+            ligand_data = Ligand.objects.get(gpcrdb_id=ligand_id)
+        elif info_type=='gtp_info':
+            ligand_data = LigandID.objects.get(web_resource__slug='gtoplig', index=ligand_id).ligand
         endogenous_ligands =  Endogenous_GTP.objects.all().values_list("ligand_id", flat=True)
-        assay_data = list(AssayExperiment.objects.filter(ligand=ligand_id).prefetch_related(
+        assay_data = list(AssayExperiment.objects.filter(ligand__gpcrdb_id=ligand_id).prefetch_related(
             'ligand', 'protein', 'protein__family',
             'protein__family__parent', 'protein__family__parent__parent__parent',
             'protein__family__parent__parent', 'protein__family', 'protein__species'))
@@ -3367,7 +3371,7 @@ class LigandInformationView(AbsLigand):
         assay_data_affinity, assay_data_potency = LigandInformationView.process_assay(assay_data)
         mutations = LigandInformationView.get_mutations(ligand_data)
         # if int(ligand_id) in endogenous_ligands:
-        #     endo_data = list(Endogenous_GTP.objects.filter(ligand=ligand_id).prefetch_related(
+        #     endo_data = list(Endogenous_GTP.objects.filter(ligand__gpcrdb_id=ligand_id).prefetch_related(
         #     'ligand', 'receptor', 'receptor__family',
         #     'receptor__family__parent', 'receptor__family__parent__parent__parent',
         #     'receptor__family__parent__parent', 'receptor__species'))
@@ -3400,7 +3404,7 @@ class LigandInformationView(AbsLigand):
 
         ##### ADDING SECTION FOR SANKEY #####
 
-        indication_data = Drugs.objects.filter(ligand=ligand_id).prefetch_related('ligand',
+        indication_data = Drugs.objects.filter(ligand__gpcrdb_id=ligand_id).prefetch_related('ligand',
                                                                                       'target',
                                                                                       'indication')
         context.update({'plot_existence': 'no'})
@@ -3427,7 +3431,7 @@ class LigandInformationView(AbsLigand):
                 indication_0 = record.indication.get_level_0().title
                 uri = record.indication.uri.index if record.indication.uri else ''
                 ligand_name = record.ligand.name.capitalize()
-                ligand_id = record.ligand.id
+                ligand_id = record.ligand.gpcrdb_id
                 protein_name = record.target.name
                 target_name = record.target.entry_name
                 #check for each value if it exists and retrieve the source node value
@@ -3652,7 +3656,7 @@ class LigandInformationView(AbsLigand):
                 'target__family__parent__parent__parent',
                 'indication',
                 'disease_association'
-            ).filter(ligand=ligand_id).values(
+            ).filter(ligand__gpcrdb_id=ligand_id).values(
                 'ligand',
                 'ligand__name',
                 'target__entry_name',
@@ -3751,7 +3755,7 @@ class LigandInformationView(AbsLigand):
         return_set = set()
         return_list = list()
         mutations = list(
-            MutationExperiment.objects.filter(ligand_id=ligand['ligand_id']).only('protein').order_by("protein__name"))
+            MutationExperiment.objects.filter(ligand__gpcrdb_id=ligand['ligand_id']).only('protein').order_by("protein__name"))
         for i in mutations:
             if i.protein.family_id in return_set:
                 pass
@@ -3912,7 +3916,7 @@ class LigandInformationView(AbsLigand):
     @staticmethod
     def process_ligand(ligand_data, endogenous_ligands):
         ld = dict()
-        ld['ligand_id'] = ligand_data.id
+        ld['ligand_id'] = ligand_data.gpcrdb_id
         ld['ligand_name'] = ligand_data.name
         ld['ligand_inchikey'] = ligand_data.inchikey
         try:
