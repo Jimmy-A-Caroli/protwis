@@ -1,12 +1,37 @@
 
-#set directory containing uniprot flat files
-uniprot_dir="/home/rnd457/gpcr/protein_data/uniprot"
-#set a scratch directory for intermediates and output
-working_dir="/home/rnd457/scratch"
-#Set output file path
-outfile="/home/rnd457/gpcr/gene_data/entrez_id_lookup.txt"
+#!/bin/bash
+# This script downloads resources from NCBI and generates a lookup file mapping gene symbols and taxonomic IDs to Entrez Gene IDs and species names.
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 -u uniprot_dir -w working_dir -o outfile"
+    echo "  -u uniprot_dir    Directory containing UniProt flat files"
+    echo "  -w working_dir    Scratch directory for intermediates and output"
+    echo "  -o outfile        Output file path"
+    echo "  -t threads        Number of threads to use for parallel processing (default: 10)"
+    echo "  -h                Display this help message"
+    exit 1
+}
 
 threads=10
+
+# Parse command line arguments
+while getopts "u:w:o:t:h" opt; do
+    case $opt in
+        u) uniprot_dir="$OPTARG" ;;
+        w) working_dir="$OPTARG" ;;
+        o) outfile="$OPTARG" ;;
+        t) threads="$OPTARG" ;;
+        h) usage ;;
+        *) usage ;;
+    esac
+done
+
+# Check if required arguments are provided
+if [ -z "$uniprot_dir" ] || [ -z "$working_dir" ] || [ -z "$outfile" ]; then
+    echo "Error: Missing required arguments."
+    usage
+fi
 
 #download the gene2accession file from NCBI, which contains mappings between gene symbols and Entrez Gene IDs, as well as taxonomic information
 if [ -e "${working_dir}/gene2accession.gz" ]
@@ -153,17 +178,17 @@ EOF
 #Account for incorrect human gene name in uniprot file.
 echo "NPY6R#9606#4888#Homo sapiens" | tr '#' '\t' >> ${outfile} #Uniprot file for Q99463 currently uses outdated NPY6R gene symbol instead of corrrect NPY6RP  
 
-#cleanup
-# echo "Cleaning up ..."
-# if [ -e "${working_dir}/entrez_id_lookup.txt" ]
-# then
-#     rm ${working_dir}/*.dmp \
-#     ${working_dir}/*.prt \
-#     ${working_dir}/entrez_of_interest_clean.txt \
-#     ${working_dir}/readme.txt \
-#     ${working_dir}/entrez_of_interest_intermediate.txt \
-#     ${working_dir}/taxid_speciesname_mapping.txt \
-#     ${working_dir}/unique_genesymbol_list.txt \
-#     ${working_dir}/unique_taxid_list.txt \
-#     ${working_dir}/uniprot_taxid_genesymbol_intermediate.txt
-# fi
+cleanup
+echo "Cleaning up ..."
+if [ -e "${working_dir}/entrez_id_lookup.txt" ]
+then
+    rm ${working_dir}/*.dmp \
+    ${working_dir}/*.prt \
+    ${working_dir}/entrez_of_interest_clean.txt \
+    ${working_dir}/readme.txt \
+    ${working_dir}/entrez_of_interest_intermediate.txt \
+    ${working_dir}/taxid_speciesname_mapping.txt \
+    ${working_dir}/unique_genesymbol_list.txt \
+    ${working_dir}/unique_taxid_list.txt \
+    ${working_dir}/uniprot_taxid_genesymbol_intermediate.txt
+fi

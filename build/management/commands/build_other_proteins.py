@@ -7,7 +7,7 @@ from build.management.commands.build_human_proteins import Command as BuildHuman
 from residue.functions import *
 from structure.functions import BlastSearch, ParseStructureCSV
 from protein.models import Protein, ProteinFamily, Gene
-from common.tools import test_model_updates, parse_uniprot_file
+from common.tools import test_model_updates, parse_uniprot_file, build_entrezgeneid_lookup_dict
 
 import django.apps
 import logging
@@ -61,7 +61,7 @@ class Command(BuildHumanProteins):
 
 
     def handle(self, *args, **options):
-        self.entrez_lookup = self.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
+        self.entrez_lookup = build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
         
         if options['purge']:
             try:

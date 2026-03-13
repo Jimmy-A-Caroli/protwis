@@ -8,7 +8,7 @@ from protein.models import (Protein, ProteinConformation, ProteinState, ProteinF
         ProteinSequenceType, Species, Gene, ProteinSource, ProteinSegment)
 from common.models import WebResource, WebLink
 from residue.models import ResidueNumberingScheme
-from common.tools import test_model_updates, parse_uniprot_file
+from common.tools import test_model_updates, parse_uniprot_file, build_entrezgeneid_lookup_dict, select_entrez_id
 
 import django.apps
 import shlex
@@ -36,7 +36,7 @@ class Command(BaseBuild):
     test_model_updates(all_models, tracker, initialize=True)
 
     def handle(self, *args, **options):
-        self.entrez_lookup = self.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
+        self.entrez_lookup = build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
 
         # use a smaller protein file if in test mode
         if options['test']:
@@ -269,7 +269,7 @@ class Command(BaseBuild):
             g = False
                         
             try:
-                entrez_geneid = self.select_entrez_id(i, uniprot, self.entrez_lookup)
+                entrez_geneid = select_entrez_id(i, uniprot, self.entrez_lookup)
                 
                 if entrez_geneid is not None:
                     resource = WebResource.objects.get(slug='entrez_gene')
@@ -335,79 +335,4 @@ class Command(BaseBuild):
             'level_family_counter': level_family_counter,
         }
 
-    @staticmethod
-    def build_entrezgeneid_lookup_dict(entrez_lookup_file, logger, keep_only_lowest_id=True):
-        entrez_lookup_dict = dict()
-        entrez_lookup_dict["by_species_name"] = dict()
-        entrez_lookup_dict["by_taxon_id"] = dict()
-
-        with open(entrez_lookup_file, 'r') as f:
-            for line in f:
-                split_line = line.strip().split('\t')
-                if len(split_line) == 4:
-                    if split_line[0] != 'gene_symbol': #skip header line
-                        gene_symbol, taxon_id, entrez_gene_id, species_name = split_line
-                        
-                        #Lookup by species
-                        try:
-                            by_species_ref = entrez_lookup_dict["by_species_name"][species_name]
-                        except KeyError:
-                            by_species_ref = dict()
-                            entrez_lookup_dict["by_species_name"][species_name] = by_species_ref
-                        
-                        try:
-                            gene_array_ref = by_species_ref[gene_symbol]
-                        except KeyError:
-                            gene_array_ref = []
-                            by_species_ref[gene_symbol] = gene_array_ref
-                        
-                        gene_array_ref.append(entrez_gene_id) 
-
-                        #Lookup by taxon id
-                        try:
-                            by_taxon_ref = entrez_lookup_dict["by_taxon_id"][taxon_id]
-                        except KeyError:
-                            by_taxon_ref = dict()
-                            entrez_lookup_dict["by_taxon_id"][taxon_id] = by_taxon_ref
-                        
-                        try:
-                            gene_array_ref = by_taxon_ref[gene_symbol]
-                        except KeyError:
-                            gene_array_ref = []
-                            by_taxon_ref[gene_symbol] = gene_array_ref
-                        
-                        gene_array_ref.append(entrez_gene_id) 
-                else:
-                    logger.error('Unexpected format in entrez gene id lookup file for line: ' + line)
-
-        if keep_only_lowest_id:
-            for species in entrez_lookup_dict["by_species_name"]:
-                for gene_symbol in entrez_lookup_dict["by_species_name"][species]:
-                    entrez_lookup_dict["by_species_name"][species][gene_symbol] = min(entrez_lookup_dict["by_species_name"][species][gene_symbol])
-
-            for taxon_id in entrez_lookup_dict["by_taxon_id"]:
-                for gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id]:
-                    entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = min(entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol])
-
-        return entrez_lookup_dict
     
-    @staticmethod
-    def select_entrez_id(current_gene_index, uniprot_dict, entrez_lookup):
-        entrez_geneid_use = None
-        
-        if 'entrez_geneids' in uniprot_dict and len(uniprot_dict['entrez_geneids']) > 0: 
-            if len(uniprot_dict['genes']) == len(uniprot_dict['entrez_geneids']):
-                entrez_geneid_use = uniprot_dict['entrez_geneids'][current_gene_index] #take index matched id
-            else:
-                if len(uniprot_dict['entrez_geneids']) > 0:
-                    entrez_geneid_use = sorted(uniprot_dict['entrez_geneids'])[0] #take the lowest (earliest) id
-        elif "genes" in uniprot_dict: #gene name present but no entrez gene id in uniprot file
-            entrez_list = []
-            for gene in uniprot_dict["genes"]:
-                #lookup entrez gene id using the gene symbol and species name in the lookup file
-                if uniprot_dict['species_latin_name'] in entrez_lookup["by_species_name"]:
-                    if gene in entrez_lookup["by_species_name"][uniprot_dict['species_latin_name']]:
-                        entrez_list.append(entrez_lookup["by_species_name"][uniprot_dict['species_latin_name']][gene])
-            entrez_geneid_use = entrez_list[0] if len(entrez_list) > 0 else None #Prioritise the first entry as this hopefully corresponds to the official symbol match
-
-        return entrez_geneid_use

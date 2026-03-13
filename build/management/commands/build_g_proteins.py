@@ -36,7 +36,7 @@ from residue.models import (Residue, ResidueGenericNumber,
                             ResidueNumberingScheme)
 from signprot.models import SignprotBarcode, SignprotComplex, SignprotStructure, SignprotStructureExtraProteins
 from structure.models import Structure, StructureStabilizingAgent, StructureType, StructureExtraProteins
-from common.tools import test_model_updates, parse_uniprot_file
+from common.tools import test_model_updates, parse_uniprot_file, build_entrezgeneid_lookup_dict, select_entrez_id
 from build.management.commands.build_human_proteins import Command as BuildHumanProteinsCommand
 
 class Command(BaseCommand):
@@ -85,7 +85,7 @@ class Command(BaseCommand):
                             help='Build PDB_UNIPROT_ENSEMBLE_ALL file')
 
     def handle(self, *args, **options):
-        self.entrez_lookup = BuildHumanProteinsCommand.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
+        self.entrez_lookup = build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
         self.options = options
         if options['filename']:
             filenames = options['filename']
@@ -797,7 +797,7 @@ class Command(BaseCommand):
         for i, gene in enumerate(uniprot['genes']):
             g = False
             try:
-                entrez_geneid = BuildHumanProteinsCommand.select_entrez_id(i, uniprot, self.entrez_lookup)
+                entrez_geneid = select_entrez_id(i, uniprot, self.entrez_lookup)
                 
                 if entrez_geneid is not None:
                     resource = WebResource.objects.get(slug='entrez_gene')

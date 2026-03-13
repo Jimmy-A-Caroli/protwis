@@ -288,6 +288,22 @@ def urlopen_with_retry(url, data = None, retries = 5, sleeptime = 5):
             return False
 
 def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot_dir=None, remote_uniprot_dir='http://www.uniprot.org/uniprot/', excel_sequences=None):
+
+    '''
+        Parse a Uniprot file with the given accession number, either from a local file or from the Uniprot website.
+        The function returns a dictionary with the parsed information, including gene names, protein names,
+        accessions, species information, and sequence.
+        Parameters:
+        - accession: The Uniprot accession number for the protein to be parsed.
+        - path_to_file: Path to a local Uniprot file.
+        - logger: A logging object for logging information and warnings.
+        - local_uniprot_dir: The local directory where Uniprot files are stored
+        - remote_uniprot_dir: The remote directory (URL) where Uniprot files can be accessed.
+        - excel_sequences: A dictionary containing GPCR protein sequences
+        Returns:
+        - up: A dictionary containing the parsed information from the Uniprot file
+    '''
+
     filename = accession + '.txt'
     if not path_to_file:
         local_file_path = os.sep.join([local_uniprot_dir, filename])
@@ -297,7 +313,7 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
 
     up = {
         'genes': [],
-        'names': [],            
+        'names': [],
         'accessions': [],
         'structures': [],
         'entrez_geneids': []
@@ -394,19 +410,17 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
 
             # NCBI IDs
             elif line.startswith('DR'):
-                line_tagless = line[5:]                    
+                line_tagless = line[5:]
                 split_dr_line = line_tagless.split(';')
                 if split_dr_line[0].strip() == 'GeneID':
-                    id = split_dr_line[1].strip()
-                    if (id.isdecimal()):
+                    eid = split_dr_line[1].strip()
+                    if (eid.isdecimal()):
                         up['entrez_geneids'].append(id)
                     else:
-                        if logger is not None: logger.info('Encountered non-numeric entrez gene id :' + id + ' for protein ' + up['entry_name'] + ', skipping')
+                        if logger is not None: logger.info('Encountered non-numeric entrez gene id :' + eid + ' for protein ' + up['entry_name'] + ', skipping')
 
             # sequence
             elif line.startswith('SQ'):
-                split_sq_line = line.split()
-                seq_len = int(split_sq_line[2])
                 read_sequence = True
                 up['sequence'] = ''
             elif read_sequence == True:
@@ -414,13 +428,13 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
 
         # close the Uniprot file
         uf.close()
-        
+
         if excel_sequences is not None:
             try:
                 up['sequence'] = excel_sequences[up['entry_name']]['Sequence']
-            except:
+            except KeyError:
                 pass
-    
+
     except:
         return False
 
@@ -429,3 +443,109 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
         local_file.close()
 
     return up
+
+def build_entrezgeneid_lookup_dict(entrez_lookup_file, logger, keep_only_lowest_id=True):
+
+        '''
+        This function builds a lookup dictionary for entrez gene ids based on the provided file.
+        The dictionary is structured to allow lookup by species name and gene
+        symbol, as well as by taxon id and gene symbol.
+        If keep_only_lowest_id is True, only the lowest (earliest) entrez gene id
+        will be kept for each gene symbol and species/taxon id combination.
+        Parameters:
+        - entrez_lookup_file: A path to a plain-text file containing the mapping of gene symbols, taxon ids,
+          entrez gene ids, and species names. The file is expected to have a header line and be tab-delimited with
+          the following columns: gene_symbol, taxon_id, entrez_gene_id, species_name.
+        - logger: A logging object for logging information and warnings.
+        - keep_only_lowest_id: A boolean flag indicating whether to keep only the lowest (earliest) entrez gene id. Default is True.
+        Returns:
+        - entrez_lookup_dict: A dictionary containing the lookup information for entrez gene ids.
+        '''
+
+        entrez_lookup_dict = dict()
+        entrez_lookup_dict["by_species_name"] = dict()
+        entrez_lookup_dict["by_taxon_id"] = dict()
+
+        with open(entrez_lookup_file, 'r') as f:
+            for line in f:
+                split_line = line.strip().split('\t')
+                if len(split_line) == 4:
+                    if split_line[0] != 'gene_symbol': #skip header line
+                        gene_symbol, taxon_id, entrez_gene_id, species_name = split_line
+
+                        #Lookup by species
+                        try:
+                            by_species_ref = entrez_lookup_dict["by_species_name"][species_name]
+                        except KeyError:
+                            by_species_ref = dict()
+                            entrez_lookup_dict["by_species_name"][species_name] = by_species_ref
+
+                        try:
+                            gene_array_ref = by_species_ref[gene_symbol]
+                        except KeyError:
+                            gene_array_ref = []
+                            by_species_ref[gene_symbol] = gene_array_ref
+
+                        gene_array_ref.append(entrez_gene_id)
+
+                        #Lookup by taxon id
+                        try:
+                            by_taxon_ref = entrez_lookup_dict["by_taxon_id"][taxon_id]
+                        except KeyError:
+                            by_taxon_ref = dict()
+                            entrez_lookup_dict["by_taxon_id"][taxon_id] = by_taxon_ref
+
+                        try:
+                            gene_array_ref = by_taxon_ref[gene_symbol]
+                        except KeyError:
+                            gene_array_ref = []
+                            by_taxon_ref[gene_symbol] = gene_array_ref
+
+                        gene_array_ref.append(entrez_gene_id)
+                else:
+                    logger.error('Unexpected format in entrez gene id lookup file for line: ' + line)
+
+        if keep_only_lowest_id:
+            for species in entrez_lookup_dict["by_species_name"]:
+                for gene_symbol in entrez_lookup_dict["by_species_name"][species]:
+                    entrez_lookup_dict["by_species_name"][species][gene_symbol] = min(entrez_lookup_dict["by_species_name"][species][gene_symbol])
+
+            for taxon_id in entrez_lookup_dict["by_taxon_id"]:
+                for gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id]:
+                    entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = min(entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol])
+
+        return entrez_lookup_dict
+
+
+def select_entrez_id(current_gene_index, uniprot_dict, entrez_lookup):
+
+        '''
+        Select an entrez id from either the set parsed from the uniprot file or,
+        if entrez gene id is not provided by uniprot file, from a lookup dictionary
+        using the species and gene symbol.
+        Paramters:
+            - current_gene_index: The index/position of the gene within the list of genes present in the uniprot file
+            - uniprot_dict: The dictionary containing the parsed information from the uniprot file.
+            - entrez_lookup: A lookup dictionary containing entrez gene ids, indexed by species name and gene symbol.
+        Returns:
+            - entrez_geneid_use: The selected entrez gene id, or None if no suitable id is available.
+        '''
+
+        entrez_geneid_use = None
+
+        if 'entrez_geneids' in uniprot_dict and len(uniprot_dict['entrez_geneids']) > 0:
+            if len(uniprot_dict['genes']) == len(uniprot_dict['entrez_geneids']):
+                entrez_geneid_use = uniprot_dict['entrez_geneids'][current_gene_index] #take index matched id
+            else:
+                if len(uniprot_dict['entrez_geneids']) > 0:
+                    entrez_geneid_use = sorted(uniprot_dict['entrez_geneids'])[0] #take the lowest (earliest) id
+        elif "genes" in uniprot_dict: #gene name present but no entrez gene id in uniprot file
+            entrez_list = []
+            for gene in uniprot_dict["genes"]:
+                #lookup entrez gene id using the gene symbol and species name in the lookup file
+                if uniprot_dict['species_latin_name'] in entrez_lookup["by_species_name"]:
+                    if gene in entrez_lookup["by_species_name"][uniprot_dict['species_latin_name']]:
+                        entrez_list.append(entrez_lookup["by_species_name"][uniprot_dict['species_latin_name']][gene])
+            entrez_geneid_use = entrez_list[0] if len(entrez_list) > 0 else None #Prioritise the first entry as this hopefully corresponds to the official symbol match
+
+        return entrez_geneid_use
