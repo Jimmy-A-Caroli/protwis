@@ -1,6 +1,6 @@
 from django.core.management.base import CommandError
 from build.management.commands.base_build import Command as BaseBuild
-from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types
+from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types, allocate_next_gpcrdb_id
 from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError, transaction, connection
@@ -79,6 +79,11 @@ class Command(BaseBuild):
                             dest='only_make_dump',
                             default=False,
                             help='Create dump, then quit')
+        parser.add_argument('--no_reload',
+                            action='store_true',
+                            dest='no_reload',
+                            default=False,
+                            help='Skip ligand dump reload scripts')
 
     def handle(self, *args, **options):
         if options["test_run"]:
@@ -97,9 +102,10 @@ class Command(BaseBuild):
             test_model_updates(self.all_models, self.tracker, initialize=True)
             print("Ended purging data")
 
-        print("\n\nRebuilding the Ligand Model based on latest dump")
-        self.reload_dump()
-        print("Ended reloading data from ligand dump")
+        if not options['no_reload']:
+            print("\n\nRebuilding the Ligand Model based on latest dump")
+            self.reload_dump()
+            print("Ended reloading data from ligand dump")
 
         # Fetching all the Guide to Pharmacology data
         print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
@@ -230,12 +236,13 @@ class Command(BaseBuild):
         gtp_peptides_merged['helm_notation'] = gtp_peptides_merged['helm_notation_x'].fillna(gtp_peptides_merged['helm_notation_y'])
         gtp_peptides_merged = gtp_peptides_merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-        #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
-        #GTP
-        print('\n\nStarted comparing GTP data to reloaded database')
-        small_to_update, peptide_to_update = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
-        print(f"Building {len(small_to_update)} small molecules and {len(peptide_to_update)} peptide from GTP that were missing from dump")
-        self.save_the_ligands_save_the_world(small_to_update, peptide_to_update)
+        if not options['no_reload']:
+            #HERE WE HAVE THE ACTUAL DATA TO COMPARE, WE NEED TO COMPARE AND THEN CREATE MISSING LIGANDS
+            #GTP
+            print('\n\nStarted comparing GTP data to reloaded database')
+            ligand_data_merged, gtp_peptides_merged = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
+            print(f"Building {len(ligand_data_merged)} small molecules and {len(gtp_peptides_merged)} peptide from GTP that were missing from dump")
+        self.save_the_ligands_save_the_world(ligand_data_merged, gtp_peptides_merged)
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
@@ -1409,7 +1416,7 @@ class Command(BaseBuild):
 
         ligand_input_file = os.path.join(settings.DATA_DIR, "ligand_data", "assay_data", "chembl_cpds.csv.gz")
         ligand_data = pd.read_csv(ligand_input_file, keep_default_na=False)
-        ligand_data.replace(["", "None", "null", "NaN"], np.nan, inplace=True)
+        ligand_data.replace(["", "None", "null", "NaN", "nan"], np.nan, inplace=True)
         print(f"Found {len(ligand_data)} ligands")
 
         # Build mask: not NaN, and not empty/whitespace-only
@@ -1488,6 +1495,7 @@ class Command(BaseBuild):
             "sequence": {},
             "name": {}
         }
+
         for index, row in sm_data.iterrows():
             insert = True
             chembl_id = row["molecule_chembl_id"]
@@ -1654,7 +1662,7 @@ class Command(BaseBuild):
                     parent=parent  # directly assign the parent (which was already created)
                 )
 
-                try:
+                if pd.notna(row.get('smiles')):
                     input_mol = dm.to_mol(row['smiles'], sanitize=True)
                     if input_mol:
                         # If the ligand's InChIKey wasn't set from the row, compute it.
@@ -1665,8 +1673,6 @@ class Command(BaseBuild):
                         ligand.hacc = dm.descriptors.n_hba(input_mol)
                         ligand.hdon = dm.descriptors.n_hbd(input_mol)
                         ligand.logp = dm.descriptors.clogp(input_mol)
-                except Exception:
-                    pass
 
                 ligands.append(ligand)
 
@@ -1682,10 +1688,14 @@ class Command(BaseBuild):
                             "link": LigandID(index=cid, web_resource=wr_pubchem),
                             "lig_idx": len(ligands) - 1
                         })
-                print(ligands)
-                print(len(ligands), Command.bulk_size)
+
                 # Bulk insert every X entries or on the last row
                 if len(ligands) == Command.bulk_size or (index == lig_entries - 1):
+                    # 0) Assign GPCRdb IDs
+                    next_gpcrdb_id = allocate_next_gpcrdb_id()
+                    for i, l in enumerate(ligands):
+                        l.gpcrdb_id = i+next_gpcrdb_id
+
                     # 1) Insert all pending Ligand objects
                     Ligand.objects.bulk_create(ligands)
 
@@ -1761,7 +1771,8 @@ class Command(BaseBuild):
                 nonsm_ids["chembl_ligand"] = row['molecule_chembl_id']
 
             # Filter types
-            ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True, "ChEMBL_peptide", row.get('helm_notation'))
+            helm = row.get('helm_notation') if pd.notna(row.get("helm_notation")) else None
+            ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True, "ChEMBL_peptide", helm)
             # Add LigandIDs
             if pd.notna(row["other_ids"]):
                 # 1) Strip and dedupe
