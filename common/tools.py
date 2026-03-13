@@ -415,7 +415,7 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
                 if split_dr_line[0].strip() == 'GeneID':
                     eid = split_dr_line[1].strip()
                     if (eid.isdecimal()):
-                        up['entrez_geneids'].append(id)
+                        up['entrez_geneids'].append(eid)
                     else:
                         if logger is not None: logger.info('Encountered non-numeric entrez gene id :' + eid + ' for protein ' + up['entry_name'] + ', skipping')
 
