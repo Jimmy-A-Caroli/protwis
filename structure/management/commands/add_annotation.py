@@ -8,7 +8,9 @@ from structure.functions import ParseStructureCSV, X50Finder
 from tools.management.commands.build_structure_angles import NonHetSelect
 from contactnetwork.interaction import InteractingPair
 from construct.functions import fetch_pdb_info, construct_structure_annotation_override
-from build.management.commands.build_human_proteins import Command as Parse
+#from build.management.commands.build_human_proteins import Command as Parse
+from common.tools import parse_uniprot_file
+
 
 from Bio.PDB import PDBParser, Polypeptide
 import logging
@@ -33,6 +35,7 @@ class Command(BaseCommand):
 
     logger = logging.getLogger(__name__)
 
+    local_uniprot_dir = os.sep.join([settings.DATA_DIR, 'protein_data', 'uniprot'])
     xtal_seg_end_file = os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'mod_xtal_segends.yaml'])
     nonxtal_seg_end_file = os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'non_xtal_segends.yaml'])
     anomalies_file = os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'all_anomalies.yaml'])
@@ -89,7 +92,7 @@ class Command(BaseCommand):
                 if len(structure_input)==1 and os.path.exists(structure_input[0]):
                     path_to_models = structure_input[0]
                     models = os.listdir(path_to_models)
-                    p = Parse()
+                    #p = Parse()
                     missing_segments = {}
                     outdated_models = []
                     c = 0
@@ -100,7 +103,7 @@ class Command(BaseCommand):
                         dssp = None
                         res_dict = OrderedDict()
                         accession = m.split('.')[0]
-                        up = deepcopy(p.parse_uniprot_file(accession))
+                        up = deepcopy(parse_uniprot_file(accession, logger=self.logger, local_uniprot_dir=self.local_uniprot_dir))
 
                         ### Running x50 finder
                         if up['entry_name'] not in self.nonxtal_seg_ends:
