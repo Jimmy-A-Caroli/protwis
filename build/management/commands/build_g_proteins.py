@@ -85,7 +85,7 @@ class Command(BaseCommand):
                             help='Build PDB_UNIPROT_ENSEMBLE_ALL file')
 
     def handle(self, *args, **options):
-        self.entrez_lookup = self.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
+        self.entrez_lookup = BuildHumanProteinsCommand.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
         self.options = options
         if options['filename']:
             filenames = options['filename']
@@ -797,7 +797,17 @@ class Command(BaseCommand):
         for i, gene in enumerate(uniprot['genes']):
             g = False
             try:
-                g, created = Gene.objects.get_or_create(name=gene, species=species, position=i)
+                entrez_geneid = BuildHumanProteinsCommand.select_entrez_id(i, uniprot, self.entrez_lookup)
+                
+                if entrez_geneid is not None:
+                    resource = WebResource.objects.get(slug='entrez_gene')
+                    entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid)
+                else:
+                    entrez_link = None
+
+                g, created = Gene.objects.get_or_create(name=gene, species=species, position=i, 
+                                                        entrez_id=entrez_geneid, entrez_weblink=entrez_link)                    
+                
                 if created:
                     self.logger.info('Created gene ' + g.name + ' for protein ' + p.name)
             except IntegrityError:

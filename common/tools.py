@@ -414,10 +414,13 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
 
         # close the Uniprot file
         uf.close()
-        try:
-            up['sequence'] = excel_sequences[up['entry_name']]['Sequence']
-        except:
-            pass
+        
+        if excel_sequences is not None:
+            try:
+                up['sequence'] = excel_sequences[up['entry_name']]['Sequence']
+            except:
+                pass
+    
     except:
         return False
 

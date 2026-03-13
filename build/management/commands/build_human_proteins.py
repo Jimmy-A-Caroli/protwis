@@ -267,31 +267,18 @@ class Command(BaseBuild):
         #but edge cases exist where there are multiple gene names and/or entrez ids.
         for i, gene in enumerate(uniprot['genes']):
             g = False
-            entrez_geneid_use = None
-            entrez_link = None
-            
+                        
             try:
-                if 'entrez_geneids' in uniprot.keys() and len(uniprot['entrez_geneids']) > 0: 
-                    if len(uniprot['genes']) == len(uniprot['entrez_geneids']):
-                        entrez_geneid_use = uniprot['entrez_geneids'][i] #take index matched id
-                    else:
-                        if len(uniprot['entrez_geneids']) > 0:
-                            entrez_geneid_use = sorted(uniprot['entrez_geneids'])[0] #take the lowest (earliest) id
-                elif "genes" in uniprot.keys(): #gene name present but no entrez gene id in uniprot file
-                    entrez_list = []
-                    for gene in uniprot["genes"]:
-                        #lookup entrez gene id using the gene symbol and species name in the lookup file
-                        if uniprot['species_latin_name'] in self.entrez_lookup["by_species_name"].keys():
-                            if gene in self.entrez_lookup["by_species_name"][uniprot['species_latin_name']].keys():
-                                entrez_list.append(self.entrez_lookup["by_species_name"][species.latin_name][gene])
-                    entrez_geneid_use = entrez_list[0] if len(entrez_list) > 0 else None #Prioritise the first entry as this hopefully corresponds to the official symbol match
+                entrez_geneid = self.select_entrez_id(i, uniprot, self.entrez_lookup)
                 
-                if entrez_geneid_use is not None:
+                if entrez_geneid is not None:
                     resource = WebResource.objects.get(slug='entrez_gene')
-                    entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid_use)
+                    entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid)
+                else:
+                    entrez_link = None
 
                 g, created = Gene.objects.get_or_create(name=gene, species=species, position=i, 
-                                                        entrez_id=entrez_geneid_use, entrez_weblink=entrez_link)                    
+                                                        entrez_id=entrez_geneid, entrez_weblink=entrez_link)                    
                 
                 if created:
                     self.logger.info('Created gene ' + g.name + ' for protein ' + p.name)
@@ -362,31 +349,65 @@ class Command(BaseBuild):
                         gene_symbol, taxon_id, entrez_gene_id, species_name = split_line
                         
                         #Lookup by species
-                        if not species_name in entrez_lookup_dict["by_species_name"].keys():
-                            entrez_lookup_dict["by_species_name"][species_name] = dict()
+                        try:
+                            by_species_ref = entrez_lookup_dict["by_species_name"][species_name]
+                        except KeyError:
+                            by_species_ref = dict()
+                            entrez_lookup_dict["by_species_name"][species_name] = by_species_ref
                         
-                        if not gene_symbol in entrez_lookup_dict["by_species_name"][species_name].keys():
-                            entrez_lookup_dict["by_species_name"][species_name][gene_symbol] = []
+                        try:
+                            gene_array_ref = by_species_ref[gene_symbol]
+                        except KeyError:
+                            gene_array_ref = []
+                            by_species_ref[gene_symbol] = gene_array_ref
                         
-                        entrez_lookup_dict["by_species_name"][species_name][gene_symbol].append(entrez_gene_id) 
+                        gene_array_ref.append(entrez_gene_id) 
 
                         #Lookup by taxon id
-                        if not taxon_id in entrez_lookup_dict["by_taxon_id"].keys():
-                            entrez_lookup_dict["by_taxon_id"][taxon_id] = dict()
+                        try:
+                            by_taxon_ref = entrez_lookup_dict["by_taxon_id"][taxon_id]
+                        except KeyError:
+                            by_taxon_ref = dict()
+                            entrez_lookup_dict["by_taxon_id"][taxon_id] = by_taxon_ref
                         
-                        if not gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id].keys():
-                            entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = []
+                        try:
+                            gene_array_ref = by_taxon_ref[gene_symbol]
+                        except KeyError:
+                            gene_array_ref = []
+                            by_taxon_ref[gene_symbol] = gene_array_ref
                         
-                        entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol].append(entrez_gene_id) 
+                        gene_array_ref.append(entrez_gene_id) 
                 else:
                     logger.error('Unexpected format in entrez gene id lookup file for line: ' + line)
 
         if keep_only_lowest_id:
-            for species in entrez_lookup_dict["by_species_name"].keys():
-                for gene_symbol in entrez_lookup_dict["by_species_name"][species].keys():
-                    entrez_lookup_dict["by_species_name"][species][gene_symbol] = sorted(entrez_lookup_dict["by_species_name"][species][gene_symbol])[0]
+            for species in entrez_lookup_dict["by_species_name"]:
+                for gene_symbol in entrez_lookup_dict["by_species_name"][species]:
+                    entrez_lookup_dict["by_species_name"][species][gene_symbol] = min(entrez_lookup_dict["by_species_name"][species][gene_symbol])
 
-            for taxon_id in entrez_lookup_dict["by_taxon_id"].keys():
-                for gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id].keys():
-                    entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = sorted(entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol])[0]
+            for taxon_id in entrez_lookup_dict["by_taxon_id"]:
+                for gene_symbol in entrez_lookup_dict["by_taxon_id"][taxon_id]:
+                    entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol] = min(entrez_lookup_dict["by_taxon_id"][taxon_id][gene_symbol])
+
         return entrez_lookup_dict
+    
+    @staticmethod
+    def select_entrez_id(current_gene_index, uniprot_dict, entrez_lookup):
+        entrez_geneid_use = None
+        
+        if 'entrez_geneids' in uniprot_dict and len(uniprot_dict['entrez_geneids']) > 0: 
+            if len(uniprot_dict['genes']) == len(uniprot_dict['entrez_geneids']):
+                entrez_geneid_use = uniprot_dict['entrez_geneids'][current_gene_index] #take index matched id
+            else:
+                if len(uniprot_dict['entrez_geneids']) > 0:
+                    entrez_geneid_use = sorted(uniprot_dict['entrez_geneids'])[0] #take the lowest (earliest) id
+        elif "genes" in uniprot_dict: #gene name present but no entrez gene id in uniprot file
+            entrez_list = []
+            for gene in uniprot_dict["genes"]:
+                #lookup entrez gene id using the gene symbol and species name in the lookup file
+                if uniprot_dict['species_latin_name'] in entrez_lookup["by_species_name"]:
+                    if gene in entrez_lookup["by_species_name"][uniprot_dict['species_latin_name']]:
+                        entrez_list.append(entrez_lookup["by_species_name"][uniprot_dict['species_latin_name']][gene])
+            entrez_geneid_use = entrez_list[0] if len(entrez_list) > 0 else None #Prioritise the first entry as this hopefully corresponds to the official symbol match
+
+        return entrez_geneid_use

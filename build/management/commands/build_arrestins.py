@@ -13,6 +13,7 @@ from django.core.management.base import BaseCommand
 from django.core.management.color import no_style
 from django.db import IntegrityError, connection
 from common.tools import test_model_updates, parse_uniprot_file
+from common.models import WebLink, WebResource
 from protein.models import (Gene, Protein, ProteinAlias, ProteinConformation,
                             ProteinFamily, ProteinSegment,
                             ProteinSequenceType, ProteinSource, ProteinState, Species)
@@ -21,7 +22,7 @@ from residue.models import (Residue, ResidueGenericNumber,
                             ResidueNumberingScheme)
 from signprot.models import SignprotStructure
 from structure.models import Structure
-
+from build.management.commands.build_human_proteins import Command as BuildHumanProteinsCommand
 
 class Command(BaseCommand):
     help = 'Build Arrestin proteins'
@@ -29,6 +30,7 @@ class Command(BaseCommand):
     # source files
     arrestin_data_file = os.sep.join([settings.DATA_DIR, 'arrestin_data', 'ortholog_alignment.xlsx'])
     local_uniprot_dir = os.sep.join([settings.DATA_DIR, 'protein_data', 'uniprot'])
+    entrezid_source_file = os.sep.join([settings.DATA_DIR, 'gene_data', 'entrez_id_lookup.txt'])
     
     #Setting the variables for the test tracking of the model upadates
     tracker = {}
@@ -43,6 +45,7 @@ class Command(BaseCommand):
                             help='Filename to import. Can be used multiple times')
 
     def handle(self, *args, **options):
+        self.entrez_lookup = BuildHumanProteinsCommand.build_entrezgeneid_lookup_dict(self.entrezid_source_file, self.logger)
         self.options = options
         if options['filename']:
             filenames = options['filename']
@@ -288,15 +291,25 @@ class Command(BaseCommand):
         for i, gene in enumerate(uniprot['genes']):
             g = False
             try:
-                g, created = Gene.objects.get_or_create(name=gene, species=species, position=i)
+                entrez_geneid = BuildHumanProteinsCommand.select_entrez_id(i, uniprot, self.entrez_lookup)
+                
+                if entrez_geneid is not None:
+                    resource = WebResource.objects.get(slug='entrez_gene')
+                    entrez_link, created = WebLink.objects.get_or_create(web_resource=resource, index=entrez_geneid)
+                else:
+                    entrez_link = None
+
+                g, created = Gene.objects.get_or_create(name=gene, species=species, position=i, 
+                                                        entrez_id=entrez_geneid, entrez_weblink=entrez_link)                    
+                
                 if created:
                     self.logger.info('Created gene ' + g.name + ' for protein ' + p.name)
             except IntegrityError:
                 g = Gene.objects.get(name=gene, species=species, position=i)
 
             if g:
-                pcan = Protein.objects.get(entry_name=uniprot['entry_name'].lower())
-                g.proteins.add(pcan)
+                pcgn = Protein.objects.get(entry_name=uniprot['entry_name'].lower())
+                g.proteins.add(pcgn)
 
         # structures
         # for i, structure in enumerate(uniprot['structures']):
