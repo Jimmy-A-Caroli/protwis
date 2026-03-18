@@ -3,7 +3,6 @@ from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
 from rest_framework.parsers import FileUploadParser
 from rest_framework.renderers import JSONRenderer
-from rest_framework.schemas import AutoSchema
 
 from rest_framework_swagger.views import get_swagger_view
 from rest_framework_swagger.renderers import OpenAPIRenderer, SwaggerUIRenderer
