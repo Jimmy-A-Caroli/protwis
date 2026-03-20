@@ -91,29 +91,21 @@ def getLigandTable(receptor_id, browser_type):
             t = {}
             t['ligandname'] = link_setup.format(str(p[3])+"/info", p[0])
             t['ligandtype'] = p[2]
-            t['endogenous'] = p[1]
+            t['endogenous'] = ("No" if p[1] == None else p[1])
             t['publications'] = len(pubs)
             t['compared'] = len(compared) - 1
             t['2d_structure'] = img_setup_smiles.format(urllib.parse.quote(p[5])) if p[5] != None else "Image not available"
-            data_table += "<tr> \
-            <td data-sort=\"0\"><input autocomplete='off' class=\"form-check-input\" type=\"checkbox\" name=\"reference\" id=\"{}\" data-entry=\"{}\" entry-value=\"{}\"></td> \
-            <td data-html=\"true\">{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            </tr> \n".format(
-                p[0],
-                p[3],
-                p[3],
-                t['ligandname'],
-                t['2d_structure'],
-                t['ligandtype'],
-                ("No" if t['endogenous'] == None else t['endogenous']),
-                t['publications'],
-                t['compared'],
-            )
+          
+            data_table += f'''<tr> 
+            <td data-sort="0"><input autocomplete='off' class="form-check-input" type="checkbox" 
+            name="reference" id="{p[0]}" data-entry="{p[3]}" entry-value="{p[3]}"></td>
+            <td data-html="true">{t['ligandname']}</td>
+            <td>{t['2d_structure']}</td>
+            <td>{t['ligandtype']}</td>
+            <td>{t['endogenous']}</td>
+            <td>{t['publications']}</td>
+            <td>{t['compared']}</td>
+            </tr> \n'''
 
         data_table += "</tbody></table>"
         cache.set(cache_key, data_table, 60*60*24*7)
@@ -219,30 +211,19 @@ def getLigandCountTable():
                 t['approved_target'] = approved[t['entry_name']] if t['entry_name'] in approved.keys() else 0
                 t['clinical_target'] = trials[t['entry_name']] if t['entry_name'] in trials.keys() else 0
 
-                data_table += "<tr> \
-                <td data-sort=\"0\"><input autocomplete='off' class=\"form-check-input\" type=\"checkbox\" name=\"reference\" data-entry=\"{}\" entry-value=\"{}\"></td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td><span class=\"expand\">{}</span></td> \
-                <td><span class=\"expand\">{}</span></td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                </tr> \n".format(
-                    t['slug'],
-                    t['id'],
-                    t['class'],
-                    t['ligandtype'],
-                    t['family'],
-                    t['species'],
-                    t['uniprot'],
-                    t['iuphar'],
-                    t['ligand_count'],
-                    t['approved_target'],
-                    t['clinical_target'],
-                )
+                data_table += f'''<tr>
+                <td data-sort="0"><input autocomplete='off' class="form-check-input" type="checkbox" name="reference" 
+                data-entry="{t['slug']}" entry-value="{t['id']}"></td>
+                <td>{t['class']}</td>
+                <td>{t['ligandtype']}</td>
+                <td>{t['family']}</td>
+                <td>{t['species']}</td>
+                <td><span class="expand">{t['uniprot']}</span></td>
+                <td><span class="expand">{t['iuphar']}</span></td>
+                <td>{t['ligand_count']}</td>
+                <td>{t['approved_target']}</td>
+                <td>{t['clinical_target']}</td>
+                </tr> \n'''
 
         data_table += "</tbody></table>"
         cache.set("ligand_count_table", data_table, 60*60*24*7)
@@ -396,44 +377,31 @@ def getTargetTable():
                 else:
                     t[gprotein] = "-"
 
-            data_table += "<tr> \
-            <td data-sort=\"0\"><input autocomplete='off' class=\"form-check-input\" type=\"checkbox\" name=\"targets\" id=\"{}\" data-entry=\"{}\" data-human=\"{}\"></td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td><span class=\"expand\">{}</span></td> \
-            <td><span class=\"expand\">{}</span></td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td><span {} data-html=\"true\" data-placement=\"bottom\" title=\"{}\" data-search=\"{}\" >{}</span></td> \
-            <!--<td>{}</td> \
-            <td>{}</td>--> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            <td>{}</td> \
-            </tr> \n".format(
-                t['slug'],
-                t['name'],
-                ("No" if t['slug'] in missing_slugs else "Yes"),
-                t['class'],
-                t['ligandtype'],
-                t['family'],
-                t['uniprot'],
-                t['iuphar'],
-                t['ligand_count'],
-                t['pdb_count'],
-                ("data-toggle=\"tooltip\"" if t['pdbid_tooltip']!="-" else ""),
-                t['pdbid_tooltip'],
-                t['pdbid'],      # This one hidden used for search box.
-                t['pdbid_two'],  # This one shown. Show only first two pdb's.
-                t['approved_target'],
-                t['clinical_target'],
-                t[gprotein_families[0]].capitalize(),
-                t[gprotein_families[1]].capitalize(),
-                t[gprotein_families[2]].capitalize(),
-                t[gprotein_families[3]].capitalize(),
-            )
+            # data-search="{t["pdbid"]}" is hidden and used for search box. 
+            # t["pdbid_two"] is one shown. Show only first two pdb's.
+            is_human = ("No" if t['slug'] in missing_slugs else "Yes")
+            data_toggle = "tooltip" if t["pdbid_tooltip"]!="-" else ""
+            data_table += f'''<tr> 
+            <td data-sort="0"><input autocomplete="off" class="form-check-input" type="checkbox" 
+                name="targets" id="{t["slug"]}" data-entry="{t["name"]}" 
+                    data-human="{is_human}"></td> 
+            <td>{t["class"]}</td> 
+            <td>{t["ligandtype"]}</td> 
+            <td>{t["family"]}</td> 
+            <td><span class="expand">{t["uniprot"]}</span></td> 
+            <td><span class="expand">{t["iuphar"]}</span></td> 
+            <td>{t["ligand_count"]}</td> 
+            <td>{t["pdb_count"]}</td> 
+            <td><span data-toggle={data_toggle} data-html="true" 
+                data-placement="bottom" title="{t["pdbid_tooltip"]}" 
+                data-search="{t["pdbid"]}" >{ t["pdbid_two"]}</span></td> 
+            <!--<td>{t["approved_target"]}</td> 
+            <td>{t["clinical_target"]}</td>--> 
+            <td>{ t[gprotein_families[0]].capitalize()}</td> 
+            <td>{t[gprotein_families[1]].capitalize()}</td> 
+            <td>{t[gprotein_families[2]].capitalize()}</td> 
+            <td>{t[gprotein_families[3]].capitalize()}</td> 
+            </tr>\n''' 
 
         data_table += "</tbody></table>"
         cache.set("target_table", data_table, 60*60*24*7)
@@ -585,58 +553,32 @@ def getReferenceTable(pathway, subtype):
                     t['pathway_span'] = ligand_tot[t['id']][3]
 
             if pathway == "yes":
-                data_table += "<tr> \
-                <td data-sort=\"0\"><input autocomplete='off' class=\"form-check-input\" type=\"checkbox\" name=\"reference\" id=\"{}\" data-entry=\"{}\" entry-value=\"{}\"></td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td><span class=\"expand\">{}</span></td> \
-                <td><span class=\"expand\">{}</span></td> \
-                <td style=\"border-left: 1px solid black; text-align:left\">{}</td> \
-                </tr> \n".format(
-                    t['slug'],
-                    t['name'],
-                    t['id'],
-                    t['class'],
-                    t['ligandtype'],
-                    t['family'],
-                    t['species'],
-                    t['uniprot'],
-                    t['iuphar'],
-                    t['ligand_count'],
-                )
+                data_table += f'''<tr>
+                <td data-sort="0"><input autocomplete='off' class="form-check-input" 
+                type="checkbox" name="reference" id="{t['slug']}" data-entry="{t['name']}" entry-value="{t['id']}"></td>
+                <td>{t['class']}</td>
+                <td>{ t['ligandtype']}</td>
+                <td>{t['family']}</td>
+                <td>{t['species']}</td>
+                <td><span class="expand">{t['uniprot']}</span></td>
+                <td><span class="expand">{t['iuphar']}</span></td>
+                <td style="border-left: 1px solid black; text-align:left">{t['ligand_count']}</td>
+                </tr> \n'''
             else:
-                data_table += "<tr> \
-                <td data-sort=\"0\"><input autocomplete='off' class=\"form-check-input\" type=\"checkbox\" name=\"reference\" id=\"{}\" data-entry=\"{}\" entry-value=\"{}\"></td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td>{}</td> \
-                <td><span class=\"expand\">{}</span></td> \
-                <td><span class=\"expand\">{}</span></td> \
-                <td style=\"border-left: 1px solid black; text-align:left\">{}</td> \
-                <td data-search=\"{}\">{}</td> \
-                <td data-search=\"{}\">{}</td> \
-                <td data-search=\"{}\">{}</td> \
-                </tr> \n".format(
-                    t['slug'],
-                    t['name'],
-                    t['id'],
-                    t['class'],
-                    t['ligandtype'],
-                    t['family'],
-                    t['species'],
-                    t['uniprot'],
-                    t['iuphar'],
-                    t['ligand_count'],
-                    t['balanced_span'],
-                    t['balanced_refs'],
-                    t['pathway_span'],
-                    t['pathway_count'],
-                    t['biased_span'],
-                    t['biased_count'],
-                )
+                data_table += f'''<tr>
+                <td data-sort="0"><input autocomplete='off' class="form-check-input" 
+                type="checkbox" name="reference" id="{t['slug']}" data-entry="{t['name']}" entry-value="{t['id']}"></td> 
+                <td>{t['class']}</td> 
+                <td>{t['ligandtype']}</td> 
+                <td>{ t['family']}</td> 
+                <td>{t['species']}</td> 
+                <td><span class="expand">{t['uniprot']}</span></td> 
+                <td><span class="expand">{t['iuphar']}</span></td> 
+                <td style="border-left: 1px solid black; text-align:left">{t['ligand_count']}</td> 
+                <td data-search="{t['balanced_span']}">{t['balanced_refs']}</td> 
+                <td data-search="{t['pathway_span']}">{t['pathway_count']}</td> 
+                <td data-search="{t['biased_span']}">{t['biased_count']}</td> 
+                </tr> \n'''
 
         data_table += "</tbody></table>"
         cache.set(cache_key, data_table, 60*60*24*7)
