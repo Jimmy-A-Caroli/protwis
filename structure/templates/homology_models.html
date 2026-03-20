@@ -425,11 +425,11 @@
                 <tr model_id='{{model.pk}}'>
                     <td class="text-center"><input class="alt" type="checkbox" id="{{ model.pk }}"></td>
                     {% if model.protein.accession %}
-                        <td><a target="_blank" href="homology_models/{{ model.protein.entry_name }}_{{ model.state.slug }}">
+                        <td><a target="_blank" href="/structure/structure_models/receptor/{{ model.protein.entry_name }}_{{ model.state.slug }}">
                             <img width="14px" height="20px" class="model-link" src="{% static 'home/images/gpcr_structure_logo.png' %}">
                         </a></td>
                     {% else %}
-                        <td><a target="_blank" href="refined/{{ model.protein.entry_name|upper }}">
+                        <td><a target="_blank" href="/structure/refined/{{ model.protein.entry_name|upper }}">
                             <img width="14px" height="20px" class="model-link" src="{% static 'home/images/gpcr_structure_logo.png' %}">
                         </a></td>
                     {% endif %}

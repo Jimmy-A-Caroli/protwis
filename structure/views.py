@@ -1691,24 +1691,24 @@ def ServePdbLigandDiagram(request,pdbname,ligand):
     return response
 
 def ServeCleanPdbDiagram(request, pdbname, ligname):
-	structure = Structure.objects.filter(pdb_code__index=pdbname.upper())
-	if structure.exists():
-		structure = structure.get()
-		if structure.pdb_data is None:
-			quit()
-	else:
-		 quit()
+    structure = Structure.objects.filter(pdb_code__index=pdbname.upper())
+    if structure.exists():
+        structure = structure.get()
+        if structure.pdb_data is None:
+            quit()
+    else:
+        quit()
 
-	# Obtain and save cleaned PDB
-	parser = PDBParser(QUIET = True)
-	filtered_pdb = StringIO(structure.get_cleaned_pdb(ligands_to_keep=ligname.upper()))
-	pdb_out = PDBIO()
-	pdb_out.set_structure(parser.get_structure(structure.pdb_code.index, filtered_pdb))
+    # Obtain and save cleaned PDB
+    parser = PDBParser(QUIET = True)
+    filtered_pdb = StringIO(structure.get_cleaned_pdb(ligands_to_keep=ligname.upper()))
+    pdb_out = PDBIO()
+    pdb_out.set_structure(parser.get_structure(structure.pdb_code.index, filtered_pdb))
 
-	# Send as response
-	out_stream = StringIO()
-	pdb_out.save(out_stream, select = NotDisordered())
-	return HttpResponse(out_stream.getvalue(), content_type = 'chemical/x-pdb')
+    # Send as response
+    out_stream = StringIO()
+    pdb_out.save(out_stream, select = NotDisordered())
+    return HttpResponse(out_stream.getvalue(), content_type = 'chemical/x-pdb')
 
 class NotDisordered(Select):
     def accept_atom(self, atom):
@@ -4791,7 +4791,7 @@ class StructureBlastView(View):
 
         elif origin_acr == 'af':
             protein_data = protein.split('_human_')
-            return 'AF2 model', f'homology_models/{protein}', protein_data[1]
+            return 'AF2 model', f'structure_models/receptor/{protein}', protein_data[1]
         elif origin_acr == 'ref':
             return 'Refined experimental structure', f'refined/{protein.replace("_refined", "")}', ''
         return '', '', ''
