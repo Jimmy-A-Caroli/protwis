@@ -88,7 +88,6 @@
             background-color: rgb(0,0,0); /* Fallback color */
             background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
         }
-    }
     </style>
 {% endblock %}
 
@@ -177,6 +176,17 @@
                         filter_type: "multi_select",
                         select_type: 'select2',
                         column_data_type: "html",
+                        filter_default_label: "Gene",
+                        filter_reset_button_text: false,
+                        select_type_options: {
+                            width: '80px',
+                        }
+                    },
+                    {
+                        column_number : 6,
+                        filter_type: "multi_select",
+                        select_type: 'select2',
+                        column_data_type: "html",
                         filter_default_label: "UniProt",
                         filter_reset_button_text: false,
                         select_type_options: {
@@ -184,7 +194,7 @@
                         }
                     },
                     {
-                        column_number: 6,
+                        column_number: 7,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         column_data_type: "html",
@@ -195,7 +205,7 @@
                         }
                     },
                     {
-                        column_number: 7,
+                        column_number: 8,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Rec. family",
@@ -205,7 +215,7 @@
                         }
                     },
                     {
-                        column_number : 8,
+                        column_number : 9,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Class",
@@ -215,7 +225,7 @@
                         }
                     },
                     {
-                        column_number : 9,
+                        column_number : 10,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Species",
@@ -403,7 +413,7 @@
             <thead>
                 <tr class='over_header' style='max-height: 20px'>
                     <th colspan=5 class="over_header">MODEL</th>
-                    <th colspan=5 class="over_header">RECEPTOR</th>
+                    <th colspan=6 class="over_header">RECEPTOR</th>
                 </tr>
                 <tr>
                     <th class='no-sort checkbox_tr'><input class="select-all" type="checkbox" onclick="select_all(this)"></th>
@@ -411,6 +421,7 @@
                     <th>Date</th>
                     <th></th>
                     <th class='rightborder'></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th ></th>
@@ -440,6 +451,17 @@
                     {% else %}
                         <td><a href="https://doi.org/10.1038/s41586-021-03819-2", target="_blank">AlphaFold2</a></td>
                     {% endif %}
+                    <td>
+                        {% if model.protein.genes.first %}
+                            {% if model.protein.genes.first.entrez_weblink %}
+                            <a href="{{ model.protein.genes.first.entrez_weblink }}" target="_blank" rel="noopener">{{ model.protein.genes.first.name | safe }}</a>
+                            {% else %}
+                                {{ model.protein.genes.first.name |safe }}
+                            {% endif %}
+                        {% else %}
+                            Unavailable
+                        {% endif %}
+                    </td>
                     <td>
                         {% if not model.protein.accession %}
                             <a href="http://www.uniprot.org/uniprot/{{ model.protein.parent.accession }}">{{ model.protein.parent.entry_short|safe }}</a>

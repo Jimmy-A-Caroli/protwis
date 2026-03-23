@@ -454,7 +454,7 @@ function initTargetTable(elementID) {
                 targets: 1,
                 className: "text-center"
             },{
-                targets: [6,7,9,10,11,12],
+                targets: [7,8,10,11,12,13],
                 className: "text-center"
             },],
         });
@@ -520,6 +520,19 @@ function initTargetTable(elementID) {
                 },
                 {
                     column_number: 6,
+                    filter_type: "multi_select",
+                    select_type: "select2",
+                    column_data_type: "html",
+                    html_data_type: "text",
+                    filter_default_label: "Gene",
+                    filter_match_mode : "exact",
+                    filter_reset_button_text: false,
+                    select_type_options: {
+                        "width": "110px",
+                    }
+                },
+                {
+                    column_number: 7,
                     filter_type: "range_number",
                     filter_default_label: ["From", "To"],
                     filter_reset_button_text: false,
@@ -528,14 +541,14 @@ function initTargetTable(elementID) {
                     column_data_type: "html",
                 },
                 {
-                    column_number: 7,
+                    column_number: 8,
                     filter_type: "range_number",
                     filter_default_label: ["From", "To"],
                     filter_reset_button_text: false,
                     style_class: "center",
                 },
                 {
-                    column_number: 8,
+                    column_number: 9,
                     filter_type: "text",
                     select_type: "select2",
                     html5_data: "data-search",
@@ -558,28 +571,28 @@ function initTargetTable(elementID) {
                     filter_default_label: "Clinical trial",
                 },*/
                 {
-                    column_number: 9,
+                    column_number: 10,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Gs",
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 10,
+                    column_number: 11,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Gi/o",
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 11,
+                    column_number: 12,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Gq/11",
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 12,
+                    column_number: 13,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "G12/13",

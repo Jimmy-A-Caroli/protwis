@@ -237,7 +237,8 @@ def getTargetTable():
                                           family__slug__startswith="0",
                                           species__common_name="Human").prefetch_related(
             "family",
-            "family__parent__parent__parent"
+            "family__parent__parent__parent",
+            "genes"
         )
         # Acquired slugs
         slug_list = [ p.family.slug for p in proteins ]
@@ -253,7 +254,8 @@ def getTargetTable():
                                         .order_by("id")\
                                         .prefetch_related(
                 "family",
-                "family__parent__parent__parent"
+                "family__parent__parent__parent",
+                "genes"
             )
             proteins = proteins | missing[:1]
 
@@ -291,7 +293,7 @@ def getTargetTable():
             <thead>\
               <tr> \
                 <th colspan=1>&nbsp;</th> \
-                <th colspan=5>Receptor classification</th> \
+                <th colspan=6>Receptor classification</th> \
                 <th colspan=1>Ligands</th> \
                 <th colspan=2>Structures</th> \
 <!--                <th colspan=2>Drugs</th> -->\
@@ -304,6 +306,7 @@ def getTargetTable():
                 <th style=\"width; 100px;\">Family<br>&nbsp;</th> \
                 <th style=\"color:red\">Receptor<br>(UniProt)</th> \
                 <th style=\"color:red\">Receptor<br>(GtP)</th> \
+                <th>Gene<br>&nbsp;</th> \
                 <th>Count</th> \
                 <th>Count</th> \
                 <th>PDB(s)<br>&nbsp;</th> \
@@ -335,6 +338,14 @@ def getTargetTable():
             t['family'] = p.family.parent.short()
             t['uniprot'] = p.entry_short()
             t['iuphar'] = p.family.name.replace("receptor", '').strip()
+            if(p.genes.first()):
+                t['gene_name'] = p.genes.first().name
+                t['gene_entrez'] = p.genes.first().entrez_id
+                t['gene_weblink'] = p.genes.first().entrez_weblink if p.genes.first().entrez_id else None
+            else:
+                t['gene_name'] = "-"
+                t['gene_entrez'] = None
+                t['gene_weblink'] = None
 
             # Web resource links
             #t['uniprot_link'] = ""
@@ -346,6 +357,11 @@ def getTargetTable():
             gtop_links = p.web_links.filter(web_resource__slug='gtop')
             if gtop_links.count() > 0:
                 t['iuphar'] = link_setup.format(gtop_links[0], t['iuphar'])
+                
+            if t['gene_weblink']:
+                t['gene_display'] = link_setup.format(t['gene_weblink'], t['gene_name'])
+            else:
+                t['gene_display'] = t['gene_name']
 
             # Ligand count
             t['ligand_count'] = 0
@@ -390,6 +406,7 @@ def getTargetTable():
             <td>{t["family"]}</td> 
             <td><span class="expand">{t["uniprot"]}</span></td> 
             <td><span class="expand">{t["iuphar"]}</span></td> 
+            <td><span>{t['gene_display']}</span></td> 
             <td>{t["ligand_count"]}</td> 
             <td>{t["pdb_count"]}</td> 
             <td><span data-toggle={data_toggle} data-html="true" 

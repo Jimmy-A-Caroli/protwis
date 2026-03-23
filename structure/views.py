@@ -125,7 +125,7 @@ class StructureDataJsonView(View):
                 .prefetch_related(
                     Prefetch(
                         "protein_conformation__protein__parent__genes",
-                        queryset=Gene.objects.filter(position=0),
+                        queryset=Gene.objects.filter(position=0).select_related("entrez_weblink"),
                         to_attr="filtered_genes",
                     ),
                     Prefetch(
@@ -183,6 +183,10 @@ class StructureDataJsonView(View):
 
                 gene_name = (pp.filtered_genes[0].name
                              if getattr(pp, "filtered_genes", []) else "-")
+
+                gene_href = (str(pp.filtered_genes[0].entrez_weblink)
+                             if getattr(pp, "filtered_genes", []) and
+                             pp.filtered_genes[0].entrez_weblink else "-")
 
                 # arrestin / Gα
                 arrestin = next(
@@ -251,7 +255,7 @@ class StructureDataJsonView(View):
                 out.append({
                     "id": s.id,
                     "uniprot_link": f"http://www.uniprot.org/uniprot/{pp.accession}",
-                    "Gene": gene_name,
+                    "Gene": { "name": gene_name, "entrez_url": gene_href },
                     "entry_name": pp.entry_name,
                     "gpcrdb_link": gpcrdb_link,
                     "iuphar_link": iuphar_link,
@@ -410,7 +414,8 @@ class ServeHomologyModels(TemplateView):
                 "protein__family__parent__parent__parent",
                 "protein__species",
                 "main_template__protein_conformation__protein__parent__family",
-                "main_template__pdb_code")
+                "main_template__pdb_code",
+                "protein__genes")
         except StructureModel.DoesNotExist as e:
             pass
 
