@@ -513,7 +513,13 @@
                     
                                         <!--               RECEPTOR            -->
                     <!-- Gene name 3 -->
-                    <td>{{ model.gene_name }}</td>
+                    <td>
+                    {% if model.protein_conformation.protein.genes.first.entrez_weblink %}
+                    <a href="{{ model.protein_conformation.protein.genes.first.entrez_weblink }}" target="_blank" rel="noopener">{{ model.protein_conformation.protein.genes.first.name | safe }}</a>
+                    {% else %} 
+                    {{ model.protein_conformation.protein.genes.first.name }}
+                    {% endif %}
+                    </td>
 
                     <!-- Protein name 4 -->
                     <td> <a href=" /protein/{{model.protein_conformation.protein.entry_name}} ">{{ model.protein_conformation.protein.name|receptor_short|safe }}</a></td>

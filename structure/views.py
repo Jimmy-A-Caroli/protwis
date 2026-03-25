@@ -4988,10 +4988,6 @@ class LigandComplexModels(TemplateView):
     def get_context_data(self, **kwargs):
         context = super(LigandComplexModels, self).get_context_data(**kwargs)
         try:
-            subquery_gene = Gene.objects.filter(
-                proteins=OuterRef('protein_conformation__protein__pk')
-            ).values('name')[:1]
-
             # Get the structure models along with prefetching ligands and related data
             structures = Structure.objects.filter(
                 structure_type__slug__in=['af-signprot-peptide', 'af-rfaa-sm']
@@ -5002,6 +4998,7 @@ class LigandComplexModels(TemplateView):
                 "protein_conformation__protein__family__parent__parent__parent",
                 "protein_conformation__protein__species",
                 "protein_conformation__protein__parent__family",
+                "protein_conformation__protein__genes",
                 "pdb_code",
                 Prefetch(
                     "structureafscores_set",
@@ -5022,7 +5019,6 @@ class LigandComplexModels(TemplateView):
                     to_attr="prefetch_ligands"
                 )
             ).annotate(
-                gene_name=Subquery(subquery_gene),
                 experimental_pdb_exists=Exists(
                     StructureLigandInteraction.objects.filter(
                         structure__structure_type__slug__in=[
