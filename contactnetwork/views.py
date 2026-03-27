@@ -344,7 +344,7 @@ def PdbTableData(request):
             <!-- identity to human --> <th>Identity %<br>to Human</th> 
             <!-- Method --> <th></th>
             <!-- pdb_id --> <th></th> 
-            <!-- resolution --> <th></th>
+            <!-- resolution --> <th>Res (Å)</th>
             <!-- resolution_best --> <th></th> 
             <!-- state --> <th></th> 
             <!-- gprot_bound_likeness --> <th>Degree active (%)</th> 
@@ -585,7 +585,7 @@ def PdbTableData(request):
                         <td>{r['identity_to_human']}</td> 
                         <td>{r['method']}</td> 
                         <td class='shorten'>{pdb_id}</td> 
-                        <td><p class='no_margins' style='color:{resolution_colour}'>{r['resolution']}</p></td> 
+                        <td style='color:{resolution_colour}'>{r['resolution']}</td> 
                         <td>{resolution_best}</td> 
                         <td>{r['state']}</td> 
                         <td>{r['gprot_bound_likeness']}</td>

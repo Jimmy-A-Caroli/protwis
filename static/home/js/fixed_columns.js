@@ -625,7 +625,7 @@ function showPDBtable(element) {
                     select_type_options: {
                         width: "70px"
                     },
-                    filter_default_label: ["Res (Å)",""],
+                    filter_default_label: ["From","to"],
                     filter_reset_button_text: false,
                 },
                 // {
