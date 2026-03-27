@@ -385,7 +385,7 @@ function showPDBtable(element) {
 
     if (!$.fn.DataTable.isDataTable(element + " .tableview table")) {
         $(element + " #best_species").html('<div class2="pull-right">\
-                                            <div class="btn-group btn-toggle" column="7" mode="'+ mode +'"> \
+                                            <div class="btn-group btn-toggle" column="8" mode="'+ mode +'"> \
                                             <button class="btn btn-xs btn-default" value="On">&nbsp;</button> \
                                             <button class="btn btn-xs btn-primary active" value="Off">Off</button> \
                                             </div> \
@@ -393,7 +393,7 @@ function showPDBtable(element) {
                                             </div>');
 
         $(element + " #best_res").html('<div class2="pull-right"> \
-        <div class="btn-group btn-toggle" column="12" mode="'+ mode +'"> \
+        <div class="btn-group btn-toggle" column="13" mode="'+ mode +'"> \
                                             <button class="btn btn-xs btn-default" value="On">&nbsp;</button> \
                                             <button class="btn btn-xs btn-primary active" value="Off">Off</button> \
                                             </div> \
@@ -479,36 +479,37 @@ function showPDBtable(element) {
                 targets: "no-sort",
                 orderable: false
             },
-                {"targets": [ 7, 12 ],
+                {"targets": [ 8, 13 ],
                 "visible": false}],
             "aaSorting": [],
             "columns": [
                 {
                   "orderDataType": "dom-checkbox"
                 },
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                null, //uniprot
+                null, //gene
+                null, //GtoPdb
+                null, //Family
+                null, //Class
+                null, //Frac WT seq
+                null, //Species
+                null, //Species best !
+                null, //identity_to_human
+                null, //method
+                null, //pdb_id
+                null, //resolution
+                null, //resolution_best !
+                null, //state
+                null, //gprot_bound_likeness
+                null, //tm6_angle
+                null, //signal_protein
+                null, //signal_protein_subtype
+                null, //signal_protein_note
+                null, //signal_protein_seq_cons
+                null, //fusion
+                null, //antibody
+                null, //ligand
+                null, //ligand_function
             ],
         });
         console.timeEnd("DataTable");
@@ -525,6 +526,13 @@ function showPDBtable(element) {
                     column_number: 2,
                     filter_type: "multi_select",
                     select_type: "select2",
+                    filter_default_label: "Gene",
+                    filter_reset_button_text: false,
+                },
+                {
+                    column_number: 3,
+                    filter_type: "multi_select",
+                    select_type: "select2",
                     column_data_type: "html",
                     html_data_type: "text",
                     filter_default_label: "GtoPdb",
@@ -532,7 +540,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 3,
+                    column_number: 4,
                     filter_type: "multi_select",
                     select_type: "select2",
                     html_data_type: "text",
@@ -544,7 +552,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 4,
+                    column_number: 5,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Cl",
@@ -554,7 +562,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 5,
+                    column_number: 6,
                     filter_type: "range_number",
                     select_type_options: {
                         width: "70px"
@@ -563,7 +571,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 6,
+                    column_number: 7,
                     filter_type: "multi_select",
                     filter_container_id: mode_without_space + "_species",
                     select_type: "select2",
@@ -572,7 +580,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 7,
+                    column_number: 8,
                     filter_type: "select",
                     select_type: "select2",
                     select_type_options: {
@@ -583,7 +591,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 8,
+                    column_number: 9,
                     filter_type: "range_number",
                     select_type_options: {
                         width: "70px"
@@ -592,7 +600,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 9,
+                    column_number: 10,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Type",
@@ -602,7 +610,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 10,
+                    column_number: 11,
                     filter_type: "multi_select",
                     select_type: "select2",
                     select_type_options: {
@@ -612,7 +620,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 11,
+                    column_number: 12,
                     filter_type: "range_number",
                     select_type_options: {
                         width: "70px"
@@ -631,7 +639,7 @@ function showPDBtable(element) {
                 //     filter_reset_button_text: false,
                 // },
                 {
-                    column_number: 12,
+                    column_number: 13,
                     // filter_container_id: mode_without_space + "_best_res",
                     filter_type: "select",
                     select_type: "select2",
@@ -643,7 +651,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 13,
+                    column_number: 14,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "State",
@@ -673,7 +681,7 @@ function showPDBtable(element) {
 
                 // },
                 {
-                    column_number: 14,
+                    column_number: 15,
                     filter_type: "range_number",
                     select_type_options: {
                         width: "70px"
@@ -683,7 +691,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 15,
+                    column_number: 16,
                     filter_type: "range_number",
                     select_type_options: {
                         width: "70px"
@@ -700,7 +708,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },*/
                 {
-                    column_number: 16,
+                    column_number: 17,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Family",
@@ -710,7 +718,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 17,
+                    column_number: 18,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Subtype",
@@ -720,7 +728,7 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 19,
+                    column_number: 20,
                     filter_type: "range_number",
                     select_type_options: {
                         width: "50px"
@@ -730,14 +738,14 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 20,
+                    column_number: 21,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Fusion",
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 21,
+                    column_number: 22,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Antibody",
@@ -745,14 +753,14 @@ function showPDBtable(element) {
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 22,
+                    column_number: 23,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Ligand",
                     filter_reset_button_text: false,
                 },
                 {
-                    column_number: 23,
+                    column_number: 24,
                     filter_type: "multi_select",
                     select_type: "select2",
                     filter_default_label: "Modality",
