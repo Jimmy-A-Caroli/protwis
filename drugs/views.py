@@ -1,13 +1,14 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from django.db.models import Count, Max, Case, When, IntegerField
+from django.db.models import Count, Max, Case, When, IntegerField, Subquery, OuterRef
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.views.generic import TemplateView
 from structure.models import Structure
+from common.models import WebResource, WebLink
 from drugs.models import Drugs, Indication, ATCCodes, IndicationAssociation
 from protein.views import get_sankey_data
-from protein.models import Protein, ProteinFamily, TissueExpression
+from protein.models import Protein, ProteinFamily, TissueExpression, Gene
 from mapper.views import DataMapperHome
 from ligand.models import AssayExperiment, LigandID
 from ligand.functions import standardize_smiles
@@ -70,9 +71,19 @@ def Venn(request, origin="both"):
             'indication',
             'moa',
             'disease_association'
+        ).annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target__pk')).order_by('entrez_id').values('name')[:1]
+            ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target__pk')).order_by('entrez_id').values('entrez_id')[:1]
+            )
         ).values(
             'target',
             'target__entry_name',
+            'gene_name',
+            'gene_entrez_id',
             'target__name',
             'target__family__parent__name',
             'target__family__parent__parent__name',
@@ -101,7 +112,9 @@ def Venn(request, origin="both"):
         # Rename the columns to your desired format
         df.rename(columns={
             'target': 'TargetID',
-            'target__entry_name': "Gene name",
+            'target__entry_name': "Uniprot entry",
+            'gene_name': "Gene name",
+            'gene_entrez_id': "Gene_entrez_id",
             'target__name': "Protein name",
             'target__family__parent__name': 'Receptor family',
             'target__family__parent__parent__name': 'Ligand type',
@@ -120,6 +133,11 @@ def Venn(request, origin="both"):
             'disease_association__association_score': 'Association score',
             'drug_status': 'Approved'
         }, inplace=True)
+        
+        #Convert Gene_entrez_ids to web links
+        entrez_websource = WebResource.objects.get(slug="entrez_gene")        
+        df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
+        df.drop(columns=['Gene_entrez_id'], inplace=True)
 
         # Preprocess SMILES data
         extra_df = df.apply(DrugSectionSelection.process_smiles, axis=1)
