@@ -1315,8 +1315,16 @@ class TargetSelectionTool(TemplateView):
             family_id__slug__startswith='007'
         ).exclude(
             family_id__slug__startswith='008'
+        ).annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('pk')).order_by('entrez_id').values('name')[:1]
+            ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('pk')).order_by('entrez_id').values('entrez_id')[:1]
+            )
         ).values(
-            'id', 'entry_name', 'name', 'family__parent__name', 
+            'id', 'entry_name', 'gene_name', 'gene_entrez_id', 'name', 'family__parent__name', 
             'family__parent__parent__name', 'family__parent__parent__parent__name'
         )
 
@@ -1324,12 +1332,22 @@ class TargetSelectionTool(TemplateView):
         proteins_df = pd.DataFrame(list(all_proteins))
         proteins_df.rename(columns={
             'id': 'Target ID',
-            'entry_name': 'Gene name',
+            'entry_name': 'Uniprot entry',
+            'gene_name': 'Gene name',
+            'gene_entrez_id': 'Gene_entrez_id',
             'name': 'Protein name',
             'family__parent__name': 'Receptor family',
             'family__parent__parent__name': 'Ligand type',
             'family__parent__parent__parent__name': 'Class'
         }, inplace=True)
+
+        #Remove duplicates due to multiple gene synonyms on some target entries 
+        proteins_df = proteins_df.groupby(by=['Target ID'], as_index = False).first()
+
+        #Convert Gene_entrez_ids to web links
+        entrez_websource = WebResource.objects.get(slug="entrez_gene")        
+        proteins_df['Gene_entrez_weblink'] = proteins_df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
+        proteins_df.drop(columns=['Gene_entrez_id'], inplace=True)
 
         # Fetch all data in a single query
         table_data = Drugs.objects.select_related(
@@ -1365,7 +1383,7 @@ class TargetSelectionTool(TemplateView):
         # Rename the columns to your desired format
         df.rename(columns={
             'target': 'Target ID', # Target ID
-            'target__entry_name': 'Gene name', # Gene name
+            'target__entry_name': "Uniprot entry", # Uniprot entry name
             'target__name': 'Protein name', # Protein name
             'target__family__parent__name': 'Receptor family', # Receptor family
             'target__family__parent__parent__name': 'Ligand type', # Ligand type
@@ -1523,7 +1541,8 @@ class TargetSelectionTool(TemplateView):
 
         # Keep only the specified columns in df_first
         keep_col_names = [
-            'Target ID', 'Gene name', 'Protein name', 'Receptor family', 'Ligand type',
+            'Target ID', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 
+            'Protein name', 'Receptor family', 'Ligand type',
             'Class', 'Literature', 'Novelty (Pharos)', 'IDG',
             'Total', 'Active', 'Inactive', 'All_Max_Phase', 'All_Drugs', 'All_Agents',
             'Stimulatory_max_phase', 'Stimulatory_Drugs', 'Stimulatory_Agents',
@@ -1706,9 +1725,19 @@ class TargetSelectionTool(TemplateView):
             'target__family__parent__parent__parent',
             'moa',
             'indication'
+        ).annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target__pk')).order_by('entrez_id').values('name')[:1]
+            ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target__pk')).order_by('entrez_id').values('entrez_id')[:1]
+            )
         ).values(
             'target',  # Target ID
-            'target__entry_name',  # Gene name
+            'target__entry_name', # Uniprot entry name
+            'target__genes__name', # Gene name/symbol
+            'target__genes__entrez_id', # Gene NCBI/Entrez ID
             'target__name',  # Protein name
             'target__family__parent__name',  # Receptor family
             'target__family__parent__parent__name',  # Ligand type
@@ -1725,7 +1754,9 @@ class TargetSelectionTool(TemplateView):
         df_table_2 = pd.DataFrame(list(table_data_2))
         df_table_2.rename(columns={
             'target': 'Target ID',
-            'target__entry_name': 'Gene name',
+            'target__entry_name': "Uniprot entry",
+            'target__genes__name': "Gene name",
+            'target__genes__entrez_id': "Gene_entrez_id",
             'target__name': 'Protein name',
             'target__family__parent__name': 'Receptor family',
             'target__family__parent__parent__name': 'Ligand type',
@@ -1737,6 +1768,10 @@ class TargetSelectionTool(TemplateView):
             'disease_association__association_score': 'Association Score',
             'drug_status': 'Status'
         }, inplace=True)
+
+        #Convert Gene_entrez_ids to web links
+        df_table_2['Gene_entrez_weblink'] = df_table_2['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
+        df_table_2.drop(columns=['Gene_entrez_id'], inplace=True)
 
         # Classify based on status
         df_table_2['Classification'] = df_table_2['Status'].apply(
@@ -1778,7 +1813,7 @@ class TargetSelectionTool(TemplateView):
         def aggregate_table_fast(df):
             # Select unique rows for non-aggregated columns
             unique_df = df.drop_duplicates(subset=[
-                'Target ID', 'Gene name', 'Protein name', 'Receptor family',
+                'Target ID', 'Uniprot entry', 'Gene name', 'Protein name', 'Receptor family',
                 'Ligand type', 'Class', 'Master Indication', 'Indication',
                 'ATC Code', 'ATC Parent Name', 'ATC Name', 'Association Score','ICD11'
             ])
@@ -1828,7 +1863,7 @@ class TargetSelectionTool(TemplateView):
 
         # Retain only the specified columns
         keep_cols = [
-            'Target ID', 'Gene name', 'Protein name', 'Receptor family', 'Ligand type',
+            'Target ID', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 'Protein name', 'Receptor family', 'Ligand type',
             'Class', 'Master Indication', 'Indication', 'ATC Code',
             'ATC Parent Name', 'ATC Name', 'Association Score', 'Drug Count', 'Agent Count','ICD11'
         ]
@@ -1850,9 +1885,19 @@ class TargetSelectionTool(TemplateView):
             'indication'
         ).exclude(
             target__in=existing_target_ids  # Exclude targets that already exist in df_table_2
+        ).annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target__pk')).order_by('entrez_id').values('name')[:1]
+            ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target__pk')).order_by('entrez_id').values('entrez_id')[:1]
+            )
         ).values(
             'target',  # Target ID
-            'target__entry_name',  # Gene name
+            'target__entry_name',  # Uniprot entry
+            'gene_name', # Gene symbol/name
+            'gene_entrez_id', # Gene NCBI/entrez ID
             'target__name',  # Protein name
             'target__family__parent__name',  # Receptor family
             'target__family__parent__parent__name',  # Ligand type
@@ -1868,7 +1913,9 @@ class TargetSelectionTool(TemplateView):
 
         df_table_3.rename(columns={
             'target': 'Target ID',
-            'target__entry_name': 'Gene name',
+            'target__entry_name': 'Uniprot entry',
+            'gene_name' : "Gene name",
+            'gene_entrez_id' : "Gene_entrez_id", # Gene NCBI/entrez ID
             'target__name': 'Protein name',
             'target__family__parent__name': 'Receptor family',
             'target__family__parent__parent__name': 'Ligand type',
