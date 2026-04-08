@@ -133,9 +133,9 @@ def Venn(request, origin="both"):
             'disease_association__association_score': 'Association score',
             'drug_status': 'Approved'
         }, inplace=True)
-        
+
         #Convert Gene_entrez_ids to web links
-        entrez_websource = WebResource.objects.get(slug="entrez_gene")        
+        entrez_websource = WebResource.objects.get(slug="entrez_gene")
         df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
         df.drop(columns=['Gene_entrez_id'], inplace=True)
 
@@ -335,7 +335,7 @@ class DrugSectionSelection(TemplateView):
                 'ligand__name',  # Agent/Drug
                 'ligand__ligand_type__name',  # "type'
                 'ligand__smiles', # SMILES
-                'ligand__mw', 
+                'ligand__mw',
                 'ligand__sequence',
                 'moa__name',  # Modality
                 'indication__title',  # Disease name
@@ -553,7 +553,7 @@ class DrugSectionSelection(TemplateView):
             inhib_moa = ['Antagonist', 'Inverse agonist', 'NAM']
 
             #Convert Gene_entrez_ids to web links
-            entrez_websource = WebResource.objects.get(slug="entrez_gene")        
+            entrez_websource = WebResource.objects.get(slug="entrez_gene")
             df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
             df.drop(columns=['Gene_entrez_id'], inplace=True)
 
@@ -640,7 +640,7 @@ class DrugSectionSelection(TemplateView):
             # ###########################
             # Data Aggregation for Drugs
             # ###########################
-            group_cols_drugs = ['Indication ID', 'ICD11', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 'Drug name', 'LigandID', 'Indication name', 
+            group_cols_drugs = ['Indication ID', 'ICD11', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 'Drug name', 'LigandID', 'Indication name',
                                 'Protein name', 'Receptor family', 'Ligand type', 'Class', 'Molecule_type','Mode of action','Phase']
 
             # Precompute relevant columns
@@ -1342,7 +1342,7 @@ class TargetSelectionTool(TemplateView):
                 Gene.objects.filter(proteins=OuterRef('pk')).order_by('entrez_id').values('entrez_id')[:1]
             )
         ).values(
-            'id', 'entry_name', 'gene_name', 'gene_entrez_id', 'name', 'family__parent__name', 
+            'id', 'entry_name', 'gene_name', 'gene_entrez_id', 'name', 'family__parent__name',
             'family__parent__parent__name', 'family__parent__parent__parent__name'
         )
 
@@ -1359,11 +1359,11 @@ class TargetSelectionTool(TemplateView):
             'family__parent__parent__parent__name': 'Class'
         }, inplace=True)
 
-        #Remove duplicates due to multiple gene synonyms on some target entries 
+        #Remove duplicates due to multiple gene synonyms on some target entries
         proteins_df = proteins_df.groupby(by=['Target ID'], as_index = False).first()
 
         #Convert Gene_entrez_ids to web links
-        entrez_websource = WebResource.objects.get(slug="entrez_gene")        
+        entrez_websource = WebResource.objects.get(slug="entrez_gene")
         proteins_df['Gene_entrez_weblink'] = proteins_df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
         proteins_df.drop(columns=['Gene_entrez_id'], inplace=True)
 
@@ -1476,7 +1476,7 @@ class TargetSelectionTool(TemplateView):
         # Define a helper function to compute unique counts for drugs/agents
         def compute_unique_counts(df, group_cols, value_col, classification_col):
             """
-            Aggregates the unique count of `value_col` grouped by `group_cols` 
+            Aggregates the unique count of `value_col` grouped by `group_cols`
             and splits them by their classification.
             """
             grouped = df.groupby(group_cols)[[value_col, classification_col]].apply(
@@ -1559,7 +1559,7 @@ class TargetSelectionTool(TemplateView):
 
         # Keep only the specified columns in df_first
         keep_col_names = [
-            'Target ID', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 
+            'Target ID', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink',
             'Protein name', 'Receptor family', 'Ligand type',
             'Class', 'Literature', 'Novelty (Pharos)', 'IDG',
             'Total', 'Active', 'Inactive', 'All_Max_Phase', 'All_Drugs', 'All_Agents',
