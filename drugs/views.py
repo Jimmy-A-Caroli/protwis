@@ -437,6 +437,14 @@ class DrugSectionSelection(TemplateView):
                 'target__family__parent__parent__parent',  # All target info
                 'moa',
                 'disease_association'
+            ).annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target_id')).order_by('entrez_id').values('name')[:1]
+                ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('target_id')).order_by('entrez_id').values('entrez_id')[:1]
+                )
             ).values(
                 'indication',  # Indication ID
                 'indication__title',  # Indication name
@@ -450,7 +458,9 @@ class DrugSectionSelection(TemplateView):
                 'drug_status',  # Approval
                 'ligand__ligand_type__name',  # Molecule type
                 'moa__name',  # Mode of action
-                'target__entry_name',  # Gene name
+                'target__entry_name',  # Uniprot name
+                'gene_name', # Gene name
+                'gene_entrez_id', # Gene id
                 'target__name',  # Protein name
                 'target__family__parent__name',  # Receptor family
                 'target__family__parent__parent__name',  # Ligand type
@@ -500,7 +510,9 @@ class DrugSectionSelection(TemplateView):
                 'drug_status': 'Status',
                 'ligand__ligand_type__name': 'Molecule_type',
                 'moa__name': 'Mode of action',
-                'target__entry_name': 'Gene name',
+                'target__entry_name': 'Uniprot entry',
+                'gene_name' : 'Gene name',
+                'gene_entrez_id' : 'Gene_entrez_id',
                 'target__name': 'Protein name',
                 'target__family__parent__name': 'Receptor family',
                 'target__family__parent__parent__name': 'Ligand type',
@@ -540,6 +552,11 @@ class DrugSectionSelection(TemplateView):
             stim_moa = ['Partial agonist', 'Agonist', 'PAM']
             inhib_moa = ['Antagonist', 'Inverse agonist', 'NAM']
 
+            #Convert Gene_entrez_ids to web links
+            entrez_websource = WebResource.objects.get(slug="entrez_gene")        
+            df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
+            df.drop(columns=['Gene_entrez_id'], inplace=True)
+
             # Split the DataFrame into two: one for targets and one for drugs
             df_targets = df.copy()
             df_drugs = df.copy()
@@ -548,7 +565,7 @@ class DrugSectionSelection(TemplateView):
             # Data Aggregation for Targets
             # ###########################
             # Update group_cols to include 'Indication name'
-            group_cols = ['Indication ID', 'ICD11', 'Gene name', 'Indication name', 'Protein name', 'Receptor family', 'Ligand type', 'Class']
+            group_cols = ['Indication ID', 'ICD11', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 'Indication name', 'Protein name', 'Receptor family', 'Ligand type', 'Class']
 
             # Define disease association columns to be added to the grouping
             disease_cols = [
@@ -623,7 +640,8 @@ class DrugSectionSelection(TemplateView):
             # ###########################
             # Data Aggregation for Drugs
             # ###########################
-            group_cols_drugs = ['Indication ID', 'ICD11', 'Gene name', 'Drug name', 'LigandID', 'Indication name', 'Protein name', 'Receptor family', 'Ligand type', 'Class', 'Molecule_type','Mode of action','Phase']
+            group_cols_drugs = ['Indication ID', 'ICD11', 'Uniprot entry', 'Gene name', 'Gene_entrez_weblink', 'Drug name', 'LigandID', 'Indication name', 
+                                'Protein name', 'Receptor family', 'Ligand type', 'Class', 'Molecule_type','Mode of action','Phase']
 
             # Precompute relevant columns
             df_drugs['Is_Approved'] = df_drugs['Status'].apply(lambda x: 1 if x == 'Approved' else 0)
