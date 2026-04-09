@@ -157,7 +157,7 @@
                         filter_reset_button_text: false,
                     }, 
                     {
-                        column_number: 4,
+                        column_number: 5,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         column_data_type: "html",
@@ -167,7 +167,7 @@
                         filter_reset_button_text: false,
                     },
                     {
-                        column_number: 5,
+                        column_number: 6,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Class",
@@ -588,7 +588,7 @@
             <thead>
                     <tr style='max-height: 20px'>
                     <th class="protein-th" colspan=1></th>
-                    <th class="protein-th" colspan=6>Construct</th>
+                    <th class="protein-th" colspan=7>Construct</th>
                     <th class="parts4-th" colspan=1>Crystallization</th>
                     <th class="seq-th" colspan=4>Sequence modifications</th>
                     <th class="pdb-th" colspan=2></th>
@@ -599,6 +599,7 @@
                     <th class="protein-th">PDB</th>
                     <th class="protein-th">UniProt</th>
                     <th class="protein-th">Receptor</th>
+                    <th class="protein-th">Gene</th>
                     <th class="protein-th">Rec. Family</th>
                     <th class="protein-th">Class</th>
                     <th class="protein-th">Species</th>
@@ -621,6 +622,18 @@
                     <td><a href="{{ construct.name|safe}}">{{ construct.name|safe }}</a></td>
                     <td><span>{{ construct.protein.entry_short|safe }}</span></td>
                     <td><span>{{ construct.protein.short|safe }}</span></td>
+                    <td><span>
+                        {% if construct.protein.genes.first %}
+                            {% if construct.protein.genes.first.entrez_weblink %}
+                                <a href="{{ construct.protein.genes.first.entrez_weblink }}" target="_blank">{{construct.protein.genes.first | safe }}</a>
+                            {% else %}
+                                {{ construct.protein.genes.first }}
+                            {% endif %}
+                                
+                            {% else %}
+                            -
+                        {% endif %}
+                    </span></td>
                     <td><span>{{ construct.protein.family.parent.short|safe }}</span></td>
                     <td>{{ construct.protein.family.parent.parent.parent.short }}</td>
                     <td>{{ construct.protein.species.common_name }}</td>
@@ -669,6 +682,7 @@
                                 <th class="ali-td ali-td-first-col protein-th">PDB</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">UniProt</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Receptor</th>
+                                <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Gene</th>
                             </tr>
                             </thead>
 
@@ -680,6 +694,18 @@
                                     <td style='padding: 8px 10px;'><a href="{{ construct.name|safe}}">{{ construct.name|safe }}</a></td>
                                     <td style='padding: 8px 10px;'>{{ construct.protein.entry_short|safe }}</td>
                                     <td style='padding: 8px 10px;'>{{ construct.protein.short|safe }}</td>
+                                    <td><span>
+                                        {% if construct.protein.genes.first %}
+                                            {% if construct.protein.genes.first.entrez_weblink %}
+                                                <a href="{{ construct.protein.genes.first.entrez_weblink }}" target="_blank">{{construct.protein.genes.first | safe }}</a>
+                                            {% else %}
+                                                {{ construct.protein.genes.first }}
+                                            {% endif %}
+                                                
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </span></td>
                             </tr>       
                             {% endfor %}
                             </tbody>
@@ -754,6 +780,7 @@
                                 <th class="ali-td ali-td-first-col protein-th">PDB</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">UniProt</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Receptor</th>
+                                <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Gene</th>
                             </tr>
                             </thead>
 
@@ -765,6 +792,18 @@
                                     <td style='padding: 8px 10px;'><a href="{{ construct.name|safe}}">{{ construct.name|safe }}</a></td>
                                     <td style='padding: 8px 10px;'>{{ construct.protein.entry_short|safe }}</td>
                                     <td style='padding: 8px 10px;'>{{ construct.protein.short|safe }}</td>
+                                    <td><span>
+                                        {% if construct.protein.genes.first %}
+                                            {% if construct.protein.genes.first.entrez_weblink %}
+                                                <a href="{{ construct.protein.genes.first.entrez_weblink }}" target="_blank">{{construct.protein.genes.first | safe }}</a>
+                                            {% else %}
+                                                {{ construct.protein.genes.first }}
+                                            {% endif %}
+                                                
+                                            {% else %}
+                                            -
+                                        {% endif %}
+                                    </span></td>
                             </tr>       
                             {% endfor %}
                             </tbody>
