@@ -149,7 +149,7 @@ def getLigandCountTable():
             <thead>\
               <tr> \
                 <th colspan=1>&nbsp;</th> \
-                <th colspan=6>Receptor classification</th> \
+                <th colspan=7>Receptor classification</th> \
                 <th colspan=1>Ligands</th> \
                 <th colspan=2>Drugs</th> \
               </tr> \
@@ -161,6 +161,7 @@ def getLigandCountTable():
                 <th>Species<br>&nbsp;</th> \
                 <th style=\"color:red\">Receptor<br>(UniProt)</th> \
                 <th style=\"color:red\">Receptor<br>(GtP)</th> \
+                <th>Gene<br>&nbsp;</th> \
                 <th>Count</th> \
                 <th>Approved</th> \
                 <th>In clinical<br>trials</th> \
@@ -194,6 +195,14 @@ def getLigandCountTable():
                 t['family'] = p.family.parent.short()
                 t['uniprot'] = p.entry_short()
                 t['iuphar'] = p.family.name.replace("receptor", '').strip()
+                if(p.genes.first()):
+                    t['gene_name'] = p.genes.first().name
+                    t['gene_entrez'] = p.genes.first().entrez_id
+                    t['gene_weblink'] = p.genes.first().entrez_weblink if p.genes.first().entrez_id else None
+                else:
+                    t['gene_name'] = "-"
+                    t['gene_entrez'] = None
+                    t['gene_weblink'] = None
 
                 # Web resource links
                 #t['uniprot_link'] = ""
@@ -208,6 +217,11 @@ def getLigandCountTable():
                     #t['gtp_link'] = link_setup.format(p.web_links.filter(web_resource__slug='gtop')[0])
                     t['iuphar'] = link_setup.format(gtop_links[0], t['iuphar'])
 
+                if t['gene_weblink']:
+                    t['gene_display'] = link_setup.format(t['gene_weblink'], t['gene_name'])
+                else:
+                    t['gene_display'] = t['gene_name']
+
                 t['approved_target'] = approved[t['entry_name']] if t['entry_name'] in approved.keys() else 0
                 t['clinical_target'] = trials[t['entry_name']] if t['entry_name'] in trials.keys() else 0
 
@@ -220,13 +234,14 @@ def getLigandCountTable():
                 <td>{t['species']}</td>
                 <td><span class="expand">{t['uniprot']}</span></td>
                 <td><span class="expand">{t['iuphar']}</span></td>
+                <td><span>{t['gene_display']}</span></td> 
                 <td>{t['ligand_count']}</td>
                 <td>{t['approved_target']}</td>
                 <td>{t['clinical_target']}</td>
                 </tr> \n'''
 
         data_table += "</tbody></table>"
-        cache.set("ligand_count_table", data_table, 60*60*24*7)
+        # cache.set("ligand_count_table", data_table, 60*60*24*7)
 
     return data_table
 
@@ -475,7 +490,7 @@ def getReferenceTable(pathway, subtype):
                 <thead>\
                   <tr> \
                     <th colspan=1>&nbsp;</th> \
-                    <th colspan=6>Receptor classification</th> \
+                    <th colspan=7>Receptor classification</th> \
                     <th colspan=1 style=\"border-left: 1px solid black; text-align:left\">Number of ligands</th> \
                   </tr> \
                   <tr> \
@@ -486,6 +501,7 @@ def getReferenceTable(pathway, subtype):
                     <th>Species<br>&nbsp;</th> \
                     <th style=\"color:red\">Receptor<br>(UniProt)</th> \
                     <th style=\"color:red\">Receptor<br>(GtP)</th> \
+                    <th>Gene<br>&nbsp;</th> \
                     <th>Tested<br>(total)</th> \
                   </tr> \
                 </thead>\
@@ -496,7 +512,7 @@ def getReferenceTable(pathway, subtype):
                 <thead>\
                   <tr> \
                     <th colspan=1>&nbsp;</th> \
-                    <th colspan=6>Receptor classification</th> \
+                    <th colspan=7>Receptor classification</th> \
                     <th colspan=4 style=\"border-left: 1px solid black; text-align:left\">Number of ligands</th> \
                   </tr> \
                   <tr> \
@@ -507,6 +523,7 @@ def getReferenceTable(pathway, subtype):
                     <th>Species<br>&nbsp;</th> \
                     <th style=\"color:red\">Receptor<br>(UniProt)</th> \
                     <th style=\"color:red\">Receptor<br>(GtP)</th> \
+                    <th>Gene<br>&nbsp;</th> \
                     <th>Tested<br>(total)</th> \
                     <th>Balanced<br>references</th> \
                     <th>Pathway<br>biased *</th> \
@@ -536,6 +553,15 @@ def getReferenceTable(pathway, subtype):
             t['family'] = p.family.parent.short()
             t['uniprot'] = p.entry_short()
             t['iuphar'] = p.family.name.replace("receptor", '').strip()
+            if(p.genes.first()):
+                t['gene_name'] = p.genes.first().name
+                t['gene_entrez'] = p.genes.first().entrez_id
+                t['gene_weblink'] = p.genes.first().entrez_weblink if p.genes.first().entrez_id else None
+            else:
+                t['gene_name'] = "-"
+                t['gene_entrez'] = None
+                t['gene_weblink'] = None
+
 
             uniprot_links = p.web_links.filter(web_resource__slug='uniprot')
             if uniprot_links.count() > 0:
@@ -544,6 +570,11 @@ def getReferenceTable(pathway, subtype):
             gtop_links = p.web_links.filter(web_resource__slug='gtop')
             if gtop_links.count() > 0:
                 t['iuphar'] = link_setup.format(gtop_links[0], t['iuphar'])
+
+            if t['gene_weblink']:
+                t['gene_display'] = link_setup.format(t['gene_weblink'], t['gene_name'])
+            else:
+                t['gene_display'] = t['gene_name']
 
             # Ligand count
             t['ligand_count'] = 0
@@ -579,6 +610,7 @@ def getReferenceTable(pathway, subtype):
                 <td>{t['species']}</td>
                 <td><span class="expand">{t['uniprot']}</span></td>
                 <td><span class="expand">{t['iuphar']}</span></td>
+                <td><span class="expand">{t['gene_display']}</span></td> 
                 <td style="border-left: 1px solid black; text-align:left">{t['ligand_count']}</td>
                 </tr> \n'''
             else:
@@ -591,6 +623,7 @@ def getReferenceTable(pathway, subtype):
                 <td>{t['species']}</td> 
                 <td><span class="expand">{t['uniprot']}</span></td> 
                 <td><span class="expand">{t['iuphar']}</span></td> 
+                <td><span class="expand">{t['gene_display']}</span></td> 
                 <td style="border-left: 1px solid black; text-align:left">{t['ligand_count']}</td> 
                 <td data-search="{t['balanced_span']}">{t['balanced_refs']}</td> 
                 <td data-search="{t['pathway_span']}">{t['pathway_count']}</td> 
