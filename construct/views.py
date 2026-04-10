@@ -1467,6 +1467,14 @@ class ConstructMutations(TemplateView):
             p_class = class_names[p_class]
             entry_short = p.entry_short
             receptor_short = p.short
+            if p.genes.count() > 0:
+                if p.genes.first().entrez_weblink:
+                    gene_as_anchor = f'<a href="{p.genes.first().entrez_weblink}" target="_blank">{p.genes.first()}</a>'
+                else:
+                    gene_as_anchor = p.genes.first()
+            else:
+                gene_as_anchor = "-"
+
 
 
             if entry_name not in rs_lookup:
@@ -1481,7 +1489,7 @@ class ConstructMutations(TemplateView):
 
             key = mutation[1]+"_"+str(mutation[0].sequence_number)+"_"+mutation[0].mutated_amino_acid
             if key not in new_mutations:
-                new_mutations[key] = {'entry_name':entry_short,'receptor_short':receptor_short,'cname':cname, 'segment':segment,'pos': pos, 'gn': gn, 'wt': wt, 'mut': mut,'p_class': p_class, 'type': set(), 'pdbs': set()}
+                new_mutations[key] = {'entry_name':entry_short,'receptor_short':receptor_short,'gene_as_anchor':gene_as_anchor, 'cname':cname, 'segment':segment,'pos': pos, 'gn': gn, 'wt': wt, 'mut': mut,'p_class': p_class, 'type': set(), 'pdbs': set()}
             new_mutations[key]['type'].update(mut_types)
             new_mutations[key]['pdbs'].add(pdb)
 
