@@ -1723,6 +1723,9 @@ def stabilisation_browser(request):
         p_class_slug = prot.family.parent.parent.parent.slug
         p_ligand = prot.family.parent.parent.short()
         p_receptor = prot.family.parent.short()
+        p_gene_name =  str(prot.genes.first()) if prot.genes.count() > 0 else "-"
+        p_gene_weblink =  str(prot.genes.first().entrez_weblink ) if prot.genes.count() > 0 else "-"
+        p_gene_anchor = f'<a href="{p_gene_weblink}" target="_blank">{p_gene_name}</a>' if p_gene_weblink != 'None' else p_gene_name
         # print(p_receptor,'p_receptor')
         real_receptor = prot.entry_short
         real_receptor_iuphar = prot.short()
@@ -1749,6 +1752,7 @@ def stabilisation_browser(request):
                        'receptor': p_receptor,
                        'real_receptor': real_receptor,
                        'real_receptor_iuphar': real_receptor_iuphar,
+                       'gene_as_anchor': p_gene_anchor,
                        'wild_type':mutant_id["wild_type"],
                        'mutant':mutant_id['mutant'],
                        'state':state,
