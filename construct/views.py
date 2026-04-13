@@ -1842,15 +1842,16 @@ def stabilisation_browser(request):
             # Count the number of construct mutations recorded in the row.
             group[0]['GPCR_count'] += 1
             # Remove unnecessary items from the mutant info
-            info = {key:set((item,)) for key, item in mutant_info.items() if key not in attr['include_in_id']}
+            info = {key:item for key, item in mutant_info.items() if key not in attr['include_in_id']}
 
             if group[1] == {}:
                 # Initialise the dict with the first mutant.
-                group[1].update(info)
+                group[1] = {key:[item] for key, item in info.items()}
             else:
                  # Add the specific mutant info.
                 for key, item in info.items():
-                    group[1][key].update(item)
+                    if item not in group[1][key]:
+                        group[1][key].append(item) 
                 # Remove receptor family conservation info if row refers to >1 receptor family
                 if len(group[1]['receptor']) != 1:
                     group[0]["receptor_fam_cons"] = u'\u2014'
