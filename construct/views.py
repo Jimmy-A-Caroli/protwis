@@ -1475,6 +1475,8 @@ class ConstructMutations(TemplateView):
             else:
                 gene_as_anchor = "-"
 
+            species = p.species.common_name if p.species else "-"
+
 
 
             if entry_name not in rs_lookup:
@@ -1489,7 +1491,7 @@ class ConstructMutations(TemplateView):
 
             key = mutation[1]+"_"+str(mutation[0].sequence_number)+"_"+mutation[0].mutated_amino_acid
             if key not in new_mutations:
-                new_mutations[key] = {'entry_name':entry_short,'receptor_short':receptor_short,'gene_as_anchor':gene_as_anchor, 'cname':cname, 'segment':segment,'pos': pos, 'gn': gn, 'wt': wt, 'mut': mut,'p_class': p_class, 'type': set(), 'pdbs': set()}
+                new_mutations[key] = {'entry_name':entry_short,'receptor_short':receptor_short,'gene_as_anchor':gene_as_anchor,'species':species, 'cname':cname, 'segment':segment,'pos': pos, 'gn': gn, 'wt': wt, 'mut': mut,'p_class': p_class, 'type': set(), 'pdbs': set()}
             new_mutations[key]['type'].update(mut_types)
             new_mutations[key]['pdbs'].add(pdb)
 
