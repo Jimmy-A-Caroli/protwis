@@ -336,12 +336,12 @@ class ConstructStatistics(TemplateView):
                             truncations_new[position][p_class_name] = {'receptors':OrderedDict(),'no_cut':[], 'possiblities':[]}
                         if entry_name_pdb_state not in truncations_new[position][p_class_name]['receptors']:
                             truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state] = [[],[],[tm1_start[entry_name]-1]]
-                        if fusion_position!='nterm' or 1==1:
-                            if from_tm1 not in truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state][0]:
-                                truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state][0].append(from_tm1)
-                                if from_tm1 not in truncations_new_sum[position][p_class_name]:
-                                    truncations_new_sum[position][p_class_name][from_tm1] = 0
-                                truncations_new_sum[position][p_class_name][from_tm1] += 1
+                        
+                        if from_tm1 not in truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state][0]:
+                            truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state][0].append(from_tm1)
+                            if from_tm1 not in truncations_new_sum[position][p_class_name]:
+                                truncations_new_sum[position][p_class_name][from_tm1] = 0
+                            truncations_new_sum[position][p_class_name][from_tm1] += 1
                         # if from_tm1 not in truncations_new[position][p_class_name]['possiblities']:
                         #     truncations_new[position][p_class_name]['possiblities'].append(from_tm1)
                         #     truncations_new[position][p_class_name]['possiblities'] = sorted(truncations_new[position][p_class_name]['possiblities'])

@@ -745,6 +745,8 @@ class CouplingBrowser(TemplateView):
             protein_data[prot.id]['family'] = prot.family.parent.short()
             protein_data[prot.id]['uniprot'] = prot.entry_short()
             protein_data[prot.id]['iuphar'] = prot.family.name.replace('receptor', '').strip()
+            protein_data[prot.id]['genename'] = prot.genes.first().name if prot.genes.count() else ''
+            protein_data[prot.id]['entrezweblink'] = prot.genes.first().entrez_weblink if prot.genes.count() else ''
             protein_data[prot.id]['accession'] = prot.accession
             protein_data[prot.id]['entryname'] = prot.entry_name
             protein_data[prot.id]['gtp_fam_supp'] = []
@@ -904,6 +906,8 @@ class CouplingBrowser_deprecated(TemplateView):
             protein_data[prot.id]['family'] = prot.family.parent.short()
             protein_data[prot.id]['uniprot'] = prot.entry_short()
             protein_data[prot.id]['iuphar'] = prot.family.name.replace('receptor', '').strip()
+            protein_data[prot.id]['genename'] = prot.genes.first().name if prot.genes.count() else ''
+            protein_data[prot.id]['entrezweblink'] = prot.genes.first().entrez_weblink if prot.genes.count() else ''
             protein_data[prot.id]['accession'] = prot.accession
             protein_data[prot.id]['entryname'] = prot.entry_name
 
