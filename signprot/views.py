@@ -1425,7 +1425,7 @@ def CouplingProfiles(request, render_part="both", signalling_data="empty"):
 
         # Collect receptor information
         receptor_panel = Protein.objects.filter(entry_name__in=receptor_dictionary)\
-                                .prefetch_related("family", "family__parent__parent__parent")
+                                .prefetch_related("family", "family__parent__parent__parent", "genes")
 
         receptor_dictionary = {}
         for p in receptor_panel:
@@ -1434,8 +1434,11 @@ def CouplingProfiles(request, render_part="both", signalling_data="empty"):
             rec_ligandtype = p.family.parent.parent.short()
             rec_family = p.family.parent.short()
             rec_uniprot = p.entry_short()
+            rec_genename = p.genes.first().name if p.genes.first() else "-"
+            rec_entrezweblink = p.genes.first().entrez_weblink
+            rec_gene_as_anchor = f'<a href="{rec_entrezweblink}" target="_blank">{rec_genename}</a>' if rec_entrezweblink else rec_genename
             rec_iuphar = p.family.name.replace("receptor", '').replace("<i>","").replace("</i>","").strip()
-            receptor_dictionary[rec_uniprot] = [rec_class, rec_ligandtype, rec_family, rec_uniprot, rec_iuphar]
+            receptor_dictionary[rec_uniprot] = [rec_class, rec_ligandtype, rec_family, rec_uniprot, rec_gene_as_anchor, rec_iuphar]
 
         whole_receptors = Protein.objects.prefetch_related("family", "family__parent__parent__parent").filter(sequence_type__slug="wt", family__slug__startswith="0")
         whole_rec_dict = {}
