@@ -469,14 +469,26 @@ class ServeComplexModels(TemplateView):
                 "protein_conformation__protein__family__parent",
                 "protein_conformation__protein__family__parent__parent__parent",
                 "protein_conformation__protein__species",
+                "protein_conformation__protein__genes__name",
+                "protein_conformation__protein__genes__entrez_id",
                 "signprot_complex__protein",
                 "signprot_complex__protein__famliy",
-                "signprot_complex__protein__family__parent").values("structure_type__slug",
+                "signprot_complex__protein__family__parent").annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('name')[:1]
+            ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('entrez_id')[:1]
+            )
+        ).values("structure_type__slug",
                                                                     "pdb_code__index",
                                                                     "protein_conformation__protein__accession",
                                                                     "protein_conformation__protein__parent__accession",
                                                                     "protein_conformation__protein__parent__name",
                                                                     "protein_conformation__protein__entry_name",
+                                                                    "gene_name",
+                                                                    "gene_entrez_id",
                                                                     "protein_conformation__protein",
                                                                     "protein_conformation__protein__name",
                                                                     "protein_conformation__protein__family__name",
@@ -504,6 +516,8 @@ class ServeComplexModels(TemplateView):
                                                                                                                  "logemaxec50",
                                                                                                                  "protein__entry_name"))
 
+            entrez_websource = WebResource.objects.get(slug="entrez_gene")
+
             for i, cm in enumerate(complex_models):
                 ### Heterotrimer
                 if sep_dict[cm["pdb_code__index"]]==3:
@@ -517,6 +531,8 @@ class ServeComplexModels(TemplateView):
                 cm["Roth"] = "-"
                 cm["Bouvier"] = "-"
                 # cm["transduction"] = "-"
+                cm['gene_entrez_weblink'] = str(WebLink(index=cm['gene_entrez_id'], web_resource=entrez_websource)) if cm['gene_entrez_id'] != "" else ""
+            
                 for coupling in couplings_data:
                     if coupling["source"] == 'GuideToPharma':
                         if (cm["protein_conformation__protein__entry_name"] == coupling["protein__entry_name"]) and (cm["signprot_complex__protein__family__parent__name"] == coupling["g_protein__name"]):
