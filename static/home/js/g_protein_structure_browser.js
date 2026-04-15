@@ -87,7 +87,7 @@ function gproteinstructurebrowser(effector) {
           // "bSortCellsTop": true,
           "aaSorting": [],
           "autoWidth": false,
-          "order": [[29,"desc"],[1,"asc"]],
+          "order": [[30,"desc"],[1,"asc"]],
           "columnDefs": [
               { "targets": "no-sort", "orderable": false },
               { "targets": -1, "visible": false, "searchable": false } // hidden protein id
@@ -103,7 +103,7 @@ function gproteinstructurebrowser(effector) {
       column_filters = column_filters.concat(createYADCFfilters(1, 1, "multi_select", "select2", "Fam.", false, "exact", null, "50px"));
       column_filters = column_filters.concat(createYADCFfilters(2, 1, "multi_select", "select2", "&alpha", false, "exact", "html", "40px"));
       column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
-      column_filters = column_filters.concat(createYADCFfilters(3, 1, "multi_select", "select2", "Note", false, null, null, "80px"));
+      column_filters = column_filters.concat(createYADCFfilters(4, 1, "multi_select", "select2", "Note", false, null, null, "80px"));
       column_filters = column_filters.concat(createYADCFfilters(5, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
       column_filters = column_filters.concat(createYADCFfilters(6, 1, "multi_select", "select2", "&beta", false, "exact", "html", "40px"));
       column_filters = column_filters.concat(createYADCFfilters(7, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
@@ -113,21 +113,22 @@ function gproteinstructurebrowser(effector) {
       column_filters = column_filters.concat(createYADCFfilters(11, 2, "multi_select", "select2", "", false, null, "html", "50px"));
       column_filters = column_filters.concat(createYADCFfilters(13, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
       column_filters = column_filters.concat(createYADCFfilters(14, 1, "multi_select", "select2", "UniProt", false, "exact", "html", "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(15, 1, "multi_select", "select2", "IUPHAR", false, "exact", "html", "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(16, 1, "multi_select", "select2", "Receptor family", false, "exact", "html", "120px"));
-      column_filters = column_filters.concat(createYADCFfilters(17, 1, "multi_select", "select2", "Class", false, "exact", "html", "80px"));
-      column_filters = column_filters.concat(createYADCFfilters(18, 1, "multi_select", "select2", "Species", false, "exact", null, "55px"));
-      column_filters = column_filters.concat(createYADCFfilters(19, 1, "text", "select2", "Receptor fusion", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(20, 1, "text", "select2", "Antibodies", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(21, 1, "text", "select2", "Other", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(22, 1, "text", "select2", "Ligand name", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(23, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(24, 1, "multi_select", "select2", "Modality", false, "exact", null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(25, 1, "multi_select", "select2", "Ligand name", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(26, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(27, 1, "multi_select", "select2", "Last author", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(28, 1, "multi_select", "select2", "Reference", false, null, null, "140px"));
-      column_filters = column_filters.concat(createYADCFfilters(29, 1, "range_date", null, ["Min", "Max"], false, null, null, "30px"));
+      column_filters = column_filters.concat(createYADCFfilters(15, 1, "multi_select", "select2", "Gene", false, "exact", "html", "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(16, 1, "multi_select", "select2", "IUPHAR", false, "exact", "html", "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(17, 1, "multi_select", "select2", "Receptor family", false, "exact", "html", "120px"));
+      column_filters = column_filters.concat(createYADCFfilters(18, 1, "multi_select", "select2", "Class", false, "exact", "html", "80px"));
+      column_filters = column_filters.concat(createYADCFfilters(19, 1, "multi_select", "select2", "Species", false, "exact", null, "55px"));
+      column_filters = column_filters.concat(createYADCFfilters(20, 1, "text", "select2", "Receptor fusion", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(21, 1, "text", "select2", "Antibodies", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(22, 1, "text", "select2", "Other", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(23, 1, "text", "select2", "Ligand name", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(24, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(25, 1, "multi_select", "select2", "Modality", false, "exact", null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(26, 1, "multi_select", "select2", "Ligand name", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(27, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(28, 1, "multi_select", "select2", "Last author", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(29, 1, "multi_select", "select2", "Reference", false, null, null, "140px"));
+      column_filters = column_filters.concat(createYADCFfilters(30, 1, "range_date", null, ["Min", "Max"], false, null, null, "30px"));
     } else {
       // Arrestin browser has historically drifted between header and body column counts.
       // Normalize header to body BEFORE DataTables init to avoid '_DT_CellIndex' crashes.
@@ -161,28 +162,29 @@ function gproteinstructurebrowser(effector) {
       column_filters = column_filters.concat(createYADCFfilters(3, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
       // Receptor Block
       column_filters = column_filters.concat(createYADCFfilters(4, 1, "multi_select", "select2", "UniProt", false, "exact", "html", "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(5, 1, "multi_select", "select2", "IUPHAR", false, "exact", "html", "60px"));
-      column_filters = column_filters.concat(createYADCFfilters(6, 1, "multi_select", "select2", "Receptor family", false, "exact", "html", "120px"));
-      column_filters = column_filters.concat(createYADCFfilters(7, 1, "multi_select", "select2", "Class", false, "exact", "html", "80px"));
-      column_filters = column_filters.concat(createYADCFfilters(8, 1, "multi_select", "select2", "Species", false, "exact", null, "55px"));
+      column_filters = column_filters.concat(createYADCFfilters(5, 1, "multi_select", "select2", "Gene", false, "exact", "html", "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(6, 1, "multi_select", "select2", "IUPHAR", false, "exact", "html", "60px"));
+      column_filters = column_filters.concat(createYADCFfilters(7, 1, "multi_select", "select2", "Receptor family", false, "exact", "html", "120px"));
+      column_filters = column_filters.concat(createYADCFfilters(8, 1, "multi_select", "select2", "Class", false, "exact", "html", "80px"));
+      column_filters = column_filters.concat(createYADCFfilters(9, 1, "multi_select", "select2", "Species", false, "exact", null, "55px"));
       // Arrestin block
-      column_filters = column_filters.concat(createYADCFfilters(9, 1, "multi_select", "select2", "Fam.", false, "exact", null, "50px"));
-      column_filters = column_filters.concat(createYADCFfilters(10, 1, "multi_select", "select2", "Arrestin", false, "exact", "html", "40px"));
-      column_filters = column_filters.concat(createYADCFfilters(11, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
-      column_filters = column_filters.concat(createYADCFfilters(12, 1, "multi_select", "select2", "Note", false, null, null, "80px"));
-      column_filters = column_filters.concat(createYADCFfilters(13, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
+      column_filters = column_filters.concat(createYADCFfilters(10, 1, "multi_select", "select2", "Fam.", false, "exact", null, "50px"));
+      column_filters = column_filters.concat(createYADCFfilters(11, 1, "multi_select", "select2", "Arrestin", false, "exact", "html", "40px"));
+      column_filters = column_filters.concat(createYADCFfilters(12, 1, "multi_select", "select2", "Species", false, null, null, "55px"));
+      column_filters = column_filters.concat(createYADCFfilters(13, 1, "multi_select", "select2", "Note", false, null, null, "80px"));
+      column_filters = column_filters.concat(createYADCFfilters(14, 1, "range_number", null, ["Min", "Max"], false, null, null, "30px"));
       // Other proteins block
-      column_filters = column_filters.concat(createYADCFfilters(14, 1, "text", "select2", "Receptor fusion", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(15, 1, "text", "select2", "Antibodies", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(16, 1, "text", "select2", "Other", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(17, 1, "text", "select2", "Ligand name", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(18, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(19, 1, "multi_select", "select2", "Modality", false, "exact", null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(15, 1, "text", "select2", "Receptor fusion", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(16, 1, "text", "select2", "Antibodies", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(17, 1, "text", "select2", "Other", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(18, 1, "text", "select2", "Ligand name", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(19, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(20, 1, "multi_select", "select2", "Modality", false, "exact", null, "100px"));
       // column_filters = column_filters.concat(createYADCFfilters(21, 1, "multi_select", "select2", "Ligand name", false, null, null, "100px"));
       // column_filters = column_filters.concat(createYADCFfilters(22, 1, "multi_select", "select2", "Ligand type", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(20, 1, "multi_select", "select2", "Last author", false, null, null, "100px"));
-      column_filters = column_filters.concat(createYADCFfilters(21, 1, "multi_select", "select2", "Reference", false, null, null, "140px"));
-      column_filters = column_filters.concat(createYADCFfilters(22, 1, "range_date", null, ["Min", "Max"], false, null, null, "30px"));
+      column_filters = column_filters.concat(createYADCFfilters(21, 1, "multi_select", "select2", "Last author", false, null, null, "100px"));
+      column_filters = column_filters.concat(createYADCFfilters(22, 1, "multi_select", "select2", "Reference", false, null, null, "140px"));
+      column_filters = column_filters.concat(createYADCFfilters(23, 1, "range_date", null, ["Min", "Max"], false, null, null, "30px"));
   }
     yadcf.init(oTable2, column_filters, {
       cumulative_filtering: false

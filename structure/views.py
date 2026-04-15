@@ -27,7 +27,7 @@ from construct.functions import convert_ordered_to_disordered_annotation,add_con
 from common.views import AbsSegmentSelection,AbsReferenceSelection
 from common.selection import Selection, SelectionItem
 from common.extensions import MultiFileField
-from common.models import ReleaseNotes, WebLink
+from common.models import ReleaseNotes, WebLink, WebResource
 from common.alignment import Alignment, GProteinAlignment
 from common.definitions import G_PROTEIN_DISPLAY_NAME, ARRESTIN_DISPLAY_NAME
 from residue.models import Residue, ResidueNumberingScheme, ResiduePositionSet
@@ -469,14 +469,26 @@ class ServeComplexModels(TemplateView):
                 "protein_conformation__protein__family__parent",
                 "protein_conformation__protein__family__parent__parent__parent",
                 "protein_conformation__protein__species",
+                "protein_conformation__protein__genes__name",
+                "protein_conformation__protein__genes__entrez_id",
                 "signprot_complex__protein",
                 "signprot_complex__protein__famliy",
-                "signprot_complex__protein__family__parent").values("structure_type__slug",
+                "signprot_complex__protein__family__parent").annotate(
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('name')[:1]
+            ),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('entrez_id')[:1]
+            )
+        ).values("structure_type__slug",
                                                                     "pdb_code__index",
                                                                     "protein_conformation__protein__accession",
                                                                     "protein_conformation__protein__parent__accession",
                                                                     "protein_conformation__protein__parent__name",
                                                                     "protein_conformation__protein__entry_name",
+                                                                    "gene_name",
+                                                                    "gene_entrez_id",
                                                                     "protein_conformation__protein",
                                                                     "protein_conformation__protein__name",
                                                                     "protein_conformation__protein__family__name",
@@ -504,6 +516,8 @@ class ServeComplexModels(TemplateView):
                                                                                                                  "logemaxec50",
                                                                                                                  "protein__entry_name"))
 
+            entrez_websource = WebResource.objects.get(slug="entrez_gene")
+
             for i, cm in enumerate(complex_models):
                 ### Heterotrimer
                 if sep_dict[cm["pdb_code__index"]]==3:
@@ -517,6 +531,8 @@ class ServeComplexModels(TemplateView):
                 cm["Roth"] = "-"
                 cm["Bouvier"] = "-"
                 # cm["transduction"] = "-"
+                cm['gene_entrez_weblink'] = str(WebLink(index=cm['gene_entrez_id'], web_resource=entrez_websource)) if cm['gene_entrez_id'] != "" else ""
+            
                 for coupling in couplings_data:
                     if coupling["source"] == 'GuideToPharma':
                         if (cm["protein_conformation__protein__entry_name"] == coupling["protein__entry_name"]) and (cm["signprot_complex__protein__family__parent__name"] == coupling["g_protein__name"]):
@@ -4988,6 +5004,7 @@ class LigandComplexModels(TemplateView):
     def get_context_data(self, **kwargs):
         context = super(LigandComplexModels, self).get_context_data(**kwargs)
         try:
+
             # Get the structure models along with prefetching ligands and related data
             structures = Structure.objects.filter(
                 structure_type__slug__in=['af-signprot-peptide', 'af-rfaa-sm']
@@ -4998,7 +5015,6 @@ class LigandComplexModels(TemplateView):
                 "protein_conformation__protein__family__parent__parent__parent",
                 "protein_conformation__protein__species",
                 "protein_conformation__protein__parent__family",
-                "protein_conformation__protein__genes",
                 "pdb_code",
                 Prefetch(
                     "structureafscores_set",
@@ -5018,7 +5034,12 @@ class LigandComplexModels(TemplateView):
                     ),
                     to_attr="prefetch_ligands"
                 )
-            ).annotate(
+            ).annotate(                
+            #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
+            gene_name=Subquery(
+                Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('name')[:1]),
+            gene_entrez_id=Subquery(
+                Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('entrez_id')[:1]),
                 experimental_pdb_exists=Exists(
                     StructureLigandInteraction.objects.filter(
                         structure__structure_type__slug__in=[
@@ -5038,6 +5059,8 @@ class LigandComplexModels(TemplateView):
                 experimental_pdb_exists=True
             )
 
+            entrez_websource = WebResource.objects.get(slug="entrez_gene")
+
             # Process each ligand using standardize_smiles
             # We assume that each structure has a prefetch_ligands list with at least one element.
             for structure in structures:
@@ -5052,6 +5075,7 @@ class LigandComplexModels(TemplateView):
                         # Attach these values to the ligand instance so that your template can access them
                         ligand.smiles_for_image = smiles_for_image
                         ligand.picture = picture_flag
+                structure.gene_entrez_weblink = str(WebLink(index=structure.gene_entrez_id, web_resource=entrez_websource)) if structure.gene_entrez_id != "" else None
 
             context['structure_model'] = structures
 

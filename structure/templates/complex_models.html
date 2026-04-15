@@ -164,6 +164,19 @@
                         select_type: "select2",
                         column_data_type: "html",
                         html_data_type: "text",
+                        filter_default_label: "Gene",
+                        filter_match_mode : "exact",
+                        filter_reset_button_text: false,
+                        select_type_options: {
+                            width: "60px",
+                        }
+                    },
+                    {
+                        column_number : 5,
+                        filter_type: "multi_select",
+                        select_type: "select2",
+                        column_data_type: "html",
+                        html_data_type: "text",
                         filter_default_label: "GtoPdb",
                         filter_match_mode : "exact",
                         filter_reset_button_text: false,
@@ -172,7 +185,7 @@
                         }
                     },
                     {
-                        column_number: 5,
+                        column_number: 6,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Family",
@@ -182,7 +195,7 @@
                         }
                     },
                     {
-                        column_number : 6,
+                        column_number : 7,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Class",
@@ -192,7 +205,7 @@
                         }
                     },
                     {
-                        column_number : 7,
+                        column_number : 8,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Subtype",
@@ -203,7 +216,7 @@
                         }
                     },
                     {
-                        column_number : 8,
+                        column_number : 9,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Family",
@@ -213,7 +226,7 @@
                         }
                     },
                     {
-                        column_number : 9,
+                        column_number : 10,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "Heterotrimer",
@@ -241,7 +254,7 @@
                     //     }
                     // },
                     {
-                        column_number : 10,
+                        column_number : 11,
                         filter_type: "multi_select",
                         select_type: 'select2',
                         filter_default_label: "",
@@ -251,7 +264,7 @@
                         }
                     },
                     {
-                        column_number : 11,
+                        column_number : 12,
                         filter_type: "range_date",
                         date_format: "yyyy-mm-dd",
                         select_type: 'select2',
@@ -553,7 +566,7 @@
                 <tr class='over_header' style='max-height: 20px'>
                     <th colspan=1 class="over_header"></th>
                     <th colspan=1 class="over_header">   MODEL   </th>
-                    <th colspan=5 class="over_header">RECEPTOR</th>
+                    <th colspan=6 class="over_header">RECEPTOR</th>
                     {% if signalling_protein == 'af-signprot' %}
                     <th colspan=3 class="over_header">G PROTEIN</th>
                     {% else %}
@@ -567,6 +580,7 @@
                 <tr class='over_header cenetered-header'>
                     <th class='rightborder'></th>
                     <th class='rightborder'></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>
@@ -587,6 +601,7 @@
                     <th class='no-sort checkbox_tr rightborder'><input class="select-all" type="checkbox" onclick="select_all(this)"></th>
                     <th class='rightborder'></th>
                     <th>GPCRdb</th>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>
@@ -618,6 +633,17 @@
                     {% endif %}
                     <td class="text-center"><a target="_blank" href="/protein/{{ model.protein_conformation__protein__entry_name }}"><img width="12px" height="12px" class="gpcrdb-link" src="{% static 'home/logo/gpcr/main.png' %}"></a></td>
                     <td><a target="_blank" href="http://www.uniprot.org/uniprot/{{ model.protein_conformation__protein__accession }}">{{ model.protein_conformation__protein__entry_name|entry_short }}</a></td>
+                    <td>
+                        {% if model.gene_name %}
+                            {% if model.gene_entrez_weblink %}
+                                <a href="{{ model.gene_entrez_weblink }}" target="_blank">{{ model.gene_name | safe }}</a>
+                            {% else %}
+                                <span>{{ model.gene_name | safe }}</span>
+                            {% endif %}                                    
+                        {% else %}
+                            </span>-</span>
+                        {% endif %}
+                    </td>
                     <td><span>{{ model.protein_conformation__protein__name|receptor_short|safe }}</span></td>
                     <td>{{ model.protein_conformation__protein__family__parent__name }}</td>
                     <td>{{ model.protein_conformation__protein__family__parent__parent__parent__name|cut_classname }}</td>
