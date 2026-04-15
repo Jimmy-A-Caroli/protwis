@@ -336,7 +336,7 @@ class ConstructStatistics(TemplateView):
                             truncations_new[position][p_class_name] = {'receptors':OrderedDict(),'no_cut':[], 'possiblities':[]}
                         if entry_name_pdb_state not in truncations_new[position][p_class_name]['receptors']:
                             truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state] = [[],[],[tm1_start[entry_name]-1]]
-                        
+
                         if from_tm1 not in truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state][0]:
                             truncations_new[position][p_class_name]['receptors'][entry_name_pdb_state][0].append(from_tm1)
                             if from_tm1 not in truncations_new_sum[position][p_class_name]:
@@ -1851,7 +1851,7 @@ def stabilisation_browser(request):
                  # Add the specific mutant info.
                 for key, item in info.items():
                     if item not in group[1][key]:
-                        group[1][key].append(item) 
+                        group[1][key].append(item)
                 # Remove receptor family conservation info if row refers to >1 receptor family
                 if len(group[1]['receptor']) != 1:
                     group[0]["receptor_fam_cons"] = u'\u2014'
