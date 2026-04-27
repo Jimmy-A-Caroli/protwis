@@ -159,7 +159,7 @@ class PhosphorylationBrowser(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         sites = self.calculating()
-        context['fixed_headers'] = ['uniprot', 'gtodb', 'family', 'class']
+        context['fixed_headers'] = ['uniprot', 'gene', 'gtodb', 'family', 'class']
         context['segment_headers'] = self._headers()['headers']
         context['extra_headers'] = ['log(Emax/EC50)', 'emax', 'pEC50']
 
@@ -276,6 +276,7 @@ class PhosphorylationBrowser(TemplateView):
             # Construct base data
             base_data = {
                 'uniprot': self.get_uniprot_link(protein),  # GPCR
+                'gene': self.get_gene_link(protein),
                 'gtodb': self.get_gtodb_link(protein),
                 'family': parent1.name.replace('receptors', '').replace('Class', '') if parent1 else '',
                 'class': parent3.name.split(' ')[1] if parent3 else '',
@@ -351,6 +352,23 @@ class PhosphorylationBrowser(TemplateView):
             )
         else:
             return protein.entry_name.split("_")[0].upper()
+        
+    def get_gene_link(self, protein):
+        """Retrieve the gene link for the protein."""
+        
+        gene_display = None
+
+        if protein.genes.count() > 0:
+            if protein.genes.first().entrez_id:
+                gene_display = format_html(
+                '<a href="{}" target="_blank">{}</a>',
+                protein.genes.first().entrez_weblink,
+                protein.genes.first().name
+            )
+            else:
+                gene_display = protein.genes.first().name
+
+        return gene_display
 
     def get_gtodb_link(self, protein):
         """Retrieve the Guide to Pharmacology link for the protein."""
