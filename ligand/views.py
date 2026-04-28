@@ -1933,9 +1933,9 @@ class UserBiased(AbsReferenceSelectionTable):
     #Biased Effector Subtype Tau/KA Rank Order (Ligand Selection)
     'TauRankOrderSubtype': "submitSelection('/biased_signalling/userbiasedsubtypes_tau_rank_order');",
     #Biased Effector Subtype Emax/EC50 Pathway Profiles (Ligand Selection)
-    'EmaxPathProfilesSubtype': "submitSelection('/biased_signalling/userbiasedsubtypes_emax_path_profile');",
+    'EmaxPathProfileSubtype': "submitSelection('/biased_signalling/userbiasedsubtypes_emax_path_profile');",
     #Biased Effector Subtype Tau/KA Pathway Profiles (Ligand Selection)
-    'TauPathProfilesSubtype': "submitSelection('/biased_signalling/userbiasedsubtypes_tau_path_profile');"}
+    'TauPathProfileSubtype': "submitSelection('/biased_signalling/userbiasedsubtypes_tau_path_profile');"}
 
     selection_boxes = OrderedDict([
         ('reference', True),
