@@ -31,7 +31,14 @@
         return "";
     }
 
-    base_defaults = {
+    ////////////////////////////
+    //// Column definitions ////
+    ////////////////////////////
+    
+    ///// Filter Types /////
+    
+    //Initialisation of basic defaults for a null filter column
+    const base_defaults = {
         filter_type: 'none',
         select_type: null,
         filter_default_label: "",
@@ -42,16 +49,19 @@
     }
 
     //Columns definitions for a multiselect text based filter
-    multiselect_defaults = {
+    const multiselect_defaults = {
         ...base_defaults,
         filter_type: "multi_select",
         select_type: 'select2',
         filter_default_label: 'Select',
         filter_reset_button_text: false,
+        column_data_type: "text",
         width: "80px",
     }
 
-    structures_coldefs = {
+    /// Table Column Definitions ///
+
+    const structures_coldefs = {
         info : {column_number: 0, ...base_defaults},
         receptor_class : {column_number: 1, ...multiselect_defaults},
         receptor_recfam : {column_number: 2, ...multiselect_defaults},
@@ -108,7 +118,7 @@
             scrollX: '100%',
             scrollY: '70vh',
             scrollCollapse: true,
-            order: [[4, "desc"]],
+            order: [[structures_coldefs.receptor_gtp.column_number, "desc"]],
             AutoWidth: false,
             paging: true,
             lengthMenu: [[100, -1],[100, "All"]],

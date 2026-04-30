@@ -251,8 +251,14 @@
   <script>
     $(document).ready(function() {
 
-    //Base column filter definition
-    base_defaults = {
+    ////////////////////////////
+    //// Column definitions ////
+    ////////////////////////////
+    
+    ///// Filter Types /////
+    
+    //Initialisation of basic defaults for a null filter column
+    const base_defaults = {
         filter_type: 'none',
         select_type: null,
         filter_default_label: "",
@@ -263,24 +269,28 @@
     }
 
     //Columns definitions for a multiselect text based filter
-    multiselect_defaults = {
+    const multiselect_defaults = {
         ...base_defaults,
         filter_type: "multi_select",
         select_type: 'select2',
         filter_default_label: 'select',
+        column_data_type: 'text',
         filter_reset_button_text: false,
     }
 
     //Columns definitions for a numeric range filter
-    range_number_defaults = {
+    const range_number_defaults = {
         ...base_defaults,
         filter_type: "range_number",
         filter_default_label: ['Min', 'Max'],
         filter_reset_button_text: false,
     }
 
+    
+    /// Table Column Definitions ///
+    
     //Phosphorylation site table column definitions
-    phospho_site_col_defs = {
+    const phospho_site_col_defs = {
         selector : { column_number: 0, ...base_defaults, },
         receptor_uniprot : { column_number: 1, ...multiselect_defaults, },
         receptor_gene : { column_number: 2, ...multiselect_defaults, },
@@ -354,8 +364,6 @@
         columnDefs: [
           { targets: 'segment-col', visible: true },
           {
-            // targets: [3,4,28],
-            
             targets: ["icl3_segment_seq", "icl3_p_sites_seq", "cterm_segment_seq","cterm_p_sites_seq" , 
                         "cterm_p_sites_longest_seq", "cterm_o_sites_seq", "cterm_o_sites_longest_seq"].map(col => phospho_site_col_defs[col].column_number),
             //width: '30rem !important', 

@@ -255,7 +255,7 @@ class StructureDataJsonView(View):
                 out.append({
                     "id": s.id,
                     "uniprot_link": f"http://www.uniprot.org/uniprot/{pp.accession}",
-                    "Gene": { "name": gene_name, "entrez_url": gene_href },
+                    "gene": { "name": gene_name, "entrez_url": gene_href },
                     "entry_name": pp.entry_name,
                     "gpcrdb_link": gpcrdb_link,
                     "iuphar_link": iuphar_link,

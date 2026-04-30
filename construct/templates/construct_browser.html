@@ -598,8 +598,8 @@
                     <th class="protein-th"><input class="select-all" type="checkbox" onclick="select_all(this)"></th>
                     <th class="protein-th">PDB</th>
                     <th class="protein-th">UniProt</th>
-                    <th class="protein-th">Receptor</th>
                     <th class="protein-th">Gene</th>
+                    <th class="protein-th">Receptor</th>
                     <th class="protein-th">Rec. Family</th>
                     <th class="protein-th">Class</th>
                     <th class="protein-th">Species</th>
@@ -621,7 +621,6 @@
                     <td class="text-center"><input class="alt" type="checkbox" id="{{ construct.pk }}" cname="{{ construct.name|safe}}"></td>
                     <td><a href="{{ construct.name|safe}}">{{ construct.name|safe }}</a></td>
                     <td><span>{{ construct.protein.entry_short|safe }}</span></td>
-                    <td><span>{{ construct.protein.short|safe }}</span></td>
                     <td><span>
                         {% if construct.protein.genes.first %}
                             {% if construct.protein.genes.first.entrez_weblink %}
@@ -634,6 +633,7 @@
                             -
                         {% endif %}
                     </span></td>
+                    <td><span>{{ construct.protein.short|safe }}</span></td>
                     <td><span>{{ construct.protein.family.parent.short|safe }}</span></td>
                     <td>{{ construct.protein.family.parent.parent.parent.short }}</td>
                     <td>{{ construct.protein.species.common_name }}</td>
@@ -681,8 +681,8 @@
                                 <th class="ali-td ali-td-first-col protein-th"><input class="select-all" type="checkbox" onclick="select_all(this)"></th>
                                 <th class="ali-td ali-td-first-col protein-th">PDB</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">UniProt</th>
-                                <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Receptor</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Gene</th>
+                                <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Receptor</th>
                             </tr>
                             </thead>
 
@@ -693,7 +693,6 @@
                                     <td style='padding: 8px 10px;min-width: 35px;text-align: center' ><input class="alt" type="checkbox" id="{{ construct.pk }}" cname="{{ construct.name|safe}}"></td>
                                     <td style='padding: 8px 10px;'><a href="{{ construct.name|safe}}">{{ construct.name|safe }}</a></td>
                                     <td style='padding: 8px 10px;'>{{ construct.protein.entry_short|safe }}</td>
-                                    <td style='padding: 8px 10px;'>{{ construct.protein.short|safe }}</td>
                                     <td><span>
                                         {% if construct.protein.genes.first %}
                                             {% if construct.protein.genes.first.entrez_weblink %}
@@ -706,6 +705,7 @@
                                             -
                                         {% endif %}
                                     </span></td>
+                                    <td style='padding: 8px 10px;'>{{ construct.protein.short|safe }}</td>                                    
                             </tr>       
                             {% endfor %}
                             </tbody>
@@ -779,8 +779,8 @@
                                 <th class="ali-td ali-td-first-col protein-th"><input class="select-all" type="checkbox" onclick="select_all(this)"></th>
                                 <th class="ali-td ali-td-first-col protein-th">PDB</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">UniProt</th>
-                                <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Receptor</th>
                                 <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Gene</th>
+                                <th class="ali-td ali-td-first-col protein-th receptor_sorting cus_sorting">Receptor</th>
                             </tr>
                             </thead>
 
@@ -791,7 +791,6 @@
                                     <td style='padding: 8px 10px;min-width: 35px;text-align: center' ><input class="alt" type="checkbox" id="{{ construct.pk }}" cname="{{ construct.name|safe}}"></td>
                                     <td style='padding: 8px 10px;'><a href="{{ construct.name|safe}}">{{ construct.name|safe }}</a></td>
                                     <td style='padding: 8px 10px;'>{{ construct.protein.entry_short|safe }}</td>
-                                    <td style='padding: 8px 10px;'>{{ construct.protein.short|safe }}</td>
                                     <td><span>
                                         {% if construct.protein.genes.first %}
                                             {% if construct.protein.genes.first.entrez_weblink %}
@@ -804,6 +803,7 @@
                                             -
                                         {% endif %}
                                     </span></td>
+                                    <td style='padding: 8px 10px;'>{{ construct.protein.short|safe }}</td>
                             </tr>       
                             {% endfor %}
                             </tbody>

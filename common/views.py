@@ -160,8 +160,8 @@ def getLigandCountTable():
                 <th style=\"width; 100px;\">Family<br>&nbsp;</th> \
                 <th>Species<br>&nbsp;</th> \
                 <th style=\"color:red\">Receptor<br>(UniProt)</th> \
-                <th style=\"color:red\">Receptor<br>(GtP)</th> \
                 <th>Gene<br>&nbsp;</th> \
+                <th style=\"color:red\">Receptor<br>(GtP)</th> \
                 <th>Count</th> \
                 <th>Approved</th> \
                 <th>In clinical<br>trials</th> \
@@ -233,8 +233,8 @@ def getLigandCountTable():
                 <td>{t['family']}</td>
                 <td>{t['species']}</td>
                 <td><span class="expand">{t['uniprot']}</span></td>
-                <td><span class="expand">{t['iuphar']}</span></td>
                 <td><span>{t['gene_display']}</span></td> 
+                <td><span class="expand">{t['iuphar']}</span></td>
                 <td>{t['ligand_count']}</td>
                 <td>{t['approved_target']}</td>
                 <td>{t['clinical_target']}</td>
@@ -320,8 +320,8 @@ def getTargetTable():
                 <th>Ligand type<br>&nbsp;</th> \
                 <th style=\"width; 100px;\">Family<br>&nbsp;</th> \
                 <th style=\"color:red\">Receptor<br>(UniProt)</th> \
-                <th style=\"color:red\">Receptor<br>(GtP)</th> \
                 <th>Gene<br>&nbsp;</th> \
+                <th style=\"color:red\">Receptor<br>(GtP)</th> \
                 <th>Count</th> \
                 <th>Count</th> \
                 <th>PDB(s)<br>&nbsp;</th> \
@@ -420,8 +420,8 @@ def getTargetTable():
             <td>{t["ligandtype"]}</td> 
             <td>{t["family"]}</td> 
             <td><span class="expand">{t["uniprot"]}</span></td> 
-            <td><span class="expand">{t["iuphar"]}</span></td> 
             <td><span>{t['gene_display']}</span></td> 
+            <td><span class="expand">{t["iuphar"]}</span></td> 
             <td>{t["ligand_count"]}</td> 
             <td>{t["pdb_count"]}</td> 
             <td><span data-toggle={data_toggle} data-html="true" 
@@ -500,8 +500,8 @@ def getReferenceTable(pathway, subtype):
                     <th style=\"width; 100px;\">Family<br>&nbsp;</th> \
                     <th>Species<br>&nbsp;</th> \
                     <th style=\"color:red\">Receptor<br>(UniProt)</th> \
-                    <th style=\"color:red\">Receptor<br>(GtP)</th> \
                     <th>Gene<br>&nbsp;</th> \
+                    <th style=\"color:red\">Receptor<br>(GtP)</th> \
                     <th>Tested<br>(total)</th> \
                   </tr> \
                 </thead>\
@@ -522,8 +522,8 @@ def getReferenceTable(pathway, subtype):
                     <th style=\"width; 100px;\">Family<br>&nbsp;</th> \
                     <th>Species<br>&nbsp;</th> \
                     <th style=\"color:red\">Receptor<br>(UniProt)</th> \
-                    <th style=\"color:red\">Receptor<br>(GtP)</th> \
                     <th>Gene<br>&nbsp;</th> \
+                    <th style=\"color:red\">Receptor<br>(GtP)</th> \
                     <th>Tested<br>(total)</th> \
                     <th>Balanced<br>references</th> \
                     <th>Pathway<br>biased *</th> \
@@ -609,8 +609,8 @@ def getReferenceTable(pathway, subtype):
                 <td>{t['family']}</td>
                 <td>{t['species']}</td>
                 <td><span class="expand">{t['uniprot']}</span></td>
-                <td><span class="expand">{t['iuphar']}</span></td>
                 <td><span class="expand">{t['gene_display']}</span></td> 
+                <td><span class="expand">{t['iuphar']}</span></td>
                 <td style="border-left: 1px solid black; text-align:left">{t['ligand_count']}</td>
                 </tr> \n'''
             else:
@@ -621,9 +621,9 @@ def getReferenceTable(pathway, subtype):
                 <td>{t['ligandtype']}</td> 
                 <td>{ t['family']}</td> 
                 <td>{t['species']}</td> 
-                <td><span class="expand">{t['uniprot']}</span></td> 
+                <td><span class="expand">{t['uniprot']}</span></td>
+                <td><span class="expand">{t['gene_display']}</span></td>  
                 <td><span class="expand">{t['iuphar']}</span></td> 
-                <td><span class="expand">{t['gene_display']}</span></td> 
                 <td style="border-left: 1px solid black; text-align:left">{t['ligand_count']}</td> 
                 <td data-search="{t['balanced_span']}">{t['balanced_refs']}</td> 
                 <td data-search="{t['pathway_span']}">{t['pathway_count']}</td> 
