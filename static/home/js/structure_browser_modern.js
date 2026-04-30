@@ -120,8 +120,8 @@
     // RECEPTOR
     ({ data: "id", name: "Select", orderable: false, searchable: false, render: (data) => `<input type="checkbox" class="select-row" value="${data}">` }),
     ({ data: "gpcrdb_link", name: "GPCRdb", orderable: false, searchable: false, render: (d,t) => (t === 'display' && d ? `<a href="${d}" target="_blank" rel="noopener"><img class="gpcrdb-link" src="/static/home/logo/gpcr/main.png" width="12" height="12" alt="GPCRdb"></a>` : '') }),
-    ({ data:"Gene", name:"Gene", render:(d,t,r)=> t != "display" || d?.entrez_url === "-" ? d.name : `<a href="${d.entrez_url}" target="_blank" rel="noopener">${d.name}</a>` }),
     ({ data:"entry_name", name:"UniProt", render:(d,t,r)=> t==="display" ? (r?.uniprot_link ? `<a href="${r.uniprot_link}" target="_blank" rel="noopener">${d?d.split("_")[0].toUpperCase():"-"}</a>` : (d?d.split("_")[0].toUpperCase():"-")) : (t==="filter"||t==="sort" ? (d?d.split("_")[0].toUpperCase():"") : (d||"")) }),
+    ({ data:"gene", name:"Gene", render:(d,t,r)=> t != "display" || d?.entrez_url === "-" ? d.name : `<a href="${d.entrez_url}" target="_blank" rel="noopener">${d.name}</a>` }),
     ({ data: "iuphar_name", name: "Protein", render: (d,t,r) => { if (t !== 'display') return d; const url = r && r.iuphar_link; return (url && url !== "-") ? `<a href="${url}" target="_blank" rel="noopener">${d}</a>` : d; } }),
     { data: "id", name: "ID", visible: false },
 
@@ -687,7 +687,7 @@
 
     // default: open modal
     superpositionModern(tableId,
-      ["pdb", "entry_short", "iuphar_name", "family", "class", "species", "state", "pub_date"],
+      ["pdb", "entry_name", "gene", "iuphar_name", "family", "class", "species", "state", "pub_date"],
       "structure_browser", "gpcr", "pdb"
     );
   }
@@ -726,7 +726,11 @@
       tr.appendChild(checkboxTd);
       columns.forEach(key => {
         const td = document.createElement("td");
-        td.innerHTML = row[key] || '';
+        if(key == 'gene') {
+          td.innerHTML = row[key].name || '';
+        } else {
+          td.innerHTML = row[key] || ''; 
+        }
         if (hidden_columns.includes(key)) td.style.display = "none";
         tr.appendChild(td);
       });
