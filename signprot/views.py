@@ -352,10 +352,9 @@ class PhosphorylationBrowser(TemplateView):
             )
         else:
             return protein.entry_name.split("_")[0].upper()
-        
+
     def get_gene_link(self, protein):
         """Retrieve the gene link for the protein."""
-        
         gene_display = None
 
         if protein.genes.count() > 0:
