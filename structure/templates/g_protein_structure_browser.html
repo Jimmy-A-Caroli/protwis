@@ -268,7 +268,7 @@
                                    <span>{{ structure.protein_conformation.protein.parent.genes.first.name | safe }}</span>
                                 {% endif %}                                    
                             {% else %}
-                                </span>-</span>
+                                <span>-</span>
                             {% endif %}
                             </td>
                             <td class='uniprot'><a href="/protein/{{ structure.protein_conformation.protein.parent.entry_name }}">{{ structure.protein_conformation.protein.parent.short|safe }}</a></td>
@@ -498,10 +498,10 @@
                                     <span>{{ structure.protein_conformation.protein.parent.genes.first.name | safe }}</span>
                                 {% endif %}                                    
                             {% else %}
-                                </span>-</span>
+                                <span>-</span>
                             {% endif %}
                         {% else %}
-                            </span>-</span>
+                            <span>-</span>
                         {% endif %}
                     </td>
 

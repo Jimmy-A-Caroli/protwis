@@ -136,7 +136,7 @@ def Venn(request, origin="both"):
 
         #Convert Gene_entrez_ids to web links
         entrez_websource = WebResource.objects.get(slug="entrez_gene")
-        df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
+        df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if pd.notna(id) and str(id) != "" else "")
         df.drop(columns=['Gene_entrez_id'], inplace=True)
 
         # Preprocess SMILES data
@@ -554,7 +554,7 @@ class DrugSectionSelection(TemplateView):
 
             #Convert Gene_entrez_ids to web links
             entrez_websource = WebResource.objects.get(slug="entrez_gene")
-            df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if id != "" else "")
+            df['Gene_entrez_weblink'] = df['Gene_entrez_id'].apply(lambda id: str(WebLink(index=id, web_resource=entrez_websource)) if pd.notna(id) and str(id) != "" else "")
             df.drop(columns=['Gene_entrez_id'], inplace=True)
 
             # Split the DataFrame into two: one for targets and one for drugs

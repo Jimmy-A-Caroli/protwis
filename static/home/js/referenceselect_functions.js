@@ -450,7 +450,7 @@ function initLigandCountTable(elementID) {
         });
 
         yadcf.init(referenceTable, Object.values(reference_coldefs_ligand), { filters_tr_index: 1 });
-        yadcf.exFilterColumn(referenceTable, [[[reference_coldefs_ligand.receptor_species.column_number], ["Homo sapiens"]]], true);
+        yadcf.exFilterColumn(referenceTable, [[reference_coldefs_ligand.receptor_species.column_number, ["Homo sapiens"]]], true);
     }
     // When redrawing update the information selection message
     referenceTable.on("draw.dt", function(e, oSettings) {

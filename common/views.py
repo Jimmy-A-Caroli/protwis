@@ -241,7 +241,7 @@ def getLigandCountTable():
                 </tr> \n'''
 
         data_table += "</tbody></table>"
-        # cache.set("ligand_count_table", data_table, 60*60*24*7)
+        cache.set("ligand_count_table", data_table, 60*60*24*7)
 
     return data_table
 

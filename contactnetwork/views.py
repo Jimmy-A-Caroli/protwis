@@ -572,7 +572,7 @@ def PdbTableData(request):
         species_best = 'Best' if r['closest_to_human_raw'] else ''
         data_table += f'''<tr> \
                         <td data-sort='0'><input class='form-check-input pdb_selected' type='checkbox' value='' 
-                                onclick='thisPDB(this);' representative='{r['contact_representative'],}' distance_representative='{ r['distance_representative']}' 
+                                onclick='thisPDB(this);' representative='{r['contact_representative']}' distance_representative='{ r['distance_representative']}' 
                                 class_consensus_based_representative='{r['class_consensus_based_representative']}' long='{r['protein_long']}'  id='{pdb_id}'></td> \
                         <td>{r['protein']}</td> 
                         <td>{r['gene']}</td> 
@@ -580,7 +580,7 @@ def PdbTableData(request):
                         <td>{r['protein_family']}</td> 
                         <td>{r['class']}</td> 
                         <td>{r['fraction_of_wt_seq']}</td> 
-                        <td><p class='no_margins' style='color:{species_colour}'>{r['species']}</td> 
+                        <td><p class='no_margins' style='color:{species_colour}'>{r['species']}</p></td> 
                         <td>{species_best}</td> 
                         <td>{r['identity_to_human']}</td> 
                         <td>{r['method']}</td> 
