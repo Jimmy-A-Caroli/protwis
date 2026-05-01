@@ -138,9 +138,9 @@
             ////////////////////////////
             //// Column definitions ////
             ////////////////////////////
-            
+
             ///// Filter Types /////
-            
+
             //Initialisation of basic defaults for a null filter column
             const base_defaults = {
                 filter_type: "none",
@@ -156,7 +156,8 @@
             const text_defaults = {
                 ...base_defaults,
                 filter_type: "text",
-                select_type:"select2",            
+                select_type:"select2",
+                column_data_type: "text",
             }
 
             //defaults for a multi-select select type filter
@@ -165,6 +166,7 @@
                 filter_type: "multi_select",
                 select_type:"select2",
                 filter_match_mode: "exact",
+                column_data_type: "text",
             }
 
             //defaults for a number range type filter
@@ -176,79 +178,19 @@
 
             /// Table Column Definitions ///
             const homology_cols = {
-                select_checkbox: {                    
-                    column_number : 0,
-                    ...base_defaults,
-                },
-                model_link: {                    
-                    column_number : 1,
-                    ...base_defaults,
-                },
-                date: {
-                        column_number : 2,
-                        filter_type: "range_date",
-                        date_format: "yyyy-mm-dd",
-                        select_type: 'select2',
-                        filter_default_label: ["From", "To"],
-                        filter_reset_button_text: false,
-                        select_type_options:  { width: '100px', }
-                },
-                state: {
-                    column_number : 3,
-                    ...multiselect_defaults,
-                    filter_default_label: "State",
-                    select_type_options: { width: '100px', }
-                },
-                method: {
-                    column_number : 4,
-                    ...multiselect_defaults,
-                    filter_default_label: "Method",
-                    column_data_type: "html",
-                    select_type_options:  { width: '100px', }
-                },
-                uniprot: {
-                    column_number : 5,
-                    ...multiselect_defaults,
-                    column_data_type: "html",
-                    filter_default_label: "UniProt",
-                    select_type_options:  { width: '80px', }
-                },
-                gene: {
-                    column_number : 6,
-                    ...multiselect_defaults,
-                    column_data_type: "html",
-                    filter_default_label: "Gene",
-                    select_type_options:  { width: '80px', }
-                },
-                iuphar: {
-                    column_number: 7,
-                    ...multiselect_defaults,
-                    column_data_type: "html",
-                    filter_default_label: "IUPHAR",
-                    select_type_options:  { width: '100px', }
-                },
-                rec_family: {
-                    column_number: 8,
-                    ...multiselect_defaults,
-                    filter_default_label: "Rec. family",
-                    select_type_options:  { width: '100px', }
-                },
-                class: {
-                    column_number : 9,
-                    ...multiselect_defaults,
-                    filter_default_label: "Class",
-                    select_type_options:  { width: '100px', }
-                },
-                species: {
-                    column_number : 10,
-                    ...multiselect_defaults,
-                    filter_default_label: "Species",
-                    select_type_options:  { width: '100px', }
-                },
-                protein_entry_name: {
-                    column_number : 11,
-                    ...base_defaults,
-            }}
+                select_checkbox    : { column_number: 0, ...base_defaults, },
+                model_link         : { column_number: 1, ...base_defaults, },
+                date               : { column_number: 2, ...base_defaults, filter_type: "range_date", date_format: "yyyy-mm-dd", select_type: 'select2', filter_default_label: ["From", "To"], select_type_options: { width: '100px', } },
+                state              : { column_number: 3, ...multiselect_defaults, filter_default_label: "State", select_type_options: { width: '100px', } },
+                method             : { column_number: 4, ...multiselect_defaults, filter_default_label: "Method", column_data_type: "html", select_type_options: { width: '100px', } },
+                uniprot            : { column_number: 5, ...multiselect_defaults, column_data_type: "html", filter_default_label: "UniProt", select_type_options: { width: '80px', } },
+                gene               : { column_number: 6, ...multiselect_defaults, column_data_type: "html", filter_default_label: "Gene", select_type_options: { width: '80px', } },
+                iuphar             : { column_number: 7, ...multiselect_defaults, column_data_type: "html", filter_default_label: "IUPHAR", select_type_options: { width: '100px', } },
+                rec_family         : { column_number: 8, ...multiselect_defaults, filter_default_label: "Rec. family", select_type_options: { width: '100px', } },
+                class              : { column_number: 9, ...multiselect_defaults, filter_default_label: "Class", select_type_options: { width: '100px', } },
+                species            : { column_number: 10, ...multiselect_defaults, filter_default_label: "Species", select_type_options: { width: '100px', } },
+                protein_entry_name : { column_number: 11, ...base_defaults,
+                }}
 
             yadcf.init(oTable,
                 [
@@ -260,7 +202,7 @@
                     homology_cols.iuphar,
                     homology_cols.rec_family,
                     homology_cols.class,
-                    homology_cols.species,                    
+                    homology_cols.species,
                 ],
                 {
                     cumulative_filtering: false

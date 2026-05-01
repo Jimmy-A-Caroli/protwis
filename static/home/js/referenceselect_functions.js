@@ -27,13 +27,6 @@ const base_defaults = {
     width: null
 }
 
-//defaults for a free text type filter
-const text_defaults = {
-    ...base_defaults,
-    filter_type: "text",
-    select_type:"select2",            
-}
-
 //defaults for a multi-select type filter
 const multiselect_defaults = {
     ...base_defaults,
@@ -55,114 +48,37 @@ const range_number_defaults = {
 ////////////////////////////////
 
 //Core shared columns
-const reference_core_colDefs = {
-    selector: {
-        column_number: 0,
-        ...base_defaults,
-        filter_type: "custom_func",
-        custom_func: selectedTargetFilter,
-        filter_container_id: "hidden_filter_container",
-        html5_data: "data-search", // which does not exist - prevent warning logs
-    },
-    receptor_class: {
-        column_number: 1,
-        ...multiselect_defaults,
-        filter_default_label: "Class",
-        select_type_options: { "width": "70px",},
-    },
-    receptor_ligand: {
-        column_number: 2,
-        ...multiselect_defaults,
-        filter_default_label: "Ligand",
-    },
-    receptor_family: {
-                column_number: 3,
-                ...multiselect_defaults,
-                filter_default_label: "Family",
-    },
-    receptor_species: {
-        column_number: 4,
-        ...multiselect_defaults,
-        filter_default_label: "Species",
-        select_type_options: { "width": "110px",}
-    },
-    receptor_uniprot: {
-        column_number: 5,
-    ...multiselect_defaults,
-        column_data_type: "html",
-        filter_default_label: "Uniprot",
-        select_type_options: { "width": "110px", }
-    },
-    receptor_gene: {
-        column_number: 6,
-        ...multiselect_defaults,
-        column_data_type: "html",
-        html_data_type: "text",
-        filter_default_label: "Gene",
-        select_type_options: { "width": "110px", }
-    },
-    receptor_gtp: {
-        column_number: 7,
-        ...multiselect_defaults,
-        column_data_type: "html",
-        html_data_type: "text",
-        filter_default_label: "GtP",
-        select_type_options: { "width": "110px",}
-    },
+const reference_core_coldefs = {
+  selector         : { column_number: 0, ...base_defaults, filter_type: "custom_func", custom_func: selectedTargetFilter, filter_container_id: "hidden_filter_container", html5_data: "data-search", },
+  receptor_class   : { column_number: 1, ...multiselect_defaults, filter_default_label: "Class", select_type_options: { "width": "70px",}, },
+  receptor_ligand  : { column_number: 2, ...multiselect_defaults, filter_default_label: "Ligand", },
+  receptor_family  : { column_number: 3, ...multiselect_defaults, filter_default_label: "Family", },
+  receptor_species : { column_number: 4, ...multiselect_defaults, filter_default_label: "Species", select_type_options: { "width": "110px",} },
+  receptor_uniprot : { column_number: 5, ...multiselect_defaults, column_data_type: "html", filter_default_label: "Uniprot", select_type_options: { "width": "110px", } },
+  receptor_gene    : { column_number: 6, ...multiselect_defaults, column_data_type: "html", html_data_type: "text", filter_default_label: "Gene", select_type_options: { "width": "110px", } },
+  receptor_gtp     : { column_number: 7, ...multiselect_defaults, column_data_type: "html", html_data_type: "text", filter_default_label: "GtP", select_type_options: { "width": "110px",} },
 }
 
 //Column definitions for pathway browser table
-const reference_colDefs_pathway = {
-    ...reference_core_colDefs,
-    tested_total: {
-        column_number: 8,
-        ...range_number_defaults,
-        column_data_type: "html",
-    },
-}
+const reference_coldefs_pathway = {
+    ...reference_core_coldefs,
+    tested_total: { column_number: 8, ...range_number_defaults, column_data_type: "html", },
+  }
 
 //Column definitions for bias signalling browser tables
-const reference_colDefs_bias = {
-    ...reference_core_colDefs,
-    tested_total: {
-        column_number: 8,
-        ...range_number_defaults,
-        column_data_type: "html",
-    },
-    balanced_references : {
-        column_number: 9,
-        ...range_number_defaults,
-        html5_data: "data-search",
-    },
-    pathway_biased : {
-        column_number: 10,
-        ...range_number_defaults,
-        html5_data: "data-search",
-    },
-    physiology_biased : {
-        column_number: 11,
-        ...range_number_defaults,
-        html5_data: "data-search",
-    },
+const reference_coldefs_bias = {
+  ...reference_core_coldefs,
+  tested_total        : { column_number: 8, ...range_number_defaults, column_data_type: "html", },
+  balanced_references : { column_number: 9, ...range_number_defaults, html5_data: "data-search", },
+  pathway_biased      : { column_number: 10, ...range_number_defaults, html5_data: "data-search", },
+  physiology_biased   : { column_number: 11, ...range_number_defaults, html5_data: "data-search", },
 }
 
-const reference_colDefs_ligand = {
-    ...reference_core_colDefs,
-    ligand_count: {
-        column_number: 8,
-        ...range_number_defaults,
-        column_data_type: "html",
-    },
-    drugs_approved: {
-        column_number: 9,
-        ...range_number_defaults,
-        html5_data: "data-search",
-    },
-    drugs_clininal_trials: {
-        column_number: 10,
-        ...range_number_defaults,
-        html5_data: "data-search",
-    },
+const reference_coldefs_ligand = {
+  ...reference_core_coldefs,
+  ligand_count         : { column_number: 8, ...range_number_defaults, column_data_type: "html", },
+  drugs_approved       : { column_number: 9, ...range_number_defaults, html5_data: "data-search", },
+  drugs_clininal_trials: { column_number: 10, ...range_number_defaults, html5_data: "data-search", },
 }
 
 /**
@@ -443,18 +359,18 @@ function initTargetTable(elementID, pathway) {
               autoWidth: false,
               bInfo: true,
               columnDefs: [{
-                  targets: reference_colDefs_pathway.selector.column_number,
+                  targets: reference_coldefs_pathway.selector.column_number,
                   orderable: false,
                   className: "select-checkbox"
               },{
-                  targets: reference_colDefs_pathway.receptor_species.column_number,
+                  targets: reference_coldefs_pathway.receptor_species.column_number,
                   className: "text-center"
               },
             ],
           });
 
-          yadcf.init(referenceTable, Object.values(reference_colDefs_pathway), { filters_tr_index: 1 });
-          yadcf.exFilterColumn(referenceTable, [[reference_colDefs_pathway.receptor_species.column_number, ["Homo sapiens"]]], true);
+          yadcf.init(referenceTable, Object.values(reference_coldefs_pathway), { filters_tr_index: 1 });
+          yadcf.exFilterColumn(referenceTable, [[reference_coldefs_pathway.receptor_species.column_number, ["Homo sapiens"]]], true);
       }
     }else{
       if (!$.fn.DataTable.isDataTable(elementID + " table")) {
@@ -470,18 +386,18 @@ function initTargetTable(elementID, pathway) {
               autoWidth: false,
               bInfo: true,
               columnDefs: [{
-                  targets: reference_colDefs_bias.selector.column_number,
+                  targets: reference_coldefs_bias.selector.column_number,
                   orderable: false,
                   className: "select-checkbox"
               },{
-                  targets: reference_colDefs_bias.receptor_species.column_number,
+                  targets: reference_coldefs_bias.receptor_species.column_number,
                   className: "text-center"
               },
             ],
           });
 
-          yadcf.init(referenceTable, Object.values(reference_colDefs_bias), { filters_tr_index: 1 });
-          yadcf.exFilterColumn(referenceTable, [[reference_colDefs_bias.receptor_species.column_number, ["Homo sapiens"]]], true);
+          yadcf.init(referenceTable, Object.values(reference_coldefs_bias), { filters_tr_index: 1 });
+          yadcf.exFilterColumn(referenceTable, [[reference_coldefs_bias.receptor_species.column_number, ["Homo sapiens"]]], true);
       }
     }
     // When redrawing update the information selection message
@@ -504,7 +420,6 @@ function initTargetTable(elementID, pathway) {
 
 }
 
-
 /**
  * This function initializes the YADCF datatables for a specific element
  * @param {string} elementID The identifier of the container containing the table
@@ -524,18 +439,18 @@ function initLigandCountTable(elementID) {
             autoWidth: false,
             bInfo: true,
             columnDefs: [{
-                targets: reference_colDefs_ligand.selector.column_number,
+                targets: reference_coldefs_ligand.selector.column_number,
                 orderable: false,
                 className: "select-checkbox"
             },{
-                targets: reference_colDefs_ligand.receptor_species.column_number,
+                targets: reference_coldefs_ligand.receptor_species.column_number,
                 className: "text-center"
             },
           ],
         });
 
-        yadcf.init(referenceTable, Object.values(reference_colDefs_ligand), { filters_tr_index: 1 });
-        yadcf.exFilterColumn(referenceTable, [[[reference_colDefs_ligand.receptor_species.column_number], ["Homo sapiens"]]], true);
+        yadcf.init(referenceTable, Object.values(reference_coldefs_ligand), { filters_tr_index: 1 });
+        yadcf.exFilterColumn(referenceTable, [[[reference_coldefs_ligand.receptor_species.column_number], ["Homo sapiens"]]], true);
     }
     // When redrawing update the information selection message
     referenceTable.on("draw.dt", function(e, oSettings) {

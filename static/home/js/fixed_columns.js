@@ -448,9 +448,9 @@ function showPDBtable(element) {
     ////////////////////////////
     //// Column definitions ////
     ////////////////////////////
-    
+
     ///// Filter Types /////
-    
+
     //Initialisation of basic defaults for a null filter column
     const base_defaults = {
         filter_type: 'none',
@@ -481,153 +481,42 @@ function showPDBtable(element) {
         style_class: "range_number_filter_slim",
     }
 
+    const hiddenfilter_defaults = {
+        ...base_defaults,
+        filter_type: 'select',
+        select_type: 'select2',
+        filter_match_mode: 'exact',
+        column_data_type: 'text',
+        select_type_options: {width: "90px",  minimumResultsForSearch: -1}
+    }
+
     /// Table Column Definitions ///
 
     const structure_colDefs = {
-        selector: {column_number: 0, ...base_defaults},
-        receptor_uniprot:{
-                    column_number: 1,
-                    ...multiselect_defaults,
-                    filter_default_label: "UniProt",                    
-                },
-        receptor_gene : {
-                    column_number: 2,
-                    ...multiselect_defaults,
-                    filter_default_label: "Gene",
-                },
-        receptor_gtopdb : {
-                    column_number: 3,
-                    ...multiselect_defaults,
-                    column_data_type: "html",
-                    //html_data_type: "text",
-                    filter_default_label: "GtoPdb",
-                },
-        receptor_family : {
-                    column_number: 4,
-                    ...multiselect_defaults,
-                    html_data_type: "text",
-                    select_type_options: {width: "150px"},
-                    filter_default_label: "Rec Family",
-                },
-        receptor_class : {
-                    column_number: 5,
-                    ...multiselect_defaults,
-                    filter_default_label: "Cl",
-                    select_type_options: {width: "30px"},
-                },
-        receptor_pcnt_seq :{
-                    column_number: 6,
-                    ...range_number_defaults,
-                    select_type_options: {width: "70px"},                    
-                },
-        species_species : {
-                    column_number: 7,
-                    ...multiselect_defaults,
-                    filter_container_id: mode_without_space + "_species",
-                    column_data_type: "html",
-                    filter_default_label: "Species",                   
-                },
-        best_species_hiddenfilter : {
-                    column_number: 8,
-                    ...base_defaults,
-                    filter_type: 'select',
-                    select_type: 'select2',
-                    filter_match_mode: 'exact',
-                    column_data_type: 'text',
-                    select_type_options: {width: "90px",
-                        minimumResultsForSearch: -1 // remove search box
-                    },
-                    filter_default_label: "All",
-                },
-        species_ident_human : {
-                    column_number: 9,
-                    ...range_number_defaults,
-                    select_type_options: {width: "70px"},                    
-                },
-        structure_type : {
-                    column_number: 10,
-                    ...multiselect_defaults,
-                    filter_default_label: "Type",
-                    select_type_options: {width: "70px"},
-                },
-        structure_pdb : {
-                    column_number: 11,
-                    ...multiselect_defaults,
-                    select_type_options: {width: "70px"},
-                    filter_default_label: "PDB",
-                },
-        structure_res : {
-                    column_number: 12,
-                    ...range_number_defaults,
-                    select_type_options: {width: "70px"},
-                },
-        best_res_hiddenfilter :  {
-                    column_number: 13,
-                    // filter_container_id: mode_without_space + "_best_res",
-                    ...base_defaults,
-                    filter_type: 'select',
-                    select_type: 'select2',
-                    filter_match_mode: 'exact',
-                    column_data_type: 'text',
-                    select_type_options: {width: "90px",
-                        minimumResultsForSearch: -1}, // remove search box                    
-                    filter_default_label: "All",                    
-                },
-        receptor_state : {
-                    column_number: 14,
-                    ...multiselect_defaults,
-                    filter_default_label: "State",
-                    select_type_options: {width: "70px"},                    
-                },
-        receptor_degreeact : {
-                    column_number: 15,
-                    ...range_number_defaults,
-                    select_type_options: {width: "70px"},                    
-                },
-        receptor_tm6tilt : {
-                    column_number: 16,
-                    ...range_number_defaults,
-                    select_type_options: {width: "70px"},                    
-                },
-        gprotein_family : {
-                    column_number: 17,
-                    ...multiselect_defaults,
-                    filter_default_label: "Family",
-                    select_type_options: {width: "70px"},
-                },
-        gprotein_subtype :  {
-                    column_number: 18,
-                    ...multiselect_defaults,
-                    filter_default_label: "Subtype",
-                    select_type_options: {width: "70px"},                    
-                },
-        gprotein_pcntseq : {
-                    column_number: 20,
-                    ...range_number_defaults,
-                    select_type_options: {width: "50px"},
-                    column_data_type: "html",
-                },
-        aux_fusion : {
-                    column_number: 21,
-                    ...multiselect_defaults,
-                    filter_default_label: "Fusion",                    
-                },
-        aux_antibody : {
-                    column_number: 22,
-                    ...multiselect_defaults,
-                    filter_default_label: "Antibody",
-                    column_data_type: "html",
-                },
-        ligand_ligand : {
-                    column_number: 23,
-                    ...multiselect_defaults,
-                    filter_default_label: "Ligand",
-                },
-        ligand_modality : {
-                    column_number: 24,
-                    ...multiselect_defaults,
-                    filter_default_label: "Modality",
-                },
+        selector                 : { column_number: 0, ...base_defaults},
+        receptor_uniprot         : { column_number: 1, ...multiselect_defaults, filter_default_label: "UniProt", },
+        receptor_gene            : { column_number: 2, ...multiselect_defaults, filter_default_label: "Gene", },
+        receptor_gtopdb          : { column_number: 3, ...multiselect_defaults, column_data_type: "html", filter_default_label: "GtoPdb", },
+        receptor_family          : { column_number: 4, ...multiselect_defaults, html_data_type: "text", select_type_options: {width: "150px"}, filter_default_label: "Rec Family", },
+        receptor_class           : { column_number: 5, ...multiselect_defaults, filter_default_label: "Cl", select_type_options: {width: "30px"}, },
+        receptor_pcnt_seq        : { column_number: 6, ...range_number_defaults, select_type_options: {width: "70px"}, },
+        species_species          : { column_number: 7, ...multiselect_defaults, filter_container_id: mode_without_space + "_species", column_data_type: "html", filter_default_label: "Species", },
+        best_species_hiddenfilter: { column_number: 8, ...hiddenfilter_defaults, filter_default_label: "All", },
+        species_ident_human      : { column_number: 9, ...range_number_defaults, select_type_options: {width: "70px"}, },
+        structure_type           : { column_number: 10, ...multiselect_defaults, filter_default_label: "Type", select_type_options: {width: "70px"}, },
+        structure_pdb            : { column_number: 11, ...multiselect_defaults, select_type_options: {width: "70px"}, filter_default_label: "PDB", },
+        structure_res            : { column_number: 12, ...range_number_defaults, select_type_options: {width: "70px"}, },
+        best_res_hiddenfilter    : { column_number: 13, ...hiddenfilter_defaults, filter_default_label: "All", },
+        receptor_state           : { column_number: 14, ...multiselect_defaults, filter_default_label: "State", select_type_options: {width: "70px"}, },
+        receptor_degreeact       : { column_number: 15, ...range_number_defaults, select_type_options: {width: "70px"}, },
+        receptor_tm6tilt         : { column_number: 16, ...range_number_defaults, select_type_options: {width: "70px"}, },
+        gprotein_family          : { column_number: 17, ...multiselect_defaults, filter_default_label: "Family", select_type_options: {width: "70px"}, },
+        gprotein_subtype         : { column_number: 18, ...multiselect_defaults, filter_default_label: "Subtype", select_type_options: {width: "70px"}, },
+        gprotein_pcntseq         : { column_number: 20, ...range_number_defaults, select_type_options: {width: "50px"}, column_data_type: "html", },
+        aux_fusion               : { column_number: 21, ...multiselect_defaults, filter_default_label: "Fusion", },
+        aux_antibody             : { column_number: 22, ...multiselect_defaults, filter_default_label: "Antibody", column_data_type: "html", },
+        ligand_ligand            : { column_number: 23, ...multiselect_defaults, filter_default_label: "Ligand", },
+        ligand_modality          : { column_number: 24, ...multiselect_defaults, filter_default_label: "Modality", },
         }
 
         console.time('DataTable');
@@ -639,14 +528,14 @@ function showPDBtable(element) {
                 var table = $(element + " .dataTables_scrollBody .structure_selection");
 
                 // Hidden columns create a mismatch between column indexes in DataTable config and final HTML
-                // Here we compute new column indexes with an offset accounting for hidden columns, 
+                // Here we compute new column indexes with an offset accounting for hidden columns,
                 // to be able to get the correct data for uniprot and receptor state
                 required_col_idxs = { uniprot : structure_colDefs.receptor_uniprot.column_number, receptor_state : structure_colDefs.receptor_state.column_number }
                 hidden_col_idxs = [structure_colDefs.best_species_hiddenfilter.column_number, structure_colDefs.best_res_hiddenfilter.column_number]
                 function apply_hidden_column_offset(col_idxs, hidden_col_idxs){
                     //Checks if hidden columns are before the required columns, and subtracts offset accordingly
                     let offset_return = {...col_idxs}
-                    for (const [key, current_idx] of Object.entries(col_idxs)){                        
+                    for (const [key, current_idx] of Object.entries(col_idxs)){
                         for (let h_idx of hidden_col_idxs){
                             if (h_idx <= current_idx){
                                 offset_return[key] = offset_return[key] - 1
@@ -724,7 +613,7 @@ function showPDBtable(element) {
             ],
         });
         console.timeEnd("DataTable");
-        console.time("yadcf"); 
+        console.time("yadcf");
 
         yadcf.init(oTable[mode],
             [

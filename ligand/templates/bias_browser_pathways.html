@@ -2,8 +2,6 @@
 
 {% load static %}
 
-
-
 {% block addon_js %}
 <script src="{% static 'home/js/jquery.dataTables.min.js' %}"> </script>
 <script src="{% static 'home/js/jquery.dataTables.yadcf.js' %}"> </script>
@@ -15,7 +13,6 @@
 <script src="{% static 'home/js/selection.js' %}"> </script>
 <script src="{% static 'home/js/jquery.dataTables.yadcf.js' %}"> </script>
 <script src="{% static 'home/js/gpcrdb.js' %}"></script>
-
 
 <script type="text/javascript" charset="utf-8">
     function getCookie(c_name) {
@@ -34,9 +31,9 @@
     ////////////////////////////
     //// Column definitions ////
     ////////////////////////////
-    
+
     ///// Filter Types /////
-    
+
     //Initialisation of basic defaults for a null filter column
     const base_defaults = {
         filter_type: 'none',
@@ -62,27 +59,26 @@
     /// Table Column Definitions ///
 
     const structures_coldefs = {
-        info : {column_number: 0, ...base_defaults},
-        receptor_class : {column_number: 1, ...multiselect_defaults},
-        receptor_recfam : {column_number: 2, ...multiselect_defaults},
-        receptor_uniprot : {column_number: 3, ...multiselect_defaults, column_data_type: "html"},
-        receptor_gene : {column_number: 4, ...multiselect_defaults, column_data_type: "html"},
-        receptor_gtp : {column_number: 5, ...multiselect_defaults, column_data_type: "html"},
-        receptor_species : {column_number: 6, ...multiselect_defaults},
-        ligand_name : {column_number: 7, ...multiselect_defaults},
-        pathway_effector : {column_number: 8, ...multiselect_defaults},
-        therapeutic_area : {column_number: 9, ...multiselect_defaults},
-        peo_effect_type : {column_number: 10, ...multiselect_defaults},
-        peo_high_level_term : {column_number: 11, ...multiselect_defaults},
-        peo_summary : {column_number: 12, ...multiselect_defaults},
-        peo_details : {column_number: 13, ...multiselect_defaults},
-        experiment_pathway : {column_number: 14, ...multiselect_defaults},
-        experiment_system : {column_number: 15, ...multiselect_defaults},
-        experiment_method : {column_number: 16, ...multiselect_defaults},
-        reference_authors : {column_number: 17, ...multiselect_defaults},
-        reference_doi : {column_number: 18,  ...multiselect_defaults, column_data_type: "html"} 
+        info               : { column_number: 0, ...base_defaults  },
+        receptor_class     : { column_number: 1, ...multiselect_defaults },
+        receptor_recfam    : { column_number: 2, ...multiselect_defaults },
+        receptor_uniprot   : { column_number: 3, ...multiselect_defaults, column_data_type: "html" },
+        receptor_gene      : { column_number: 4, ...multiselect_defaults, column_data_type: "html" },
+        receptor_gtp       : { column_number: 5, ...multiselect_defaults, column_data_type: "html" },
+        receptor_species   : { column_number: 6, ...multiselect_defaults },
+        ligand_name        : { column_number: 7, ...multiselect_defaults },
+        pathway_effector   : { column_number: 8, ...multiselect_defaults },
+        therapeutic_area   : { column_number: 9, ...multiselect_defaults },
+        peo_effect_type    : { column_number: 10, ...multiselect_defaults },
+        peo_high_level_term: { column_number: 11, ...multiselect_defaults },
+        peo_summary        : { column_number: 12, ...multiselect_defaults },
+        peo_details        : { column_number: 13, ...multiselect_defaults },
+        experiment_pathway : { column_number: 14, ...multiselect_defaults },
+        experiment_system  : { column_number: 15, ...multiselect_defaults },
+        experiment_method  : { column_number: 16, ...multiselect_defaults },
+        reference_authors  : { column_number: 17, ...multiselect_defaults },
+        reference_doi      : { column_number: 18,  ...multiselect_defaults, column_data_type: "html" }
     }
-
 
     // main table load
     $(document).ready(function() {
@@ -190,19 +186,19 @@
 
         });
 
-        let column_filters = [];       
+        let column_filters = [];
         //Create filters from column definition objects above, and add to table
         for (let col_def of Object.values(structures_coldefs)) {
             column_filters = column_filters.concat(
-                createYADCFfilters(col_def.column_number, 
-                    1, 
-                    col_def .filter_type, 
-                    col_def.select_type, 
-                    col_def.filter_default_label, 
-                    col_def.filter_reset_button_text, 
-                    col_def.filter_match_mode, 
-                    col_def.column_data_type, 
-                    col_def.width));      
+                createYADCFfilters(col_def.column_number,
+                    1,
+                    col_def .filter_type,
+                    col_def.select_type,
+                    col_def.filter_default_label,
+                    col_def.filter_reset_button_text,
+                    col_def.filter_match_mode,
+                    col_def.column_data_type,
+                    col_def.width));
     }
 
         yadcf.init(oTable.draw(), column_filters, {
@@ -309,7 +305,6 @@
         return l
     }
 
-
     function countUnique(iterable) {
         return new Set(iterable).size;
     }
@@ -330,7 +325,6 @@
 </script>
 
 {% endblock %}
-
 
 {% block content %}
 <a id="dlink" style="display:none;"></a>
@@ -472,8 +466,6 @@ document.getElementById("loadingSpinner").style.display = "none";
 <br>
 <br>
 {% endblock %}
-
-
 
 {% block addon_css %}
 <link rel="stylesheet" href="{% static 'home/css/jquery.dataTables.min.css' %}" type="text/css" />

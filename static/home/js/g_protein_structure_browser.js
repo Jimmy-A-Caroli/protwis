@@ -80,9 +80,9 @@ function gproteinstructurebrowser(effector) {
     ////////////////////////////
     //// Column definitions ////
     ////////////////////////////
-    
+
     ///// Filter Types /////
-    
+
     //Initialisation of basic defaults for a null filter column
     const base_defaults = {
         filter_type: "none",
@@ -98,7 +98,8 @@ function gproteinstructurebrowser(effector) {
     const text_defaults = {
         ...base_defaults,
         filter_type: "text",
-        select_type:"select2",            
+        column_data_type: "text",
+        select_type:"select2",
     }
 
     //defaults for a multi-select select type filter
@@ -106,6 +107,7 @@ function gproteinstructurebrowser(effector) {
         ...base_defaults,
         filter_type: "multi_select",
         select_type:"select2",
+        column_data_type: "text",
         filter_match_mode: "exact",
     }
 
@@ -119,360 +121,68 @@ function gproteinstructurebrowser(effector) {
     /// Table Column Definitions ///
 
     //column definitions for g-protein browser
-    const gprotein_ColDefs = { 
-        selector: {
-            column_number: 0,
-            ...base_defaults,
-        },
-        gprotein_family: {
-            column_number: 1,
-            ...multiselect_defaults,
-            filter_default_label: "Fam.",
-            width: "50px"
-        },
-        gprotein_alpha: {
-            column_number: 2,
-            ...multiselect_defaults,
-            filter_default_label: "&alpha",
-            column_data_type: "html",
-            width: "40px"
-        },
-        gprotein_alpha_species: {
-            column_number: 3,
-            ...multiselect_defaults,
-            filter_default_label: "Species",
-            width: "55px"
-        },
-        gprotein_note: {
-            column_number: 4,
-            ...multiselect_defaults,
-            filter_default_label: "Note",
-            width: "80px"
-        },
-        gprotein_percent_of_sequence: {
-            column_number: 5,
-            ...range_number_defaults,
-            width: "30px"
-        },
-        gprotein_beta: {
-            column_number: 6,
-            ...multiselect_defaults,
-            filter_default_label: "&beta",
-            width: "40px"
-        },
-        gprotein_beta_species: {
-            column_number: 7,
-            ...multiselect_defaults,
-            filter_default_label: "Species",
-            width: "55px"
-        },
-        gprotein_gamma: {
-            column_number: 8,
-            ...multiselect_defaults,
-            filter_default_label: "&gamma",
-            width: "40px"
-        },
-        gprotein_gamma_species: {
-            column_number: 9,
-            ...multiselect_defaults,
-            filter_default_label: "Species",
-            width: "55px"
-        },
-        structure_method: {
-            column_number: 10,
-            ...multiselect_defaults,
-            filter_default_label: "Method",
-            width: "60px"
-    },
-        structure_pdb: {
-            column_number: 11,
-            ...multiselect_defaults,
-            filter_default_label: "PDB",
-            column_data_type: "html",
-            width: "50px"
-        },
-        structure_refined_structure: {
-            column_number: 12,
-            ...multiselect_defaults,
-            filter_default_label: "Refined",
-            column_data_type: "html",
-            width: "50px"
-        },
-        structure_resolution: {
-            column_number: 13,
-            ...range_number_defaults,
-            width: "30px"
-        },
-        receptor_uniprot: {
-            column_number: 14,
-            ...multiselect_defaults,
-            filter_default_label: "UniProt",
-            column_data_type: "html",
-            width: "60px"
-        },
-        receptor_gene: {
-            column_number: 15,
-            ...multiselect_defaults,
-            filter_default_label: "Gene",
-            column_data_type: "html",
-            width: "60px"
-        },
-        receptor_iuphar : {
-            column_number: 16,
-            ...multiselect_defaults,
-            filter_default_label: "IUPHAR",
-            column_data_type: "html",
-            width: "60px"
-        },
-        receptor_family	: {
-            column_number: 17,
-            ...multiselect_defaults,
-            filter_default_label: "Receptor family",
-            column_data_type: "html",
-            width: "120px"
-        },
-
-        receptor_class: {
-            column_number: 18,
-            ...multiselect_defaults,
-            filter_default_label: "Class",            
-            column_data_type: "html",
-            width: "80px"
-        },
-
-        receptor_species: {
-            column_number: 19,
-            ...multiselect_defaults,
-            filter_default_label: "Species",
-            width: "55px"
-        },
-        otherproteins_receptor_fusion: {
-            column_number: 20,
-            ...text_defaults,
-            filter_default_label: "Receptor fusion",
-            width: "100px"
-        },
-        otherproteins_antibodies: {
-            column_number: 21,
-            ...text_defaults,
-            filter_default_label: "Antibodies",
-            width: "100px"
-        },
-        otherproteins_other: {
-            column_number: 22,
-            ...text_defaults,
-            filter_default_label: "Other",
-            width: "100px"
-        },
-        structurelig_name: {
-            column_number: 23,
-            ...text_defaults,
-            filter_default_label: "Ligand name",
-            width: "100px"
-        },
-        structurelig_type: {
-            column_number: 24,
-            ...multiselect_defaults,
-            filter_default_label: "Ligand type",
-            width: "100px"
-        },
-        structurelig_function: {
-            column_number: 25,
-            ...multiselect_defaults,
-            filter_default_label: "Modality",
-            width: "100px"
-        },
-        physligand_name: {
-            column_number: 26,
-            ...multiselect_defaults,
-            filter_default_label: "Ligand name",
-            width: "100px"
-        },
-        physligand_type: {
-            column_number: 27,
-            ...multiselect_defaults,
-            filter_default_label: "Ligand type",
-            width: "100px"
-        },
-        reference_authors: {
-            column_number: 28,
-            ...multiselect_defaults,
-            filter_default_label: "Last author",
-            width: "100px"
-        },
-        reference_reference: {
-            column_number: 29,
-            ...base_defaults,
-            filter_default_label: "Reference",
-            width: "140px"
-        },
-        reference_pdb_date : {
-            column_number: 30,
-            ...base_defaults,
-            filter_type: "range_date",
-            filter_default_label: ["Min","Max"],
-            width: "30px"
-        },
-        protein_id_hidden: {
-            column_number: 31, ...base_defaults}
+    const gprotein_coldefs = {
+        selector                     : { column_number: 0, ...base_defaults, },
+        gprotein_family              : { column_number: 1, ...multiselect_defaults, filter_default_label: "Fam.", width: "50px" },
+        gprotein_alpha               : { column_number: 2, ...multiselect_defaults, filter_default_label: "&alpha", column_data_type: "html", width: "40px" },
+        gprotein_alpha_species       : { column_number: 3, ...multiselect_defaults, filter_default_label: "Species", width: "55px" },
+        gprotein_note                : { column_number: 4, ...multiselect_defaults, filter_default_label: "Note", width: "80px" },
+        gprotein_percent_of_sequence : { column_number: 5, ...range_number_defaults, width: "30px" },
+        gprotein_beta                : { column_number: 6, ...multiselect_defaults, filter_default_label: "&beta", width: "40px" },
+        gprotein_beta_species        : { column_number: 7, ...multiselect_defaults, filter_default_label: "Species", width: "55px" },
+        gprotein_gamma               : { column_number: 8, ...multiselect_defaults, filter_default_label: "&gamma", width: "40px" },
+        gprotein_gamma_species       : { column_number: 9, ...multiselect_defaults, filter_default_label: "Species", width: "55px" },
+        structure_method             : { column_number: 10, ...multiselect_defaults, filter_default_label: "Method", width: "60px" },
+        structure_pdb                : { column_number: 11, ...multiselect_defaults, filter_default_label: "PDB", column_data_type: "html", width: "50px" },
+        structure_refined_structure  : { column_number: 12, ...multiselect_defaults, filter_default_label: "Refined", column_data_type: "html", width: "50px" },
+        structure_resolution         : { column_number: 13, ...range_number_defaults, width: "30px" },
+        receptor_uniprot             : { column_number: 14, ...multiselect_defaults, filter_default_label: "UniProt", column_data_type: "html", width: "60px" },
+        receptor_gene                : { column_number: 15, ...multiselect_defaults, filter_default_label: "Gene", column_data_type: "html", width: "60px" },
+        receptor_iuphar              : { column_number: 16, ...multiselect_defaults, filter_default_label: "IUPHAR", column_data_type: "html", width: "60px" },
+        receptor_family	             : { column_number: 17, ...multiselect_defaults, filter_default_label: "Receptor family", column_data_type: "html", width: "120px" },
+        receptor_class               : { column_number: 18, ...multiselect_defaults, filter_default_label: "Class", column_data_type: "html", width: "80px" },
+        receptor_species             : { column_number: 19, ...multiselect_defaults, filter_default_label: "Species", width: "55px" },
+        otherproteins_receptor_fusion: { column_number: 20, ...text_defaults, filter_default_label: "Receptor fusion", width: "100px" },
+        otherproteins_antibodies     : { column_number: 21, ...text_defaults, filter_default_label: "Antibodies", width: "100px" },
+        otherproteins_other          : { column_number: 22, ...text_defaults, filter_default_label: "Other", width: "100px" },
+        structurelig_name            : { column_number: 23, ...text_defaults, filter_default_label: "Ligand name", width: "100px" },
+        structurelig_type            : { column_number: 24, ...multiselect_defaults, filter_default_label: "Ligand type", width: "100px" },
+        structurelig_function        : { column_number: 25, ...multiselect_defaults, filter_default_label: "Modality", width: "100px" },
+        physligand_name              : { column_number: 26, ...multiselect_defaults, filter_default_label: "Ligand name", width: "100px" },
+        physligand_type              : { column_number: 27, ...multiselect_defaults, filter_default_label: "Ligand type", width: "100px" },
+        reference_authors            : { column_number: 28, ...multiselect_defaults, filter_default_label: "Last author", width: "100px" },
+        reference_reference          : { column_number: 29, ...base_defaults, filter_default_label: "Reference", width: "140px" },
+        reference_pdb_date           : { column_number: 30, ...base_defaults, filter_type: "range_date", filter_default_label: ["Min","Max"], width: "30px" },
+        protein_id_hidden            : { column_number: 31, ...base_defaults}
     };
 
-    //column definitions for arrestin browser
-    const arrestin_ColDefs = {
-        selector: {
-            column_number: 0,
-            ...base_defaults,
-        },
-        // Structure Block
-        structure_pdb: {
-            column_number: 1,
-            ...multiselect_defaults,
-            filter_default_label: "PDB",
-            column_data_type: 'html',
-            width: null
-        },
-        structure_method: {
-            column_number: 2,
-            ...multiselect_defaults,
-            filter_default_label: "Method",
-            width: "60px"
-        },
-        structure_resolution: {
-            column_number: 3,
-            ...range_number_defaults,
-            width: "30px"
-        },
-        // Receptor Block
-        receptor_uniprot: {
-            column_number: 4,
-            ...multiselect_defaults,
-            filter_default_label: "UniProt",
-            width: "60px"
-        },
-        receptor_gene: {
-            column_number: 5,
-            ...multiselect_defaults,
-            filter_default_label: "Gene",            
-            column_data_type: "html",
-            width: "60px"
-        },
-        receptor_iuphar: {
-            column_number: 6,
-            ...multiselect_defaults,
-            filter_default_label: "IUPHAR",
-            column_data_type: "html",
-           width: "60px"
-        },
-        receptor_family: { 
-            column_number: 7,
-            ...multiselect_defaults,
-            filter_default_label: "Receptor family",
-            column_data_type: "html",
-            width: "120px"
-        },
-        receptor_class: {
-            column_number: 8,
-            ...multiselect_defaults,
-            filter_default_label: "Class",
-            column_data_type: "html",
-            width: "80px"
-        },
-        receptor_species: {
-            column_number: 9,
-            ...multiselect_defaults,
-            filter_default_label: "Species",
-            column_data_type: null,
-            width: "55px"
-        },
-        // Arrestin block
-        arrestin_family: {
-            column_number: 10,
-            ...multiselect_defaults,
-            filter_default_label: "Fam.",
-            width: "50px"
-        },
-        arrestin_arrestin: {
-            column_number: 11,
-            ...multiselect_defaults,
-            filter_default_label: "Arrestin",
-            column_data_type: "html",
-            width: "40px"
-        },
-        arrestin_species: {
-            column_number: 12,
-            ...multiselect_defaults,
-            filter_default_label: "Species",
-            width: "55px"
-        },
-        arrestin_note : {
-            column_number: 13,
-            ...multiselect_defaults,
-            filter_default_label: "Note",
-            width: "80px"
-        },
-        arrestin_percentseq: {
-            column_number: 14,
-            ...range_number_defaults,
-            width: "30px"
-        },
-        // Other proteins block
-        otherproteins_receptor_fusion: {
-            column_number: 15,
-            ...text_defaults,
-            filter_default_label: "Receptor fusion",
-            width: "100px"
-        },
-        otherproteins_antibodies: {
-            column_number: 16,
-            ...text_defaults,
-            filter_default_label: "Antibodies",
-            width: "100px"
-        },
-        otherproteins_other: {
-            column_number: 17,
-            ...text_defaults,
-            filter_default_label: "Other",
-            width: "100px"
-        },
-        structurelig_name: {
-            column_number: 18,
-            ...text_defaults,
-            filter_default_label: "Ligand name",
-            width: "100px"
-        },
-        structurelig_type: {
-            column_number: 19,
-            ...multiselect_defaults,
-            filter_default_label: "Ligand type",
-            width: "100px"
-        },
-        structurelig_function: {
-            column_number: 20,
-            ...multiselect_defaults,
-            filter_default_label: "Modality",
-            width: "100px"
-        },
-        reference_authors: {
-            column_number: 21,
-            ...multiselect_defaults,
-            filter_default_label: "Last author",
-            width: "100px"
-        },
-        reference_reference: {
-            column_number: 22,
-           ...multiselect_defaults,
-            filter_default_label: "Reference",
-            width: "140px"
-        },
-        reference_pdb_date : {
-            column_number: 23,
-            ...base_defaults,
-            filter_type: "range_date",
-            filter_default_label: ["Min", "Max"],
-            width: "30px"
-        },
-        protein_id_hidden: {
-            column_number: 24, ...base_defaults}
+        //column definitions for arrestin browser
+    const arrestin_coldefs = {
+        selector                     : { column_number: 0, ...base_defaults, },
+        structure_pdb                : { column_number: 1, ...multiselect_defaults, filter_default_label: "PDB", column_data_type: 'html', width: null },
+        structure_method             : { column_number: 2, ...multiselect_defaults, filter_default_label: "Method", width: "60px" },
+        structure_resolution         : { column_number: 3, ...range_number_defaults, width: "30px" },
+        receptor_uniprot             : { column_number: 4, ...multiselect_defaults, filter_default_label: "UniProt", width: "60px" },
+        receptor_gene                : { column_number: 5, ...multiselect_defaults, filter_default_label: "Gene", column_data_type: "html", width: "60px" },
+        receptor_iuphar              : { column_number: 6, ...multiselect_defaults, filter_default_label: "IUPHAR", column_data_type: "html",           width: "60px" },
+        receptor_family              : { column_number: 7, ...multiselect_defaults, filter_default_label: "Receptor family", column_data_type: "html", width: "120px" },
+        receptor_class               : { column_number: 8, ...multiselect_defaults, filter_default_label: "Class", column_data_type: "html", width: "80px" },
+        receptor_species             : { column_number: 9, ...multiselect_defaults, filter_default_label: "Species", column_data_type: null, width: "55px" },
+        arrestin_family              : { column_number: 10, ...multiselect_defaults, filter_default_label: "Fam.", width: "50px" },
+        arrestin_arrestin            : { column_number: 11, ...multiselect_defaults, filter_default_label: "Arrestin", column_data_type: "html", width: "40px" },
+        arrestin_species             : { column_number: 12, ...multiselect_defaults, filter_default_label: "Species", width: "55px" },
+        arrestin_note                : { column_number: 13, ...multiselect_defaults, filter_default_label: "Note", width: "80px" },
+        arrestin_percentseq          : { column_number: 14, ...range_number_defaults, width: "30px" },
+        otherproteins_receptor_fusion: { column_number: 15, ...text_defaults, filter_default_label: "Receptor fusion", width: "100px" },
+        otherproteins_antibodies     : { column_number: 16, ...text_defaults, filter_default_label: "Antibodies", width: "100px" },
+        otherproteins_other          : { column_number: 17, ...text_defaults, filter_default_label: "Other", width: "100px" },
+        structurelig_name            : { column_number: 18, ...text_defaults, filter_default_label: "Ligand name", width: "100px" },
+        structurelig_type            : { column_number: 19, ...multiselect_defaults, filter_default_label: "Ligand type", width: "100px" },
+        structurelig_function        : { column_number: 20, ...multiselect_defaults, filter_default_label: "Modality", width: "100px" },
+        reference_authors            : { column_number: 21, ...multiselect_defaults, filter_default_label: "Last author", width: "100px" },
+        reference_reference          : { column_number: 22, ...multiselect_defaults, filter_default_label: "Reference", width: "140px" },
+        reference_pdb_date           : { column_number: 23, ...base_defaults, filter_type: "range_date", filter_default_label: ["Min", "Max"], width: "30px" },
+        protein_id_hidden            : { column_number: 24, ...base_defaults}
     };
 
     let use_defs = null;
@@ -483,21 +193,21 @@ function gproteinstructurebrowser(effector) {
           "scrollCollapse": true,
           "scroller": true,
           "paging":         true,
-          "pageLength":     100, 
+          "pageLength":     100,
           // "bSortCellsTop": true,
           "aaSorting": [],
           "autoWidth": false,
-          "order": [[gprotein_ColDefs.reference_pdb_date.column_number,"desc"],[gprotein_ColDefs.receptor_family.column_number,"asc"]],
+          "order": [[gprotein_coldefs.reference_pdb_date.column_number,"desc"],[gprotein_coldefs.receptor_family.column_number,"asc"]],
           "columnDefs": [
               { "targets": "no-sort", "orderable": false },
-              { "targets": gprotein_ColDefs.protein_id_hidden.column_number, "visible": false, "searchable": false } // hidden protein id
+              { "targets": gprotein_coldefs.protein_id_hidden.column_number, "visible": false, "searchable": false } // hidden protein id
               ],
-          "columns": buildColumnsFromDOM("#structures_scrollable", {[gprotein_ColDefs.reference_pdb_date.column_number]: {"width": "20%"}}),
+          "columns": buildColumnsFromDOM("#structures_scrollable", {[gprotein_coldefs.reference_pdb_date.column_number]: {"width": "20%"}}),
           "bInfo" : true,
       });
 
-      use_defs = gprotein_ColDefs;
-      
+      use_defs = gprotein_coldefs;
+
     } else {
       // Arrestin browser has historically drifted between header and body column counts.
       // Normalize header to body BEFORE DataTables init to avoid '_DT_CellIndex' crashes.
@@ -512,30 +222,30 @@ function gproteinstructurebrowser(effector) {
           "aaSorting": [],
           "autoWidth": false,
           // Arrestin browser columns:
-          "order": [[arrestin_ColDefs.reference_pdb_date.column_number,"desc"],[arrestin_ColDefs.receptor_species.column_number,"asc"]],
+          "order": [[arrestin_coldefs.reference_pdb_date.column_number,"desc"],[arrestin_coldefs.receptor_species.column_number,"asc"]],
           "columnDefs": [
               { "targets": "no-sort", "orderable": false },
-              { "targets": arrestin_ColDefs.protein_id_hidden.column_number, "visible": false, "searchable": false } // hidden protein id
+              { "targets": arrestin_coldefs.protein_id_hidden.column_number, "visible": false, "searchable": false } // hidden protein id
               ],
           // Prefer body-derived column count to avoid header drift breaking initialization
           "columns": arrestinBodyCols ? new Array(arrestinBodyCols).fill(null) : buildColumnsFromDOM("#structures_scrollable"),
           "bInfo" : true,
       });
-      use_defs = arrestin_ColDefs;      
+      use_defs = arrestin_coldefs;
     }
 
     //Create filters from column definition objects above, and add to table
     for (let col_def of Object.values(use_defs)) {
         column_filters = column_filters.concat(
-            createYADCFfilters(col_def.column_number, 
+            createYADCFfilters(col_def.column_number,
                 1, //columns spanned
-                col_def.filter_type, 
-                col_def.select_type, 
-                col_def.filter_default_label, 
-                col_def.filter_reset_button_text, 
-                col_def.filter_match_mode, 
-                col_def.column_data_type, 
-                col_def.width));      
+                col_def.filter_type,
+                col_def.select_type,
+                col_def.filter_default_label,
+                col_def.filter_reset_button_text,
+                col_def.filter_match_mode,
+                col_def.column_data_type,
+                col_def.width));
     }
 
     //Javascript object properties are not necessarily internally ordered, so re-sort to numeric column order for consistency
@@ -671,12 +381,12 @@ function gproteinstructurebrowser(effector) {
     });
 
     $("#superpose_btn").click(function() {
-        const required_cols = ["gprotein_family", "gprotein_alpha", "structure_pdb", "receptor_uniprot", "receptor_gene", 
-            "receptor_iuphar", "receptor_family", "receptor_class", 
+        const required_cols = ["gprotein_family", "gprotein_alpha", "structure_pdb", "receptor_uniprot", "receptor_gene",
+            "receptor_iuphar", "receptor_family", "receptor_class",
             "receptor_species", "reference_pdb_date"].map(function(col) {
-                return gprotein_ColDefs[col].column_number;
+                return gprotein_coldefs[col].column_number;
             });
-        superposition(oTable2, required_cols, "g_protein_structure_browser", "gprot", gprotein_ColDefs.structure_pdb.column_number);
+        superposition(oTable2, required_cols, "g_protein_structure_browser", "gprot", gprotein_coldefs.structure_pdb.column_number);
     });
 
     $('#superpose_template_btn').click(function () {

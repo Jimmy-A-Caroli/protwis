@@ -252,7 +252,7 @@ function importTargets(){
     $("#AnnotationSP").removeClass('active');
     $("#AnnotationAll").addClass('active');
   }
-  
+
   // Update not_found list
   var remove_indeces = [];
   for (i=0;i<slugs.length;i++) {
@@ -462,9 +462,9 @@ function initTargetTable(elementID) {
         ////////////////////////////
         //// Column definitions ////
         ////////////////////////////
-        
+
         ///// Filter Types /////
-        
+
         //Initialisation of basic defaults for a null filter column
         const base_defaults = {
             filter_type: 'none',
@@ -482,6 +482,16 @@ function initTargetTable(elementID) {
             select_type: 'select2',
             filter_default_label: 'Select',
             column_data_type: 'text',
+            filter_match_mode: "exact",
+            filter_reset_button_text: false,
+        }
+
+        const multiselect_html_defaults = {
+            filter_type: "multi_select",
+            select_type: 'select2',
+            filter_default_label: 'Select',
+            column_data_type: 'html',
+            html_data_type: "text",
             filter_match_mode: "exact",
             filter_reset_button_text: false,
         }
@@ -506,90 +516,21 @@ function initTargetTable(elementID) {
 
         //Target select column definitions
         const target_colDefs = {
-          selector: {
-              column_number: 0,
-              ...base_defaults,
-              filter_type: "custom_func",
-              custom_func: selectedTargetFilter,
-              filter_container_id: "hidden_filter_container",
-              html5_data: "data-search", // which does not exist - prevent warning logs
-          },
-          receptor_class: {
-              column_number: 1,
-              ...multiselect_defaults,
-              filter_default_label: "Class",
-              select_type_options: { "width": "70px",},
-          },
-          receptor_ligand: {
-              column_number: 2,
-              ...multiselect_defaults,
-              filter_default_label: "Ligand",
-          },
-          receptor_family: {
-                      column_number: 3,
-                      ...multiselect_defaults,
-                      filter_default_label: "Family",
-          },
-          receptor_uniprot: {
-              column_number: 4,
-          ...multiselect_defaults,
-              column_data_type: "html",
-              filter_default_label: "Uniprot",
-              select_type_options: { "width": "110px", }
-          },
-          receptor_gene: {
-              column_number: 5,
-              ...multiselect_defaults,
-              column_data_type: "html",
-              html_data_type: "text",
-              filter_default_label: "Gene",
-              select_type_options: { "width": "110px", }
-          },
-          receptor_gtp: {
-              column_number: 6,
-              ...multiselect_defaults,
-              column_data_type: "html",
-              html_data_type: "text",
-              filter_default_label: "GtP",
-              select_type_options: { "width": "110px",}
-          },
-          ligand_count: {
-            column_number: 7,
-            ...range_number_defaults,
-            column_data_type: "html",
-          },
-          structure_count: {
-            column_number: 8,
-            ...range_number_defaults,
-            column_data_type: "html",
-          },
-          pdb_list: {
-          column_number: 9,
-            ...text_search_defaults,
-            html5_data: "data-search",
-            select_type_options: {"width": "110px",}
-          },
-          gprotein_gs: {
-            column_number: 10,
-            ...multiselect_defaults,
-            filter_default_label: "Gs",
-          },
-          gprotein_gio: {
-            column_number: 11,
-            ...multiselect_defaults,
-            filter_default_label: "Gi/o",
-          },
-          gprotein_gq11: {
-            column_number: 12,
-            ...multiselect_defaults,
-            filter_default_label: "Gq/11",
-          },
-          gprotein_g1213: {
-            column_number: 13,
-            ...multiselect_defaults,
-            filter_default_label: "G12/13",
-          }
-      }
+            selector        : { column_number: 0, ...base_defaults, filter_type: "custom_func", custom_func: selectedTargetFilter, filter_container_id: "hidden_filter_container", html5_data: "data-search", },
+            receptor_class  : { column_number: 1, ...multiselect_defaults, filter_default_label: "Class", select_type_options: { "width": "70px",}, },
+            receptor_ligand : { column_number: 2, ...multiselect_defaults, filter_default_label: "Ligand", },
+            receptor_family : { column_number: 3, ...multiselect_defaults, filter_default_label: "Family", },
+            receptor_uniprot: { column_number: 4, ...multiselect_html_defaults, filter_default_label: "Uniprot", select_type_options: { "width": "110px", } },
+            receptor_gene   : { column_number: 5, ...multiselect_html_defaults, filter_default_label: "Gene", select_type_options: { "width": "110px", } },
+            receptor_gtp    : { column_number: 6, ...multiselect_html_defaults, filter_default_label: "GtP", select_type_options: { "width": "110px",} },
+            ligand_count    : { column_number: 7, ...range_number_defaults, column_data_type: "html", },
+            structure_count : { column_number: 8, ...range_number_defaults, column_data_type: "html", },
+            pdb_list        : { column_number: 9, ...text_search_defaults, html5_data: "data-search", select_type_options: {"width": "110px",} },
+            gprotein_gs     : { column_number: 10, ...multiselect_defaults, filter_default_label: "Gs", },
+            gprotein_gio    : { column_number: 11, ...multiselect_defaults, filter_default_label: "Gi/o", },
+            gprotein_gq11   : { column_number: 12, ...multiselect_defaults, filter_default_label: "Gq/11", },
+            gprotein_g1213  : { column_number: 13, ...multiselect_defaults, filter_default_label: "G12/13", }
+        }
 
         yadcf.init(targetTable, Object.values(target_colDefs), { filters_tr_index: 1 });
     }
