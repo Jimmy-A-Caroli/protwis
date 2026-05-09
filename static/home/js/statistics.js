@@ -25,12 +25,21 @@
 
  function clear_all() {
      $("#charts").find(".chart_type").each(function () {
-         $(this).css("fill", "");
+         $(this).find("span:first").css("background", "white");
      });
      $("#charts").find(".chart_container").each(function () {
          $(this).css("display", "none");
      });
  }
+
+function move_legend_into_whitespace(parent_svg, offset_x=300, offset_y=0)
+{        
+        //move the legend up a parent level to the root <svg> so it can be positioned relative to svg within margin whitespace
+        var legend = parent_svg.select(".nv-legendWrap");
+        if (!legend.empty()) {            
+            parent_svg.node().appendChild(legend.node());
+            legend.attr("transform", "translate(" + offset_x + "," + offset_y + ")"); 
+        }}
 
  $(window).on("load", function () {
     //Unique crystallized receptors graph
@@ -40,7 +49,7 @@
           var chart = nv.models.multiBarChart()
               .reduceXTicks(false)
               .stacked(true)
-              .margin({ top: 30, right: 60, bottom: 20, left: 60 })
+              .margin({ top: 100, right: 60, bottom: 20, left: 60 })
               .color(d3.scale.category20().range());
           chart.yAxis
               .tickFormat(d3.format(",f"))
@@ -55,14 +64,21 @@
               .tickPadding(0)
               .orient("right");
 
-          d3.select("#unique_cryst_container svg")
-              .datum(datum)
-              .transition().duration(500)
-              .call(chart);
-          d3.select("#unique_cryst_container svg").selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
-              .attr("class", "nv-y nv-axis")
-              .attr("transform", "translate(780, 0)")
-              .call(yAxis2);
+        const svg = d3.select("#unique_cryst_container svg");
+              
+        svg
+            .datum(datum)
+            .transition().duration(500)
+            .call(chart);
+        
+        svg
+            .selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
+            .attr("class", "nv-y nv-axis")
+            .attr("transform", "translate(780, 0)")
+            .call(yAxis2);
+
+        move_legend_into_whitespace(svg);
+
       });
       //Unique crystals/year
       nv.addGraph(function () {
@@ -70,7 +86,7 @@
           var chart = nv.models.multiBarChart()
               .reduceXTicks(false)
               .stacked(true)
-              .margin({ top: 30, right: 60, bottom: 20, left: 60 })
+              .margin({ top: 100, right: 60, bottom: 20, left: 60 })
               .color(d3.scale.category20().range());
           chart.yAxis
               .tickFormat(d3.format(",f"))
@@ -85,21 +101,28 @@
               .tickPadding(0)
               .orient("right");
 
-          d3.select("#unique_cryst_year_container svg")
-              .datum(datum)
-              .transition().duration(500)
-              .call(chart);
-          d3.select("#unique_cryst_year_container svg").selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
-              .attr("class", "nv-y nv-axis")
-              .attr("transform", "translate(780, 0)")
-              .call(yAxis2);
+          const svg = d3.select("#unique_cryst_year_container svg");
+
+        svg
+            .datum(datum)
+            .transition().duration(500)
+            .call(chart);
+         
+        svg
+            .selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
+            .attr("class", "nv-y nv-axis")
+            .attr("transform", "translate(780, 0)")
+            .call(yAxis2);
+        
+        move_legend_into_whitespace(svg);
+
       });
       //All crystals/year
       nv.addGraph(function () {
           var chart = nv.models.multiBarChart()
               .reduceXTicks(false)
               .stacked(true)
-              .margin({ top: 30, right: 60, bottom: 20, left: 60 })
+              .margin({ top: 130, right: 60, bottom: 20, left: 60 })
               .color(d3.scale.category20().range());
           chart.yAxis
               .tickFormat(d3.format(",f"));
@@ -114,14 +137,20 @@
               .tickPadding(0)
               .orient("right");
 
-          d3.select("#cryst_year_container svg")
-              .datum(datum)
-              .transition().duration(500)
-              .call(chart);
-          d3.select("#cryst_year_container svg").selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
-              .attr("class", "nv-y nv-axis")
-              .attr("transform", "translate(780, 0)")
-              .call(yAxis2);
+        const svg = d3.select("#cryst_year_container svg")
+
+        svg
+            .datum(datum)
+            .transition().duration(500)
+            .call(chart);
+        svg
+            .selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
+            .attr("class", "nv-y nv-axis")
+            .attr("transform", "translate(780, 0)")
+            .call(yAxis2);
+
+        move_legend_into_whitespace(svg);
+
       });
       //Unique crystallized receptors per class graph
       nv.addGraph(function () {
@@ -129,7 +158,7 @@
           var chart = nv.models.multiBarChart()
               .reduceXTicks(false)
               .stacked(true)
-              .margin({ top: 30, right: 60, bottom: 20, left: 60 })
+              .margin({ top: 100, right: 60, bottom: 20, left: 60 })
               .color(d3.scale.category20().range());
           chart.yAxis
               .tickFormat(d3.format(",f"))
@@ -144,14 +173,19 @@
               .tickPadding(0)
               .orient("right");
 
-          d3.select("#unique_cryst_class_container svg")
-              .datum(datum)
-              .transition().duration(500)
-              .call(chart);
-          d3.select("#unique_cryst_class_container svg").selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
-              .attr("class", "nv-y nv-axis")
-              .attr("transform", "translate(780, 0)")
-              .call(yAxis2);
+        const svg = d3.select("#unique_cryst_class_container svg");
+
+        svg
+            .datum(datum)
+            .transition().duration(500)
+            .call(chart);
+        svg
+            .selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
+            .attr("class", "nv-y nv-axis")
+            .attr("transform", "translate(780, 0)")
+            .call(yAxis2);
+
+        move_legend_into_whitespace(svg, x_offset=270);
       });
       //Unique crystals/year per class
       nv.addGraph(function () {
@@ -159,7 +193,7 @@
           var chart = nv.models.multiBarChart()
               .reduceXTicks(false)
               .stacked(true)
-              .margin({ top: 30, right: 60, bottom: 20, left: 60 })
+              .margin({ top: 100, right: 60, bottom: 20, left: 60 })
               .color(d3.scale.category20().range());
           chart.yAxis
               .tickFormat(d3.format(",f"))
@@ -174,21 +208,26 @@
               .tickPadding(0)
               .orient("right");
 
-          d3.select("#unique_class_cryst_year_container svg")
-              .datum(datum)
-              .transition().duration(500)
-              .call(chart);
-          d3.select("#unique_class_cryst_year_container svg").selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
-              .attr("class", "nv-y nv-axis")
-              .attr("transform", "translate(780, 0)")
-              .call(yAxis2);
+        const svg = d3.select("#unique_class_cryst_year_container svg");
+        
+        svg
+            .datum(datum)
+            .transition().duration(500)
+            .call(chart);
+        svg
+        .selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
+        .attr("class", "nv-y nv-axis")
+        .attr("transform", "translate(780, 0)")
+        .call(yAxis2);
+
+        move_legend_into_whitespace(svg, x_offset=270);
       });
       //All crystals/year per class
       nv.addGraph(function () {
           var chart = nv.models.multiBarChart()
               .reduceXTicks(false)
               .stacked(true)
-              .margin({ top: 30, right: 60, bottom: 20, left: 60 })
+              .margin({ top: 100, right: 60, bottom: 20, left: 60 })
               .color(d3.scale.category20().range());
           chart.yAxis
               .tickFormat(d3.format(",f"));
@@ -203,26 +242,31 @@
               .tickPadding(0)
               .orient("right");
 
-          d3.select("#cryst_class_year_container svg")
-              .datum(datum)
-              .transition().duration(500)
-              .call(chart);
-          d3.select("#cryst_class_year_container svg").selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
-              .attr("class", "nv-y nv-axis")
-              .attr("transform", "translate(780, 0)")
-              .call(yAxis2);
+        const svg = d3.select("#cryst_class_year_container svg");
+
+        svg
+            .datum(datum)
+            .transition().duration(500)
+            .call(chart);
+        
+        svg
+            .selectAll("g.nv-wrap.nv-multiBarWithLegend").append("g")
+            .attr("class", "nv-y nv-axis")
+            .attr("transform", "translate(780, 0)")
+            .call(yAxis2);
+        
+        move_legend_into_whitespace(svg, x_offset=270);
       });
 
       $(".chart_type").click(function () {
           clear_all();
-          $(this).css("fill", "#000000");
+          $(this).find("span:first").css("background", "black");
           let point = $("#" + $(this).attr("id")).find("svg");
           $(point).css("visibility", "hidden");
           $("#"+$(this).attr("id") + ".chart_container").css("display", "");
       });
 
       $(document).ready(function () {
-          $("#unique_class.chart_type").css("fill", "#000000");
           $("#unique_class.chart_container").css("display", "");
       });
     }
