@@ -1,4 +1,6 @@
-"""Docker development settings.
+# flake8: noqa: F401, F403, F405
+"""
+Docker development settings.
 
 Use as: DJANGO_SETTINGS_MODULE=protwis.settings_local_docker
 

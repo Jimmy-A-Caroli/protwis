@@ -1,4 +1,6 @@
-"""Docker production settings.
+# flake8: noqa: F401, F403, F405
+"""
+Docker production settings.
 
 Use as: DJANGO_SETTINGS_MODULE=protwis.settings_production_docker
 
