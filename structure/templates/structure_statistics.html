@@ -5,6 +5,10 @@
 <link rel="stylesheet" href="{% static 'home/css/nvd3-update.css' %}" type="text/css" />
 <link href="{% static 'home/css/bootstrap-responsive.css' %}" rel="stylesheet" media="screen">
 <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="{% static '/home/css/frameworks/datatables/datatables_bundle.min-2.3.8.css' %}">
+
 <style>
     .node circle {
     /*fill: #fff;*/
@@ -116,14 +120,14 @@
         flex-direction: column;
         align-items: center;
         margin: 30px auto;
-        border: 1px solid black;
+        /* border: 1px solid black; */
         border-radius: 5px;
         padding: 20px;
     }
 
     .chart_controls {
         border-radius: 5px; 
-        border: 1px solid black; 
+        /* border: 1px solid black; */ 
         display: flex; 
         gap: 40px; 
         padding: 20px 16px; 
@@ -135,6 +139,32 @@
         right: 12px;
         top: 12px;
         z-index: 10;
+    }
+
+
+    .col-filter.numericrange-filter {
+        width: 60px;
+    }
+
+    .col-filter.text-filter {
+        width: 140px;
+    }
+
+    .col-filter.text-filter.uniprot_filter_input {
+        width: 100px;
+    }
+
+    .col-filter.text-filter.gene_filter_input {
+        width: 85px;
+    }
+
+    .col-filter.text-filter.species_filter_input {
+        width: 85px;
+    }
+
+    .nvd3 .nv-axis .darktick {
+        stroke-width: 2px;
+        stroke: black;
     }
 
 </style>
@@ -150,13 +180,16 @@
             <a href="#wheel" data-toggle="tab">GPCRome Wheels</a>
         </li>
         <li>
-            <a href="#barchart" data-toggle="tab">Barchart</a>
+            <a href="#barchart" data-toggle="tab">Bar chart</a>
         </li>      
         <li>
             <a href="#table_class" data-toggle="tab">Table (Class)</a>
         </li>        
         <li>
             <a href="#table_receptor" data-toggle="tab">Table (Receptor)</a>
+        </li>
+        <li>
+            <a href="#table_perreceptorstats" data-toggle="tab">Table (Per Receptor Statistics)</a>
         </li>
     </ul>
 
@@ -326,41 +359,38 @@
                 <span style="margin-top: 30px; display: block; font-size: 120%; font-weight: bold;">Select data to display</span>
                 <div class="chart_controls">
                     <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <span style="font-size: 120%; margin-bottom: 4px; border-bottom: 1px solid black;">By class</span>
-                        <div id="unique_class" class="chart_type" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid black; background: black; flex-shrink: 0;"></span>
-                            <span style="font-size: 90%;">The number of unique receptors with structures.</span>
+                       <!-- Category drop down menu -->
+                        <div class="dropdown">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="CategoryDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Categories
+                            <span class="caret"></span>
+                        </button>
+                        <ul id="categoryDropdownButtonList" class="dropdown-menu" aria-labelledby="CategoryDropdown">
+                            <li><a onClick="setDisplayCategory" data-category="all_classes">All Classes</a></li>
+                            <li><a onClick="setDisplayCategory" data-category="all_chemotypes">All Chemotypes </a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a onClick="displayClassSelection">Select Classes</a></li>
+                            <li><a onClick="displayChemotypeSelection">Select Chemotypes</a></li>
+                        </ul>
                         </div>
-                        <div id="unique_class_y" class="chart_type" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid black; background: white; flex-shrink: 0;"></span>
-                            <span style="font-size: 90%;">The number of unique GPCR-ligand complexes.</span>
+
+                        <div class="dropdown">
+                        <button class="btn btn-default dropdown-toggle" type="button" id="DataSourceDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            Data Source
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="DataSourceDropdown">
+                            <li><a onClick="setDisplayData" data-source="distinct_receptors">Distinct receptor structures</a></li>
+                            <li><a onClick="setDisplayData" data-source="distinct_gpcrligandcomplexes">Distinct GPCR-ligand complexes</a></li>
+                            <li><a onClick="setDisplayData" data-source="all_structures">All structures (redundant receptors)</a></li>
+                        </ul>
                         </div>
-                        <div id="all_class" class="chart_type" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid black; background: white; flex-shrink: 0;"></span>
-                            <span style="font-size: 90%;">The number of structures available.</span>
-                        </div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <span style="font-size: 120%; margin-bottom: 4px; border-bottom: 1px solid black;">By ligand type</span>
-                        <div id="unique" class="chart_type" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid black; background: white; flex-shrink: 0;"></span>
-                            <span style="font-size: 90%;">The number of unique receptors with structures available.</span>
-                        </div>
-                        <div id="unique_y" class="chart_type" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid black; background: white; flex-shrink: 0;"></span>
-                            <span style="font-size: 90%;">The number of unique receptors GPCR-ligand complexes.</span>
-                        </div>
-                        <div id="all" class="chart_type" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 2px solid black; background: white; flex-shrink: 0;"></span>
-                            <span style="font-size: 90%;">The number of structures available.</span>
-                        </div>
-                    </div>
                 </div>
                 <div id="master_chart_container">
-                    <div id="unique" class="chart_container" style="display: none;">
-                        <div id="unique_cryst_container"><svg id="unique_cryst" style="width:900px;height:600px;"></svg></div>
+                    <div id="chemotype__distinct_structure" class="chart_container" style="display: none;">
+                        <div id="chemotype__distinct_structure__container"><svg id="chemotype__distinct_structure__chart" style="width:1024px;height:600px;"></svg></div>
                         <script>
-                            data_unique_cryst_container = {{ chartdata | safe }};
+                            chemotype__distinct_structure__data = {{ chartdata | safe }};
                         </script>
                         <div class="btn-group top-right ">
                             <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -369,29 +399,29 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="javascript:saveSvgAsPng(document.getElementById('unique_cryst'), 'unique_crystalized_receptors.png',
+                                    <a href="javascript:saveSvgAsPng(document.getElementById('chemotype__distinct_structure__chart'), 'chemotype__distinct_structure_by_year.png',
                             {scale: 3});">PNG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsJpg(document.getElementById('unique_cryst'), 'unique_crystalized_receptors.jpg',
+                                    <a href="javascript:saveSvgAsJpg(document.getElementById('chemotype__distinct_structure__chart'), 'chemotype__distinct_structure_by_year.jpg',
                             {scale: 3});">JPG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsTiff(document.getElementById('unique_cryst'), 'unique_crystalized_receptors.tiff',
+                                    <a href="javascript:saveSvgAsTiff(document.getElementById('chemotype__distinct_structure__chart'), 'chemotype__distinct_structure_by_year.tiff',
                             {scale: 3});">TIFF</a>
                                     </a>
                                 </li>
                                 <li>
                                     <a
-                                        href="javascript:saveSvg(document.getElementById('unique_cryst'), 'unique_crystalized_receptors.svg');">SVG</a>
+                                        href="javascript:saveSvg(document.getElementById('chemotype__distinct_structure__chart'), 'chemotype__distinct_structure_by_year.svg');">SVG</a>
                                 </li>
                             </ul>
                         </div>
                     </div>
-                    <div id="unique_y" class="chart_container" style="display: none;">
-                        <div id="unique_cryst_year_container"><svg id="unique_cryst_year" style="width:900px;height:600px;"></svg></div>
+                    <div id="chemotype__distinct_gpcrligand" class="chart_container" style="display: none;">
+                        <div id="chemotype__distinct_gpcrligand__container"><svg id="chemotype__distinct_gpcrligand__chart" style="width:1024px;height:600px;"></svg></div>
                         <script>
-                            data_unique_cryst_year_container = {{ chartdata_y | safe }};
+                            chemotype__distinct_gpcrligand__data = {{ chartdata_y | safe }};
                         </script>
                         <div class="btn-group top-right">
                             <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -400,29 +430,29 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="javascript:saveSvgAsPng(document.getElementById('unique_cryst_year'), 'unique_crystalized_receptors_by_year.png',
+                                    <a href="javascript:saveSvgAsPng(document.getElementById('chemotype__distinct_gpcrligand__chart'), 'chemotype__distinct_gpcrligand_by_year.png',
                             {scale: 3});">PNG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsJpg(document.getElementById('unique_cryst_year'), 'unique_crystalized_receptors_by_year.jpg',
+                                    <a href="javascript:saveSvgAsJpg(document.getElementById('chemotype__distinct_gpcrligand__chart'), 'chemotype__distinct_gpcrligand_by_year.jpg',
                             {scale: 3});">JPG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsTiff(document.getElementById('unique_cryst_year'), 'unique_crystalized_receptors_by_year.tiff',
+                                    <a href="javascript:saveSvgAsTiff(document.getElementById('chemotype__distinct_gpcrligand__chart'), 'chemotype__distinct_gpcrligand_by_year.tiff',
                             {scale: 3});">TIFF</a>
                                     </a>
                                 </li>
                                 <li>
                                     <a
-                                        href="javascript:saveSvg(document.getElementById('unique_cryst_year'), 'unique_crystalized_receptors_by_year.svg');">SVG</a>
+                                        href="javascript:saveSvg(document.getElementById('chemotype__distinct_gpcrligand__chart'), 'chemotype__distinct_gpcrligand_by_year.svg');">SVG</a>
                                 </li>
                             </ul>
                         </div>
                     </div>
-                    <div id="all" class="chart_container" style="display: none;">
-                        <div id="cryst_year_container"><svg id="data_cryst_year" style="width:900px;height:600px;"></svg></div>
+                    <div id="chemotype__all_structures" class="chart_container" style="display: none;">
+                        <div id="chemotype__all_structures__container"><svg id="chemotype__all_structures__chart" style="width:1024px;height:600px;"></svg></div>
                         <script>
-                            data_cryst_year_container = {{ chartdata_all | safe }};
+                            chemotype__all_structures__data = {{ chartdata_all | safe }};
                         </script>
                         <div class="btn-group top-right">
                             <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -431,31 +461,31 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="javascript:saveSvgAsPng(document.getElementById('data_cryst_year'), 'crystalized_receptors_by_year.png',
+                                    <a href="javascript:saveSvgAsPng(document.getElementById('chemotype__all_structures__chart'), 'chemotype__all_structures_by_year.png',
                             {scale: 3});">PNG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsJpg(document.getElementById('data_cryst_year'), 'crystalized_receptors_by_year.jpg',
+                                    <a href="javascript:saveSvgAsJpg(document.getElementById('chemotype__all_structures__chart'), 'chemotype__all_structures_by_year.jpg',
                             {scale: 3});">JPG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsTiff(document.getElementById('data_cryst_year'), 'crystalized_receptors_by_year.tiff',
+                                    <a href="javascript:saveSvgAsTiff(document.getElementById('chemotype__all_structures__chart'), 'chemotype__all_structures_by_year.tiff',
                             {scale: 3});">TIFF</a>
                                     </a>
                                 </li>
                                 <li>
                                     <a
-                                        href="javascript:saveSvg(document.getElementById('data_cryst_year'), 'crystalized_receptors_by_year.svg');">SVG</a>
+                                        href="javascript:saveSvg(document.getElementById('chemotype__all_structures__chart'), 'chemotype__all_structures_by_year.svg');">SVG</a>
                                 </li>
                             </ul>
                         </div>
                     </div>
 
-                    <div id="unique_class" class="chart_container" style="display: none;">
-                        <div id="unique_cryst_class_container"><svg id="unique_class_cryst" style="width:900px;height:600px;"></svg>
+                    <div id="class__distinct_structure" class="chart_container" style="display: none;">
+                        <div id="class__distinct_structure__container"><svg id="class__distinct_structure__chart" style="width:1024px;height:600px;"></svg>
                         </div>
                         <script>
-                            data_unique_class_cryst_container = {{ chartdata_class | safe }};
+                            class__distinct_structure__data = {{ chartdata_class | safe }};
                         </script>
                         <div class="btn-group top-right">
                             <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -464,30 +494,30 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="javascript:saveSvgAsPng(document.getElementById('unique_class_cryst'), 'unique_crystalized_receptors.png',
+                                    <a href="javascript:saveSvgAsPng(document.getElementById('class__distinct_structure__chart'), 'class__distinct_structure_by_year.png',
                             {scale: 3});">PNG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsJpg(document.getElementById('unique_class_cryst'), 'unique_crystalized_receptors.jpg',
+                                    <a href="javascript:saveSvgAsJpg(document.getElementById('class__distinct_structure__chart'), 'class__distinct_structure_by_year.jpg',
                             {scale: 3});">JPG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsTiff(document.getElementById('unique_class_cryst'), 'unique_crystalized_receptors.tiff',
+                                    <a href="javascript:saveSvgAsTiff(document.getElementById('class__distinct_structure__chart'), 'class__distinct_structure_by_year.tiff',
                             {scale: 3});">TIFF</a>
                                     </a>
                                 </li>
                                 <li>
                                     <a
-                                        href="javascript:saveSvg(document.getElementById('unique_class_cryst'), 'unique_crystalized_receptors.svg');">SVG</a>
+                                        href="javascript:saveSvg(document.getElementById('class__distinct_structure__chart'), 'class__distinct_structure_by_year.svg');">SVG</a>
                                 </li>
                             </ul>
                         </div>
                     </div>
-                    <div id="unique_class_y" class="chart_container" style="display: none;">
-                        <div id="unique_class_cryst_year_container"><svg id="unique_class_cryst_year"
-                                style="width:900px;height:600px;"></svg></div>
+                    <div id="class__distinct_gpcrligand" class="chart_container" style="display: none;">
+                        <div id="class__distinct_gpcrligand__container"><svg id="class__distinct_gpcrligand__chart"
+                                style="width:1024px;height:600px;"></svg></div>
                         <script>
-                            data_unique_class_cryst_year_container = {{ chartdata_class_y | safe }};
+                            class__distinct_gpcrligand__data = {{ chartdata_class_y | safe }};
                         </script>
                         <div class="btn-group top-right">
                             <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -496,30 +526,30 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="javascript:saveSvgAsPng(document.getElementById('unique_class_cryst_year'), 'unique_crystalized_receptors_by_year.png',
+                                    <a href="javascript:saveSvgAsPng(document.getElementById('class__distinct_gpcrligand__chart'), 'class__distinct_gpcrligand_by_year.png',
                             {scale: 3});">PNG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsJpg(document.getElementById('unique_class_cryst_year'), 'unique_crystalized_receptors_by_year.jpg',
+                                    <a href="javascript:saveSvgAsJpg(document.getElementById('class__distinct_gpcrligand__chart'), 'class__distinct_gpcrligand_by_year.jpg',
                             {scale: 3});">JPG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsTiff(document.getElementById('unique_class_cryst_year'), 'unique_crystalized_receptors_by_year.tiff',
+                                    <a href="javascript:saveSvgAsTiff(document.getElementById('class__distinct_gpcrligand__chart'), 'class__distinct_gpcrligand_by_year.tiff',
                             {scale: 3});">TIFF</a>
                                     </a>
                                 </li>
                                 <li>
                                     <a
-                                        href="javascript:saveSvg(document.getElementById('unique_class_cryst_year'), 'unique_crystalized_receptors_by_year.svg');">SVG</a>
+                                        href="javascript:saveSvg(document.getElementById('class__distinct_gpcrligand__chart'), 'class__distinct_gpcrligand_by_year.svg');">SVG</a>
                                 </li>
                             </ul>
                         </div>
                     </div>
-                    <div id="all_class" class="chart_container" style="display: none;">
-                        <div id="cryst_class_year_container"><svg id="data_class_cryst_year" style="width:900px;height:600px;"></svg>
+                    <div id="class__all_structures" class="chart_container" style="display: none;">
+                        <div id="class__all_structures__container"><svg id="class__all_structures__chart" style="width:1024px;height:600px;"></svg>
                         </div>
                         <script>
-                            data_cryst_class_year_container = {{ chartdata_class_all | safe }};
+                            class__all_structures__data = {{ chartdata_class_all | safe }};
                         </script>
                         <div class="btn-group top-right">
                             <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-toggle="dropdown"
@@ -528,21 +558,21 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a href="javascript:saveSvgAsPng(document.getElementById('data_class_cryst_year'), 'crystalized_receptors_by_year.png',
+                                    <a href="javascript:saveSvgAsPng(document.getElementById('class__all_structures__chart'), 'class__all_structures_by_year.png',
                             {scale: 3});">PNG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsJpg(document.getElementById('data_class_cryst_year'), 'crystalized_receptors_by_year.jpg',
+                                            <a href="javascript:saveSvgAsJpg(document.getElementById('class__all_structures__chart'), 'class__all_structures_by_year.jpg',
                             {scale: 3});">JPG</a>
                                 </li>
                                 <li>
-                                    <a href="javascript:saveSvgAsTiff(document.getElementById('data_class_cryst_year'), 'crystalized_receptors_by_year.tiff',
+                                    <a href="javascript:saveSvgAsTiff(document.getElementById('class__all_structures__chart'), 'class__all_structures_by_year.tiff',
                             {scale: 3});">TIFF</a>
                                     </a>
                                 </li>
                                 <li>
                                     <a
-                                        href="javascript:saveSvg(document.getElementById('data_class_cryst_year'), 'crystalized_receptors_by_year.svg');">SVG</a>
+                                        href="javascript:saveSvg(document.getElementById('class__all_structures__chart'), 'class__all_structures_by_year.svg');">SVG</a>
                                 </li>
                             </ul>
                         </div>
@@ -668,6 +698,11 @@
             <span class="footer"><b style="font-size: 130%;">*</b>Active state is defined as agonist-bound and opened intracellular TM bundle. <b style="font-size: 130%;">**</b>Receptor-orthologues are only counted once.</span>
 
             <span class="footer"> Specific sets of structures can be downloaded from the <a href="/structure">Structures</a> page. The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }}</strong>.</span>
+        </div>
+        <div id="table_perreceptorstats" class="tab-pane fade">
+            <table id="structureStatisticsTable" class="display" style="width:100%">
+                <!-- This table is populated by the TableManager via AJAX -->  
+            </table>
         </div>
 
 {% elif page == 'gprotein' %}
@@ -1553,12 +1588,24 @@
 <script src="{% static 'home/js/saveSvg.js' %}"></script>
 <script src="{% static 'home/js/phylo_tree.js' %}"></script>
 
+
 {% if page == 'gpcr' %}
     <script src="{% static 'home/js/datamapper.js' %}"></script>
     <script src="{% static 'home/js/popper.min.js' %}"></script>
     <script src="{% static 'home/js/spectrum_v1_8_1.js' %}"></script>
     <script src="{% static 'home/js/ml.js' %}"></script>
     <script src="{% static 'home/js/d3.tip.js' %}"></script>
+
+    <!-- jQuery + DataTables -->
+  
+  <script src="{% static '/home/js/frameworks/datatables/datatables-2.3.8.js' %}"></script> 
+  <script src="{% static '/home/js/frameworks/datatables/buttons-3.2.6.js' %}"></script> 
+  <script src="{% static '/home/js/frameworks/datatables/fixed_columns-5.0.5.js' %}"></script> 
+  <script src="{% static '/home/js/frameworks/datatables/html5_export-3.2.6.js' %}"></script> 
+  <!-- TableManager -->
+  <script src="{% static '/home/js/tablemanager/tablemanager.js' %}"></script> 
+
+
     <script>
 
         // Import GPCRome data 
@@ -1831,6 +1878,20 @@
             DrawGPCRomeWheel(Data, location, styling);
         }
 
+    </script>
+    <script>
+        // Populate structure model statistics table using TableManager 
+        TableManager.fetchConfiguration(
+          dataTableConfigName = 'structure_model_statistics_table_gpcr', 
+          dataTableConfigVariant = 'clientside',
+          columnConfigName = 'structure_model_statistics_table_gpcr', 
+          columnConfigVariant = 'basic',)
+        .then(config => {
+          stattable = new TableManager(config.columnsSpecifications, 'structureStatisticsTable');
+          stattable.initialiseDataTable(config.datatableConfiguration);
+        }).catch(error => {
+          console.error('Error fetching configuration:', error);
+        });
     </script>
 {% elif page == 'gprotein' %}
     <script type="text/javascript" charset="utf-8">
