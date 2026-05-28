@@ -375,8 +375,14 @@
       },
       stateLoadParams: function (settings, state) {
         state.search = { search: "" };
-        state.columns.forEach(c => { c.search = { search: "" }; });
         state.start = 0;
+        const inWorkflow = window.location.hash.startsWith('#keepselection') ||
+                           sessionStorage.getItem('sbReturnWorkflow') === '1';
+        sessionStorage.removeItem('sbReturnWorkflow');
+        state.columns.forEach((c, i) => {
+          c.search = { search: "" };
+          if (!inWorkflow && i !== 5) c.visible = true; // col 5 = internal ID, always hidden
+        });
       },
       buttons: [
         {
@@ -638,6 +644,7 @@
     ClearSelection("targets");
     if (selectedData.length === 0) { showAlert("No entries selected for sequence alignment", "danger"); return; }
     selectedData.forEach(row => AddToSelection("targets", "structure", row.pdb));
+    sessionStorage.setItem('sbReturnWorkflow', '1');
     window.location.href = "/structure/selection_convert";
   }
 
@@ -648,6 +655,7 @@
     if (selectedData.length > 100){ showAlert("Maximum number of selected entries is 100", "warning"); return; }
     const ids = selectedData.map(row => row.pdb.replace(/\s+/g, ""));
     AddToSelection("targets", "structure_many", ids.join(","));
+    sessionStorage.setItem('sbReturnWorkflow', '1');
     window.location.href = "/structure/pdb_download";
   }
 
