@@ -170,6 +170,16 @@
   ];
 
   // ===== 3) COLVIS (Table Control) ===========================================
+  function syncTableControlBtn(table) {
+    const hasHidden = table.columns().indexes().toArray()
+      .filter(i => i >= 6)
+      .some(i => !table.column(i).visible());
+    $('.btn-table-control span:first').html(
+      'Table Control' +
+      (hasHidden ? ' <i class="glyphicon glyphicon-eye-close" style="font-size:11px;" title="Some columns are hidden"></i>' : '')
+    );
+  }
+
   function controlTableButtonWithGroups(table) {
     const managedIdx = table.columns().indexes().toArray().filter(i => i >= 6); // lock 0..5
     return {
@@ -885,8 +895,8 @@
           });
         });
 
-        // Keep dividers in sync with visibility toggles
-        table.on('column-visibility.dt', function(){ applyGroupBorders(table); });
+        // Keep dividers and Table Control indicator in sync with visibility toggles
+        table.on('column-visibility.dt', function(){ applyGroupBorders(table); syncTableControlBtn(table); });
 
         // Build the column filters
         createFilters();
@@ -895,6 +905,7 @@
         $("#Init_loader").busyLoad("hide").hide();
         $("#StructureBrowserTableContainer").show();
         table.columns.adjust().draw(false);
+        syncTableControlBtn(table);
 
         // initial export state
         updateExportSelectedState();
