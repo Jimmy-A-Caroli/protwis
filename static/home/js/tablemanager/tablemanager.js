@@ -5,6 +5,10 @@ class TableManager {
   ) {
     this.columnsSpecifications = columnSpecification;
     this.tableId = tableId;
+    //Array to store functions that need to be run after data is loaded into the table, 
+    // e.g. to populate filter interfaces that require access to the dataset to determine their options (e.g. select dropdowns populated with unique values from the dataset)
+    this.dataLoadedCallBacks = []; 
+    this.documentReadyCallBacks = []; 
   }
 
   initialiseDataTable(dataTableOptions) {
@@ -12,8 +16,7 @@ class TableManager {
       this.validateColumnSpecifications();
     } catch (error) {
       alert(
-        "Error in column specifications during DataTable initialisation:",
-        error.message,
+        "Error in column specifications during DataTable initialisation:" + error.message        
       );
       return;
     }
@@ -33,6 +36,12 @@ class TableManager {
       );
     }
 
+    // We need to wait until the initial data has been loaded into the table before populating the filter headers, 
+    // as the filter interfaces (e.g. select dropdowns) may need to be populated with unique values from the dataset which are not available until the data is loaded. 
+    dataTableOptions.initComplete = (settings, json) => {
+      this.dataLoadedCallBacks.forEach((callBack) => callBack());
+    }
+
     this.dataTableReference = $(`#${this.tableId}`).DataTable(dataTableOptions);
 
     tableComponents = this.createSecondaryTableStructure(tableComponents);
@@ -40,6 +49,13 @@ class TableManager {
     this.populateSuperHeaders(tableComponents.superHeaderRow);
 
     this.populateFilterHeaders(tableComponents.filterHeaderRow);
+
+    //We need to wait until the document is fully loaded before initializing any filter interface plugins (e.g. select2) to ensure the relevant DOM elements are available
+    // so we store the initialization of such plugins as callbacks to be run on document ready, and push them into the documentReadyCallBacks array
+    $(document).ready(() => {
+      this.documentReadyCallBacks.forEach((callBack) => callBack());
+    });
+
   }
 
   createPrimaryTableStructure() {
@@ -204,7 +220,7 @@ class TableManager {
     return filterHeaderRow;
   }
 
-  populateFilterHeaders(filterHeaderRow) {
+  populateFilterHeaders(filterHeaderRow) { //, jsonData=null
     this.columnsSpecifications.forEach((col) => {
       // add filter interface if allowed
       const filterTh = document.createElement("th");
@@ -217,6 +233,7 @@ class TableManager {
         const filterInterface = this.filterInterfaceFactory(
           col,
           this.dataTableReference,
+          //jsonData
         );
         if (filterInterface) {
           //Add filter <input> elements  to filter header cell
@@ -231,11 +248,14 @@ class TableManager {
   //  Filter user interfaces  /
   //--------------------------/
 
-  filterInterfaceFactory(col, dataTableReference) {
+  filterInterfaceFactory(col, dataTableReference) { //, jsonData=null
     if (col.data_type === "text" || col.data_type === "weblink") {
       return [this._createTextFilterInterface(col, dataTableReference)];
     } else if (col.data_type === "numeric") {
       return this._createNumericRangeFilterInterface(col, dataTableReference);
+    }
+    else if (col.data_type === "textselect") {
+      return [this._createTextSelectFilterInterface(col, dataTableReference)]; //, jsonData
     }
     return null;
   }
@@ -273,6 +293,119 @@ class TableManager {
     });
 
     return filterInput;
+  }
+
+  _createTextSelectFilterInterface(col, dataTableReference) { //jsonData
+
+    //------------------//
+    //  Event Handlers  //
+    //------------------//
+
+    function onSelectChangeHandler() {
+      let currentSearchValue = dataTableReference.columns(col.col_idx).search()[0] || "%";
+
+      let newSearchValue = this.value;
+      if (dataTableReference.settings()[0].oFeatures.bServerSide == true) {
+        newSearchValue = newSearchValue + "%"; // append wildcard for "contains" search
+      }
+
+      if (newSearchValue !== currentSearchValue) {
+        dataTableReference.columns(col.col_idx).search(newSearchValue).draw();
+        clearButton.style.display = newSearchValue && newSearchValue !== "%" ? "inline-block" : "none";
+      }
+    }
+
+    //Unsupported on Server Side fallback
+    if (dataTableReference.settings()[0].oFeatures.bServerSide == true)
+    {
+      console.warn("Select filter interfaces are not currently supported in server-side processing mode. Falling back to text input filter for column " + col.json_id);
+      return this._createTextFilterInterface(col, dataTableReference);
+    }
+
+    //-----------------//
+    //  HTML Elements  //
+    //-----------------//
+
+    let filterInput = this._createInputForSelectFilter(col);
+
+    let clearButton = this._createClearButtonForSelectFilter(col, dataTableReference, filterInput.attributes.id.value);
+
+    let wrapper = document.createElement("div");
+    wrapper.classList.add("col-filter-wrapper");
+    wrapper.appendChild(filterInput);
+    wrapper.appendChild(clearButton);
+
+    //-----------------------------------------------------------------//
+    /// Callbacks for post processing and event handler registration ////
+    //-----------------------------------------------------------------//
+
+    // Add function to populate select options as a callback to be run once data is loaded into the table,
+    // as we need access to the dataset to determine the unique values for the options.
+    this.dataLoadedCallBacks.push( () => this._populateTextSelectFilterOptions(filterInput, col, dataTableReference.ajax.json()));
+
+    // Add select2 initialization as a callback to be run when document is ready to ensure the relevant DOM element is available
+    this.documentReadyCallBacks.push( () => $(`#${filterInput.attributes.id.value}`).select2());
+
+    //Add event handler registration to callback for when document is ready
+    this.documentReadyCallBacks.push( () => $(`#${filterInput.attributes.id.value}`).on('select2:select', onSelectChangeHandler));
+
+    return wrapper;
+  }
+
+_createInputForSelectFilter(col) {
+    let filterInput = document.createElement("select");
+
+    let data_field = document.createAttribute("data-field");
+    data_field.value = col.json_id;
+    filterInput.setAttributeNode(data_field);
+
+    let id = document.createAttribute("id");
+    id.value = col.json_id + "_search";
+    filterInput.setAttributeNode(id);
+
+    let name = document.createAttribute("name");
+    name.value = col.json_id + "_select";
+    filterInput.setAttributeNode(name);
+
+    filterInput.classList.add("col-filter");
+    filterInput.classList.add("select-filter");
+
+    if (col.cssClassFilterInput) {
+      filterInput.classList.add(col.cssClassFilterInput);
+    }
+
+    return filterInput;
+}
+
+  _createClearButtonForSelectFilter(col, dataTableReference, selectInputId) {
+        // Create clear button
+    let clearButton = document.createElement("button");
+    clearButton.type = "button";
+    clearButton.textContent = "✕";
+    clearButton.id = col.json_id + "_clear";
+    clearButton.classList.add("col-filter-clear");
+    clearButton.style.display = "none";
+
+        // Add clear button click handler
+    clearButton.addEventListener("click", function(e) {
+      e.preventDefault();
+      $(`#${selectInputId}`).val("Select...").trigger('change');
+      dataTableReference.columns(col.col_idx).search("").draw();
+      clearButton.style.display = "none";
+    });
+
+    return clearButton;
+  }
+
+  _populateTextSelectFilterOptions(filterInput, col, DTjson) {
+    const uniqueValues = new Set(["Select...", ...DTjson.data.map(row => row[col.json_id])]);    
+    
+    uniqueValues.forEach(value => {
+      let option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      filterInput.appendChild(option);
+    });
   }
 
   _createNumericRangeFilterInterface(col, dataTableReference) {
@@ -413,6 +546,19 @@ class TableManager {
   }
 
   _checkColumnsIdxContinuous(columnsSpecifications) {
+    let someColumnsMissingColIdx = columnsSpecifications.some((col) => !col.hasOwnProperty("col_idx"));
+    let allColumnsMissingColIdx = columnsSpecifications.every((col) => !col.hasOwnProperty("col_idx"));
+
+    if(allColumnsMissingColIdx) {
+      // If no columns have col_idx, we can assume they are in the correct order and assign col_idx based on their position in the array
+      columnsSpecifications.forEach((col, index) => col.col_idx = index);
+      return true;
+    }
+
+    if (someColumnsMissingColIdx) {      
+        throw new Error("Either all or none of the column specifications should have a col_idx property");
+    }    
+
     for (let i = 1; i < columnsSpecifications.length; i++) {
       if (
         columnsSpecifications[i].col_idx -
@@ -479,7 +625,8 @@ class TableManager {
     if (type === "display" && data) {
       return `<a href="${data.anchor_href}" target="_blank">${data.anchor_content}</a>`;
     }
-    return data;
+    // Search, order and type return
+    return data.anchor_content;
   }
 
   //-------------------------/

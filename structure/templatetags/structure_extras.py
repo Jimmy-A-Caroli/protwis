@@ -196,3 +196,13 @@ def receptor_short ( objs ):
     if not objs.startswith('mGlu'):
         objs = objs[0].upper()+objs[1:]
     return objs.replace(" receptor","").replace("-adrenoceptor","")
+
+
+@register.filter
+def br_after_class_code ( objs ):
+    objs = objs.strip()
+    m = re.match("^([A-Z][0-9]?)\s(\(.+\))", objs)
+    if m:
+        return m.group(1) + "<br/>" + m.group(2)
+    else:
+        return objs

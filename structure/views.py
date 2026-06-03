@@ -1776,8 +1776,12 @@ class StructureStatistics(TemplateView):
             'publication_date', 'resolution').distinct('protein_conformation__protein__family__name').prefetch_related('protein_conformation__protein__family')
         unique_complexes = StructureLigandInteraction.objects.filter(annotated=True).exclude(structure__structure_type__slug__startswith='af-').distinct('ligand', 'structure__protein_conformation__protein__family').prefetch_related('structure', 'structure__protein_conformation', 'structure__protein_conformation__protein', 'structure__protein_conformation__protein__family')
         all_active = all_structs.filter(protein_conformation__state__slug = 'active')
+        all_intermediate = all_structs.filter(protein_conformation__state__slug = 'intermediate')
+        all_inactive = all_structs.filter(protein_conformation__state__slug = 'inactive')
         years = self.get_years_range(list(set([x.publication_date.year for x in all_structs])))
         unique_active = unique_structs.filter(protein_conformation__state__slug = 'active')
+        unique_intermediate = unique_structs.filter(protein_conformation__state__slug = 'intermediate')
+        unique_inactive = unique_structs.filter(protein_conformation__state__slug = 'inactive')
         #Stats
         # struct_count = Structure.objects.all().annotate(Count('id'))
         struct_lig_count = Structure.objects.exclude(ligands=None).exclude(structure_type__slug__startswith='af-')
@@ -1787,21 +1791,29 @@ class StructureStatistics(TemplateView):
         context['all_complexes_by_class'] = self.count_by_class(all_complexes, lookup)
         context['all_active'] = len(all_active)
         context['all_active_by_class'] = self.count_by_class(all_active, lookup)
+        context['all_intermediate'] = len(all_intermediate)
+        context['all_intermediate_by_class'] = self.count_by_class(all_intermediate, lookup)
+        context['all_inactive'] = len(all_inactive)
+        context['all_inactive_by_class'] = self.count_by_class(all_inactive, lookup)
         context['unique_structures'] = len(unique_structs)
         context['unique_structures_by_class'] = self.count_by_class(unique_structs, lookup)
         context['unique_complexes'] = len(unique_complexes)
         context['unique_complexes_by_class'] = self.count_by_class([x.structure for x in unique_complexes], lookup)
         context['unique_active'] = len(unique_active)
         context['unique_active_by_class'] = self.count_by_class(unique_active, lookup)
+        context['unique_intermediate'] = len(unique_intermediate)
+        context['unique_intermediate_by_class'] = self.count_by_class(unique_intermediate, lookup)
+        context['unique_inactive'] = len(unique_inactive)
+        context['unique_inactive_by_class'] = self.count_by_class(unique_inactive, lookup)
         context['release_notes'] = ReleaseNotes.objects.all()[0]
         context['latest_structure'] = Structure.objects.exclude(structure_type__slug__startswith='af-').latest('publication_date').publication_date
-        context['chartdata'] = self.get_per_family_cumulative_data_series(years, unique_structs, lookup)
-        context['chartdata_y'] = self.get_per_family_data_series(years, unique_structs, lookup)
-        context['chartdata_all'] = self.get_per_family_cumulative_data_series(years, all_structs, lookup)
         context['chartdata_reso'] = self.get_resolution_coverage_data_series(all_structs)
-        context['chartdata_class'] = self.get_per_class_cumulative_data_series(years, unique_structs, lookup)
-        context['chartdata_class_y'] = self.get_per_class_data_series(years, unique_structs, lookup)
-        context['chartdata_class_all'] = self.get_per_class_cumulative_data_series(years, all_structs, lookup)
+        context['chemotype__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="family")
+        context['chemotype__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="family")
+        context['chemotype__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="family")
+        context['class__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="class")
+        context['class__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="class")
+        context['class__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="class")
 
         # GPROT Complex information
         all_gprots = StructureExtraProteins.objects.filter(category='G alpha').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
@@ -2026,7 +2038,7 @@ class StructureStatistics(TemplateView):
         else: #JIMMY
             start_time = time.time()
             if self.origin == 'arrestin':
-                #Adjust call to exclude odorants
+                #Adjust call to exclude olfactory
                 all_proteins = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False, family_id__slug__startswith='0').exclude(
                                                     family_id__slug__startswith='007'
                                                 ).exclude(
@@ -2087,7 +2099,7 @@ class StructureStatistics(TemplateView):
                 context['GPCRome_data'] = json.dumps(updated_data)
 
             else:
-                #Adjust call to exclude odorants
+                #Adjust call to exclude olfactory
                 all_proteins = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False, family_id__slug__startswith='0').exclude(
                                                     family_id__slug__startswith='007'
                                                 ).exclude(
@@ -2187,33 +2199,33 @@ class StructureStatistics(TemplateView):
                 context['GPCRome_data_complexes'] = json.dumps(complexes_updated_data)
 
                 ### TESTING GPCROME FOR ODORANTS
-                all_odorant = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False
+                all_olfactory = Protein.objects.filter(species_id=1, parent_id__isnull=True, accession__isnull=False
                                                     ).filter(Q(family_id__slug__startswith='007') | Q(family_id__slug__startswith='008'))
-                odorant_struct = Structure.objects.filter(Q(protein_conformation__protein__family_id__slug__startswith='007') | Q(protein_conformation__protein__family_id__slug__startswith='008')).values(
+                olfactory_struct = Structure.objects.filter(Q(protein_conformation__protein__family_id__slug__startswith='007') | Q(protein_conformation__protein__family_id__slug__startswith='008')).values(
                                                         'protein_conformation__protein__parent__entry_name'
                                                     ).annotate(
                                                         c=Count('id', distinct=True)
                                                     )
 
-                odorant_struct_dict = {}
-                for prot in all_odorant:
-                    odorant_struct_dict[prot.entry_name] = 0
+                olfactory_struct_dict = {}
+                for prot in all_olfactory:
+                    olfactory_struct_dict[prot.entry_name] = 0
 
-                for a in odorant_struct:
-                    odorant_struct_dict[a['protein_conformation__protein__parent__entry_name']] = a['c']
+                for a in olfactory_struct:
+                    olfactory_struct_dict[a['protein_conformation__protein__parent__entry_name']] = a['c']
 
-                odorant_struct_dict.pop(None)
+                olfactory_struct_dict.pop(None)
 
-                updated_odorant_struct_dict = {
+                updated_olfactory_struct_dict = {
                     key: {
                         'Value1': value,
                     }
-                    for key, value in odorant_struct_dict.items()
+                    for key, value in olfactory_struct_dict.items()
                 }
 
-                gpcr_data_odorant = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Odorant")
-                Odorant_updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data_odorant["Data"], updated_odorant_struct_dict)
-                context['GPCRome_data_odorant'] = json.dumps(Odorant_updated_data)
+                gpcr_data_olfactory = DataMapperHome.GenerateGPCRomeDataStructure(data_type="Odorant")
+                Olfactory_updated_data = DataMapperHome.update_nested_GPCRome_data(gpcr_data_olfactory["Data"], updated_olfactory_struct_dict)
+                context['GPCRome_data_olfactory'] = json.dumps(Olfactory_updated_data)
 
 
         return context
@@ -2222,6 +2234,8 @@ class StructureStatistics(TemplateView):
 
         families = []
         for s in queryset:
+            if (s.__class__.__name__ == "StructureLigandInteraction"):
+                s = s.structure
             fid = s.protein_conformation.protein.family.slug.split("_")
             fname = lookup[fid[0]+"_"+fid[1]]
             cname = lookup[fid[0]]
@@ -2294,129 +2308,45 @@ class StructureStatistics(TemplateView):
 
         min_y = min(years_list)
         max_y = max(years_list)
-        return range(min_y, max_y+1)
+        return range(min_y, max_y+1)    
 
-    def get_per_class_data_series(self, years, structures, lookup):
-        """
-        Prepare data for multiBarGraph of unique crystallized receptors grouped by class. Returns data series for django-nvd3 wrapper.
-        """
-        slugs = ProteinFamily.objects.filter(parent_id=1).exclude(name='G-Protein').values_list('slug', flat=True)
-        classes = [lookup[x] for x in slugs]
-        series = []
-        data = {}
-        for year in years:
-            for prot_class in classes:
-                if prot_class not in data.keys():
-                    data[prot_class] = []
-                count = 0
-                for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
-                    # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
-                    if lookup[fid[0]] == prot_class and structure.publication_date.year == year:
-                        count += 1
-                data[prot_class].append(count)
-        for prot_class in classes:
-            series.append({"values":
-                [OrderedDict({
-                    'x': years[i],
-                    'y': j
-                    }) for i, j in enumerate(data[prot_class])],
-                "key": prot_class,
-                "yAxis": "1"})
-        return json.dumps(series)
-
-    def get_per_family_data_series(self, years, structures, lookup):
+    def get_structure_cumulative_data_series(self, years, structures, lookup, mode):
         """
         Prepare data for multiBarGraph of unique crystallized receptors. Returns data series for django-nvd3 wrapper.
         """
-        families = self.get_families_dict(structures, lookup)
+        if mode == "family":
+            groups = self.get_families_dict(structures, lookup)
+        elif mode == "class":
+            slugs = ProteinFamily.objects.filter(parent_id=1).exclude(name='G-Protein').values_list('slug', flat=True)
+            groups =  [lookup[x] for x in slugs]
         series = []
         data = {}
         for year in years:
-            for family in families:
-                if family not in data.keys():
-                    data[family] = []
+            for group in groups:
+                if group not in data.keys():
+                    data[group] = []
                 count = 0
                 for structure in structures:
+                    if (structure.__class__.__name__ == "StructureLigandInteraction"):
+                        structure = structure.structure
                     fid = structure.protein_conformation.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
-                    if lookup[fid[0]+"_"+fid[1]] == family and structure.publication_date.year == year:
+                    group_key = fid[0] if mode == "class" else fid[0]+"_"+fid[1]
+                    if lookup[group_key] == group and structure.publication_date.year == year:
                         count += 1
-                data[family].append(count)
-        for family in families:
-            series.append({"values":
-                [OrderedDict({
-                    'x': years[i],
-                    'y': j
-                    }) for i, j in enumerate(data[family])],
-                "key": family,
-                "yAxis": "1"})
-        return json.dumps(series)
-
-    def get_per_class_cumulative_data_series(self, years, structures, lookup):
-        """
-        Prepare data for multiBarGraph of unique crystallized receptors. Returns data series for django-nvd3 wrapper.
-        """
-        slugs = ProteinFamily.objects.filter(parent_id=1).exclude(name='G-Protein').values_list('slug', flat=True)
-        classes =  [lookup[x] for x in slugs]
-        series = []
-        data = {}
-        for year in years:
-            for prot_class in classes:
-                if prot_class not in data.keys():
-                    data[prot_class] = []
-                count = 0
-                for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
-                    # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
-                    if lookup[fid[0]] == prot_class and structure.publication_date.year == year:
-                        count += 1
-                if len(data[prot_class]) > 0:
-                    data[prot_class].append(count + data[prot_class][-1])
+                if len(data[group]) > 0:
+                    data[group].append(count + data[group][-1])
                 else:
-                    data[prot_class].append(count)
-        for prot_class in classes:
-            series.append({"values":
-                [OrderedDict({
-                    'x': years[i],
-                    'y': j
-                    }) for i, j in enumerate(data[prot_class])],
-                "key": prot_class,
-                "yAxis": "1"})
-        return json.dumps(series)
-
-
-    def get_per_family_cumulative_data_series(self, years, structures, lookup):
-        """
-        Prepare data for multiBarGraph of unique crystallized receptors. Returns data series for django-nvd3 wrapper.
-        """
-        families = self.get_families_dict(structures, lookup)
-        series = []
-        data = {}
-        for year in years:
-            for family in families:
-                if family not in data.keys():
-                    data[family] = []
-                count = 0
-                for structure in structures:
-                    fid = structure.protein_conformation.protein.family.slug.split("_")
-                    # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
-                    if lookup[fid[0]+"_"+fid[1]] == family and structure.publication_date.year == year:
-                        count += 1
-                if len(data[family]) > 0:
-                    data[family].append(count + data[family][-1])
-                else:
-                    data[family].append(count)
-        for family in families:
+                    data[group].append(count)
+        for group in groups:
             series.append({"values":
                 [{
                     'x': years[i],
                     'y': j
-                    } for i, j in enumerate(data[family])],
-                "key": family,
+                    } for i, j in enumerate(data[group])],
+                "key": group,
                 "yAxis": "1"})
         return json.dumps(series)
-
 
     def get_resolution_coverage_data_series(self, structures):
         """

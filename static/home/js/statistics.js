@@ -1,5 +1,7 @@
 /*global nv,d3,data_cryst_year_container,data_unique_class_cryst_container,data_unique_class_cryst_year_container,data_cryst_class_year_container,data_unique_cryst_container,data_unique_cryst_year_container*/
 
+
+
  function mergeSVG(div) {
      let SVG = $("#"+div).find("svg")[0];
      let h = parseInt($(SVG).attr("height"), 10);
@@ -23,157 +25,359 @@
      }
  }
 
- function clear_all() {
-     $("#charts").find(".chart_type").each(function () {
-         $(this).find("span:first").css("background", "white");
-     });
-     $("#charts").find(".chart_container").each(function () {
-         $(this).css("display", "none");
-     });
- }
+ function destroyExistingChart(config) {
+    Plotly.purge(config.chart_container_id);
+}
 
-function move_legend_into_whitespace(parent_svg, offset_x=0, offset_y=0)
+function flattenDataForPlotly(data) {
+    // This function transforms the data stucture from 
+    // data = [
+    //     {key: "category1", values: [{x: x1, y: y1}, {x: x2, y: y2}, ...]},
+    //     {key: "category2", values: [{x: x1, y: y1}, {x: x2, y: y2}, ...]},
+    //     ...
+    // ]
+    // to 
+    // data = {
+    //     category1: {x: [x1, x2, ...], y: [y1, y2, ...]},
+    //     category2: {x: [x1, x2, ...], y: [y1, y2, ...]},
+    //     ...
+    // }
+    return data.map(function (category) {
+        values = category.values.reduce(
+            function (accumulator, item) {
+            return {
+                x: [...accumulator.x, item.x],
+                y: [...accumulator.y, item.y],
+            };
+            },
+            { x: [], y: [] },
+        )
+        return {[category.key] : values};
+    }).reduce(function (acc, item) {
+        return Object.assign(acc, item);
+    }, {});
+}
+
+function initialiseChart(config)
 {
-    //The usual methods for obtaining the size of the SVG bounding box do not work correctly 
-    // because the SVG container has a display type of hidden. 
-    // So this hack obtains the offset applied to the right aligned y-axis as the basis for the legend positioning.
-    let yAxis_transform = parent_svg.select(".nv-y").attr("transform"); 
-    yAxis_transform.replace(/translate\((\d+),\s*\d+\)/, function(match, p1, p2) {
-        offset_x = offset_x + parseInt(p1, 10);         
+    plot_object = preparePlotlyConfiguration(config);
+   
+    layout = preparePlotlyLayout(config);
+
+    plotlyConfig = {
+        responsive: true,
+        displayModeBar: false,
+        displaylogo: false,
+    };
+
+    return Plotly.newPlot(config.chart_container_id, plot_object, layout, plotlyConfig);
+
+}
+
+function preparePlotlyConfiguration(config) {
+    let i=0;
+    data = {...config.chart_data}; //clone data to avoid mutating original config   
+    for (let [category, data_entry] of Object.entries(data))
+    {
+        data_entry.name = category;
+        data_entry.type = "bar";
+        data_entry.marker = {color: config.color_pallete[i] };
+        i++;
+    }    
+    return Object.values(data);
+}
+
+function generatePlotTitle(config) {
+let category_label = config.category === "class" ? "Class" : "Chemotype";
+let count_type_label = "";
+switch (config.count_type) {
+    case "distinct_receptors":
+    count_type_label = "Count of Distinct Receptors";
+    break;
+    case "distinct_gpcrligandcomplexes":
+    count_type_label = "Count of Distinct GPCR-Ligand Complexes";
+    break;
+    case "all_structures":
+    count_type_label = "Total Structure Count (including redundant receptors)";
+    break;
+}
+return `${count_type_label} by ${category_label}`;
+}
+
+function preparePlotlyLayout(config) {  
+  plot_title = generatePlotTitle(config);
+
+  return {
+    title: { text: plot_title, font: { size: 16 } },
+    autosize: false,
+    width: 1200,
+    height: 600,
+    margin: {l:10, t:30, r:0, b:0},
+    xaxis: {
+      tickangle: config.x_label_angle * -1,
+      showgrid: config.show_x_gridlines || false,
+      automargin: true,
+      dtick: 1
+    },
+    yaxis: {
+      showgrid: config.show_y_gridlines || false,
+      automargin: true,
+      side: 'right',
+        ticks: 'outside',
+        tick0: 0,
+        ticklen: 4,
+        tickwidth: 1,
+        tickcolor: '#000',
+        showline: true,
+        linecolor: '#000',
+        linewidth: 1
+    },
+    annotations: generateBarTotalAnnotations(config.chart_data),
+    barmode: config.stack ? "stack" : "group",
+    legend: { x: 1.05 },
+    responsive: true
+  };
+}
+
+//Generates annotations for total values on top of stacked bars
+generateBarTotalAnnotations = function (data) {
+  //Get unique x values/labels in order of appearance
+  const xLabels = Object.values(data).reduce((acc, trace) => {
+    trace.x.forEach((v) => {
+      if (!acc.includes(v)) acc.push(v);
     });
+    return acc;
+  }, []);
 
-    let legend = parent_svg.select(".nv-legendWrap");
-    if (!legend.empty()) {
-        legend.selectAll(".nv-series").each(function(d, i) {
-            d3.select(this).attr("transform", "translate(0," + (i * 20) + ")");
-        });
-        parent_svg.node().appendChild(legend.node());
-        legend.attr("transform", "translate(" + offset_x + "," + offset_y + ")");
-}}
+  //Calculate total y value for each x value across all traces
+  const yTotal = xLabels.map((xLab) =>
+    Object.values(data).reduce((sum, trace) => {
+      const i = trace.x.indexOf(xLab);
+      return sum + (i !== -1 ? trace.y[i] : 0);
+    }, 0),
+  );
 
-function rotate_x_labels(parent_svg, angle=-45, x_offset, y_offset)
-{
-    let xAxis = parent_svg.select(".nv-x");
-    if (!xAxis.empty()) {
-        xAxis.selectAll(".tick").each(function(d, i) {
-            d3.select(this).select('text').attr("transform", "rotate(" + angle + ",0,0)translate(" + y_offset + "," + x_offset + ")");
-        });
-        
-        
-}}
+  //Calculate max Y value and determine annotation offset
+  maxY = Math.max(...yTotal);
+  annotationOffset = maxY * 0.05; // 5% of max Y for annotation offset
 
-function convert_gridlines_to_axis_ticks(parent_svg, tick_length=10)
-{
-    //Shrink the gridlines and make them look like ticks.
-    let xAxis = parent_svg.select(".nv-x");
-    if (!xAxis.empty()) {
-        xAxis.selectAll(".tick").each(function(d, i) {
-            d3.select(this).select('line').attr("y2", tick_length).classed("darktick", true);
-        });
-    }
+  stack_value_annotations = xLabels.map((xLab, i) => ({
+    x: xLab,
+    y: yTotal[i] + annotationOffset,
+    text: String(yTotal[i]),
+    showarrow: false,
+    font: { color: "black", size: 12 },
+  }));
 
-    let yAxis = parent_svg.select(".nv-y");
-    if (!yAxis.empty()) {
-        yAxis.selectAll(".tick").each(function(d, i) {
-            d3.select(this).select('line').attr("x2", tick_length).classed("darktick", true);
-        });
-    }
-}
-
-function add_whitebackground_to_svg(parent_svg)
-{
-  parent_svg.insert("rect", ":first-child")
-  .attr('width', '100%')
-  .attr('height', '100%')
-  .attr('fill', '#ffffff')
-}
-
-function initialiseChart()
-{
-    var chart = nv.models.multiBarChart()
-        .reduceXTicks(false)
-        .stacked(true)
-        .showControls(false)
-        .margin({ top: 30, right: 210, bottom: 40, left: 20 })
-        .color(d3.scale.category20().range())
-        .rightAlignYAxis(true);
-    chart.yAxis
-        .tickFormat(d3.format(",f"))
-        .showMaxMin(false);
-
-    return chart;
-}
-
-append_chart_to_container = function(chart, datum, svg) {            
-    svg
-        .datum(datum)
-        //.transition().duration(500)
-        .call(chart);
-}
-
-function attachPlot(data, svg_selector, legend_x_offset, legend_y_offset)
-{
-    let svg = d3.select(svg_selector);
-    let chart = initialiseChart()
-     chart.dispatch.on('renderEnd', function() {
-        convert_gridlines_to_axis_ticks(svg, 3);
-    });
-    append_chart_to_container(chart, data, svg);              
-    move_legend_into_whitespace(svg, legend_x_offset, legend_y_offset);
-    rotate_x_labels(svg, -45, 0, -18);
-    // Quality of life improvement for downloads so background is not transparent
-    add_whitebackground_to_svg(svg);
-}
+  return stack_value_annotations;
+};
 
  $(window).on("load", function () {
-    //Unique crystallized receptors graph
-    if (typeof chemotype__distinct_structure__data != "undefined"){
-      nv.addGraph(function () {
-        //By chemotype - number of unique structures
-        attachPlot(chemotype__distinct_structure__data, "#chemotype__distinct_structure__container svg", 40, 30);
-      });
 
-      nv.addGraph(function () {
-        //By chemotype - number of unique GPCR-ligand complex structures
-        attachPlot(chemotype__distinct_gpcrligand__data, "#chemotype__distinct_gpcrligand__container svg", 40, 30); 
-      });
-      
-      nv.addGraph(function () {
-        //By chemotype - total number of unique structures including redundant structures
-        attachPlot(chemotype__all_structures__data, "#chemotype__all_structures__container svg", 60, 30);
-      });
-      
-      nv.addGraph(function () {
-        //By class - number of unique structures
-        attachPlot(class__distinct_structure__data, "#class__distinct_structure__container svg", -60, 30);
-      });
-     
-      nv.addGraph(function () {
-        //By class - number of unique GPCR-ligand complex structures
-        attachPlot(class__distinct_gpcrligand__data, "#class__distinct_gpcrligand__container svg", -60, 30);
-      });
-      
-      nv.addGraph(function () {
-        //By class - total number of unique structures including redundant structures
-        attachPlot(class__all_structures__data, "#class__all_structures__container svg", -50, 30);
-      });
+      //Add event listener for class selection modal
+      var confirmBtn = document.getElementById('confirmClassSelection');
+      if (confirmBtn) {
+          confirmBtn.addEventListener('click', function() {
+              chart_configuration.category = "class";
+              var selected = [];
+              document.querySelectorAll('#classCheckboxList input[type="checkbox"]:checked').forEach(function(cb) {
+                  selected.push(cb.value);
+              });
+              chart_configuration.selection_list = selected;
+              $('#classSelectionModal').modal('hide');
+              
+              generateStatisticsChart(chart_configuration);
+          });
+      }
 
-      $(".chart_type").click(function () {
-          clear_all();
-          $(this).find("span:first").css("background", "black");
-          let point = $("#" + $(this).attr("id")).find("svg");
-          $(point).css("visibility", "hidden");
-          $("#"+$(this).attr("id") + ".chart_container").css("display", "");
-      });
+      //Add event listener for chemotype selection modal
+      var confirmChemotypeBtn = document.getElementById('confirmChemotypeSelection');
+      if (confirmChemotypeBtn) {
+          confirmChemotypeBtn.addEventListener('click', function() {
+              chart_configuration.category = "chemotype";
+              var selected = [];
+              document.querySelectorAll('#chemotypeCheckboxList input[type="checkbox"]:checked').forEach(function(cb) {
+                  selected.push(cb.value);
+              });
+              chart_configuration.selection_list = selected;
+              $('#chemotypeSelectionModal').modal('hide');
 
-      $(document).ready(function () {
-          $("#class__distinct_structure.chart_container").css("display", "");
-      });
-
-      populateChartCategoryDropdowns(class__all_structures__data.map( x => x.key), chemotype__all_structures__data.map( x => x.key));
+              generateStatisticsChart(chart_configuration);
+          });
+      }
+          //Unique crystallized receptors graph
+    if (typeof chart_configuration != "undefined" && typeof chart_configuration.chart_data != "undefined"){
+      generateStatisticsChart(chart_configuration)
     }
 });
 
-function populateChartCategoryDropdowns(class_list, chemotype_list) {
-    $('categoryDropdownButtonList')
+function generateStatisticsChart(config) {    
+    destroyExistingChart(config);
+    config = updateChartData(config);
+    return initialiseChart(config);
 }
+
+function setDisplayCategory(sender) {
+    chart_configuration.category = sender.dataset.category;
+    chart_configuration.selection_list = [];
+    
+    generateStatisticsChart(chart_configuration);
+}
+
+function displayClassSelection() {
+    var class_options = class__all_structures__data.map(x => x.key);
+    var checkboxList = document.getElementById('classCheckboxList');
+    checkboxList.innerHTML = '';
+
+    class_options.forEach(function(cls) {
+        var isChecked = Array.isArray(chart_configuration.selection_list) &&
+                        chart_configuration.selection_list.includes(cls);
+        var div = document.createElement('div');
+        div.className = 'checkbox';
+        div.innerHTML = '<label><input type="checkbox" value="' + cls + '"' +
+                        (isChecked ? ' checked' : '') + '> ' + cls + '</label>';
+        checkboxList.appendChild(div);
+    });
+
+    $('#classSelectionModal').modal('show');
+}
+
+function displayChemotypeSelection() {
+    var chemotype_options = chemotype__all_structures__data.map(x => x.key);
+    var checkboxList = document.getElementById('chemotypeCheckboxList');
+    checkboxList.innerHTML = '';
+
+    chemotype_options.forEach(function(chemotype) {
+        var isChecked = Array.isArray(chart_configuration.selection_list) &&
+                        chart_configuration.selection_list.includes(chemotype);
+        var div = document.createElement('div');
+        div.className = 'checkbox';
+        div.innerHTML = '<label><input type="checkbox" value="' + chemotype + '"' +
+                        (isChecked ? ' checked' : '') + '> ' + chemotype + '</label>';
+        checkboxList.appendChild(div);
+    });
+
+    $('#chemotypeSelectionModal').modal('show');
+}
+
+function setDisplayDataType(sender) {
+    chart_configuration.count_type = sender.dataset.counttype;
+    generateStatisticsChart(chart_configuration);
+}
+
+function updateChartData(chart_config) {
+    switch (chart_config.category) {
+        case "class":
+            switch(chart_config.count_type) {
+                case "distinct_receptors":
+                    chart_config.chart_data = flattenDataForPlotly(class__distinct_structure__data);
+                    break;
+                case "distinct_gpcrligandcomplexes":
+                    chart_config.chart_data = flattenDataForPlotly(class__distinct_gpcrligand__data);
+                    break;
+                case "all_structures":
+                    chart_config.chart_data = flattenDataForPlotly(class__all_structures__data);
+                    break;
+            }
+            break;
+        case "chemotype":
+            switch(chart_config.count_type) {
+                case "distinct_receptors":
+                    chart_config.chart_data = flattenDataForPlotly(chemotype__distinct_structure__data);
+                    break;
+                case "distinct_gpcrligandcomplexes":
+                    chart_config.chart_data = flattenDataForPlotly(chemotype__distinct_gpcrligand__data);
+                    break;
+                case "all_structures":
+                    chart_config.chart_data = flattenDataForPlotly(chemotype__all_structures__data);
+                    break;
+            }
+            break;
+    }
+
+    if (Array.isArray(chart_config.selection_list) && chart_config.selection_list.length > 0) {
+        chart_config.chart_data = Object.fromEntries(
+          Object.entries(chart_config.chart_data)
+            .map((entry) =>
+              chart_config.selection_list.includes(entry[0]) ? entry : null,
+            )
+            .filter(Boolean), //removes null entries
+        );
+    }
+
+    chart_config.chart_data = removeLeadingZeroValueYears(chart_config.chart_data);
+
+    return chart_config;
+}
+
+function removeLeadingZeroValueYears(chart_data) {
+    //This function removes leading years with zero values for all categories to improve readability of the chart
+    let years = Object.values(chart_data)[0].x; //Assumes all categories have the same x values (years)
+    let numCategories = Object.keys(chart_data).length;
+    let leadingZeroCount = 0;
+
+    for (let i = 0; i < years.length; i++) {
+        let allZero = true;
+        for (let category in chart_data) {
+            if (chart_data[category].y[i] !== 0) {
+                allZero = false;
+                break;
+            }
+        }
+        if (allZero) {
+            leadingZeroCount++;
+        } else {
+            break;
+        }
+    }
+
+    if (leadingZeroCount > 0) {
+        for (let category in chart_data) {
+            chart_data[category].x = chart_data[category].x.slice(leadingZeroCount-1); //keep one leading zero year for context
+            chart_data[category].y = chart_data[category].y.slice(leadingZeroCount-1);
+        }
+    }
+
+    return chart_data;
+}
+
+function downloadPlotlyChart(sender) {
+    let fileFormat = sender.dataset.format;
+    let filename = chart_configuration.category + '_' + chart_configuration.count_type + '.' + fileFormat;
+
+    function triggerDownload(dataUrl) {
+        let link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    switch(fileFormat) {
+        case "png":
+        generateStatisticsChart(chart_configuration).then(function(chart_reference) {
+            Plotly.toImage(chart_reference, {format: 'png', height: 600, width: 1200}).then(function (dataUrl) {
+                triggerDownload(dataUrl);
+            });    
+        });
+            break;
+        case "jpg":
+            generateStatisticsChart(chart_configuration).then(function(chart_reference) {
+                Plotly.toImage(chart_reference, {format: 'jpeg', height: 600, width: 1200}).then(function (dataUrl) {
+                    triggerDownload(dataUrl);
+                });
+            });
+            break;
+        case "svg":
+            generateStatisticsChart(chart_configuration).then(function(chart_reference) {
+                Plotly.toImage(chart_reference, {format: 'svg', height: 600, width: 1200}).then(function (dataUrl) {
+                    triggerDownload(dataUrl);
+                });
+            });
+            break;
+        default:
+            console.error("Unsupported file format: " + fileFormat);
+    }
+}
+
