@@ -100,7 +100,7 @@ class StructureStatisticsSummaryTable(generics.ListCreateAPIView):
     
 
     def BuildStatisticsSummaryTable(self):
-        stat_data_model = [ StructureModelStatisticsTable(**data_item) for data_item in StructureCoverageModelStatisticsQuery.statistics_query(self.database) ]
+        stat_data_model = [ StructureModelStatisticsTable(**data_item) for data_item in StructureCoverageModelStatisticsQuery(self.database) ]
         StructureModelStatisticsTable.objects.bulk_create(stat_data_model, batch_size=10000)
 
 
