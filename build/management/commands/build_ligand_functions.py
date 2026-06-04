@@ -6,7 +6,7 @@ from django.db import transaction, IntegrityError
 
 from ligand.models import Ligand, LigandID, LigandType, LigandRole
 from common.models import WebResource
-from common.tools import get_or_create_url_cache, fetch_from_web_api, save_to_cache
+from common.tools import get_or_create_url_cache, fetch_from_web_api, save_to_cache, fetch_from_cache
 from collections import defaultdict, Counter
 
 import time
@@ -14,7 +14,9 @@ import os
 import re
 import requests
 import xmltodict
+import logging
 
+import pandas as pd
 import datamol as dm
 import pubchempy as pcp
 from pubchempy import BadRequestError, PubChemHTTPError
@@ -23,60 +25,806 @@ from rdkit import Chem
 from chembl_structure_pipeline import standardizer
 from typing import Dict, Any, Optional
 
+from protein.models import Protein
+from .ligand_normalization import normalize_for_parent, normalize_for_child, infer_stereo_status
+
 # Disable the RDkit verbosity
 RDLogger.DisableLog('rdApp.*')
 
-external_sources = ["pubchem", "gtoplig", "chembl_ligand", "drugbank", "drug_central"]
+log = logging.getLogger(__name__)
 
-def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = False, extended_matching = True, source = None, helm = None):
-    """ This function tries to obtain a small molecule Ligand object.
+external_sources = ["pubchem", "gtoplig", "chembl_ligand", "chembl_peptide", "drugbank", "drug_central"]
 
-        If the ligand already exists it will return the corresponding object. If
-        not, it will process the provided data and create the ligand object.
-        When a ligand does not exist, or cannot be created, with the given input
-        it will return None
+_LIGAND_TYPE_CACHE: dict = {}
+_WEB_RESOURCE_CACHE: dict = {}
 
-        Parameters
-        ----------
-        name : str
-            Name of the ligand
-        ids : dict, optional
-            Dictionary where the key is the id_type and the value is the id
-            <id_type> is e.g. pubchem, gtp, chembl, etc. (slug of the web_resource)
-            <id> is the Identifier itself
-        lig_type : str, optional
-            String indicating the ligand type (according to the LigandType slugs)
-            By default this is set to "small-molecule".
-        unichem : bool, optional
-            Boolean indicating whether or not to match the compound to other
-            sources via UniChem using the GtP ID. By default this is disabled.
-        extended_matching : bool, optional
-            Boolean indicating whether or not to match the compound
-            sources via UniChem using the GtP ID. By default this is enabled.
+_GTP_CACHE_TTL = 7 * 24 * 3600  # 7 days
 
-        Returns
-        -------
-        obj
-            Ligand object or None
 
-        Raises
-        ------
-        ...Error
-            If no ...
+def load_gtp_source_data():
+    """Fetch, cache, and normalise all Guide to Pharmacology source CSVs.
+
+    Filters interactions and endogenous data to GPCR-linked ligands only.
+    Returns a dict with keys:
+        iuphar_ids              - list[str] GtP target IDs mapping to GPCR proteins
+        ligand_ids              - list[str] ligand IDs linked to GPCR targets
+                                  (bioactivity + endogenous, deduplicated)
+        gtp_uniprot             - normalised DataFrame
+        gtp_complete_ligands    - normalised DataFrame
+        gtp_ligand_mapping      - normalised DataFrame
+        gtp_interactions        - normalised DataFrame
+        gtp_detailed_endogenous - normalised DataFrame
+        peptide_ligand_ids      - list[str] ligand IDs from peptides linked to GPCR targets
+        gtp_peptides            - normalised DataFrame (all peptides, unfiltered)
     """
+    def _fetch(url):
+        link = get_or_create_url_cache(url, _GTP_CACHE_TTL)
+        df = pd.read_csv(link, dtype=str, header=1)
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+        return df
 
-    ligand = None
-    cas_to_cid_url =  "http://www.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pccompound&retmax=100&term=$index"
-    cas_cache_dir = ["CAS", 'cas_codes']
+    gtp_uniprot             = _fetch("https://www.guidetopharmacology.org/DATA/GtP_to_UniProt_mapping.csv")
+    gtp_complete_ligands    = _fetch("https://www.guidetopharmacology.org/DATA/ligands.csv")
+    gtp_ligand_mapping      = _fetch("https://www.guidetopharmacology.org/DATA/ligand_id_mapping.csv")
+    gtp_interactions        = _fetch("https://www.guidetopharmacology.org/DATA/interactions.csv")
+    gtp_detailed_endogenous = _fetch("https://www.guidetopharmacology.org/DATA/endogenous_ligand_detailed.csv")
+    gtp_peptides            = _fetch("https://www.guidetopharmacology.org/DATA/peptides.csv")
 
-    ### Implementing the Parent structure organization
-    # Order of checks:
-    ## Check if Standardized SMILES exists
-    ## Check if first section of INCHIKEY exists
-    ## Check if name exists
-    ## if all above fails, generate a parent
+    # GPCR target IDs: match GtP UniProt IDs against GPCRdb protein accessions
+    gpcr_accessions_base = {
+        acc.split("-")[0]
+        for acc in Protein.objects.filter(
+            family__slug__startswith="00", sequence_type__slug="wt"
+        ).values_list("accession", flat=True)
+    }
+    iuphar_ids = list(
+        gtp_uniprot.loc[
+            gtp_uniprot["uniprotkb_id"].isin(gpcr_accessions_base),
+            "gtopdb_iuphar_id",
+        ]
+        .dropna()
+        .unique()
+    )
 
-    # Check and filter IDs
+    def _ligand_ids_for(df):
+        matched = set(df["target_id"].unique()).intersection(set(iuphar_ids))
+        ids = df.loc[df["target_id"].isin(matched), "ligand_id"].unique().tolist()
+        return [x for x in ids if x == x]  # drop NaN
+
+    bioactivity_ids = _ligand_ids_for(gtp_interactions)
+    endogenous_ids  = _ligand_ids_for(gtp_detailed_endogenous)
+    ligand_ids      = list(set(bioactivity_ids + endogenous_ids))
+
+    # Peptides linked to GPCR targets: filter by uniprot_id column (pipe-separated)
+    def _any_gpcr_uniprot(val):
+        if not val or (isinstance(val, float)):
+            return False
+        return any(u.strip() in gpcr_accessions_base for u in str(val).split("|"))
+
+    gpcr_peptide_mask = gtp_peptides["uniprot_id"].apply(_any_gpcr_uniprot)
+    peptide_ligand_ids = (
+        gtp_peptides.loc[gpcr_peptide_mask, "ligand_id"].dropna().unique().tolist()
+    )
+
+    return {
+        "iuphar_ids":               iuphar_ids,
+        "ligand_ids":               ligand_ids,
+        "peptide_ligand_ids":       peptide_ligand_ids,
+        "gtp_uniprot":              gtp_uniprot,
+        "gtp_complete_ligands":     gtp_complete_ligands,
+        "gtp_ligand_mapping":       gtp_ligand_mapping,
+        "gtp_interactions":         gtp_interactions,
+        "gtp_detailed_endogenous":  gtp_detailed_endogenous,
+        "gtp_peptides":             gtp_peptides,
+    }
+
+
+def _iter_sids(source_ids):
+    """Yield (slug, str_value) pairs, expanding list values accumulated during dedup."""
+    for slug, val in source_ids.items():
+        if isinstance(val, list):
+            for v in val:
+                yield slug, str(v)
+        else:
+            yield slug, str(val)
+
+
+def _inchikeys_compatible(entry_ck: Optional[str], child_inchikey: Optional[str]) -> bool:
+    """Return True when it is safe to link a source ID from an entry to an existing child.
+
+    Rules (both sides must be non-empty for rejection to fire):
+    - Connectivity block (first dash-segment) must match.
+    - If both sides have a stereo block (second segment), they must also match.
+    A None on either side means no structural evidence to compare — allow by default.
+    """
+    if not entry_ck or not child_inchikey:
+        return True
+    e_parts = entry_ck.split("-")
+    c_parts = child_inchikey.split("-")
+    if e_parts[0] != c_parts[0]:
+        return False
+    if len(e_parts) >= 2 and len(c_parts) >= 2 and e_parts[1] != c_parts[1]:
+        # Allow when either side is truly achiral (UHFFFAOYSA = no stereo specified).
+        # This preserves the achiral-short-circuit design where a racemic entry can
+        # reuse any existing child with the same connectivity.
+        # Only reject when BOTH sides carry specific stereo information that differs.
+        if e_parts[1] != "UHFFFAOYSA" and c_parts[1] != "UHFFFAOYSA":
+            return False
+    return True
+
+
+_MW_TOL_FRAC = 0.05   # 5 % relative tolerance on molecular weight
+_MW_TOL_ABS  = 10.0   # absolute floor (Da) — avoids over-rejection for small molecules
+
+
+def _props_compatible(entry_props: dict, candidate: "Ligand") -> bool:
+    """Return False only when both sides have a value AND it differs beyond tolerance.
+
+    Checks mw (within 5 % or 10 Da), hacc, and hdon (integer exact match).
+    logp is deliberately excluded — algorithm differences (clogp vs alogp) make
+    it unreliable as a rejection criterion.
+    """
+    if not entry_props:
+        return True
+    for field in ("mw", "hacc", "hdon"):
+        ev = entry_props.get(field)
+        cv = getattr(candidate, field, None)
+        if ev is None or cv is None:
+            continue
+        ev, cv = float(ev), float(cv)
+        if field == "mw":
+            if abs(ev - cv) > max(_MW_TOL_ABS, _MW_TOL_FRAC * max(ev, cv, 1.0)):
+                return False
+        else:
+            if round(ev) != round(cv):
+                return False
+    return True
+
+
+def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule", extended_matching=True):
+    """Process a list of ligand entries in batch, minimizing DB round-trips.
+
+    entries: list of dicts with keys:
+        name, raw_smiles, raw_inchikey, raw_helm, raw_sequence,
+        source_ids (dict), radioactive (bool), synonyms (str)
+
+    Returns list of (parent, child) tuples, one per entry (either may be None on failure).
+    """
+    if lig_type not in _LIGAND_TYPE_CACHE:
+        _LIGAND_TYPE_CACHE[lig_type] = LigandType.objects.get_or_create(
+            slug=slugify(lig_type), defaults={"name": lig_type}
+        )[0]
+    lig_type_obj = _LIGAND_TYPE_CACHE[lig_type]
+
+    # ── Step A: pre-normalize all entries in memory ───────────────────────────
+    for entry in entries:
+        entry["_pk"] = None   # parent connectivity key (first InChIKey block)
+        entry["_ck"] = None   # child identity key (full normalized InChIKey)
+        entry["_parent_norm"] = None
+
+        raw_smiles = entry.get("raw_smiles")
+        raw_inchikey = entry.get("raw_inchikey")
+
+        if raw_smiles and not entry.get("skip_normalization"):
+            pnorm = normalize_for_parent(raw_smiles)
+            cnorm = normalize_for_child(raw_smiles)
+            if pnorm:
+                entry["_pk"] = pnorm["clean_inchikey"]
+                entry["_parent_norm"] = pnorm
+            if cnorm:
+                if cnorm.get("inchikey"):
+                    entry["_ck"] = cnorm["inchikey"]
+                entry["_child_mol"] = cnorm.get("mol")
+        # Always fall back to raw_inchikey when normalization didn't produce keys
+        if not entry["_ck"] and raw_inchikey:
+            entry["_ck"] = raw_inchikey
+        if not entry["_pk"] and raw_inchikey:
+            entry["_pk"] = raw_inchikey.split("-")[0]
+
+        # Pre-compute physicochemical properties for child-matching discrimination.
+        # Raw SMILES is preferred so values are consistent with the structure shown to users;
+        # parent-normalised SMILES is the fallback when raw SMILES is unavailable or unparseable.
+        entry["_entry_props"] = {}
+        _smiles_for_props = entry.get("raw_smiles") or (entry.get("_parent_norm") or {}).get("smiles")
+        if _smiles_for_props:
+            try:
+                _pmol = dm.to_mol(_smiles_for_props, sanitize=True)
+                if _pmol:
+                    entry["_entry_props"] = {
+                        "mw":   dm.descriptors.mw(_pmol),
+                        "hacc": dm.descriptors.n_hba(_pmol),
+                        "hdon": dm.descriptors.n_hbd(_pmol),
+                    }
+            except Exception:
+                pass
+
+        # Pre-compute isotope label so Steps C/D/E/G can distinguish different
+        # radioactive variants of the same compound (e.g. [³H] vs [¹²⁵I]).
+        entry["_radioactive_label"] = None
+        if entry.get("radioactive"):
+            _rl = get_radioactive_info(entry.get("name", ""), entry.get("synonyms", "") or "")
+            entry["_radioactive_label"] = _rl[0] if _rl else "Yes"
+
+    # ── Step A.5: UniChem source-ID enrichment for structure-less entries ─────
+    # Entries with no InChIKey, SMILES, or HELM cannot be matched structurally.
+    # Query UniChem to find crossover IDs that may already exist on children in
+    # the DB, turning a structure-less dead-end into a successful source-ID match.
+    # raw_sequence is intentionally NOT a skip condition: Step C builds no
+    # existing_by_sequence child lookup, so sequence-only entries (e.g. peptides
+    # with ambiguous_alias=False) can only be matched via source-ID.
+    for entry in entries:
+        if entry.get("_ck") or entry.get("raw_smiles") or entry.get("raw_helm"):
+            continue  # InChIKey/SMILES/HELM matching paths cover this entry
+        sids = entry.setdefault("source_ids", {})
+        for src_slug, src_val in list(_iter_sids(sids)):
+            if src_slug not in unichem_src_types_inv:
+                continue
+            for hit in match_id_via_unichem(src_slug, str(src_val)):
+                if hit["type"] in external_sources and hit["type"] not in sids:
+                    sids[hit["type"]] = hit["id"]
+
+    # ── Step B: batch parent lookup ───────────────────────────────────────────
+    all_clean_keys = {e["_pk"] for e in entries if e["_pk"]}
+    all_parent_smiles = {e["_parent_norm"]["smiles"] for e in entries
+                         if e.get("_parent_norm") and e["_parent_norm"].get("smiles")}
+    all_helms = {e.get("raw_helm") for e in entries if e.get("raw_helm")}
+    all_sequences = {e.get("raw_sequence") for e in entries
+                     if e.get("raw_sequence") and len(e.get("raw_sequence", "")) > 3}
+    all_uniprot_ids = {
+        e.get("raw_uniprot") for e in entries
+        if e.get("raw_uniprot") and not e.get("raw_sequence") and not e.get("raw_helm")
+    }
+    # Truly structure-less entries (no InChIKey, helm, sequence, or uniprot) are matched
+    # back to existing parents by name, but only when those parents are flagged ambiguous.
+    all_ambiguous_names = {
+        e["name"] for e in entries
+        if not e.get("_pk") and not e.get("raw_helm")
+        and not e.get("raw_sequence") and not e.get("raw_uniprot")
+    }
+
+    parent_qs = Ligand.objects.filter(parent__isnull=True)
+    q = Q()
+    if all_clean_keys:
+        q |= Q(clean_inchikey__in=all_clean_keys)
+    if all_parent_smiles:
+        q |= Q(smiles__in=all_parent_smiles)
+    if all_helms:
+        q |= Q(helm__in=all_helms)
+    if all_sequences:
+        q |= Q(sequence__in=all_sequences)
+    if all_uniprot_ids:
+        q |= Q(uniprot__in=all_uniprot_ids)
+    if all_ambiguous_names:
+        q |= Q(name__in=all_ambiguous_names, ambiguous_alias=True)
+
+    existing_parents = {}
+    if q:
+        for p in parent_qs.filter(q):
+            if p.clean_inchikey:
+                existing_parents[p.clean_inchikey] = p
+            if p.smiles:
+                existing_parents.setdefault(p.smiles, p)
+            if p.helm:
+                existing_parents.setdefault(p.helm, p)
+            if p.sequence:
+                existing_parents.setdefault(p.sequence, p)
+            if p.uniprot and not p.sequence and not p.helm:
+                existing_parents.setdefault(p.uniprot, p)
+            if p.ambiguous_alias:
+                existing_parents.setdefault(p.name, p)
+
+    # ── Step C: batch child lookup ────────────────────────────────────────────
+    all_child_norm_keys = {e["_ck"] for e in entries if e["_ck"]}
+    all_raw_iks = {e.get("raw_inchikey") for e in entries if e.get("raw_inchikey")}
+
+    existing_by_norm_ik = {}
+    if all_child_norm_keys:
+        for c in Ligand.objects.filter(clean_inchikey__in=all_child_norm_keys, parent__isnull=False):
+            existing_by_norm_ik[(c.clean_inchikey, c.radioactive)] = c
+
+    existing_by_raw_ik = {}
+    if all_raw_iks:
+        for c in Ligand.objects.filter(inchikey__in=all_raw_iks, parent__isnull=False):
+            existing_by_raw_ik[(c.inchikey, c.radioactive)] = c
+
+    # HELM-based child index — for peptide entries that have a HELM string but no InChIKey.
+    # Keyed by helm string; lowest gpcrdb_id wins as the canonical record.
+    existing_by_helm = {}  # helm → child Ligand
+    all_helms_no_ck = {
+        e.get("raw_helm") for e in entries
+        if e.get("raw_helm") and not e.get("_ck")
+    }
+    if all_helms_no_ck:
+        for c in (Ligand.objects
+                  .filter(helm__in=all_helms_no_ck, parent__isnull=False)
+                  .select_related("parent")
+                  .order_by("gpcrdb_id")):
+            existing_by_helm.setdefault(c.helm, c)
+
+    # SMILES-based child index — fallback for children already in DB with clean_inchikey=None.
+    # Only built for entries that still have no _ck after Step A (normalization failed AND
+    # no raw_inchikey was available). Skipping entries that have an InChIKey avoids a
+    # potentially slow query for every protein/peptide SMILES (can be thousands of chars).
+    # Keyed by (smiles, parent_id); lowest gpcrdb_id wins as the canonical record.
+    existing_by_smiles = {}  # (smiles, parent_id) → child Ligand
+    all_raw_smiles_no_ck = {
+        e.get("raw_smiles") for e in entries
+        if e.get("raw_smiles") and not e.get("_ck")
+    }
+    if all_raw_smiles_no_ck:
+        for c in (Ligand.objects
+                  .filter(smiles__in=all_raw_smiles_no_ck, parent__isnull=False)
+                  .select_related("parent")
+                  .order_by("gpcrdb_id")):
+            existing_by_smiles.setdefault((c.smiles, c.parent_id), c)
+
+    # ── Step D: batch source ID lookup ───────────────────────────────────────
+    existing_by_source_id = {}  # (slug, index, is_radioactive) → child Ligand
+    for src_slug in external_sources:
+        ids_for_src = {
+            str(e["source_ids"][src_slug])
+            for e in entries
+            if src_slug in e.get("source_ids", {})
+        }
+        if ids_for_src:
+            for lid in (LigandID.objects
+                        .filter(index__in=ids_for_src, web_resource__slug=src_slug)
+                        .select_related("ligand", "ligand__parent")):
+                existing_by_source_id[(src_slug, lid.index, lid.ligand.radioactive)] = lid.ligand
+
+    # ── Step E: classify each entry ──────────────────────────────────────────
+    entries_needing_new_child = []
+    entries_needing_new_parent = []  # implies new child too
+    new_ligand_ids_to_create = []
+
+    resolved = []  # (parent, child) per entry — filled below
+
+    def _resolve_parent_for_entry(entry):
+        pk = entry.get("_pk")
+        pnorm = entry.get("_parent_norm")
+        if pk and pk in existing_parents:
+            return existing_parents[pk]
+        if pnorm and pnorm.get("smiles") and pnorm["smiles"] in existing_parents:
+            return existing_parents[pnorm["smiles"]]
+        raw_helm = entry.get("raw_helm")
+        if raw_helm and raw_helm in existing_parents:
+            return existing_parents[raw_helm]
+        raw_seq = entry.get("raw_sequence")
+        if raw_seq and raw_seq in existing_parents:
+            return existing_parents[raw_seq]
+        raw_uniprot = entry.get("raw_uniprot")
+        if (raw_uniprot and not entry.get("raw_sequence") and not entry.get("raw_helm")
+                and raw_uniprot in existing_parents):
+            return existing_parents[raw_uniprot]
+        # Last resort: name-based match for truly structure-less entries, restricted to
+        # ambiguous_alias=True parents so we don't merge distinct ligands by name.
+        if (not entry.get("_pk") and not entry.get("raw_helm")
+                and not entry.get("raw_sequence") and not entry.get("raw_uniprot")
+                and entry["name"] in existing_parents):
+            return existing_parents[entry["name"]]
+        return None
+
+    for entry in entries:
+        entry_radioactive = bool(entry.get("radioactive"))
+        entry_radioactive_label = entry.get("_radioactive_label")
+        # When the isotope type is unknown ("Yes"), structural matching cannot
+        # distinguish different radioactive variants — rely on source-ID only.
+        _skip_structural = (entry_radioactive_label == "Yes")
+
+        # Source ID match?
+        _source_id_that_found: Optional[tuple] = None
+        found_child = None
+        for src_slug, src_val in _iter_sids(entry.get("source_ids", {})):
+            key = (src_slug, src_val, entry_radioactive_label)
+            if key in existing_by_source_id:
+                found_child = existing_by_source_id[key]
+                _source_id_that_found = (src_slug, src_val)
+                break
+
+        # If source-ID match found a structurally incompatible child, fall through
+        # to InChIKey matching / new child creation so the entry's IDs are not silently lost.
+        # Use clean_inchikey (normalized) in preference to inchikey (raw stored) — they can
+        # differ for the same compound when different sources use different stereo conventions.
+        if (found_child is not None
+                and _source_id_that_found is not None
+                and (found_child.clean_inchikey or found_child.inchikey)
+                and not _inchikeys_compatible(
+                    entry.get("_ck") or entry.get("raw_inchikey"),
+                    found_child.clean_inchikey or found_child.inchikey)):
+            log.info(
+                f"Source-ID {_source_id_that_found} found incompatible child "
+                f"(entry {entry.get('_ck')!r} vs child {found_child.clean_inchikey or found_child.inchikey!r}); falling through"
+            )
+            found_child = None
+
+        entry_props = entry.get("_entry_props", {})
+
+        # Child-normalized InChIKey match?
+        if not _skip_structural and found_child is None and entry.get("_ck"):
+            candidate = existing_by_norm_ik.get((entry["_ck"], entry_radioactive_label))
+            if candidate is not None and _props_compatible(entry_props, candidate):
+                found_child = candidate
+            elif candidate is not None and not _props_compatible(entry_props, candidate):
+                log.warning(
+                    f"InChIKey match rejected by property mismatch: entry {entry.get('name')!r} "
+                    f"vs child gpcrdb_id={candidate.gpcrdb_id} — "
+                    f"entry mw={entry_props.get('mw')}, child mw={candidate.mw}"
+                )
+
+        # Raw InChIKey match?
+        if not _skip_structural and found_child is None and entry.get("raw_inchikey"):
+            candidate = existing_by_raw_ik.get((entry["raw_inchikey"], entry_radioactive_label))
+            if candidate is not None and _props_compatible(entry_props, candidate):
+                found_child = candidate
+
+        # SMILES direct match — last resort when no InChIKey lookup succeeded but an
+        # existing child with the same SMILES and parent exists in the DB.
+        if not _skip_structural and found_child is None and entry.get("raw_smiles") and entry.get("_pk"):
+            for (smi, par_id), candidate in existing_by_smiles.items():
+                if (smi == entry["raw_smiles"]
+                        and candidate.parent
+                        and candidate.parent.clean_inchikey == entry["_pk"]
+                        and candidate.radioactive == entry_radioactive_label
+                        and _props_compatible(entry_props, candidate)):
+                    found_child = candidate
+                    break
+
+        # HELM match — for peptides with HELM but no InChIKey
+        if not _skip_structural and found_child is None and entry.get("raw_helm") and not entry.get("_ck"):
+            candidate = existing_by_helm.get(entry["raw_helm"])
+            if candidate is not None and candidate.radioactive == entry_radioactive_label:
+                found_child = candidate
+
+        # Achiral short-circuit
+        if not _skip_structural and found_child is None and entry.get("_ck") and entry.get("_pk"):
+            mol = entry.get("_child_mol")
+            if mol is not None:
+                from rdkit import Chem as _Chem
+                _Chem.AssignStereochemistry(mol, cleanIt=True, force=True)
+                if not _Chem.FindMolChiralCenters(mol, includeUnassigned=True):
+                    if entry_radioactive_label:
+                        _rac_filter = {"radioactive": entry_radioactive_label}
+                    else:
+                        _rac_filter = {"radioactive__isnull": True}
+                    candidates = list(Ligand.objects.filter(
+                        clean_inchikey__startswith=entry["_pk"],
+                        parent__isnull=False,
+                        **_rac_filter,
+                    )[:1])
+                    if candidates and _props_compatible(entry_props, candidates[0]):
+                        found_child = candidates[0]
+
+        if found_child is not None:
+            # Reassignment check
+            correct_pk = entry.get("_pk")
+            if (correct_pk and found_child.parent is not None and
+                    found_child.parent.clean_inchikey and
+                    found_child.parent.clean_inchikey != correct_pk):
+                correct_parent = existing_parents.get(correct_pk)
+                if correct_parent:
+                    found_child.parent = correct_parent
+                    found_child.save(update_fields=["parent"])
+                    log.warning(
+                        f"Reassigned child {found_child.name!r} (gpcrdb_id={found_child.gpcrdb_id}) "
+                        f"to parent {correct_pk!r}"
+                    )
+                else:
+                    log.error(
+                        f"Child {found_child.name!r} expected parent {correct_pk!r} but not found"
+                    )
+
+            # Back-fill missing name from entry, or fall back to parent name
+            if not found_child.name:
+                new_name = (entry.get("name") or "").strip()
+                if not new_name and found_child.parent:
+                    new_name = found_child.parent.name or ""
+                if new_name:
+                    found_child.name = new_name
+                    found_child.save(update_fields=["name"])
+
+            # Back-fill uniprot on existing children that lack it
+            if not found_child.uniprot and entry.get("raw_uniprot"):
+                found_child.uniprot = entry["raw_uniprot"]
+                found_child.save(update_fields=["uniprot"])
+
+            # Queue new LigandIDs — skip the DB fetch entirely when the entry has no source IDs
+            entry_source_ids = entry.get("source_ids", {})
+            if entry_source_ids:
+                existing_child_id_keys = set(
+                    found_child.ids.values_list("web_resource__slug", "index")
+                )
+                for src_slug, src_val in _iter_sids(entry_source_ids):
+                    if (src_slug, src_val) not in existing_child_id_keys:
+                        new_ligand_ids_to_create.append((found_child, src_slug, src_val))
+
+            resolved.append((found_child.parent, found_child))
+        else:
+            existing_parent = _resolve_parent_for_entry(entry)
+            if existing_parent is None:
+                entries_needing_new_parent.append(entry)
+            else:
+                entry["_resolved_parent"] = existing_parent
+                entries_needing_new_child.append(entry)
+
+    # ── Step F: bulk-create new parents ──────────────────────────────────────
+    unique_new_parents = {}  # _pk → entry (first occurrence wins)
+    for entry in entries_needing_new_parent:
+        pk = entry.get("_pk") or entry.get("name")
+        if pk not in unique_new_parents:
+            unique_new_parents[pk] = entry
+
+    new_parent_objects = []
+    pk_to_entry = {}
+    for pk, entry in unique_new_parents.items():
+        pnorm = entry.get("_parent_norm") or {}
+        p = Ligand()
+        p.name = entry["name"]
+        p.ambiguous_alias = False
+        p.ligand_type = lig_type_obj
+        p.smiles = pnorm.get("smiles")
+        p.inchikey = pnorm.get("inchikey")
+        p.clean_inchikey = pnorm.get("clean_inchikey")
+        if not p.clean_inchikey and entry.get("_pk"):
+            p.clean_inchikey = entry["_pk"]
+        raw_seq = entry.get("raw_sequence")
+        if raw_seq:
+            p.sequence = raw_seq
+        raw_helm = entry.get("raw_helm")
+        if raw_helm:
+            p.helm = raw_helm
+        p.uniprot = entry.get("raw_uniprot")
+        p.ambiguous_alias = not bool(
+            p.clean_inchikey or p.smiles or p.helm or p.sequence or p.uniprot
+        )
+        p.parent = None
+        new_parent_objects.append(p)
+        pk_to_entry[pk] = entry
+
+    if new_parent_objects:
+        next_id = allocate_next_gpcrdb_id()
+        for i, p in enumerate(new_parent_objects):
+            p.gpcrdb_id = next_id + i
+
+        # Build pk → gpcrdb_id before bulk_create (ids already assigned above).
+        # unique_new_parents and new_parent_objects share the same insertion order
+        # (Python 3.7+ dicts preserve it), so zip is safe.
+        pk_to_gpcrdb_id = dict(
+            zip(unique_new_parents.keys(), [p.gpcrdb_id for p in new_parent_objects])
+        )
+
+        Ligand.objects.bulk_create(new_parent_objects)
+
+        # Re-fetch ALL new parents by gpcrdb_id — works even when clean_inchikey is NULL.
+        # Index by every available structural key so _resolve_parent_for_entry finds them.
+        _fresh_gids = list(pk_to_gpcrdb_id.values())
+        _gpcrdb_to_parent = {}
+        for p in Ligand.objects.filter(gpcrdb_id__in=_fresh_gids, parent__isnull=True):
+            _gpcrdb_to_parent[p.gpcrdb_id] = p
+            if p.clean_inchikey:
+                existing_parents[p.clean_inchikey] = p
+            if p.helm:
+                existing_parents.setdefault(p.helm, p)
+            if p.sequence:
+                existing_parents.setdefault(p.sequence, p)
+            if p.uniprot and not p.sequence and not p.helm:
+                existing_parents.setdefault(p.uniprot, p)
+            if p.ambiguous_alias:
+                existing_parents.setdefault(p.name, p)
+
+        # Direct pk → parent mapping for entries with no structural identifiers at all.
+        pk_to_new_parent = {
+            pk: _gpcrdb_to_parent[gid]
+            for pk, gid in pk_to_gpcrdb_id.items()
+            if gid in _gpcrdb_to_parent
+        }
+    else:
+        pk_to_new_parent = {}
+
+    # Resolve parents for entries that needed a new parent
+    for entry in entries_needing_new_parent:
+        # Prefer structural-key lookup (helm / sequence / uniprot populated above)
+        resolved_parent = _resolve_parent_for_entry(entry)
+        # Fall back to the gpcrdb_id-backed direct mapping for structure-less entries
+        if resolved_parent is None:
+            pk = entry.get("_pk") or entry.get("name")
+            resolved_parent = pk_to_new_parent.get(pk)
+        entry["_resolved_parent"] = resolved_parent
+        entries_needing_new_child.append(entry)
+
+    # ── Step G: bulk-create new children ─────────────────────────────────────
+    # Deduplicate within this batch: key is (identity, is_radioactive) so that
+    # same-molecule entries collapse to one, while radioactive/non-radioactive
+    # variants of the same molecule remain distinct.
+    seen_child_cks: dict = {}  # ck_key → surviving entry
+    unique_entries_needing_new_child = []
+    for entry in entries_needing_new_child:
+        _rl = entry.get("_radioactive_label")
+        ck = (
+            entry.get("_ck") or entry.get("raw_smiles") or entry.get("name"),
+            (_rl, entry.get("name")) if _rl == "Yes" else _rl,
+        )
+        if ck not in seen_child_cks:
+            seen_child_cks[ck] = entry
+            unique_entries_needing_new_child.append(entry)
+        else:
+            # Merge source IDs from dropped duplicate into the surviving entry.
+            # If the slug already exists with a different value, accumulate as a list
+            # so that both IDs (e.g. two pubchem CIDs for the same molecule) survive.
+            surviving = seen_child_cks[ck]
+            _sids = surviving.setdefault("source_ids", {})
+            for slug, val in entry.get("source_ids", {}).items():
+                if slug not in _sids:
+                    _sids[slug] = val
+                elif _sids[slug] != val:
+                    existing = _sids[slug]
+                    if isinstance(existing, list):
+                        if val not in existing:
+                            existing.append(val)
+                    else:
+                        _sids[slug] = [existing, val]
+    entries_needing_new_child = unique_entries_needing_new_child
+
+    # Pre-flight: catch any _ck that already exists in the DB regardless of
+    # parent status (e.g. legacy records stored with a full InChIKey as
+    # clean_inchikey and parent_id=NULL that Step C's parent__isnull=False
+    # filter silently skips).
+    if entries_needing_new_child:
+        _preflight_cks = {e["_ck"] for e in entries_needing_new_child if e.get("_ck")}
+        if _preflight_cks:
+            _already_in_db = {
+                c.clean_inchikey: c
+                for c in Ligand.objects.filter(clean_inchikey__in=_preflight_cks)
+            }
+            if _already_in_db:
+                _surviving = []
+                for entry in entries_needing_new_child:
+                    ck = entry.get("_ck")
+                    if ck and ck in _already_in_db:
+                        existing = _already_in_db[ck]
+                        # Mirror the radioactive guard from Step E: a radioactive entry
+                        # must not be merged into a non-radioactive child (or vice-versa)
+                        # even when they share an InChIKey (isotope not in SMILES).
+                        if bool(entry.get("radioactive")) != bool(existing.radioactive):
+                            if existing.radioactive and not entry.get("radioactive"):
+                                # Radioactive variant was created first but should NOT own
+                                # clean_inchikey — transfer ownership to the non-radioactive
+                                # entry by clearing the radioactive row's clean_inchikey now,
+                                # before the non-radioactive child is bulk-created.
+                                existing.clean_inchikey = None
+                                existing.save(update_fields=["clean_inchikey"])
+                                # Don't clear _ck — non-radioactive child will own it.
+                            else:
+                                # Non-radioactive exists first; radioactive must not reuse
+                                # its clean_inchikey.
+                                entry["_ck"] = None
+                            _surviving.append(entry)
+                            continue
+                        elif (entry.get("_radioactive_label") is not None
+                              and entry.get("_radioactive_label") != existing.radioactive):
+                            # Different isotope label — create a separate child rather than
+                            # merging. The new child does not own clean_inchikey.
+                            entry["_ck"] = None
+                            _surviving.append(entry)
+                            continue
+                        resolved.append((existing.parent or existing, existing))
+                        for src_slug, src_val in _iter_sids(entry.get("source_ids", {})):
+                            new_ligand_ids_to_create.append((existing, src_slug, src_val))
+                    else:
+                        _surviving.append(entry)
+                entries_needing_new_child = _surviving
+
+    new_child_objects = []
+    new_child_entries = []
+    for entry in entries_needing_new_child:
+        resolved_parent = entry.get("_resolved_parent")
+        pnorm = entry.get("_parent_norm")
+        mol = entry.get("_child_mol")
+
+        # Compute RDKit properties from raw SMILES for consistency with the structure
+        # displayed to users; fall back to parent-normalised SMILES if raw SMILES fails.
+        rdkit_props = {}
+        _smiles_for_props = entry.get("raw_smiles") or (pnorm or {}).get("smiles")
+        if _smiles_for_props:
+            try:
+                pmol = dm.to_mol(_smiles_for_props, sanitize=True)
+                if pmol:
+                    rdkit_props = {
+                        "mw":              dm.descriptors.mw(pmol),
+                        "rotatable_bonds": dm.descriptors.n_rotatable_bonds(pmol),
+                        "hacc":            dm.descriptors.n_hba(pmol),
+                        "hdon":            dm.descriptors.n_hbd(pmol),
+                        "logp":            dm.descriptors.clogp(pmol),
+                    }
+            except Exception:
+                pass
+
+        c = Ligand()
+        _entry_name = (entry.get("name") or "").strip()
+        if not _entry_name and resolved_parent:
+            _entry_name = resolved_parent.name or ""
+        c.name = _entry_name
+        c.ambiguous_alias = False
+        c.ligand_type = lig_type_obj
+        c.smiles = entry.get("raw_smiles")
+        c.inchikey = entry.get("raw_inchikey") or entry.get("_ck")
+        c.clean_inchikey = entry.get("_ck")
+        c.sequence = entry.get("raw_sequence")
+        c.helm = entry.get("raw_helm")
+        c.uniprot = entry.get("raw_uniprot")
+        c.ambiguous_alias = not bool(
+            c.clean_inchikey or c.smiles or c.helm or c.sequence or c.uniprot
+        )
+        c.parent = resolved_parent
+        c.source = source
+        c.stereo_status = infer_stereo_status(mol)
+        c.radioactive = entry.get("_radioactive_label")
+        for field, val in rdkit_props.items():
+            setattr(c, field, val)
+
+        new_child_objects.append(c)
+        new_child_entries.append(entry)
+
+    if new_child_objects:
+        next_id = allocate_next_gpcrdb_id()
+        for i, c in enumerate(new_child_objects):
+            c.gpcrdb_id = next_id + i
+        Ligand.objects.bulk_create(new_child_objects)
+
+        # Refresh to get DB-assigned PKs — clean_inchikey-indexed for most children
+        fresh_cks = [c.clean_inchikey for c in new_child_objects if c.clean_inchikey]
+        new_children_by_ck = {
+            c.clean_inchikey: c
+            for c in Ligand.objects.filter(clean_inchikey__in=fresh_cks, parent__isnull=False)
+        } if fresh_cks else {}
+
+        # Also re-fetch children with clean_inchikey=None (radioactive variants whose _ck
+        # was cleared by the pre-flight check) by gpcrdb_id so their pk is guaranteed set.
+        none_ck_gids = [c.gpcrdb_id for c in new_child_objects if not c.clean_inchikey and c.gpcrdb_id]
+        new_children_by_gpcrdb = {}
+        if none_ck_gids:
+            for c in Ligand.objects.filter(gpcrdb_id__in=none_ck_gids, parent__isnull=False):
+                new_children_by_gpcrdb[c.gpcrdb_id] = c
+
+        for entry, child_obj in zip(new_child_entries, new_child_objects):
+            found_child = (
+                new_children_by_ck.get(child_obj.clean_inchikey)
+                or new_children_by_gpcrdb.get(child_obj.gpcrdb_id)
+                or child_obj
+            )
+            resolved.append((found_child.parent, found_child))
+
+            for src_slug, src_val in _iter_sids(entry.get("source_ids", {})):
+                new_ligand_ids_to_create.append((found_child, src_slug, src_val))
+
+    # ── Step H: bulk-create new LigandIDs ────────────────────────────────────
+    if not _WEB_RESOURCE_CACHE:
+        for wr in WebResource.objects.filter(slug__in=list(external_sources) + ["uniprot"]):
+            _WEB_RESOURCE_CACHE[wr.slug] = wr
+    lid_objects = []
+    for child, src_slug, src_val in new_ligand_ids_to_create:
+        wr = _WEB_RESOURCE_CACHE.get(src_slug)
+        if wr and child.pk:
+            lid_objects.append(LigandID(ligand=child, index=src_val, web_resource=wr))
+    if lid_objects:
+        LigandID.objects.bulk_create(lid_objects, ignore_conflicts=True)
+
+    # ── Step I: update parents that still lack structural data ────────────────
+    parents_to_update = {p.pk: (p, c) for p, c in resolved if p and c}
+    for parent, child in parents_to_update.values():
+        if not parent.smiles or not parent.clean_inchikey:
+            update_parent(parent, child)
+
+    return resolved
+
+def get_or_create_ligand(name, ids={}, lig_type="small-molecule", unichem=False,
+                          extended_matching=True, source=None, helm=None,
+                          radioactive=False, synonyms=False):
+    """Thin wrapper around get_or_create_ligands_batch() for single-ligand call sites."""
+    # Normalise / clean the ids dict (CAS → PubChem, type coercions, etc.)
+    cas_to_cid_url = "http://www.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pccompound&retmax=100&term=$index"
+    cas_cache_dir = ["CAS", "cas_codes"]
+    ids = dict(ids)  # don't mutate caller's dict
+
     for type_id in list(ids.keys()):
         if ids[type_id] is None or ids[type_id] == "None" or ids[type_id] == "":
             del ids[type_id]
@@ -93,293 +841,122 @@ def get_or_create_ligand(name, ids = {}, lig_type = "small-molecule", unichem = 
                 if data:
                     try:
                         ids["pubchem"] = int(data[3][0].text)
-                    except:
+                    except Exception:
                         pass
                 del ids["CAS"]
         elif isinstance(ids[type_id], list) and len(ids[type_id]) == 1:
             ids[type_id] = ids[type_id][0]
 
-    # Identify the parent and or create one
-    parent = None
-
-    # Attempt using SMILES if available
-    if "smiles" in ids:
-        std_smiles = standardize_smiles(ids["smiles"])
-        if std_smiles:
-            parent = try_get_parent({"smiles":std_smiles, "parent__isnull":True})
-
-    # Attempt using InChIKey if parent not yet found
-    if not parent and "inchikey" in ids:
-        head_inchi = ids["inchikey"].split('-')[0]
-        parent = try_get_parent({"clean_inchikey":head_inchi, "parent__isnull":True})
-
-    # Attemp generating and checking clean inchikey if only smiles is provided
-    if not parent and "smiles" in ids and "inchikey" not in ids:
-        std_smiles = standardize_smiles(ids["smiles"])
-        if std_smiles:
-            input_mol = dm.to_mol(std_smiles, sanitize=True)
-            inchi = dm.to_inchikey(input_mol)
-            head_inchi = inchi.split('-')[0]
-            parent = try_get_parent({"clean_inchikey":head_inchi, "parent__isnull":True})
-
-    # # Attempt using sequence if still not found
-    # if not parent and "sequence" in ids:
-    #     parent = try_get_parent({"sequence":ids["sequence"], "parent__isnull":True})
-
-    # Attempt using name if still not found (here need to add an exception)
-    # Here the logic is to find parents which have only the name stored and no other info
-    if not parent and "smiles" in ids and "inchikey" in ids:
-        std_smiles = standardize_smiles(ids["smiles"])
-        head_inchi = ids["inchikey"].split('-')[0]
-
-        if std_smiles:
-            new_name = check_name(std_smiles, head_inchi, name)
-            if name != new_name:
-                # only change the name and skip parent lookup this round
-                name = new_name
-                # (you can `continue` here if this is in a loop)
-                # or just return/exit this branch
-                return
-
-        # either std_smiles was falsy, or it was truthy but name==new_name
-        parent = try_get_parent({"name__iexact": name, "parent__isnull": True})
-
-    # Final fallback: use name-only matching (case-insensitive)
-    if not parent:
-        parent = try_get_parent({"name__iexact": name, "parent__isnull": True})
-
-    if not parent:
-        for type in external_sources:
-            if ligand is None and type in ids:
-                ligand = get_ligand_by_id(type, ids[type])
-        if ligand:
-            if ligand.parent:
-                parent = ligand.parent
-            else:
-                parent = ligand
-
-    # Finally, generate a parent if none was found
-    if not parent:
-        parent = generate_parent(name, ids, lig_type)
-
-    # No IDs are provided, so the only way forward is a name match
-    # Very short name = not unique - minimum is length of 3
-    # TODO - add filter for numerical names and typical cpd X names
-    # adding the clause 'parent__isnull = False' to all queries since we need to find Ligands, not parents
-    if len(ids) == 0:
-        results = Ligand.objects.filter(name=name, ambiguous_alias = True, parent__isnull = False)
-        if results.count() == 1:
-            ligand = results.first()
-        # DEBUGGING
-        elif results.count() > 1:
-            print("Ambiguous name (", name,") as it has ", results.count(), " corresponding entries")
-            ligand = results.first()
-        else:
-            # Longer names could be non-ambiguous compounds
-            results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = True, parent__isnull = False)
-            if results.count() == 1:
-                ligand = results.first()
-            elif len(name) >= 5:
-                results = Ligand.objects.filter(name__iexact=name, ambiguous_alias = False, parent__isnull = False)
-                if results.count() == 1:
-                    ligand = results.first()
-                    # DEBUGGING
-                    print("Semi-ambiguous matching using name")
-                elif results.count() > 1:
-                    print("Error for molecule with name (", name,") as it has ", results.count(), " corresponding entries")
-
-            if ligand is None:
-                print("No ligand found with name ",name)
-                ligand = create_ligand_from_id(name, "", "", lig_type)
-                ligand.ambiguous_alias = True
-                if parent and (ligand.pk is None or ligand.pk != parent.pk):
-                    ligand.parent = parent
-                if source:
-                    ligand.source = source
-                if helm:
-                    ligand.helm = helm
-                ligand.save()
-
-                ensure_gpcrdb_id(ligand)
-
-                return ligand
-    else:
-        # Try to find ligand via PubChem ID, Guide to Pharmacology ID, ChEMBL ID
-        for type in external_sources:
-            if ligand is None and type in ids:
-                ligand = get_ligand_by_id(type, ids[type])
-
-        # How about the InChiKey?
-        if ligand is None and "inchikey" in ids:
-            ligand = get_ligand_by_inchikey(ids["inchikey"])
-        elif ligand is None and "smiles" in ids:
-            # calculate inchikey from given SMILES and repeat inchikey check
-            input_mol = dm.to_mol(ids["smiles"], sanitize=False)
-            ligand = get_ligand_by_inchikey(dm.to_inchikey(input_mol))
-            # Try again using the InChiKey from the "cleaned" molecule
-            if ligand is None:
-                ligand = get_ligand_by_inchikey(get_cleaned_inchikey(ids["smiles"]))
-
-        #DEPRECATING UNICHEM SINCE URL HAS CHANGED (FORCING THE INCHI CHECK SINCE THAT STILL WORKS)
-        # Tried direct ID matching options => no ligand found => try UniChem IDs before creating new ligand
-        if extended_matching and ligand is None:
-            external_ids = list(set.intersection(set(ids.keys()), set(external_sources)))
-            current_ids = list(ids.values())
-            fetch_type = "inchikey"
-            if ligand is None and fetch_type in ids:
-                unichem_ids = match_id_via_unichem(fetch_type, ids[fetch_type])
-                for row in unichem_ids:
-                    if row["id"] not in current_ids:
-                        ligand = get_ligand_by_id(row["type"], row["id"])
-                        current_ids.append(row["id"])
-                        if ligand is not None:
-                            print("MATCHING", fetch_type, ids[fetch_type], "via UniChem")
-                            break
-
-        # Peptide or protein entry Sequence - filter gtoplig as those entries are standalone and should not be merged
-        if ligand is None and "sequence" in ids and len(ids["sequence"]) > 3 and "gtoplig" not in ids:
-            result = Ligand.objects.filter(sequence = ids["sequence"], parent__isnull = False)
-            if result.count() > 0:
-                ligand = result.first()
-                # DEBUGGING
-                if result.count() > 1:
-                    print("Ambiguous sequence (", ids["sequence"],") for", name, "as it has ", result.count(), " corresponding entries")
-
-        # UniProt ID if there's no sequence or other IDs
-        # TODO figure out best way of matching when sequence and UniProt ID are mixed as there can be multiple variants
-        elif ligand is None and "sequence" not in ids and "uniprot" in ids and len(set.intersection(set(ids.keys()), set(external_sources)))==0:
-            result = Ligand.objects.filter(uniprot__contains = ids["uniprot"].upper(), parent__isnull = False)
-            if result.count() > 0:
-                ligand = result.first()
-                # DEBUGGING
-                if result.count() > 1:
-                    print("Ambiguous match - uniprot (", ids["uniprot"],") as it has ", result.count(), " corresponding entries")
-
-
-        # If the ligand has not been found => create ligand using the provided IDs
-        # TODO merge this into one function
-        if ligand is None:
-            # Creation of peptides and proteins
-            if lig_type != "small-molecule" and "sequence" in ids:
-                ligand = create_ligand_from_id(name, "sequence", ids["sequence"], lig_type)
-                if (ligand is not None) and helm:
-                    ligand.helm = helm
-
-
-            # Creation of small molecules and others without sequence/UniProt
-            if ligand is None:
-                for type in ["smiles", "pubchem", "gtoplig", "chembl_ligand"]:
-                    if type in ids:
-                        ligand = create_ligand_from_id(name, type, ids[type], lig_type)
-                        if ligand is not None:
-                            ligand.save()
-                            ensure_gpcrdb_id(ligand)
-                            break
-
-            # Create empty ligand
-            if ligand is None:
-                tmp_types = list(ids.keys())
-                if "uniprot" in tmp_types:
-                    tmp_types.remove("uniprot")
-
-                if len(tmp_types) == 0 and len(name) >= 4:
-                    # Try to find ligand based on name
-                    results = Ligand.objects.filter(name=name, parent__isnull = False, ambiguous_alias = True)
-                    if results.count() == 1:
-                        ligand = results.first()
-                    # DEBUGGING
-                    elif results.count() > 1:
-                        print("Ambiguous name (", name,") as it has ", results.count(), " corresponding entries")
-                    else:
-                        results = Ligand.objects.filter(name__iexact=name, parent__isnull = False, ambiguous_alias = True)
-                        if results.count() == 1:
-                            ligand = results.first()
-
-                if ligand is None:
-                    print("Creating an empty ligand", name, ids)
-                    ligand = create_ligand_from_id(name, "", "", lig_type)
-                    if parent and (ligand.pk is None or ligand.pk != parent.pk):
-                        ligand.parent = parent
-                    if helm:
-                        ligand.helm = helm
-                    ligand.ambiguous_alias = True
-                    ligand.save()
-                    ensure_gpcrdb_id(ligand)
-
-        # Add missing IDs via (web)links to the ligand object
-        if ligand is not None:
-            # Validate if newly found inchikey really does not yet exist
-            if "inchikey" not in ids and ligand.inchikey is not None and ligand.pk is None:
-                test = get_ligand_by_inchikey(ligand.inchikey)
-                if test is not None:
-                    ligand = test
-
-            # Add provided entries to ligand when missing
-            if "pdb" in ids and ligand.pdbe is None:
-                ligand.pdbe = ids["pdb"]
-            if "uniprot" in ids and ligand.uniprot is None:
-                ligand.uniprot = ids["uniprot"].upper()
-            if "sequence" in ids and ligand.sequence is None and len(ids["sequence"]) < 1000:
-                ligand.sequence = ids["sequence"]
-            if "inchikey" in ids and ligand.inchikey is None:
-                ligand.inchikey = ids["inchikey"]
-            if "smiles" in ids and ligand.smiles is None:
-                ligand.smiles = ids["smiles"]
-            if parent and (ligand.pk is None or ligand.pk != parent.pk):
-                ligand.parent = parent
-            if source:
-                ligand.source = source
-            if helm:
-                ligand.helm = helm
-
-            ligand.save()
-
-            ensure_gpcrdb_id(ligand)
-
-            # Create list of existing weblinks
-            current_ids = []
-            for wl in ligand.ids.all():
-                current_ids.append(str(wl.index))
-
-            for type_id in ids:
-                # If the ID does not yet exist => add
-                if ids[type_id] not in current_ids and type_id in external_sources:
-                    wr = WebResource.objects.get(slug=type_id)
-                    wl, created = LigandID.objects.get_or_create(ligand=ligand, index=ids[type_id], web_resource=wr)
-                    #ligand.ids.add(wl)
-                    current_ids.append(str(ids[type_id]))
-
-    # Updating the parent data if the child has more data
-    if ligand and parent and ligand.pk != parent.pk:
-        update_parent(parent, ligand)
-
-    return ligand
+    _source_ids = {k: v for k, v in ids.items() if k in external_sources}
+    if ids.get("uniprot"):
+        _source_ids["uniprot"] = ids["uniprot"]
+    entry = {
+        "name": name,
+        "raw_smiles": ids.get("smiles"),
+        "raw_inchikey": ids.get("inchikey"),
+        "raw_helm": helm if helm not in (None, "None", "nan") else None,
+        "raw_sequence": ids.get("sequence"),
+        "raw_uniprot": ids.get("uniprot"),
+        "source_ids": _source_ids,
+        "radioactive": radioactive,
+        "synonyms": synonyms,
+    }
+    results = get_or_create_ligands_batch(
+        [entry], source=source, lig_type=lig_type, extended_matching=extended_matching
+    )
+    if results:
+        return results[0][1]  # return child
+    return None
 
 unichem_src_types = {"1": "chembl_ligand", "2": "drugbank", "3": "pdb", "4": "gtoplig", "22": "pubchem", "34": "drug_central"}
 unichem_src_types_inv = {v: k for k, v in unichem_src_types.items()}
 
+def get_radioactive_info(name, synonyms):
+    # Regex for radioactive isotopes
+    regexes = {"isotope":"\[(<sup>\d+</sup>[A-Za-z]{1,2})\]"}#, "other":"\[(?=[^\]]*<sup>)([^\]]+)\]"}
+    for _, regex in regexes.items():
+        isotope_search = re.findall(regex, name)
+        if len(isotope_search)>0:
+            break
+
+    isotopes = []
+    for i in isotope_search:
+        isotopes.append(i)
+    # Check ligand name synonyms
+    found = False
+    if len(isotopes)==0 and synonyms:
+        for syn in synonyms.split("|"):
+            for _, regex in regexes.items():
+                isotope_search = re.findall(regex, syn)
+                for i in isotope_search:
+                    print(i)
+                    isotopes.append(i)
+                    found = True
+                if found:
+                    break
+            if found:
+                break
+    return isotopes
+
+def filter_ligand_more_on_name(queryset, name):
+    '''Tries to match on name or iexact name from queryset, otherwise returns first element in queryset'''
+    result_name_iexact_filtered = queryset.filter(name__iexact=name, parent__isnull = False)
+    if result_name_iexact_filtered.count()>1:
+        result_name_filtered = queryset.filter(name=name, parent__isnull = False)
+        if result_name_filtered.count()>0:
+            return result_name_filtered.first()
+    elif result_name_iexact_filtered.count()==1:
+        return result_name_iexact_filtered.first()
+    else:
+        return queryset.first()
+
 def match_id_via_unichem(type, id):
+    """Query UniChem API v1 for crossover identifiers.
+
+    type: source slug ('chembl_ligand', 'pubchem', 'drugbank', 'gtoplig',
+                       'drug_central') or 'inchikey'
+    id:   compound identifier in that source database, or an InChIKey string.
+    Returns list of {"type": <slug>, "id": <str>} dicts.
+    """
     results = []
-    cache_dir = ['unichem', 'id_match']
-    if type in unichem_src_types_inv or type == "pdb":
-        type_id = 3 # default to PDB otherwise in list
-        if type in unichem_src_types_inv:
-            type_id = unichem_src_types_inv[type]
-        unichem_url = "https://www.ebi.ac.uk/unichem/rest/src_compound_id/$index/" + type_id
-        cache_dir[1] = "id_match_" + type
-        unichem = fetch_from_web_api(unichem_url, id, cache_dir)
-        if unichem and "error" not in unichem:
-            for entry in unichem:
-                if entry["src_id"] in unichem_src_types.keys():
-                    results.append({"type" : unichem_src_types[entry["src_id"]], "id": entry["src_compound_id"]})
-    elif type == "inchikey":
-        unichem_url = "https://www.ebi.ac.uk/unichem/rest/inchikey/$index"
-        cache_dir[1] = "id_match_" + type
-        unichem = fetch_from_web_api(unichem_url, id, cache_dir)
-        if unichem and "error" not in unichem:
-            for entry in unichem:
-                if entry["src_id"] in unichem_src_types.keys():
-                    results.append({"type" : unichem_src_types[entry["src_id"]], "id": entry["src_compound_id"]})
+    cache_path = ['unichem', f'id_match_{type}']
+    cached = fetch_from_cache(cache_path, id)
+    if cached is not None:
+        data = cached
+    else:
+        if type == "inchikey":
+            payload = {"type": "inchikey", "compound": id}
+        elif type in unichem_src_types_inv:
+            payload = {
+                "type": "sourceID",
+                "compound": str(id),
+                "sourceID": int(unichem_src_types_inv[type]),
+            }
+        else:
+            return results
+        try:
+            resp = requests.post(
+                "https://www.ebi.ac.uk/unichem/api/v1/compounds",
+                json=payload,
+                timeout=10,
+            )
+            if resp.status_code != 200:
+                return results
+            data = resp.json()
+            save_to_cache(cache_path, id, data)
+        except Exception:
+            return results
+
+    compounds = data if isinstance(data, list) else (data or {}).get("compounds", [])
+    for compound in compounds:
+        for source in compound.get("sources", []):
+            src_id_key = str(source.get("srcId", ""))
+            src_compound_id = source.get("srcCompoundId")
+            if src_id_key in unichem_src_types and src_compound_id:
+                results.append({
+                    "type": unichem_src_types[src_id_key],
+                    "id": str(src_compound_id),
+                })
     return results
 
 
@@ -403,7 +980,7 @@ def get_ligand_by_id(type, id, uniprot = None, forced=True):
     else:
         return None
 
-def create_ligand_from_id(name, type, id, lig_type):
+def create_ligand_from_id(name, type, id, lig_type, radioactive=False):
     # create new ligand
     ligand = Ligand()
     ligand.name = name
@@ -496,13 +1073,13 @@ def create_ligand_from_id(name, type, id, lig_type):
             # TODO - try again if we have other IDs
 
         # Before storing - check one more time if we already have this ligand
-        if ligand.inchikey is not None:
-            checkligand = get_ligand_by_inchikey(ligand.inchikey)
+        if ligand.inchikey is not None and not radioactive:
+            checkligand = get_ligand_by_inchikey(ligand.inchikey, ligand.name)
             if checkligand is not None:
                 return checkligand
 
-        # if ligand.clean_inchikey is not None and ligand.clean_inchikey != ligand.inchikey:
-        #     checkligand = get_ligand_by_inchikey(ligand.clean_inchikey)
+        # if ligand.clean_inchikey is not None and ligand.clean_inchikey != ligand.inchikey and not radioactive:
+        #     checkligand = get_ligand_by_inchikey(ligand.clean_inchikey, ligand.name)
         #     if checkligand is not None:
         #         return checkligand
 
@@ -512,8 +1089,8 @@ def create_ligand_from_id(name, type, id, lig_type):
             input_mol = dm.to_mol(ligand.smiles, sanitize=True)
             if input_mol:
                 ligand.inchikey = dm.to_inchikey(input_mol)
-                if ligand.inchikey is not None:
-                    checkligand = get_ligand_by_inchikey(ligand.inchikey)
+                if ligand.inchikey is not None and not radioactive:
+                    checkligand = get_ligand_by_inchikey(ligand.inchikey, ligand.name)
                     if checkligand is not None:
                         return checkligand
 
@@ -532,11 +1109,15 @@ def create_ligand_from_id(name, type, id, lig_type):
         # Ligand could not be created
         return None
 
-def get_ligand_by_inchikey(inchikey):
+def get_ligand_by_inchikey(inchikey, name=None):
+    if not inchikey:
+        return None
     result = Ligand.objects.filter((Q(inchikey=inchikey) & Q(parent__isnull=False)))
     if result.count() > 0:
         if result.count() > 1:
             print("Multiple entries for the same InChIkey - This should never happen - error", inchikey)
+            if name:
+                return filter_ligand_more_on_name(result, name)
         return result.first()
     else:
         return None
@@ -751,79 +1332,37 @@ def check_name(smiles: str,
     return name
 
 def update_parent(parent, child):
-    """
-    1) If child.inchikey → clean collision, reassign to that existing parent.
-    2) Update any missing fields (smiles, inchikey, clean_inchikey, etc.) on
-       whichever parent record is now in play.
-    3) Return the “true” parent record.
+    """Fill missing structural fields on parent from child. Returns the parent.
+
+    Collision detection / reassignment is handled upstream in the batch function.
+    This function only propagates data from child to a structure-less parent.
     """
     updated = False
 
-    # ————————————————
-    # 0) EARLY CLEAN‑KEY COLLISION / REASSIGN
-    # ————————————————
-    if child.inchikey and not parent.clean_inchikey:
-        clean = child.inchikey.split('-', 1)[0]
-        collision = (
-            Ligand.objects
-                 .filter(clean_inchikey=clean)
-                 .exclude(pk=parent.pk)
-                 .first()
-        )
-        if collision:
-            print(f"clean_inchikey '{clean}' already on {collision.name!r}; "
-                  f"switching to that record.")
-            # rebind to the “correct” parent
-            parent = collision
-            # also update the FK on the child object
-            child.parent = collision
-            child.save(update_fields=['parent'])
-            # now continue with filling-in on this new parent
+    # Derive correct parent clean_inchikey from child-normalized InChIKey
+    correct_clean_key = child.clean_inchikey.split("-")[0] if child.clean_inchikey else None
 
-    # ————————————————
-    # 1) SMILES standardization
-    # ————————————————
+    if correct_clean_key and not parent.clean_inchikey:
+        parent.clean_inchikey = correct_clean_key
+        updated = True
+
     if not parent.smiles and child.smiles:
-        std = standardize_smiles(child.smiles)
-        if std:
-            parent.smiles = std
+        norm = normalize_for_parent(child.smiles)
+        if norm:
+            parent.smiles = norm["smiles"]
+            parent.inchikey = norm["inchikey"]
             updated = True
-            print(f"→ {parent.name}: set smiles")
 
-    # ————————————————
-    # 2) inchikey
-    # ————————————————
-    if not parent.inchikey and child.inchikey:
-        parent.inchikey = child.inchikey
-        updated = True
-        print(f"→ {parent.name}: set inchikey")
-
-    # ————————————————
-    # 3) clean_inchikey (now safe)
-    # ————————————————
-    if not parent.clean_inchikey and child.inchikey:
-        clean = child.inchikey.split('-', 1)[0]
-        parent.clean_inchikey = clean
-        updated = True
-        print(f"→ {parent.name}: set clean_inchikey '{clean}'")
-
-    # ————————————————
-    # 4) other standard fields
-    # ————————————————
-    for field in ['sequence', 'logp', 'mw', 'helm', 'uniprot', 'pdbe']:
+    for field in ["sequence", "logp", "mw", "helm", "uniprot", "pdbe"]:
         if not getattr(parent, field) and getattr(child, field):
             setattr(parent, field, getattr(child, field))
             updated = True
-            print(f"→ {parent.name}: set {field}")
 
-    # ————————————————
-    # 5) save parent if needed
-    # ————————————————
     if updated:
         try:
             parent.save()
         except IntegrityError as e:
-            print(f"❗️ Unable to save {parent.name}: {e!r}")
+            log.error(f"update_parent failed for {parent.name!r}: {e!r}")
 
     return parent
 
@@ -889,7 +1428,7 @@ def pick_canonical_type(children):
         pred = predict_type(lig)
         pairs.append((lig, pred))
 
-    # 2) split into “matched” vs “unmatched” against actual
+    # 2) split into "matched" vs "unmatched" against actual
     matched = []
     for lig, pred in pairs:
         actual = (lig.ligand_type.name.lower() if lig.ligand_type else UNKNOWN)

@@ -23,8 +23,8 @@ from django.views.generic import TemplateView, DetailView, View, RedirectView
 from django.db import connection
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.db.models import Q, Count, Subquery, OuterRef
-from django.db.models.functions import Coalesce
+from django.db.models import Q, Count, Subquery, OuterRef, Value, CharField
+from django.db.models.functions import Coalesce, Concat
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ValidationError
 from django_rdkit.models import *
@@ -3239,13 +3239,17 @@ class AbsLigand(TemplateView):
 
     @staticmethod
     def get_related_ligands(ligand_id):
-        this_ligand = Ligand.objects.filter(gpcrdb_id=ligand_id).prefetch_related('ligand_type').annotate(assay_count=Count('assayexperiment'), structure_count=Count('structureligandinteraction'))
+        _assay_count = Count(Concat('assayexperiment__protein_id', Value('|'), 'assayexperiment__source', Value('|'), 'assayexperiment__value_type', output_field=CharField()), distinct=True, filter=~Q(assayexperiment__value_type='-'))
+        this_ligand = Ligand.objects.filter(gpcrdb_id=ligand_id).prefetch_related('ligand_type').annotate(assay_count=_assay_count, structure_count=Count('structureligandinteraction'))
         if this_ligand[0].parent:
-            parent_ligand = Ligand.objects.filter(id=this_ligand[0].parent.id).prefetch_related('ligand_type').annotate(assay_count=Count('assayexperiment'), structure_count=Count('structureligandinteraction'))[0]
+            parent_ligand = Ligand.objects.filter(id=this_ligand[0].parent.id).prefetch_related('ligand_type').annotate(assay_count=_assay_count, structure_count=Count('structureligandinteraction'))[0]
         else:
             parent_ligand = this_ligand[0]
-        children = Ligand.objects.filter(parent=parent_ligand).prefetch_related('ligand_type').annotate(assay_count=Count('assayexperiment'), structure_count=Count('structureligandinteraction'))
-        ligands = [parent_ligand]+list(children)
+        children = Ligand.objects.filter(parent=parent_ligand).prefetch_related('ligand_type').annotate(assay_count=_assay_count, structure_count=Count('structureligandinteraction'))
+
+        ### Keeping this line for debugging - shows also parent object on group page
+        # ligands = [parent_ligand]+list(children)
+        ligands = list(children)
 
         return this_ligand, ligands
 
@@ -3256,8 +3260,8 @@ class LigandGroup(AbsLigand):
         ligand_id = self.kwargs['gpcrdb_id']
         self.this_ligand, self.ligands = AbsLigand.get_related_ligands(ligand_id)
 
-        # if len(self.ligands) <= 2:
-        #     return redirect(f"/ligand/gpcrdb_id/{ligand_id}/info")
+        if len(self.ligands) <= 2:
+            return redirect(f"/ligand/{ligand_id}/info")
 
         return super().get(request, *args, **kwargs)
 
@@ -3267,32 +3271,25 @@ class LigandGroup(AbsLigand):
         ligands_parsed = []
         for l in self.ligands:
             ids = LigandID.objects.filter(ligand=l).count()
-            if ids>0:
-                ids = f"<b>{ids}</b>"
             mutations = MutationExperiment.objects.filter(ligand=l).count()
-            if mutations>0:
-                mutations = f"<b>{mutations}</b>"
             assay_count = l.assay_count
-            if assay_count>0:
-                assay_count = f"<b>{assay_count}</b>"
             structure_count = l.structure_count
-            if structure_count>0:
-                structure_count = f"<b>{structure_count}</b>"
             drug_indications = l.drugs_set.all().count()
-            if drug_indications>0:
-                drug_indications = f"<b>{drug_indications}</b>"
             lig_dict = {'ligand_object':None, 'chemical_properties':0, 'chemical_identifiers':0, 'bioactivities':assay_count, 
                         'structures':structure_count, 'sequence':None, 'gpcrdb_id':l.gpcrdb_id, 'db_ids':ids, 'drug_indications':drug_indications, 'mutations':mutations}
-            if l.hacc:
+            if l.hacc!=None:
                 lig_dict['chemical_properties']+=1
-            if l.hdon:
+            if l.hdon!=None:
                 lig_dict['chemical_properties']+=1
-            ### logp not shown on ligand info page, commented out for now
-            # if l.logp:
-            #     lig_dict['chemical_properties_count']+=1
+            if l.logp:
+                lig_dict['chemical_properties']+=1
             if l.mw:
                 lig_dict['chemical_properties']+=1
-            if l.rotatable_bonds:
+            if l.rotatable_bonds!=None:
+                lig_dict['chemical_properties']+=1
+            if l.radioactive:
+                lig_dict['chemical_properties']+=1
+            if l.stereo_status:
                 lig_dict['chemical_properties']+=1
             if l.inchikey:
                 lig_dict['chemical_identifiers']+=1
@@ -3302,10 +3299,7 @@ class LigandGroup(AbsLigand):
                 lig_dict['chemical_identifiers']+=1
             if l.sequence:
                 lig_dict['sequence'] = l.sequence
-            if lig_dict['chemical_properties']>0:
-                lig_dict['chemical_properties'] = f"<b>{lig_dict['chemical_properties']}</b>"
-            if lig_dict['chemical_identifiers']>0:
-                lig_dict['chemical_identifiers'] = f"<b>{lig_dict['chemical_identifiers']}</b>"
+
             ligands_parsed.append(lig_dict)
 
             if l.smiles and l.smiles != "-":
@@ -3769,7 +3763,7 @@ class LigandInformationView(AbsLigand):
     def process_assay(assays):
         return_dict = dict()
         for c, i in enumerate(assays):
-            name = str(i.protein) + '_' + str(i.source) + '_' + str(c)
+            name = str(i.protein) + '_' + str(i.source)
             assay_type = i.value_type
             if i.source == 'PDSP KiDatabase':
                 i.source = 'PDSP Ki database'
@@ -3928,10 +3922,13 @@ class LigandInformationView(AbsLigand):
         ld['hacc'] = ligand_data.hacc
         ld['hdon'] = ligand_data.hdon
         ld['logp'] = ligand_data.logp
-        ld['mw'] = ligand_data.mw
+        ld['mw'] = round(ligand_data.mw,1) if ligand_data.mw else None
         ld['labels'] = LigandInformationView.get_labels(ligand_data, endogenous_ligands, ld['type'])
         ld['wl'] = list()
         ld['ligand_smiles'], ld['ligand_smiles_for_image'], ld['picture'] = standardize_smiles(ligand_data.smiles, ld['mw'])
+        ld['helm'] = ligand_data.helm
+        ld['radioactive'] = ligand_data.radioactive
+        ld['stereo_status'] = ligand_data.stereo_status
         ld['related_ids'] = list()
 
         #Sorting links if ligand is endogenous
@@ -3947,7 +3944,7 @@ class LigandInformationView(AbsLigand):
             for i in ligand_data.ids.all():
                 ld['wl'].append({'name': i.web_resource.name, "link": str(i)})
         #Adding related ligand object links
-        _, related_ligand_objects = AbsLigand.get_related_ligands(ligand_data.id)
+        _, related_ligand_objects = AbsLigand.get_related_ligands(ligand_data.gpcrdb_id)
         for r in related_ligand_objects:
             ld['related_ids'].append(r.gpcrdb_id)
         return ld

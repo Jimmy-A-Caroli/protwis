@@ -50,7 +50,7 @@
                 </tr>
                 <!-- Filter Row for header -->
                 <tr>
-                    <td style="text-align: center;" data-dt-order="disable"></td>
+                    <td style="text-align: right;" data-dt-order="disable"></td>
                     <td style="text-align: center;" data-dt-order="disable"></td>
                     <td style="text-align: center;" data-dt-order="disable"></td>
                     <td style="text-align: center;" data-dt-order="disable"></td>
@@ -77,6 +77,7 @@
 <script src="{% static 'home/js/openchemlib-full.js' %}"></script> <!-- for rendering ligand images -->
 <script src="{% static 'home/js/PeptideLayoutEngine.js' %}"></script> <!-- For rendering peptide structures -->
 <script src="{% static 'home/js/compoundPreviewTooltip.js' %}"></script>
+<script src="{% static 'home/js/grayscale.js' %}"> </script>
 
 <script type="text/javascript">
     window.NO_IMAGE_URL = "{% static 'home/images/No_image_available.svg' %}";
@@ -86,17 +87,19 @@
     $(document).ready(function () {
         var ligand_data = JSON.parse('{{ ligands|escapejs }}');
 
-        var columnDefs = [{ className: "dt-head-center dt-center dt-body-center expand", "targets": "_all" }]
+        var columnDefs = [{ className: "dt-head-center dt-center dt-body-center expand", "targets": "_all" },
+                          { className: "color-column", "targets": [2,3,4,5,6,7,8]},
+                          { className: "dt-body-right", "targets": [0]}]
         var columns = [
 			{data: "ligand_object", name: "ligand", width: "5%"},
 			{data: "gpcrdb_id", name: "gpcrdb_id", width: "5%"},
-			{data: "chemical_identifiers", name: "ch_id", width: "5%"},
-			{data: "chemical_properties", name: "ch_prop", width: "5%"},
-			{data: "bioactivities", name: "bio", width: "5%"},
-			{data: "drug_indications", name: "drug", width: "5%"},
-			{data: "structures", name: "structs", width: "5%"},
-			{data: "mutations", name: "muts", width: "5%"},
-			{data: "db_ids", name: "dbs", width: "5%"}
+			{data: "chemical_identifiers", name: "ch_id", width: "5%", render: function(data) { return data ? data : "-"; }},
+			{data: "chemical_properties", name: "ch_prop", width: "5%", render: function(data) { return data ? data : "-"; }},
+			{data: "bioactivities", name: "bio", width: "5%", render: function(data) { return data ? data : "-"; }},
+			{data: "drug_indications", name: "drug", width: "5%", render: function(data) { return data ? data : "-"; }},
+			{data: "structures", name: "structs", width: "5%", render: function(data) { return data ? data : "-"; }},
+			{data: "mutations", name: "muts", width: "5%", render: function(data) { return data ? data : "-"; }},
+			{data: "db_ids", name: "dbs", width: "5%", render: function(data) { return data ? data : "-"; }}
 		];
         var table = $("#LigandGroupTable").DataTable({
 			data: ligand_data,
@@ -130,6 +133,7 @@
                 '<div class="popover-content"></div>' +
                 '</div>'
         });
+        gray_scale_table($('#LigandGroupTable'));
     })
     $(document).on('shown.bs.popover', function () {
         $('.popover').last().addClass('popover-wide');

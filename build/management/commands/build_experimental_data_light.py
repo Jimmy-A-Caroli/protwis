@@ -1,6 +1,6 @@
 from django.core.management.base import CommandError
 from build.management.commands.base_build import Command as BaseBuild
-from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types, allocate_next_gpcrdb_id
+from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, get_or_create_ligands_batch, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types, allocate_next_gpcrdb_id, load_gtp_source_data
 from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError, transaction, connection
@@ -8,7 +8,7 @@ from django.db.models import Count, Q
 
 from common.tools import get_or_create_url_cache, fetch_from_web_api, test_model_updates, find_role, dump_checker, generate_helm_universal, parse_cycl_pos
 from common.models import WebLink, WebResource, Publication, PublicationJournal
-from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole, LigandEffect, LigandTargetPairing
+from ligand.models import Ligand, LigandID, LigandType, LigandVendors, LigandVendorLink, AssayExperiment, Endogenous_GTP, LigandRole, LigandEffect, LigandTargetPairing, AssayClassification
 from protein.models import Protein, Species
 
 import django.apps
@@ -57,6 +57,10 @@ class Command(BaseBuild):
     ligand_csv = pd.read_csv(ligand_dump['latest_dump'], sep=';', index_col=0)
     id_dump = dump_checker('ligand.LigandID')
     id_csv = pd.read_csv(id_dump['latest_dump'], sep=';', index_col=0)
+
+    #Fetch assay classification dictionary - not to query the db for every bioactivity
+    assay_classification = {a.unit:a for a in AssayClassification.objects.all()}
+
     test_model_updates(all_models, tracker, initialize=True)
 
     def add_arguments(self, parser):
@@ -109,38 +113,19 @@ class Command(BaseBuild):
 
         # Fetching all the Guide to Pharmacology data
         print("\n\nStarted parsing Guide to Pharmacology bioactivities data")
-        gtp_uniprot_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/GtP_to_UniProt_mapping.csv", 7 * 24 * 3600)
-        gtp_uniprot = pd.read_csv(gtp_uniprot_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_uniprot)
-        gtp_complete_ligands_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/ligands.csv", 7 * 24 * 3600)
-        gtp_complete_ligands = pd.read_csv(
-            gtp_complete_ligands_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_complete_ligands)
-        gtp_ligand_mapping_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/ligand_id_mapping.csv", 7 * 24 * 3600)
-        gtp_ligand_mapping = pd.read_csv(
-            gtp_ligand_mapping_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_ligand_mapping)
-        gtp_interactions_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/interactions.csv", 7 * 24 * 3600)
-        gtp_interactions = pd.read_csv(
-            gtp_interactions_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_interactions)
-        gtp_detailed_endogenous_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/endogenous_ligand_detailed.csv", 7 * 24 * 3600)
-        gtp_detailed_endogenous = pd.read_csv(
-            gtp_detailed_endogenous_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_detailed_endogenous)
-        gtp_peptides_link = get_or_create_url_cache(
-            "https://www.guidetopharmacology.org/DATA/peptides.csv", 7 * 24 * 3600)
-        gtp_peptides = pd.read_csv(gtp_peptides_link, dtype=str, header=1)
-        self.normalize_gtp_headers(gtp_peptides)
+        gtp = load_gtp_source_data()
+        gtp_uniprot             = gtp["gtp_uniprot"]
+        gtp_complete_ligands    = gtp["gtp_complete_ligands"]
+        gtp_ligand_mapping      = gtp["gtp_ligand_mapping"]
+        gtp_interactions        = gtp["gtp_interactions"]
+        gtp_detailed_endogenous = gtp["gtp_detailed_endogenous"]
+        gtp_peptides            = gtp["gtp_peptides"]
+        iuphar_ids              = gtp["iuphar_ids"]
+        ligand_ids              = gtp["ligand_ids"]
+        bioactivity_ligands_ids = [lid for lid in ligand_ids
+                                   if lid in set(gtp_interactions["ligand_id"].unique())]
 
         # This gets all the info of the ligand and the interaction with the target
-        iuphar_ids = self.compare_proteins(gtp_uniprot)
-        bioactivity_ligands_ids = self.obtain_ligands(gtp_interactions, iuphar_ids, ['target_id', 'ligand_id'])
         # Now I have all the data I need
         bioactivity_data_gtp = self.get_ligands_data(
             bioactivity_ligands_ids, gtp_complete_ligands, gtp_ligand_mapping, ligand_interactions=gtp_interactions, target_ids=iuphar_ids)
@@ -150,11 +135,6 @@ class Command(BaseBuild):
         print("Ended parsing Guide to Pharmacology bioactivities data")
 
         print("\n\nStarted building all Guide to Pharmacology ligands")
-        print('\n\nRetrieving IUPHAR ids from UniProt ids')
-        print('\n\nRetrieving ALL ligands from GTP associated to GPCRs')
-        endogenous_ligands_ids = self.obtain_ligands(gtp_detailed_endogenous, iuphar_ids, ['target_id', 'ligand_id'])
-        ligand_ids = list(set(bioactivity_ligands_ids + endogenous_ligands_ids))
-
         print('\n\nCollating all info from GPCR related ligands in the GTP')
         ligand_data = self.get_ligands_data(ligand_ids, gtp_complete_ligands, gtp_ligand_mapping)
 
@@ -242,14 +222,21 @@ class Command(BaseBuild):
             print('\n\nStarted comparing GTP data to reloaded database')
             ligand_data_merged, gtp_peptides_merged = self.find_unmatched_gtp(Command.ligand_csv, ligand_data_merged, gtp_peptides_merged)
             print(f"Building {len(ligand_data_merged)} small molecules and {len(gtp_peptides_merged)} peptide from GTP that were missing from dump")
-        self.save_the_ligands_save_the_world(ligand_data_merged, gtp_peptides_merged)
+
+        with open('./gtp_sm.txt','w') as f:
+            for l in ligand_data_merged:
+                f.write(l)
+        with open('./gtp_peptides.txt','w') as f2:
+            for k in gtp_peptides_merged:
+                f2.write(k)
+
+        self.build_gtoplig_data(ligand_data_merged, gtp_peptides_merged)
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         #CHEMBL
         print("\n\nStarted comparing ChEBML ligands")
         self.build_chembl_ligands()
-
         print("\n\nEnded building ChEMBL ligands")
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
@@ -808,6 +795,8 @@ class Command(BaseBuild):
                     source=row.get('source') or None,
                     helm=row.get('helm') or None,
                     gpcrdb_id=int(row.get('gpcrdb_id')),
+                    radioactive=row.get('radioactive') or None,
+                    stereo_status=row.get('stereo_status') or None,
                     parent=None
                 )
                 compounds[compound.gpcrdb_id] = compound
@@ -1437,7 +1426,6 @@ class Command(BaseBuild):
 
         # Get WebResource objects
         wr_chembl = WebResource.objects.get(slug="chembl_ligand")
-        wr_pubchem = WebResource.objects.get(slug="pubchem")
 
         # Fetch existing ligand IDs
         print("\n#2 Collecting ChEMBL IDs from existing ligands", datetime.datetime.now())
@@ -1470,13 +1458,6 @@ class Command(BaseBuild):
         merged['helm_notation'] = merged['helm_notation_x'].fillna(merged['helm_notation_y'])
         filtered_ligands = merged.drop(columns=['helm_notation_x', 'helm_notation_y'])
 
-        # Fetch additional existing ligand data
-        existing_cids = set(LigandID.objects.filter(web_resource=wr_pubchem).values_list("index", flat=True))
-        existing_inchis = set(Ligand.objects.exclude(inchikey=None).values_list("inchikey", flat=True))
-
-        smallmol = LigandType.objects.get(slug="small-molecule")
-        ligands, weblinks = [], []
-
         sm_data = filtered_ligands[
             (filtered_ligands["molecule_type"].isin(["Small molecule", "Oligosaccharide"])) |
             (pd.isna(filtered_ligands["molecule_type"]))
@@ -1485,267 +1466,52 @@ class Command(BaseBuild):
         #check that we substitute all the 'nan' with actual np.nan values
         sm_data.replace('nan', np.nan, inplace=True)
 
+
         lig_entries = len(sm_data)
 
         print(f"\n#3 Building {lig_entries} new small-molecule ChEMBL ligands", datetime.datetime.now())
 
-        parent_cache = {
-            "smiles": {},
-            "inchikey": {},
-            "sequence": {},
-            "name": {}
-        }
-
+        entries_batch = []
         for index, row in sm_data.iterrows():
-            insert = True
-            chembl_id = row["molecule_chembl_id"]
-            ids = [chembl_id]
-
-            # Check other ChEMBL IDs
-            if pd.notna(row["other_ids"]) and row["other_ids"]:
-                extra_ids = set(row["other_ids"].split(";"))
-                existing_matches = extra_ids & existing_ids
-                if existing_matches:
-                    try:
-                        match = LigandID.objects.get(index=next(iter(existing_matches)))
-                    except LigandID.MultipleObjectsReturned:
-                        match = LigandID.objects.filter(index=next(iter(existing_matches))).first()
-
-                    if match and (match.web_resource == wr_pubchem):
-                        # Before saving, only save if it does not already exist:
-                        if not LigandID.objects.filter(
-                                ligand_id=match.ligand_id,
-                                index=chembl_id,
-                                web_resource=wr_chembl
-                        ).exists():
-                            LigandID(
-                                index=chembl_id,
-                                web_resource=wr_chembl,
-                                ligand_id=match.ligand_id
-                            ).save()
-                            print(f"Found existing non-parent ChEMBL {next(iter(existing_matches))} for parent {chembl_id}")
-                        insert = False
-                else:
-                    ids.extend(extra_ids)
-
-            # Check PubChem CIDs
-            if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
-                cids = set(row["pubchem_cid"].split(";"))
-                existing_matches = cids & existing_cids
-                if existing_matches:
-                    try:
-                        match = LigandID.objects.get(index=next(iter(existing_matches)))
-                    except LigandID.MultipleObjectsReturned:
-                        match = LigandID.objects.filter(index=next(iter(existing_matches))).first()
-
-                    if match and (match.web_resource == wr_pubchem):
-                        # Only create if not already in place:
-                        if not LigandID.objects.filter(
-                                ligand_id=match.ligand_id,
-                                index=chembl_id,
-                                web_resource=wr_chembl
-                        ).exists():
-                            LigandID(
-                                index=chembl_id,
-                                web_resource=wr_chembl,
-                                ligand_id=match.ligand_id
-                            ).save()
-                        insert = False
-
-            # Check InChIKey
-            if insert and row["standard_inchi_key"] in existing_inchis:
+            _name = str(row.get('pref_name') or row.get('molecule_chembl_id') or "")
+            _smiles = row.get('smiles') if pd.notna(row.get('smiles')) else None
+            _ik = row.get('standard_inchi_key') if pd.notna(row.get('standard_inchi_key')) else None
+            _chembl_id = row.get('molecule_chembl_id')
+            _pubchem_cid = None
+            if pd.notna(row.get('pubchem_cid')) and row.get('pubchem_cid'):
                 try:
-                    ligand = Ligand.objects.get(
-                        inchikey=row["standard_inchi_key"],
-                        parent__isnull=False
-                    )
-                    # Before saving the new LigandID for the ChEMBL ID:
-                    if not LigandID.objects.filter(
-                            ligand=ligand,
-                            index=chembl_id,
-                            web_resource=wr_chembl
-                        ).exists():
-                        LigandID(
-                            index=chembl_id,
-                            web_resource=wr_chembl,
-                            ligand=ligand
-                        ).save()
+                    _pubchem_cid = str(int(float(str(row['pubchem_cid']))))
+                except (ValueError, TypeError):
+                    _pubchem_cid = str(row['pubchem_cid']).strip() or None
 
-                    # Then link any PubChem CIDs, but only if they don’t already exist:
-                    if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
-                        for cid in row["pubchem_cid"].split(";"):
-                            if not LigandID.objects.filter(
-                                    ligand=ligand,
-                                    index=cid,
-                                    web_resource=wr_pubchem
-                            ).exists():
-                                LigandID(
-                                    index=cid,
-                                    web_resource=wr_pubchem,
-                                    ligand=ligand
-                                ).save()
-                    insert = False
-                except Ligand.DoesNotExist:
-                    # If no matching Ligand, create ligand
-                    pass
+            source_ids = {}
+            if _chembl_id:
+                source_ids['chembl_ligand'] = str(_chembl_id)
+            if _pubchem_cid:
+                source_ids['pubchem'] = _pubchem_cid
 
-            if insert:
-                parent = None
-                keys = {}
-                query = Q(parent__isnull=True)  # This must always be true
-                optional_conditions = Q()  # Will hold the OR conditions
+            entries_batch.append({
+                "name": _name,
+                "raw_smiles": _smiles,
+                "raw_inchikey": _ik,
+                "raw_helm": None,
+                "raw_sequence": None,
+                "raw_uniprot": None,
+                "source_ids": source_ids,
+                "radioactive": False,
+                "synonyms": False,
+            })
 
-                match_fields = []  # Store which field(s) caused a match
-
-                smiles = row.get("smiles")
-                if pd.notna(smiles) and smiles:
-                    std_smiles = standardize_smiles(smiles)
-                    if std_smiles:
-                        keys["smiles"] = std_smiles
-                        optional_conditions |= Q(smiles=std_smiles)  # OR condition
-
-                inchi = row.get("standard_inchi_key")
-                if pd.notna(inchi) and inchi:
-                    head_inchi = inchi.split("-")[0]
-                    if head_inchi:
-                        keys["inchikey"] = head_inchi
-                        optional_conditions |= Q(clean_inchikey=head_inchi)  # OR condition
-
-                sequence = row.get("sequence")
-                # if pd.notna(sequence) and sequence:
-                #     keys["sequence"] = sequence
-                #     optional_conditions |= Q(sequence=sequence)  # OR condition
-
-                name = row.get("pref_name")
-                if pd.notna(name) and name:
-                    keys["name"] = name
-                    optional_conditions |= Q(name=name)  # OR condition
-
-                # Final query: (parent__isnull=True) AND (at least one optional condition)
-                if optional_conditions:
-                    query &= optional_conditions
-
-                # Check cache first
-                for key_type, key_value in keys.items():
-                    if key_value in parent_cache[key_type]:
-                        parent = parent_cache[key_type][key_value]
-                        match_fields.append(key_type)
-                        break  # Use the first cached match
-
-                # If parent is not found, query the database
-                if not parent:
-                    parent = Ligand.objects.filter(query).first()
-                    if parent:
-                        # Store the parent in the cache
-                        for key_type, key_value in keys.items():
-                            parent_cache[key_type][key_value] = parent
-
-                # Generate parent if still not found
-                if not parent:
-                    input_ids = {k: v for k, v in keys.items() if v}
-                    parent = generate_parent(name, input_ids, "small-molecule")
-
-                    # Store the generated parent in the cache
-                    for key_type, key_value in keys.items():
-                        parent_cache[key_type][key_value] = parent
-
-                # Create the new ligand and associate it with the parent
-                ligand = Ligand(
-                    name=row['pref_name'],
-                    ambiguous_alias=False,
-                    ligand_type=smallmol,  # assuming smallmol is already defined
-                    smiles=row.get('smiles'),
-                    inchikey=row.get('standard_inchi_key'),
-                    sequence=row.get("sequence") if pd.notna(row.get("sequence")) else None,
-                    source="ChEMBL_sm",
-                    helm=row.get('helm_notation') if pd.notna(row.get("helm_notation")) else None,
-                    parent=parent  # directly assign the parent (which was already created)
+            if len(entries_batch) >= Command.bulk_size:
+                get_or_create_ligands_batch(
+                    entries_batch, source="ChEMBL_sm", lig_type="small-molecule"
                 )
+                entries_batch = []
 
-                if pd.notna(row.get('smiles')):
-                    input_mol = dm.to_mol(row['smiles'], sanitize=True)
-                    if input_mol:
-                        # If the ligand's InChIKey wasn't set from the row, compute it.
-                        if not ligand.inchikey:
-                            ligand.inchikey = dm.to_inchikey(input_mol)
-                        ligand.mw = dm.descriptors.mw(input_mol)
-                        ligand.rotatable_bonds = dm.descriptors.n_rotatable_bonds(input_mol)
-                        ligand.hacc = dm.descriptors.n_hba(input_mol)
-                        ligand.hdon = dm.descriptors.n_hbd(input_mol)
-                        ligand.logp = dm.descriptors.clogp(input_mol)
-
-                ligands.append(ligand)
-
-                # Add LigandIDs as before, e.g.:
-                for val_id in ids:  # or iterate over appropriate keys
-                    weblinks.append({
-                        "link": LigandID(index=val_id, web_resource=wr_chembl),
-                        "lig_idx": len(ligands) - 1
-                    })
-                if pd.notna(row["pubchem_cid"]) and row["pubchem_cid"]:
-                    for cid in row['pubchem_cid'].split(";"):
-                        weblinks.append({
-                            "link": LigandID(index=cid, web_resource=wr_pubchem),
-                            "lig_idx": len(ligands) - 1
-                        })
-
-                # Bulk insert every X entries or on the last row
-                if len(ligands) == Command.bulk_size or (index == lig_entries - 1):
-                    # 0) Assign GPCRdb IDs
-                    next_gpcrdb_id = allocate_next_gpcrdb_id()
-                    for i, l in enumerate(ligands):
-                        l.gpcrdb_id = i+next_gpcrdb_id
-
-                    # 1) Insert all pending Ligand objects
-                    Ligand.objects.bulk_create(ligands)
-
-                    # 2) Now assign each weblink to its newly‐saved Ligand and check "exists"
-                    to_create = []
-                    seen_keys = set()  # will hold (ligand_id, index, web_resource_id) tuples
-
-                    for pair in weblinks:
-                        # pair["lig_idx"] points into `ligands` list. Because we just bulk‐created,
-                        # each `ligands[...]` now has a primary key.
-                        ligand_instance = ligands[pair["lig_idx"]]
-                        link_obj = pair["link"]
-
-                        # build a “deduplication key” based on the FK IDs and index
-                        key = (
-                            ligand_instance.id,
-                            link_obj.index,
-                            # if web_resource is a FK, use its .id; otherwise, use link_obj.web_resource
-                            getattr(link_obj.web_resource, "id", link_obj.web_resource),
-                        )
-
-                        # Skip immediately if we’ve already queued this exact combination
-                        if key in seen_keys:
-                            continue
-
-                        # Check if a record with (ligand, index, web_resource) already exists in the DB:
-                        already_exists = LigandID.objects.filter(
-                            ligand=ligand_instance,
-                            index=link_obj.index,
-                            web_resource=link_obj.web_resource,
-                        ).exists()
-
-                        if not already_exists:
-                            # Assign the real Ligand instance and queue for bulk_create
-                            link_obj.ligand = ligand_instance
-                            to_create.append(link_obj)
-                            seen_keys.add(key)
-
-                    # 3) Bulk‐insert only those new (and now‐deduplicated) links
-                    if to_create:
-                        LigandID.objects.bulk_create(to_create)
-
-                    # -- PROGRESS REPORTING ADDED HERE --
-                    completed = index + 1
-                    percent = completed / lig_entries * 100
-                    print(f"Inserted {completed} of {lig_entries} ligands — {percent:.1f}% complete")
-
-                    # 4) Clear the lists for the next batch
-                    ligands = []
-                    weblinks = []
+        if entries_batch:
+            get_or_create_ligands_batch(
+                entries_batch, source="ChEMBL_sm", lig_type="small-molecule"
+            )
 
         # Parse all new non-small-molecule ChEMBL ligands
         print("\n#4 Building new non-small-molecule ChEMBL ligands", datetime.datetime.now())
@@ -1756,58 +1522,61 @@ class Command(BaseBuild):
                      ].reset_index()
         print("Found", len(nonsm_data), "new non-small-molecules")
 
-        ligands = []
         ligand_types = {"Unknown": "na", "Protein": "protein"}
-        weblinks = []
-        for _, row in nonsm_data.iterrows():
-            nonsm_ids = {}
-            if pd.notna(row["smiles"]):
-                nonsm_ids["smiles"] = row['smiles']
-            if pd.notna(row["sequence"]):
-                nonsm_ids["sequence"] = row['sequence']
-            if pd.notna(row["standard_inchi_key"]):
-                nonsm_ids["inchikey"] = row['standard_inchi_key']
-            if pd.notna(row["molecule_chembl_id"]):
-                nonsm_ids["chembl_ligand"] = row['molecule_chembl_id']
 
-            # Filter types
-            helm = row.get('helm_notation') if pd.notna(row.get("helm_notation")) else None
-            ligand = get_or_create_ligand(row['pref_name'], nonsm_ids, ligand_types[row['molecule_type']], False, True, "ChEMBL_peptide", helm)
-            # Add LigandIDs
-            if pd.notna(row["other_ids"]):
-                # 1) Strip and dedupe
-                raw_ids = [s.strip() for s in row["other_ids"].split(";")]
-                extra_ids = set(raw_ids)
-                # 2) Skip if any of these already match existing_ids
-                if extra_ids & existing_ids:
+        alias_rows = []  # (_lig_type, row, _smiles, _ik, _sequence, _helm) for Phase 2
+
+        for _lig_type in ("na", "protein"):
+            typed_rows = [row for _, row in nonsm_data.iterrows()
+                          if ligand_types.get(row.get('molecule_type'), 'na') == _lig_type]
+            if not typed_rows:
+                continue
+            batch = []
+            for row in typed_rows:
+                _name = str(row.get('pref_name') or row.get('molecule_chembl_id') or "")
+                _smiles = row.get('smiles') if pd.notna(row.get('smiles')) else None
+                _ik = row.get('standard_inchi_key') if pd.notna(row.get('standard_inchi_key')) else None
+                _sequence = row.get('sequence') if pd.notna(row.get('sequence')) else None
+                _helm = row.get('helm_notation') if pd.notna(row.get('helm_notation')) else None
+                _chembl_id = row.get('molecule_chembl_id')
+                batch.append({
+                    "name": _name,
+                    "raw_smiles": _smiles,
+                    "raw_inchikey": _ik,
+                    "raw_helm": _helm,
+                    "raw_sequence": _sequence,
+                    "raw_uniprot": None,
+                    "source_ids": {"chembl_ligand": str(_chembl_id)} if _chembl_id else {},
+                    "radioactive": False,
+                    "synonyms": False,
+                    "skip_normalization": True,
+                })
+                if pd.notna(row.get("other_ids")) and row.get("other_ids"):
+                    alias_rows.append((_lig_type, row, _smiles, _ik, _sequence, _helm))
+            get_or_create_ligands_batch(batch, source="ChEMBL_peptide", lig_type=_lig_type)
+
+        # Phase 2: alias IDs — children already in DB after Phase 1, Step E finds by
+        # InChIKey and queues a new LigandID without creating a duplicate child
+        alias_batch = []
+        for _lig_type, row, _smiles, _ik, _sequence, _helm in alias_rows:
+            for alias_id in str(row["other_ids"]).split(";"):
+                alias_id = alias_id.strip()
+                if not alias_id:
                     continue
-                # 3) For each trimmed, deduped extra_id, only queue it if
-                #    a) Not already in DB
-                #    b) Not already in our weblinks list
-                for link_index in extra_ids:
-                    wr = wr_chembl
-                    already_in_db = LigandID.objects.filter(
-                        ligand=ligand,
-                        index=link_index,
-                        web_resource=wr
-                    ).exists()
-                    already_queued = any(
-                        (w.ligand_id == ligand.id and
-                         w.index == link_index and
-                         w.web_resource_id == wr.id)
-                        for w in weblinks
-                    )
-                    if not (already_in_db or already_queued):
-                        weblinks.append(
-                            LigandID(
-                                ligand=ligand,
-                                index=link_index,
-                                web_resource=wr
-                            )
-                        )
-
-        # Bulk insert all new ligandIDs
-        LigandID.objects.bulk_create(weblinks)
+                alias_batch.append({
+                    "name": str(row.get('pref_name') or alias_id),
+                    "raw_smiles": _smiles,
+                    "raw_inchikey": _ik,
+                    "raw_helm": _helm,
+                    "raw_sequence": _sequence,
+                    "raw_uniprot": None,
+                    "source_ids": {"chembl_ligand": alias_id},
+                    "radioactive": False,
+                    "synonyms": False,
+                    "skip_normalization": True,
+                })
+        if alias_batch:
+            get_or_create_ligands_batch(alias_batch, source="ChEMBL_peptide", lig_type="na")
 
     @staticmethod
     def build_chembl_bioactivities():
@@ -1861,6 +1630,7 @@ class Command(BaseBuild):
                     bioacts[-1].p_activity_ranges = None
                     bioacts[-1].standard_relation = row["standard_relation"]
                     bioacts[-1].value_type = row["standard_type"]
+                    bioacts[-1].assay_classification = Command.fetch_assay_classification(row["standard_type"], row["assay_description"])
                     bioacts[-1].document_chembl_id = row["document_chembl_id"]
                     bioacts[-1].source = 'ChEMBL'
 
@@ -2120,7 +1890,7 @@ class Command(BaseBuild):
         return biodata
 
     @staticmethod
-    def save_the_ligands_save_the_world(lig_df, pep_df):
+    def build_gtoplig_data(lig_df, pep_df):
         types_dict = {
             'Inorganic': 'small-molecule',
             'Metabolite': 'small-molecule',
@@ -2139,9 +1909,6 @@ class Command(BaseBuild):
             'drugbank': 'drugbank_id',
             'drug_central': 'drug_central_id'
         }
-
-        # Remove radioactive ligands
-        lig_df = lig_df[lig_df['radioactive'] != 'yes']
 
         # Convert all columns to string, then replace 'nan' with None
         lig_df = lig_df.astype(str).replace({'nan': None})
@@ -2162,6 +1929,10 @@ class Command(BaseBuild):
             # Skip if there's no name
             if not row['name']:
                 continue
+
+            radioactive = False
+            if row['radioactive']=='yes':
+                radioactive = True
 
             # Build dictionary of IDs
             ids = {}
@@ -2193,7 +1964,7 @@ class Command(BaseBuild):
                             new_name = row['name']
                             if row['species']:
                                 new_name = f"{row['name']} ({row['species']})"
-                            ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', pep_row['helm_notation'])
+                            ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', pep_row['helm_notation'], radioactive, row['synonyms'])
                             if ligand is None:
                                 print("Issue with", row['name'])
                                 print(row)
@@ -2209,21 +1980,41 @@ class Command(BaseBuild):
                         new_name = row['name']
                         if row['species']:
                             new_name = f"{row['name']} ({row['species']})"
-                        ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', pep_row['helm_notation'])
+                        ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', pep_row['helm_notation'], radioactive, row['synonyms'])
                         if ligand is None:
                             print("Issue with", row['name'])
                             print(row)
                 else:
                     new_name = row['name']
-                    ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma')
+                    ligand = get_or_create_ligand(new_name, ids, ligand_type, True, False, 'GuideToPharma', radioactive=radioactive, synonyms=row['synonyms'])
                     if ligand is None:
                         print("Issue with", row['name'])
                         print(row)
             else:
-                ligand = get_or_create_ligand(row['name'], ids, ligand_type, True, False, 'GuideToPharma', row['helm_notation'])
+                ligand = get_or_create_ligand(row['name'], ids, ligand_type, True, False, 'GuideToPharma', row['helm_notation'], radioactive, row['synonyms'])
                 if ligand is None:
                     print("Issue with", row['name'])
                     print(row)
+
+    @staticmethod
+    def fetch_assay_classification(unit, assay_description=""):
+        # Handling edge cases
+        if unit in ['AC50','ED50']:
+            desc = assay_description.lower()
+            effect_slug = "Unknown"
+            # stimulatory if “agonist” but not part of “antagonist”
+            if 'agonist' in desc and 'antagonist' not in desc:
+                effect_slug = 'Stimulatory'
+            # inhibitory if either “antagonist” or “inhibitor”
+            elif 'antagonist' in desc or 'inhibitor' in desc:
+                effect_slug = 'Inhibitory'
+            return AssayClassification.objects.get(unit=unit, modality=effect_slug)
+        if unit in Command.assay_classification:
+            return Command.assay_classification[unit]
+        else:
+            if unit and unit!='-':
+                print(f'WARNING: unit type {unit} not in assay classification table')
+            return None
 
     @staticmethod
     def build_gtp_bioactivities(gtp_biodata):
@@ -2276,6 +2067,7 @@ class Command(BaseBuild):
                     p_activity_ranges=ranges,
                     standard_relation=row['original_affinity_relation'],
                     value_type=row['affinity_units'],
+                    assay_classification=Command.fetch_assay_classification(row['affinity_units'], row['assay_description']),
                     source='Guide to Pharmacology',
                     document_chembl_id=None,
                 )
@@ -2511,6 +2303,7 @@ class Command(BaseBuild):
                 bioacts[-1].p_activity_ranges = None
                 bioacts[-1].standard_relation = '='
                 bioacts[-1].value_type = 'pKi'
+                bioacts[-1].assay_classification = Command.fetch_assay_classification('pKi')
                 bioacts[-1].source = 'PDSP KiDatabase'
                 bioacts[-1].document_chembl_id = None
                 bioacts[-1].reference_ligand = row[conversion['Hot'][src]]
@@ -2560,7 +2353,7 @@ class Command(BaseBuild):
                 if protein is not None:
                     accession_numbers[code] = protein
 
-            ids = {}
+            ids = {'drug_central':row['ID']}
             if row['SMILES'] != 'None':
                 ids['smiles'] = row['SMILES']
             # if row['CAS_RN'] != 'None':
@@ -2572,18 +2365,27 @@ class Command(BaseBuild):
                 ligand_cache[row['DRUG_NAME']] = ligand
             if code in accession_numbers.keys():
                 receptor = accession_numbers[code]
+
+            # Case sensitive fix for pKB
+            if row['ACT_TYPE']=='Kb':
+                act_type = 'KB'
+            elif row['ACT_TYPE']=='pKb':
+                act_type = 'pKB'
+            else:
+                act_type = row['ACT_TYPE']
             if (receptor is not None) and (ligand_cache[row['DRUG_NAME']] is not None):
-                calc_val = round(-math.log10(float(row['ACT_VALUE']) * 1e-9), 2) if row['ACT_TYPE'] != 'pA2' else round(float(row['ACT_VALUE']), 2)
+                calc_val = round(-math.log10(float(row['ACT_VALUE']) * 1e-9), 2) if act_type != 'pA2' else round(float(row['ACT_VALUE']), 2)
                 bioacts.append(AssayExperiment())
                 bioacts[-1].ligand_id = ligand_cache[row['DRUG_NAME']].id
                 bioacts[-1].protein_id = receptor.id
                 bioacts[-1].assay_type = row['assay_type']
                 bioacts[-1].assay_description = row['ACT_COMMENT']
-                bioacts[-1].standard_activity_value = round(float(row['ACT_VALUE']), 2) if row['ACT_TYPE'] != 'pA2' else None
+                bioacts[-1].standard_activity_value = round(float(row['ACT_VALUE']), 2) if act_type != 'pA2' else None
                 bioacts[-1].p_activity_value = calc_val
                 bioacts[-1].p_activity_ranges = None
                 bioacts[-1].standard_relation = row['RELATION']
-                bioacts[-1].value_type = 'p'+row['ACT_TYPE'] if row['ACT_TYPE'] != 'pA2' else row['ACT_TYPE']
+                bioacts[-1].value_type = 'p'+act_type if act_type != 'pA2' else act_type
+                bioacts[-1].assay_classification = Command.fetch_assay_classification(bioacts[-1].value_type, row['ACT_COMMENT'])
                 bioacts[-1].source = 'Drug Central'
                 bioacts[-1].document_chembl_id = None
                 # BULK insert every X entries or last entry
@@ -2592,7 +2394,7 @@ class Command(BaseBuild):
                 print("Inserted", index, "out of",
                       bio_entries, "bioactivities")
                 bioacts = []
-            value_type = 'p'+row['ACT_TYPE'] if row['ACT_TYPE'] != 'pA2' else row['ACT_TYPE']
+            value_type = 'p'+act_type if act_type != 'pA2' else act_type
 
             Command.assign_ligand_target_pairing(ligand_cache[row['DRUG_NAME']], receptor, row['ACT_COMMENT'], value_type)
 
@@ -2626,15 +2428,19 @@ class Command(BaseBuild):
                 print(f"Processed {idx}/{total} ({pct:.1f}%)")
 
             ids = {}
-            if row.SMILES != 'None':
+            if row.SMILES not in ['None','nan']:
                 ids['smiles'] = row.SMILES
             # if row['CAS Number'] != 'None':
             #     ids['CAS'] = row['CAS Number']
-            if row.InChIKey != 'None':
+            if row.InChIKey not in ['None','nan']:
                 ids['inchikey'] = row.InChIKey
             #PubChem ID
-            if row._10 != 'None':
+            if row._10 not in ['None','nan']:
                 ids['pubchem'] = int(row._10)
+            #DrugBank ID
+            if row._0 not in ['None','nan']:
+                ids['drugbank'] = row._0
+            
 
             name = row.Name
             if name not in ligand_cache:
@@ -2694,6 +2500,15 @@ class Command(BaseBuild):
         bioacts = []
         pub_links = []
         bio_entries = len(data)
+        unit_to_factor = {
+            'pM': 1e-12,
+            'nM': 1e-9,
+            'µM': 1e-6,
+            'uM': 1e-6,
+            'mM': 1e-3,
+            'M':  1.0,
+        }
+
         for index, (_, row) in enumerate(data.iterrows()):
             assay_type = 'U'
             receptor = None
@@ -2716,9 +2531,19 @@ class Command(BaseBuild):
 
             ligand_label = f"{row['Ligand Name']}_{hash(helm)}"  # shorter/stable key
 
+            # Handling sequence data - setting seq to None if special characters are present
+            if pd.notna(row['Sequence']):
+                seq = row['Sequence']
+                char_set_not_wanted = set("[]-()=d")
+                has_any = not char_set_not_wanted.isdisjoint(seq)
+                if has_any:
+                    seq = None
+            else:
+                seq = None
+
             if ligand_label not in self.ligand_cache.keys():
                 ids = {}
-                ids['sequence'] = row['Sequence'] if pd.notna(row['Sequence']) else None
+                ids['sequence'] = seq
                 ligand = get_or_create_ligand(row['Ligand Name'], ids, lig_type='peptide', source='Evolvus', helm=helm)
                 self.ligand_cache[ligand_label] = ligand
 
@@ -2727,21 +2552,36 @@ class Command(BaseBuild):
                 exp.ligand_id = self.ligand_cache[ligand_label].id
                 exp.protein_id = receptor.id
                 exp.assay_type = assay_type
-                exp.assay_description = row['Assay Type']
+                exp.assay_description = row['Assay Type'] if pd.notna(row['Assay Type']) else None
 
-                if pd.notna(row['Activity Type']) and pd.notna(row['Value']):
-                    exp.standard_activity_value = round(float(row['Value']), 2) if row['Activity Type'] != 'Emax' else round(float(row['Emax (%)']), 2)
+                act_type = row['Activity Type']
+
+                if pd.notna(act_type) and act_type.startswith('p'):
+                    # Already a p-log value — both fields are the same, no conversion needed
+                    if pd.notna(row['Value']):
+                        val = round(float(row['Value']), 2)
+                        exp.standard_activity_value = val
+                        exp.p_activity_value = val
+                    else:
+                        print("Warning: missing Value field in: ", row)
+                        exp.standard_activity_value = None
+                        exp.p_activity_value = None
+                elif pd.notna(act_type) and pd.notna(row['Value']):
+                    raw = float(row['Value'])
+                    exp.standard_activity_value = round(raw, 2) if act_type != 'Emax' else round(float(row['Emax (%)']), 2)
+                    if pd.notna(row['Unit']) and raw != 0 and act_type!='Specific binding':
+                        factor = unit_to_factor.get(str(row['Unit']).strip())
+                        exp.p_activity_value = round(-math.log10(raw * factor), 2) if factor is not None else None
+                    else:
+                        exp.p_activity_value = None
                 else:
                     exp.standard_activity_value = None
-
-                if pd.notna(row['Value']):
-                    exp.p_activity_value = round(-math.log10(float(row['Value']) * 1e-9), 2) if float(row['Value']) != 0 else None
-                else:
                     exp.p_activity_value = None
 
                 exp.p_activity_ranges = None
                 exp.standard_relation = row['Sign'] if pd.notna(row['Sign']) else None
                 exp.value_type = row['Activity Type'] if pd.notna(row['Activity Type']) else None
+                exp.assay_classification = Command.fetch_assay_classification(exp.value_type, row['Assay Type'])
                 exp.source = 'Evolvus'
                 exp.document_chembl_id = None
                 exp.reference_ligand = row['Reference ligand name'] if pd.notna(row['Reference ligand name']) else None
@@ -2787,83 +2627,70 @@ class Command(BaseBuild):
                                                                                                      'p_activity_value').distinct()
         connections = {}
         SI_dict = {}
-        B_values = ['pKi', 'pKd']
-        F_values = ['pEC50', 'pIC50', 'pA2', 'pKB', 'pKb', 'Potency', 'pAC50']
+        norm_to_raws = {}
+
         for pair in ligand_target_couples:
-            value_type = pair[2]
-            if not pair[2].startswith(('p','P')):
-                value_type = 'p'+pair[2]
-            if value_type in B_values:
-                sample = 'Affinity'
-            if value_type in F_values:
-                sample = 'Potency'
-            if pair[0] not in connections.keys():
+            raw_vt = pair[2]
+            norm_vt = raw_vt if raw_vt.startswith(('p', 'P')) else 'p' + raw_vt
+            norm_to_raws.setdefault(norm_vt, set()).add(raw_vt)
+            if pair[0] not in connections:
                 connections[pair[0]] = {}
-            if pair[1] not in connections[pair[0]].keys():
+            if pair[1] not in connections[pair[0]]:
                 connections[pair[0]][pair[1]] = {}
-            if sample not in connections[pair[0]][pair[1]].keys():
-                connections[pair[0]][pair[1]][sample] = []
-            connections[pair[0]][pair[1]][sample].append(float(pair[3]))
+            if norm_vt not in connections[pair[0]][pair[1]]:
+                connections[pair[0]][pair[1]][norm_vt] = []
+            connections[pair[0]][pair[1]][norm_vt].append(float(pair[3]))
 
         for ligand in connections:
             for target in connections[ligand]:
                 for value in connections[ligand][target]:
                     connections[ligand][target][value] = round(statistics.mean(connections[ligand][target][value]),2)
 
-        #Expected: ligand[target] = SI
-        #ligand = 212224
         for ligand in connections:
             SI_dict[ligand] = {}
-            Max_Affinity = []
-            Max_Potency = []
-            # target_count = len(connections[ligand].keys())
-            #we have a list of targets for the ligand now
-            #need to assess target with highest B and highest F
-            for target in connections[ligand].keys():
-                for measurement in connections[ligand][target].keys():
-                    if measurement == 'Affinity':
-                        Max_Affinity.append((target, connections[ligand][target][measurement]))
-                    elif measurement == 'Potency':
-                        Max_Potency.append((target, connections[ligand][target][measurement]))
-            #Generate sorted lists
-            affinity_sort = sorted(Max_Affinity, key=lambda x: x[1], reverse=True)
-            potency_sort = sorted(Max_Potency, key=lambda x: x[1], reverse=True)
-            SI_dict[ligand] = {"Affinity Count": len(affinity_sort),
-                               "Potency Count": len(potency_sort)}
-            #Max_B and Max_F sets the reference GPCR and
-            #need to assess target with highest B and highest F
-            for target in connections[ligand].keys():
-                SI_dict[ligand][target] = {}
-                if (len(affinity_sort) > 1) and ('Affinity' in connections[ligand][target].keys()):
-                    if target == affinity_sort[0][0]:
-                        va = connections[ligand][target]['Affinity'] - affinity_sort[1][1]
-                        BAssay = int(10**(abs(va)))
-                        SI_dict[ligand][target]['Affinity'] = BAssay
-                    else:
-                        va = connections[ligand][target]['Affinity'] - affinity_sort[0][1]
-                        BAssay = int(10**(abs(va)))
-                        SI_dict[ligand][target]['Affinity'] = -BAssay
-                if (len(potency_sort) > 1) and ('Potency' in connections[ligand][target].keys()):
-                    if target == potency_sort[0][0]:
-                        va = connections[ligand][target]['Potency'] - potency_sort[1][1]
-                        FAssay = int(10**(abs(va)))
-                        SI_dict[ligand][target]['Potency'] = FAssay
-                    else:
-                        va = connections[ligand][target]['Potency'] - potency_sort[0][1]
-                        FAssay = int(10**(abs(va)))
-                        SI_dict[ligand][target]['Potency'] = -FAssay
+            all_vts = set(vt for tgt in connections[ligand] for vt in connections[ligand][tgt])
+            for norm_vt in all_vts:
+                targets_with_vt = [(tg, connections[ligand][tg][norm_vt])
+                                   for tg in connections[ligand] if norm_vt in connections[ligand][tg]]
+                vt_sort = sorted(targets_with_vt, key=lambda x: x[1], reverse=True)
+                SI_dict[ligand][norm_vt] = {'Count': len(vt_sort)}
+                if len(vt_sort) > 1:
+                    for tg, val in targets_with_vt:
+                        if tg == vt_sort[0][0]:
+                            va = val - vt_sort[1][1]
+                            SI_dict[ligand][norm_vt][tg] = int(10 ** abs(va))
+                        else:
+                            va = val - vt_sort[0][1]
+                            SI_dict[ligand][norm_vt][tg] = -int(10 ** abs(va))
+
+        vt_to_field = {}
+        for cls in AssayClassification.objects.values('unit', 'assay_type'):
+            unit = cls['unit']
+            norm_unit = unit if unit.startswith(('p', 'P')) else 'p' + unit
+            if 'Binding' in cls['assay_type']:
+                vt_to_field[norm_unit] = 'affinity'
+            elif 'Functional' in cls['assay_type']:
+                vt_to_field[norm_unit] = 'potency'
+
         #This step is kinda slow and may be sped up using bulk_update
         #but I don't know if you can apply bulk_update with filters
         for lig in SI_dict:
-            for tg in list(SI_dict[lig].keys())[2:]:
-                affinity = SI_dict[lig][tg]['Affinity'] if 'Affinity' in SI_dict[lig][tg].keys() else '-'
-                potency = SI_dict[lig][tg]['Potency'] if 'Potency' in SI_dict[lig][tg].keys() else '-'
-                AssayExperiment.objects.filter(ligand_id=lig, protein_id=tg).update(
-                    affinity=affinity,
-                    potency=potency,
-                    count_potency_test=SI_dict[lig]['Potency Count'],
-                    count_affinity_test=SI_dict[lig]['Affinity Count']
-                )
+            for norm_vt in SI_dict[lig]:
+                field = vt_to_field.get(norm_vt)
+                if field is None:
+                    continue
+                count = SI_dict[lig][norm_vt]['Count']
+                raw_vts = norm_to_raws.get(norm_vt, [norm_vt])
+                for tg, si_val in ((k, v) for k, v in SI_dict[lig][norm_vt].items() if k != 'Count'):
+                    qs = AssayExperiment.objects.filter(
+                        ligand_id=lig, protein_id=tg,
+                        value_type__in=raw_vts,
+                        p_activity_value__isnull=False,
+                    )
+                    if field == 'affinity':
+                        qs.update(affinity=si_val, count_affinity_test=count)
+                    else:
+                        qs.update(potency=si_val, count_potency_test=count)
 
     @staticmethod
     def expand_row(row):
@@ -2951,11 +2778,11 @@ class Command(BaseBuild):
         effect_slug = None
         if unit in ['EC50', 'pEC50', 'Emax']:
             effect_slug = 'stimulatory'
-        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50', 'pKb', 'K(b)', 'pK(b)']:
+        elif unit in ['pA2', 'pKB', 'IC50', 'pIC50', 'pKb', 'K(b)', 'pK(b)', 'KB']:
             effect_slug = 'inhibitory'
         elif unit in ['pKi', 'pKd', 'Ki', 'Kd', 'Potency', 'Specific binding', 'K(i)', 'K(d)', 'K(act)', 'pK(d)', 'pK(i)']:
             effect_slug = 'binding'
-        elif unit == 'AC50':
+        elif unit in ['AC50','ED50']:
             desc = assay_description.lower()
             # stimulatory if “agonist” but not part of “antagonist”
             if 'agonist' in desc and 'antagonist' not in desc:
@@ -2963,6 +2790,10 @@ class Command(BaseBuild):
             # inhibitory if either “antagonist” or “inhibitor”
             elif 'antagonist' in desc or 'inhibitor' in desc:
                 effect_slug = 'inhibitory'
+            else:
+                effect_slug = 'unknown'
+        elif unit=='XC50':
+            effect_slug = 'unknown'
         else:
             print(f"This value was not in the selection: {unit}")
         # 2. Lookup or fall back

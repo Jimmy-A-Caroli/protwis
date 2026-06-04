@@ -37,6 +37,8 @@ class Ligand(models.Model):
     hacc = models.SmallIntegerField(null=True)
     hdon = models.SmallIntegerField(null=True)
     logp = models.DecimalField(max_digits=10, decimal_places=3, null=True)
+    radioactive = models.CharField(max_length=20, null=True)
+    stereo_status = models.CharField(max_length=20, null=True)
     source = models.TextField(max_length=20, null=True)
     # Parent structure addition with a unique related_name
     parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE, related_name='children')
@@ -47,6 +49,7 @@ class Ligand(models.Model):
 
     class Meta():
         db_table = 'ligand'
+
 
 class CustomLigandMolManager(models.Manager):
     def truncate_table(self):
@@ -67,12 +70,14 @@ class LigandMol(models.Model):
             GistIndex(fields=['molecule']),
         ]
 
+
 class CustomLigandFingerprintManager(models.Manager):
     def truncate_table(self):
         cursor = connection.cursor()
         table_name = self.model._meta.db_table
         sql = 'TRUNCATE TABLE "{0}" CASCADE'.format(table_name)
         cursor.execute(sql)
+
 
 class LigandFingerprint(models.Model):
     ligand = models.OneToOneField('Ligand', null=False, on_delete=models.CASCADE)
@@ -85,9 +90,11 @@ class LigandFingerprint(models.Model):
             GistIndex(fields=['mfp2']),
         ]
 
+
 class LigandEffect(models.Model):
     slug = models.CharField(max_length=100, null=True)
     name = models.CharField(max_length=100, null=True)
+
 
 class LigandTargetPairing(models.Model):
     ligand = models.ForeignKey('Ligand', null=True, on_delete=models.CASCADE)
@@ -346,6 +353,7 @@ class LigandTargetPairing(models.Model):
     #                 print("FAILED SAVING CANONICAL LIGAND, duplicate? " +
     #                       pubchem_name + " " + name)
 
+
 # Dedicated WebLink-like model to relieve pressure of the WL model and be more creative
 class LigandID(models.Model):
     ligand = models.ForeignKey(Ligand, related_name='ids', on_delete=models.CASCADE)
@@ -358,6 +366,7 @@ class LigandID(models.Model):
     class Meta:
         unique_together = ('ligand', 'index', 'web_resource')
 
+
 class LigandImage(models.Model):
     ligand = models.ForeignKey(Ligand, related_name='image', on_delete = models.CASCADE)
     image = models.TextField(null = False)
@@ -365,6 +374,7 @@ class LigandImage(models.Model):
     def __str__(self):
         # TODO convert into base64 encoding by default for in-line integration
         return self.image
+
 
 class LigandType(models.Model):
     slug = models.SlugField(max_length=20, unique=True)
@@ -375,6 +385,7 @@ class LigandType(models.Model):
 
     class Meta():
         db_table = 'ligand_type'
+
 
 class LigandPeptideStructure(models.Model):
     structure = models.ForeignKey(
@@ -390,6 +401,7 @@ class LigandPeptideStructure(models.Model):
     class Meta():
         db_table = "ligand_peptide_structure"
 
+
 class LigandRole(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
@@ -401,6 +413,7 @@ class LigandRole(models.Model):
 
     class Meta():
         db_table = 'ligand_role'
+
 
 class AssayExperiment(models.Model):
     ligand = models.ForeignKey('Ligand', on_delete=models.CASCADE)
@@ -421,6 +434,20 @@ class AssayExperiment(models.Model):
     count_potency_test = models.CharField(max_length=10, null=True)
     reference_ligand = models.CharField(max_length=300, null=True)
     qualitative_activity = models.CharField(max_length=300, null=True)
+    assay_classification = models.ForeignKey('AssayClassification', on_delete=models.CASCADE, null=True)
+
+
+class AssayClassification(models.Model):
+    unit = models.CharField(max_length=30)
+    assay_type = models.CharField(max_length=20)
+    parameter_class = models.CharField(max_length=40)
+    modality = models.CharField(max_length=20)
+
+    def __str__(self):
+        return f"<AssayClassification: {self.unit}>"
+    
+    class Meta():
+        db_table = 'ligand_assay_classification'
 
 
 class LigandVendors(models.Model):
@@ -448,6 +475,7 @@ class Endogenous_GTP(models.Model):
     pic50 = models.CharField(max_length=200, null=True)
     pKd = models.CharField(max_length=200, null=True)
     publication = models.ManyToManyField(Publication)
+
 
 # Biased Signalling Data
 class BiasedData(models.Model):
@@ -481,6 +509,7 @@ class BiasedData(models.Model):
     physiology_biased = models.CharField(max_length=60, null=True)  #biased ligands
     pathway_biased = models.CharField(max_length=60, null=True)     #balanced ligands
     pathway_subtype_biased = models.CharField(max_length=60, null=True)     #balanced subtype ligands
+
 
 class BalancedLigands(models.Model):
     ligand = models.ForeignKey(Ligand, on_delete=models.CASCADE) #LINK

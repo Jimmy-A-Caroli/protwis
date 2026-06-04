@@ -6,7 +6,7 @@ from common.models import WebResource, WebLink, PublicationJournal, Publication
 from common.tools import test_model_updates
 from protein.models import (ProteinSegment, ProteinAnomaly, ProteinAnomalyType, ProteinAnomalyRuleSet,
     ProteinAnomalyRule, Site)
-from ligand.models import Ligand, LigandType, LigandRole, LigandEffect
+from ligand.models import Ligand, LigandType, LigandRole, LigandEffect, AssayClassification
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme
 from news.models import News
 
@@ -15,6 +15,7 @@ import logging
 import shlex
 import os
 import yaml
+import csv
 
 class Command(BaseCommand):
     help = 'Reads source data and creates common database tables'
@@ -27,6 +28,7 @@ class Command(BaseCommand):
     residue_number_scheme_source_file = os.sep.join([settings.DATA_DIR, 'residue_data', 'generic_numbers',
         'schemes.txt'])
     anomaly_source_dir = os.sep.join([settings.DATA_DIR, 'structure_data', 'anomalies'])
+    assay_classification_file = os.sep.join([settings.DATA_DIR, 'ligand_data', 'assay_data', 'assay_classification.csv'])
     #Setting the variables for the test tracking of the model upadates
     tracker = {}
     all_models = django.apps.apps.get_models()[6:]
@@ -40,6 +42,7 @@ class Command(BaseCommand):
             'create_anomalies',
             'create_ligand_roles',
             'create_ligand_types',
+            'create_assay_classification',
         ]
 
         # execute functions
@@ -279,3 +282,12 @@ class Command(BaseCommand):
 
         test_model_updates(self.all_models, self.tracker, check=True)
         self.logger.info('COMPLETED CREATING LIGAND TYPES')
+
+    def create_assay_classification(self):
+        self.logger.info('CREATE ASSAY CLASSIFICATION')
+        with open(self.assay_classification_file, newline='') as csvfile:
+            csvreader = csv.DictReader(csvfile, delimiter=',')
+            for row in csvreader:
+                AssayClassification.objects.get_or_create(unit=row['unit'], assay_type=row['assay_type'], parameter_class=row['parameter_class'], modality=row['modality'])
+        test_model_updates(self.all_models, self.tracker, check=True)
+        self.logger.info('COMPLETED CREATING ASSAY CLASSIFICATION')
