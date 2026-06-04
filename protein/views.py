@@ -729,7 +729,7 @@ def AlignIsoformWildtype(request):
     from common.tools import fetch_from_web_api
     from Bio import pairwise2
     from Bio.pairwise2 import format_alignment
-    from Bio.SubsMat import MatrixInfo as matlist
+    from Bio.Align import substitution_matrices as matlist
     from Bio.Align.Applications import ClustalOmegaCommandline
     from Bio import AlignIO
     cache_dir = ['ensembl', 'isoform']
