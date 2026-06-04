@@ -34,9 +34,9 @@ tracker = {}
 all_models = django.apps.apps.get_models()[6:]
 test_model_updates(all_models, tracker, initialize=True)
 
-parapinopsin = {'fam_name':'Parapinopsin','parent_fam':'Opsins'}
+parapinopsin = {'fam_name':'Parapinopsin','parent_fam':'Opsin (sight) receptors'}
 non_human_dict = {'q764p5_letca':parapinopsin, 'a0a1e1g6x5_takru':parapinopsin, 'a0a1e1g6y2_danre':parapinopsin, 'h2u5s9_takru':parapinopsin, 'w5n9z3_lepoc':parapinopsin,
-                  'a0a1e1g6y8_oncmy':parapinopsin, 'a0a0n9n9h8_danre':parapinopsin, 'r9r6d2_oryla':{'fam_name':'TMT','gene':'TMT','parent_fam':'Opsins'}, 'f1nu85_chick':{'fam_name':'OPN5-like'}}
+                  'a0a1e1g6y8_oncmy':parapinopsin, 'a0a0n9n9h8_danre':parapinopsin, 'r9r6d2_oryla':{'fam_name':'TMT','gene':'TMT','parent_fam':'Opsin (sight) receptors'}, 'f1nu85_chick':{'fam_name':'OPN5-like'}}
 
 class Command(BuildHumanProteins):
     help = 'Reads uniprot text files and creates protein entries for non-human proteins'
@@ -104,9 +104,9 @@ class Command(BuildHumanProteins):
             ###GP - class D addition - just temporary - FIXME
             construct_entry_names = construct_entry_names+['a0a0w0dd93_cangb', 'q8wzm9_sorma', 'b1gvb8_pench', 'mam2_schpo', 'q4wyu8_aspfu', 'q8nir1_neucs', 'ste2_lackl', 'q6fly8_canga', 'g2ye05_botf4', 's6exb4_zygb2', 'c5dx97_zygrc']
             # added seq with no human ortholog
-            construct_entry_names = construct_entry_names+['5ht5b_mouse', '5ht5b_rat', 'taar4_mouse', 'taar4_rat', 'taa7f_mouse', 'q9ert2_mouse']+['f1nu85_chick','b3xzf5_chick','a0a8j0qrx8_xentr','h2u5s9_takru', 'e7fee5_danre', 'a0a0n9n9h8_danre','q5sbp8_pladu','q868g4_brabe','q764p5_letca','r9r6d2_oryla','a0a1e1g6x5_takru','a0a1e1g6y2_danre','q8ji05_takru','q1l4c8_utast','q95p33_cioin','a0a0k0ybe3_pladu','r9r6c6_oryla','w5n9z3_lepoc','a0a1e1g6y8_oncmy','w5j8f8_anoda']+['q76sf8_hhv8','gpr4_danre','aa3r_sheep','a0a9l0jpp9_equas']
+            construct_entry_names = construct_entry_names+['5ht5b_mouse', '5ht5b_rat', 'taar4_mouse', 'taar4_rat', 'taa7f_mouse', 'q9ert2_mouse']+['f1nu85_chick','b3xzf5_chick','a0a8j0qrx8_xentr','h2u5s9_takru', 'e7fee5_danre', 'a0a0n9n9h8_danre','q5sbp8_pladu','q868g4_brabe','q764p5_letca','r9r6d2_oryla','a0a1e1g6x5_takru','a0a1e1g6y2_danre','q8ji05_takru','q1l4c8_utast','q95p33_cioin','a0a0k0ybe3_pladu','r9r6c6_oryla','w5n9z3_lepoc','a0a1e1g6y8_oncmy','w5j8f8_anoda']+['q76sf8_hhv8','gpr4_danre','aa3r_sheep','a0a9l0jpp9_equas','b6f0y5_carra']
             # custom family mapping for these entries
-            non_human_family_entries = ['5ht5b_mouse', '5ht5b_rat', 'taar4_mouse', 'taar4_rat', 'taa7f_mouse', 'q9ert2_mouse']+['h2u5s9_takru', 'e7fee5_danre', 'a0a0n9n9h8_danre','q5sbp8_pladu','q868g4_brabe','q764p5_letca','r9r6d2_oryla','a0a1e1g6x5_takru','a0a1e1g6y2_danre','q8ji05_takru','q1l4c8_utast','q95p33_cioin','a0a0k0ybe3_pladu','r9r6c6_oryla','w5n9z3_lepoc','a0a1e1g6y8_oncmy','w5j8f8_anoda','f1nu85_chick']
+            non_human_family_entries = ['5ht5b_mouse', '5ht5b_rat', 'taar4_mouse', 'taar4_rat', 'taa7f_mouse', 'q9ert2_mouse']+['h2u5s9_takru', 'e7fee5_danre', 'a0a0n9n9h8_danre','q5sbp8_pladu','q868g4_brabe','q764p5_letca','r9r6d2_oryla','a0a1e1g6x5_takru','a0a1e1g6y2_danre','q8ji05_takru','q1l4c8_utast','q95p33_cioin','a0a0k0ybe3_pladu','r9r6c6_oryla','w5n9z3_lepoc','a0a1e1g6y8_oncmy','w5j8f8_anoda','f1nu85_chick','b6f0y5_carra']
 
             # Keep track of first or second iteration
             reviewed = ['SWISSPROT','TREMBL'][iteration-1]
@@ -268,11 +268,11 @@ class Command(BuildHumanProteins):
                     elif 'Taar4' in up['genes']:
                         fam_name =  '<i>TAAR4P</i>'
                         gene = 'TAAR4'
-                        parent_fam = ProteinFamily.objects.get(name='Class A orphans')
+                        parent_fam = ProteinFamily.objects.get(name='Orphan receptors', parent__parent__name__startswith='Class A')
                     elif 'Taar7f' in up['genes']:
                         fam_name = '<i>TAAR7F</i>'
                         gene = 'TAAR7F'
-                        parent_fam = ProteinFamily.objects.get(name='Class A orphans')
+                        parent_fam = ProteinFamily.objects.get(name='Orphan receptors', parent__parent__name__startswith='Class A')
                     elif 'Trhr2' in up['genes']:
                         fam_name = 'TRH<sub>2</sub> receptor'
                         gene = 'TRHR2'
