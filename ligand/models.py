@@ -445,7 +445,7 @@ class AssayClassification(models.Model):
 
     def __str__(self):
         return f"<AssayClassification: {self.unit}>"
-    
+
     class Meta():
         db_table = 'ligand_assay_classification'
 

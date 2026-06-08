@@ -416,12 +416,15 @@ def fetch_from_entrez(index, cache_dir=''):
                 rettype="medline",
                 retmode="text"
             )
+            d = Medline.read(handle)
+        except StopIteration:
+            logger.warning('Empty PubMed response for PMID {}, retrying'.format(index))
+            tries += 1
+            time.sleep(0.2)
         except:
             tries += 1
             time.sleep(0.2)
         else:
-            d = Medline.read(handle)
-
             # save to cache
             save_to_cache(cache_dir, index_slug, d)
             logger.info('Saved entry for {} in cache'.format(cache_file_path))

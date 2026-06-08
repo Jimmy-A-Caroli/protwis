@@ -739,7 +739,10 @@ def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule",
                 pass
 
         c = Ligand()
-        _entry_name = (entry.get("name") or "").strip()
+        _name_raw = entry.get("name")
+        if isinstance(_name_raw, float):
+            _name_raw = str(int(_name_raw)) if _name_raw.is_integer() else str(_name_raw)
+        _entry_name = (_name_raw or "").strip()
         if not _entry_name and resolved_parent:
             _entry_name = resolved_parent.name or ""
         c.name = _entry_name

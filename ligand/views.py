@@ -3287,8 +3287,6 @@ class LigandGroup(AbsLigand):
                 lig_dict['chemical_properties']+=1
             if l.rotatable_bonds!=None:
                 lig_dict['chemical_properties']+=1
-            if l.radioactive:
-                lig_dict['chemical_properties']+=1
             if l.stereo_status:
                 lig_dict['chemical_properties']+=1
             if l.inchikey:
@@ -3311,11 +3309,13 @@ class LigandGroup(AbsLigand):
             lig_dict['picture'] = picture_flag
 
             if not l.parent:
-                goldstar = '<i class="bi bi-star-fill" style="color: gold;-webkit-text-stroke: 1px black;paint-order: stroke fill;font-size: 12px;"data-html="true" data-toggle="popover" data-trigger="hover" data-placement="right" data-content="Parent entry of ligand group"></i>'
+                icon = '<i class="bi bi-star-fill" style="color: gold;-webkit-text-stroke: 1px black;paint-order: stroke fill;font-size: 12px;"data-html="true" data-toggle="popover" data-trigger="hover" data-placement="right" data-content="Parent entry of ligand group"></i>'
+            elif l.radioactive:
+                icon = '<i class="bi bi-radioactive" style="display: inline-block; width: 1em; height: 1em; line-height: 1; background-color: yellow; border-radius: 50%; font-size: 14px; margin-right: 4px;"data-html="true" data-toggle="popover" data-trigger="hover" data-placement="right" data-content="Radioactive ligand"></i>'
             else:
-                goldstar = ''
+                icon = ''
             if l.ligand_type.slug in ['peptide', 'protein'] and l.sequence:
-                lig_dict['ligand_object'] = f"""{goldstar}<a class="struct"
+                lig_dict['ligand_object'] = f"""{icon}<a class="struct"
                                                     href='/ligand/{l.gpcrdb_id}/info'
                                                     data-ligand-type="peptide"
                                                     data-sequence="{l.sequence}">
@@ -3323,14 +3323,14 @@ class LigandGroup(AbsLigand):
                                                 </a>"""
             else:
                 if l.smiles:
-                    lig_dict['ligand_object'] = f"""{goldstar}<a class="struct"
+                    lig_dict['ligand_object'] = f"""{icon}<a class="struct"
                                                         href='/ligand/{l.gpcrdb_id}/info'
                                                         data-smiles="{smiles_for_image}"
                                                         rel="{picture_flag}">
                                                         {l.name}
                                                     </a>"""
                 else:
-                    lig_dict['ligand_object'] = f"""{goldstar}<a class="struct"
+                    lig_dict['ligand_object'] = f"""{icon}<a class="struct"
                                                         href='/ligand/{l.gpcrdb_id}/info'
                                                         data-smiles=""
                                                         rel="Not_available">

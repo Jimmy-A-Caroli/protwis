@@ -24,7 +24,7 @@
         <p><h4><b>{{this_ligand.name}}</b> and related ligand objects. Pick one to view based on the number of datapoints available.<h4></p>
     </div>
     <div id="ligand_group">
-        <table width="100%" class="display compact" id="LigandGroupTable">
+        <table width="70%" class="display compact" id="LigandGroupTable">
             <thead>
                 <!-- Dummy Header Row for Complex Header Fix -->
                 <tr>
@@ -40,13 +40,13 @@
                 <tr>
                     <th style="text-align: center;">Ligand</th>
                     <th style="text-align: center;">GPCRdb ID</th>
-                    <th style="text-align: center;">#Chemical identifiers</th>
-                    <th style="text-align: center;">#Chemical properties</th>
-                    <th style="text-align: center;">#Bioactivities</th>
-                    <th style="text-align: center;">#Drug indications</th>
-                    <th style="text-align: center;">#Structures</th>
-                    <th style="text-align: center;">#Mutations</th>
-                    <th style="text-align: center;">#Database connections</th>
+                    <th style="text-align: center;">Chemical<br>identifiers</th>
+                    <th style="text-align: center;">Chemical<br>properties</th>
+                    <th style="text-align: center;">Bioactivities</th>
+                    <th style="text-align: center;">Drug<br>indications</th>
+                    <th style="text-align: center;">Structures</th>
+                    <th style="text-align: center;">Mutations</th>
+                    <th style="text-align: center;">Database<br>connections</th>
                 </tr>
                 <!-- Filter Row for header -->
                 <tr>
@@ -106,9 +106,9 @@
 			columns: columns,
 			columnDefs: columnDefs,
 			dom: "",
-			paging: true,
-			
-			pageLength: 20,
+			paging: false,
+            searching: false,
+            info: false,
 			lengthMenu: [
 				[10, 20, -1],           // values
 				[10, 20, "All"]         // labels (shown to user)
