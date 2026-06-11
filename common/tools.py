@@ -310,8 +310,8 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
     name_tag_pattern = re.compile(r'GN   Name=([A-Za-z0-9.)(_-]+)')
     synonym_tag_pattern = re.compile(r'GN   Synonyms=(?<!..:)((?:[A-Za-z0-9.)(_-]+(?:,\s*)?)+)')
     gene_name_only_pattern = re.compile(r'GN   ([A-Za-z0-9.)(_-]+);')
-    trailing_name_pattern = re.compile(r'GN   (?:(?:{?|ECO).+}), ([A-Za-z0-9.)(_-]+)')
-    leading_name_pattern = re.compile(r'GN   ([A-Za-z0-9.)(_-]+) (?:{.+}?)')
+    trailing_name_pattern = re.compile(r'GN   (?:(?:\{?|ECO).+\}), ([A-Za-z0-9.)(_-]+)')
+    leading_name_pattern = re.compile(r'GN   ([A-Za-z0-9.)(_-]+) (?:\{.+\}?)')
     gene_pattern_list = [name_tag_pattern, gene_name_only_pattern, trailing_name_pattern, leading_name_pattern]
 
     filename = accession + '.txt'
@@ -411,7 +411,8 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
                 m = synonym_tag_pattern.search(line)
                 if m:
                     for gene_name in re.findall(r'[A-Za-z0-9.)(_-]+', m.group(1)):
-                        up['genes'].append(gene_name)
+                        if gene_name not in up['genes']:
+                            up['genes'].append(gene_name)
 
             # # structures
             # elif line.startswith('DR') and 'PDB;' in line:
@@ -450,7 +451,7 @@ def parse_uniprot_file(accession, path_to_file=False, logger=None, local_uniprot
                     except KeyError:
                         if logger is not None: logger.warning('Could not find entrez gene id ' + up['entrez_geneids'][0] + ' in the lookup table for species ' + up['species_latin_name'])
                 except KeyError:
-                    if logger is not None: logger.warning('Could not find species ' + up['species_latin_name'] + 'in the lookup table')
+                    if logger is not None: logger.warning('Could not find species ' + up['species_latin_name'] + ' in the lookup table')
 
             # filter genes based on entrez lookup (to remove non-official gene symbols)
             clean_genes = [gene for gene in up['genes'] if gene in entrez_lookup["by_species_name"].get(up['species_latin_name'], {})]

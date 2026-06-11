@@ -122,7 +122,7 @@ awk \
 # Sort and remove duplicates from the three intermediate files to create final lists of unique taxonomic IDs, gene symbols,
 # and Entrez Gene IDs that we will use to filter the gene2accession file.
 sort -n ${working_dir}/unique_taxid_list.txt | uniq > temp.txt && mv temp.txt ${working_dir}/unique_taxid_list.txt
-sort -n ${working_dir}/unique_genesymbol_list.txt | tr -d ',' | uniq > temp.txt && mv temp.txt ${working_dir}/unique_genesymbol_list.txt
+sort ${working_dir}/unique_genesymbol_list.txt | tr -d ',' | uniq > temp.txt && mv temp.txt ${working_dir}/unique_genesymbol_list.txt
 sort -n ${working_dir}/unique_entrezgeneid_list.txt | uniq > temp.txt && mv temp.txt ${working_dir}/unique_entrezgeneid_list.txt
 
 #Account for incorrect human gene name in uniprot file.
@@ -149,7 +149,6 @@ zcat ${working_dir}/gene2accession.gz | split -l ${lines_per_thread} -d --additi
 # The script will output a line when it finds a record that matches either a gene symbol and taxonomic ID combination from the uniprot files,
 # or an Entrez Gene ID from the uniprot files.
 python3 <<-EOF
-from collections.abc import Set
 from concurrent.futures import ThreadPoolExecutor
 import glob
 
@@ -172,9 +171,6 @@ with open("${working_dir}/taxid_speciesname_mapping.txt") as tax_name_fh:
 
 print('Filtering Entrez Ids ...')
 
-def worker(task):
-    print(f"Task {task} running")
-
 def process_file(file_path, gene_symbols, tax_ids, entrez_ids, tax_id_dict):
     outfile_fh = open(f"{file_path}.filtered", "w")
     processed_record_counter = 0
@@ -182,6 +178,8 @@ def process_file(file_path, gene_symbols, tax_ids, entrez_ids, tax_id_dict):
     with open(file_path, "r") as entrez_fh:
         for line in entrez_fh:
             line_split = line.strip().split('\t')
+            if len(line_split) < 16:
+                continue
             tax_id = line_split[0]
             gene_id = line_split[1]
             symbol = line_split[15]
