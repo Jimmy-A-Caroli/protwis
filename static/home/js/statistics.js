@@ -88,7 +88,7 @@ function preparePlotlyConfiguration(config) {
 }
 
 function generatePlotTitle(config) {
-let category_label = config.category === "class" ? "Class" : "Chemotype";
+let category_label = config.category === "class" ? "Class" : config.category ===  "chemotype" ? "Chemotype" : "Family";
 let count_type_label = "";
 switch (config.count_type) {
     case "distinct_receptors":
@@ -205,6 +205,21 @@ generateBarTotalAnnotations = function (data) {
               generateStatisticsChart(chart_configuration);
           });
       }
+          //Add event listener for family selection modal
+      var confirmFamilyBtn = document.getElementById('confirmFamilySelection');
+      if (confirmFamilyBtn) {
+          confirmFamilyBtn.addEventListener('click', function() {
+              chart_configuration.category = "family";
+              var selected = [];
+              document.querySelectorAll('#familyCheckboxList input[type="checkbox"]:checked').forEach(function(cb) {
+                  selected.push(cb.value);
+              });
+              chart_configuration.selection_list = selected;
+              $('#familySelectionModal').modal('hide');
+
+              generateStatisticsChart(chart_configuration);
+          });
+      }
           //Unique crystallized receptors graph
     if (typeof chart_configuration != "undefined" && typeof chart_configuration.chart_data != "undefined"){
       generateStatisticsChart(chart_configuration)
@@ -225,7 +240,7 @@ function setDisplayCategory(sender) {
 }
 
 function displayClassSelection() {
-    var class_options = class__all_structures__data.map(x => x.key);
+    var class_options = class__all_structures__data.map(x => x.key).sort();
     var checkboxList = document.getElementById('classCheckboxList');
     checkboxList.innerHTML = '';
 
@@ -243,7 +258,7 @@ function displayClassSelection() {
 }
 
 function displayChemotypeSelection() {
-    var chemotype_options = chemotype__all_structures__data.map(x => x.key);
+    var chemotype_options = chemotype__all_structures__data.map(x => x.key).sort();
     var checkboxList = document.getElementById('chemotypeCheckboxList');
     checkboxList.innerHTML = '';
 
@@ -258,6 +273,24 @@ function displayChemotypeSelection() {
     });
 
     $('#chemotypeSelectionModal').modal('show');
+}
+
+function displayFamilySelection() {
+    var family_options = family__all_structures__data.map(x => x.key).sort();
+    var checkboxList = document.getElementById('familyCheckboxList');
+    checkboxList.innerHTML = '';
+
+    family_options.forEach(function(family) {
+        var isChecked = Array.isArray(chart_configuration.selection_list) &&
+                        chart_configuration.selection_list.includes(family);
+        var div = document.createElement('div');
+        div.className = 'checkbox';
+        div.innerHTML = '<label><input type="checkbox" value="' + family + '"' +
+                        (isChecked ? ' checked' : '') + '> ' + family + '</label>';
+        checkboxList.appendChild(div);
+    });
+
+    $('#familySelectionModal').modal('show');
 }
 
 function setDisplayDataType(sender) {
@@ -290,6 +323,19 @@ function updateChartData(chart_config) {
                     break;
                 case "all_structures":
                     chart_config.chart_data = flattenDataForPlotly(chemotype__all_structures__data);
+                    break;
+            }
+            break;
+        case "family":
+            switch(chart_config.count_type) {
+                case "distinct_receptors":
+                    chart_config.chart_data = flattenDataForPlotly(family__distinct_structure__data);
+                    break;
+                case "distinct_gpcrligandcomplexes":
+                    chart_config.chart_data = flattenDataForPlotly(family__distinct_gpcrligand__data);
+                    break;
+                case "all_structures":
+                    chart_config.chart_data = flattenDataForPlotly(family__all_structures__data);
                     break;
             }
             break;

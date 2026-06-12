@@ -1808,9 +1808,12 @@ class StructureStatistics(TemplateView):
         context['release_notes'] = ReleaseNotes.objects.all()[0]
         context['latest_structure'] = Structure.objects.exclude(structure_type__slug__startswith='af-').latest('publication_date').publication_date
         context['chartdata_reso'] = self.get_resolution_coverage_data_series(all_structs)
-        context['chemotype__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="family")
-        context['chemotype__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="family")
-        context['chemotype__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="family")
+        context['family__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="family")
+        context['family__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="family")
+        context['family__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="family")
+        context['chemotype__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="chemotype")
+        context['chemotype__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="chemotype")
+        context['chemotype__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="chemotype")
         context['class__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="class")
         context['class__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="class")
         context['class__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="class")
@@ -2230,15 +2233,19 @@ class StructureStatistics(TemplateView):
 
         return context
 
-    def get_families_dict(self, queryset, lookup):
+    def get_families_dict(self, queryset, lookup, level="family"):
 
         families = []
         for s in queryset:
             if (s.__class__.__name__ == "StructureLigandInteraction"):
                 s = s.structure
             fid = s.protein_conformation.protein.family.slug.split("_")
-            fname = lookup[fid[0]+"_"+fid[1]]
-            cname = lookup[fid[0]]
+            if level == "chemotype":
+                fname = lookup[fid[0]+"_"+fid[1]]
+            elif level == "family":
+                fname = lookup[fid[0]+"_"+fid[1]+"_"+fid[2]]
+            else:
+                raise ValueError("Invalid level supplied to get_families_dict: " + level)
             if fname not in families:
                 families.append(fname)
         return families
@@ -2314,8 +2321,10 @@ class StructureStatistics(TemplateView):
         """
         Prepare data for multiBarGraph of unique crystallized receptors. Returns data series for django-nvd3 wrapper.
         """
-        if mode == "family":
-            groups = self.get_families_dict(structures, lookup)
+        if mode == "chemotype":
+            groups = self.get_families_dict(structures, lookup, level="chemotype")
+        elif mode == "family":
+            groups = self.get_families_dict(structures, lookup, level="family")
         elif mode == "class":
             slugs = ProteinFamily.objects.filter(parent_id=1).exclude(name='G-Protein').values_list('slug', flat=True)
             groups =  [lookup[x] for x in slugs]
@@ -2331,7 +2340,14 @@ class StructureStatistics(TemplateView):
                         structure = structure.structure
                     fid = structure.protein_conformation.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
-                    group_key = fid[0] if mode == "class" else fid[0]+"_"+fid[1]
+                    
+                    if mode == "chemotype":
+                        group_key = fid[0]+"_"+fid[1]
+                    elif mode == "family":
+                        group_key = fid[0]+"_"+fid[1]+"_"+fid[2]
+                    elif mode == "class":
+                        group_key = fid[0] 
+
                     if lookup[group_key] == group and structure.publication_date.year == year:
                         count += 1
                 if len(data[group]) > 0:
