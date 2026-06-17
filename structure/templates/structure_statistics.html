@@ -250,6 +250,19 @@
         border-bottom: 1px solid #ddd;
     }
 
+    .nav-tabs.sub {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .spacer_cell {
+        background-color: #f2f2f2;
+        height: 30px;
+    }    
+
+
 </style>
 
 {% if page == 'gpcr' %}
@@ -311,6 +324,34 @@
             height: 20px;
             width: 350px;
             background: linear-gradient(to right, white 0%, black 100%)
+        }
+
+        .wheel_chart_legend
+        {
+            position: fixed; 
+            z-index: 10
+        }
+
+        .bottom_left
+        { 
+            bottom: 20px; 
+            left: 20px;            
+        }
+
+        .bottom_right
+        { 
+            bottom: 20px; 
+            right: 20px;
+        }
+
+        .visible
+        {
+            display: block;
+        }
+
+        .hidden
+        {
+            display: none;
         }
 
     </style>
@@ -668,13 +709,12 @@
         </div>
         <div id="table_counts" class="tab-pane fade">
             <!-- GPCRDB TABLES SECTION -->
-            <h4 class="subHeader">Number of Structures/Complexes</h4>        
             <ul class="nav nav-tabs">
                 <li class="active">
-                    <a href="#table_counts_distinct" data-toggle="tab">Distinct Counts</a>
+                    <a href="#table_counts_distinct" data-toggle="tab">Non-redundant receptor counts</a>
                 </li>
                 <li>
-                    <a href="#table_counts_total" data-toggle="tab">Total Counts</a>
+                    <a href="#table_counts_total" data-toggle="tab">All structures (redundant receptors)</a>
                 </li>              
             </ul>
             <div class="tab-content">            
@@ -718,11 +758,11 @@
                                 <td align="center" style="vertical-align:middle !important">{{ unique_complexes | intcomma }}</td>
                             </tr>
                             <tr>
-                                <td class="row_title">Receptor&ndash;G-protein complexes</td>
-                                {% for class in unique_gprots_by_class.items %}
+                                <td class="row_title">Receptor &ndash; G protein complexes</td>
+                                {% for class in unique_gprot_complexes_by_class.items %}
                                 <td align="center" style="vertical-align:middle !important">{{ class.1 | intcomma }}</td>
                                 {% endfor %}
-                                <td align="center" style="vertical-align:middle !important">{{ unique_gprots | intcomma }}</td>
+                                <td align="center" style="vertical-align:middle !important">{{ unique_gprot_complexes | intcomma }}</td>
                             </tr>
                             <tr>
                                 <td class="row_title">Active-state receptors*</td>
@@ -790,11 +830,11 @@
                                 <td align="center" style="vertical-align:middle !important">{{ all_complexes | intcomma }}</td>
                             </tr>
                             <tr>
-                                <td class="row_title">Receptor &ndash; G-protein complexes</td>
-                                {% for class in all_gprots_by_class.items %}
+                                <td class="row_title">Receptor &ndash; G protein complexes</td>
+                                {% for class in all_gprot_complexes_by_class.items %}
                                 <td align="center" style="vertical-align:middle !important">{{ class.1 | intcomma }}</td>
                                 {% endfor %}
-                                <td align="center" style="vertical-align:middle !important">{{ all_gprots | intcomma }}</td>
+                                <td align="center" style="vertical-align:middle !important">{{ all_gprot_complexes | intcomma }}</td>
                             </tr>
                             <tr>
                                 <td class="row_title">Active-state receptors*</td>
@@ -843,6 +883,7 @@
                 </div>
             </div>
         </div>
+    </div>
 
 <!-- Class Selection Modal -->
 <div class="modal fade" id="classSelectionModal" tabindex="-1" role="dialog" aria-labelledby="classSelectionModalLabel">
@@ -913,76 +954,46 @@
     <!------------------------------------>
 
     <!----- WHEEL/TABLE SELECTOR NAV TAB DEFINITION -->
-    <ul class="nav nav-tabs">
-        <li class="active">
-            <a href="#gprotein_wheels" data-toggle="tab">GPCRome Wheels</a>
+    <ul class="nav nav-tabs main">
+        <li class="dropdown active">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#">GPCRome Wheels <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+                <li><a id='wheel_class_a_rhodopsin_tablink' href="#wheel_class_a_rhodopsin" data-toggle="tab">Class A (Rhodopsin)</a></li>
+                <li><a id='wheel_class_a_orphan_tablink' href="#wheel_class_a_orphan" data-toggle="tab">Class A (Orphan)</a></li>
+                <li><a id='wheel_class_b1_tablink' href="#wheel_class_b1_secretin" data-toggle="tab">Class B1 (Secretin)</a></li>
+                <li><a id='wheel_class_b2_tablink' href="#wheel_class_b2_adhesion" data-toggle="tab">Class B2 (Adhesion)</a></li>
+                <li><a id='wheel_class_c_tablink' href="#wheel_class_c_glutamate" data-toggle="tab">Class C (Glutamate)</a></li>
+                <li><a id='wheel_class_f_tablink' href="#wheel_class_f_frizzled" data-toggle="tab">Class F (Frizzled)</a></li>
+                <li><a id='wheel_class_t2_tablink' href="#wheel_class_t2_taste2" data-toggle="tab">Class T2 (Taste2)</a></li>
+            </ul>
         </li>
         <li>
             <a href="#gprotein_tables" data-toggle="tab">Tables</a>
         </li>
     </ul>
     
-    <!----- WHEEL/TABLE SELECTOR NAV TAB CONTENT -->
+    <!----- CHART CONTROLS: Fixed bottom left -->
+    <div class="wheel_chart_legend bottom_left visible">
+        Receptor names:
+        <div class="btn-group" role="group" id="gtp_plus">
+            <button id="UniProtNames" class="btn btn-info active">UniProt</button>
+            <button id="IUPHARNames" class="btn btn-info">IUPHAR</button>
+        </div>
+    </div>
+
+    <!----- CHART LEGEND: Fixed to bottom right -->
+    <div class="wheel_chart_legend bottom_right visible">
+        <div class="text-center">
+            <b>G Protein complexes</b> <br />
+            <span class="gprot_blue">&#11044; <b>G&alpha;<sub>s</sub></b></span>
+            <span class="gprot_red">&#11044; <b>G&alpha;<sub>i/o</sub></b></span>
+            <span class="gprot_black">&#11044; <b>G&alpha;<sub>q/11</sub></b></span>
+            <span class="gprot_green">&#11044; <b>G&alpha;<sub>12/13</sub></b></span>
+            <span class="gprot_pink">&#11044; <b>GPa1</b></span>
+        </div>
+    </div>
+
     <div class="tab-content">
-        <!----- WHEEL NAV PANEL  -->
-        <div id="gprotein_wheels" class="tab-pane fade in active">
-            <!----- CHART HEADER  -->
-            <h4 class="sectionHeader"><strong>Structural coverage of GPCR&ndash;G-protein complexes.</strong></h4>
-    
-            <!----- CHART CONTROLS: Fixed bottom left -->
-            <div style="position: fixed; bottom: 20px; left: 20px;z-index: 1000">
-                Receptor names:
-                <div class="btn-group" role="group" id="gtp_plus">
-                    <button id="UniProtNames" class="btn btn-info active">UniProt</button>
-                    <button id="IUPHARNames" class="btn btn-info">IUPHAR</button>
-                </div>
-            </div>
-    
-            <!----- CHART LEGEND: Fixed to bottom right -->
-            <div style="position: fixed; bottom: 20px; right: 20px;z-index: 1000">
-                <div class="text-center">
-                    <b>G Protein complexes</b> <br />
-                    <span class="gprot_blue">&#11044; <b>G&alpha;<sub>s</sub></b></span>
-                    <span class="gprot_red">&#11044; <b>G&alpha;<sub>i/o</sub></b></span>
-                    <span class="gprot_black">&#11044; <b>G&alpha;<sub>q/11</sub></b></span>
-                    <span class="gprot_green">&#11044; <b>G&alpha;<sub>12/13</sub></b></span>
-                    <span class="gprot_pink">&#11044; <b>GPa1</b></span>
-                </div>
-            </div>
-    
-            <!----- WHEEL CLASS NAV TABS -->
-            <div>
-                <ul class="nav nav-tabs">
-                    <li class="active">
-                        <a id='wheel_class_a_rhodopsin_tablink' href="#wheel_class_a_rhodopsin" data-toggle="tab">Class A
-                            (Rhodopsin)</a>
-                    </li>
-                    <li>
-                        <a id='wheel_class_a_orphan_tablink' href="#wheel_class_a_orphan" data-toggle="tab">Class A
-                            (Orphan)</a>
-                    </li>
-                    <li>
-                        <a id='wheel_class_b1_tablink' href="#wheel_class_b1_secretin" data-toggle="tab">Class B1
-                            (Secretin)</a>
-                    </li>
-                    <li>
-                        <a id='wheel_class_b2_tablink' href="#wheel_class_b2_adhesion" data-toggle="tab">Class B2
-                            (Adhesion)</a>
-                    </li>
-                    <li>
-                        <a id='wheel_class_c_tablink' href="#wheel_class_c_glutamate" data-toggle="tab">Class C
-                            (Glutamate)</a>
-                    </li>
-                    <li>
-                        <a id='wheel_class_f_tablink' href="#wheel_class_f_frizzled" data-toggle="tab">Class F
-                            (Frizzled)</a>
-                    </li>
-                    <li>
-                        <a id='wheel_class_t2_tablink' href="#wheel_class_t2_taste2" data-toggle="tab">Class T2 (Taste2)</a>
-                    </li>
-                </ul>
-            </div>
-    
             <!----- CLASS A WHEEL PANEL  -->
             <div id="wheel_class_a_rhodopsin" class="tab-pane fade in active">
                 <div id="class_a" class="text-center">
@@ -1213,180 +1224,82 @@
                     </div>
                 </div>
             </div>
-        </div>
-    
-    
+
+
         <!----- TABLE NAV PANEL  -->
         <div id="gprotein_tables" class="tab-pane fade">
-            <h4 class="sectionHeader"><strong>Number of structures</strong></h4>
-            <ul class="nav nav-tabs">
+            <ul class="nav nav-tabs sub">
                 <li class="active">
-                    <a href="#gprotein_tables_summary" data-toggle="tab">Summary</a>
+                    <a href="#gprotein_tables_distinct" data-toggle="tab">Non-redundant receptor counts</a>
                 </li>
                 <li>
-                    <a href="#gprotein_tables_class_details" data-toggle="tab">Complexes by GPCR Class</a>
+                    <a href="#gprotein_tables_redundant" data-toggle="tab">All structures (redundant receptors)</a>
                 </li>
             </ul>
-            <div id="gprotein_tables_summary" class="tab-pane fade in active">
-                <h4 class="subHeader">G-protein structures</h4>
-                <table style="width:75% !important" class="table table-stripped">
-                    <thead class="table_head_emphasis">
-                        <tr>
-                            <td class="row_title"><b>Structures</td>
-                            {% for class in all_gprots_by_gclass.items %}
-                            <td align="center"><b>{{ class.0|safe}}</b></td>
+
+            {% for data_source, source_data in gprot_table_data.items %}                
+                <div id="gprotein_tables_{{ data_source }}" class="tab-pane fade in {% if forloop.first %}active{% endif %}">
+                    <table style="width:75% !important; margin: 0 auto;" class="table table-stripped">
+                        <thead class="table_head_emphasis">
+                            <tr>
+                                <td class="row_title"><b>Class</b></td>
+                                {% for effector_name, effector_count in source_data.effector_totals.by_effector.items %}
+                                <td align="center"><b>{{ effector_name|safe }}</b></td>
+                                {% endfor %}
+                                <td align="center"><b>Total</b></td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for class_code, class_data in source_data.complexed.by_class.items %}
+                            <tr>
+                                <td class="row_title">{{ class_code | class_code_to_name | safe }}</td>
+                                {% for effector_name, effector_count in class_data.by_effector.items %}
+                                <td align="center" style="vertical-align:middle !important">{{ effector_count }}</td>
+                                {% endfor %}
+                                <td align="center" style="vertical-align:middle !important;font-weight: bold;">{{ class_data.total }}</td>
+                            </tr>
                             {% endfor %}
-                            <td align="center"><b>Total</b></td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="row_title">Non complexed G-protein</td>
-                            {% for class in noncomplex_gprots_by_gclass.items %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if class.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ class.1 }}
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ noncomplex_gprots }}</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Receptor &ndash; G-protein complexes</td>
-                            {% for class in all_gprots_by_gclass.items %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if class.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ class.1 }}
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_gprots }}</td>
-                        </tr>
-                        <tr>
-                            <td  class="row_title">Total structures</td>
-                            {% for item in total_gprots_by_gclass %}
-                            <td align="center" style="vertical-align:middle !important">{{ item }}</td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ total_gprots }}</td>
-                        </tr>
-                    </tbody>
-                    <tr> </tr>
-                </table>
-            </div>
-            <div id="gprotein_tables_class_details" class="tab-pane fade">
-                <h4 class="subHeader">GPCR&ndash;G-protein structures</h4>
-                <table style="width:75% !important" class="table table-stripped">
-                    <thead class="table_head_emphasis">
-                        <tr>
-                            <td class="row_title"><b>Receptor Class</td>
-                            {% for class in all_gprots_by_gclass.items %}
-                            <td align="center"><b>{{ class.0|safe }}</b></td>
-                            {% endfor %}
-                            <td align="center"><b>Total</b></td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="row_title">Class A (Rhodopsin)</td>
-                            {% for total, unique in gA_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_A_complexes }} ({{ unique_g_A_complexes }})</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Class B1 (Secretin)</td>
-                            {% for total, unique in gB1_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_B1_complexes }} ({{ unique_g_B1_complexes }})</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Class B2 (Adhesion)</td>
-                            {% for total, unique in gB2_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_B2_complexes }} ({{ unique_g_B2_complexes }})</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Class C (Glutamate)</td>
-                            {% for total, unique in gC_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_C_complexes }} ({{ unique_g_C_complexes }})</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Class D1 (Ste2-like fungal pheromone)</td>
-                            {% for total, unique in gD1_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_D1_complexes }} ({{ unique_g_D1_complexes }})</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Class F (Frizzled)</td>
-                            {% for total, unique in gF_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_F_complexes }} ({{ unique_g_F_complexes }})</td>
-                        </tr>
-                        <tr>
-                            <td class="row_title">Class T2 (Taste2)</td>
-                            {% for total, unique in gT2_complexes %}
-                            <td align="center" style="vertical-align:middle !important">
-                                {% if total.1 == 0 %}
-                                -
-                                {% else %}
-                                {{ total.1 }}({{ unique.1 }})
-                                {% endif %}
-                            </td>
-                            {% endfor %}
-                            <td align="center" style="vertical-align:middle !important">{{ all_g_T2_complexes }} ({{ unique_g_T2_complexes }})</td>
-                        </tr>
-                    </tbody>
-                    <tr> </tr>
-                </table>
-                <span>Counts presented as: Total (Unique) </span>
-            </div>
-            <p>            
+                            <tr>
+                                <td class="row_title"><b>Total Complexes</b></td>
+                                {% for effector_name, effector_count in source_data.complexed.effector_totals.by_effector.items %}
+                                <td align="center" style="font-weight: bold;">{{ effector_count }}</td>
+                                {% endfor %}
+                                <td align="center" style="font-weight: bold;">{{ source_data.complexed.effector_totals.total }}</td>
+                            </tr>
+                            {% if source_data.receptor_only %}
+                            <tr>
+                                <td class="spacer_cell"></td>
+                                {% for i in source_data.receptor_only.all.by_effector.items|length|times %}
+                                    <td class="spacer_cell"></td>
+                                {% endfor %}
+                                <td class="spacer_cell"></td>
+                            </tr>
+                            <tr>
+                                <td class="row_title">Receptor only</td>
+                                {% for effector_name, effector_count in source_data.receptor_only.all.by_effector.items %}
+                                <td align="center" style="vertical-align:middle !important">{{ effector_count }}</td>
+                                {% endfor %}
+                                <td align="center" style="vertical-align:middle !important;font-weight: bold;">{{ source_data.receptor_only.all.total }}</td>
+                            </tr>
+                            <tr>
+                                <td class="spacer_cell"></td>
+                                {% for i in source_data.receptor_only.all.by_effector.items|length|times %}
+                                <td class="spacer_cell"></td>
+                                {% endfor %}
+                                <td class="spacer_cell"></td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td class="row_title" style="border-bottom: 2px solid #000;">Total</td>
+                                {% for effector_name, effector_count in source_data.effector_totals.by_effector.items %}
+                                <td align="center" style="font-weight: bold; border-bottom: 2px solid #000;">{{ effector_count }}</td>
+                                {% endfor %}
+                                <td align="center" style="font-weight: bold; border-bottom: 2px solid #000;">{{ source_data.effector_totals.total }}</td>
+                            </tr>
+                    </table>
+                </div>
+            {% endfor %}
+            <p style="width:75%; margin: 0 auto;">
             Specific sets of structures can be downloaded from the <a href="/structure">Structures</a> page.<br />
             The latest released structure is from <strong>{{ latest_structure|date:"Y-m-d" }}</strong>.
             </p>
@@ -2253,50 +2166,53 @@
                     classObject = class_a
                     classOptions = class_a_options
                     classStr = 'class_a'
+                    tabid = 'wheel_class_a_rhodopsin'
                 break;
                 case "wheel_class_a_orphan_tablink":
                     classObject = orphan
                     classOptions = orphan_options
                     classStr = 'orphan'
+                    tabid = 'wheel_class_a_orphan'
                 break;
                 case "wheel_class_b1_tablink":
                     classObject = class_b1
                     classOptions = class_b1_options
                     classStr = 'class_b1'
+                    tabid = 'wheel_class_b1_secretin'
                 break;
                 case "wheel_class_b2_tablink":
                     classObject = class_b2
                     classOptions = class_b2_options
                     classStr = 'class_b2'
+                    tabid = 'wheel_class_b2_adhesion'
                 break;
                 case "wheel_class_c_tablink":
                     classObject = class_c
                     classOptions = class_c_options
                     classStr = 'class_c'
+                    tabid = 'wheel_class_c_glutamate'
                 break;
                 case "wheel_class_f_tablink":
                     classObject = class_f
                     classOptions = class_f_options
                     classStr = 'class_f'
+                    tabid = 'wheel_class_f_frizzled'
                 break;
                 case "wheel_class_t2_tablink":
                     classObject = class_t2
                     classOptions = class_t2_options
                     classStr = 'class_t2'
+                    tabid = 'wheel_class_t2_taste2'
                 break;
             }
 
-            if($('#' + classOptions.anchor).children('svg').length == 1)
+            if($('#' + tabid).hasClass('active'))
             {
-                return; // If the SVG already exists, do not redraw it (handles scenario of clicking multiple times on the same tab)
+                return; //ignore second click on the same tab
             }
-            else
-            {
+            else {
                 destroySVGs()
-                draw_tree(classObject, classOptions);
-                updateLeafLabels(getActiveLabelType(), classStr);
-                DrawCircles(classStr, matching, maxLeafNodeLength, conversion, true, true, false, false);
-                
+                drawWheel (classStr, classObject, classOptions)
             }
          });
       
@@ -2304,17 +2220,27 @@
         // This event fires after tab click event and resulting draw calls so it has 
         // access to SVG element dimensions and can resize it to fit the container
         $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-            if($('#gprotein_wheels').hasClass('active')) //On Wheels Tab
+            // Only rescale when a wheel tab was shown (its tablink id matches "wheel_class_..._tablink")
+            if(/^wheel_class_.*tablink$/.test(e.target.id)) //On a Wheels Tab
             {
                 setScaleAndTranslate(e.target.id);
+                $('.wheel_chart_legend').show()
+            } else {
+                $('.wheel_chart_legend').hide()
             }
          });
 
         // On page load, trigger click on the first tab to display the first wheel and set the correct scaling and translation for the SVG
         $(window).on("load", function() {
-            $('#wheel_class_a_rhodopsin_tablink').trigger('click');
+            drawWheel ('class_a', class_a, class_a_options)
             setScaleAndTranslate("wheel_class_a_rhodopsin_tablink");
         });
+
+        function drawWheel (classStr, classObject, classOptions){
+            draw_tree(classObject, classOptions);
+            updateLeafLabels(getActiveLabelType(), classStr);
+            DrawCircles(classStr, matching, maxLeafNodeLength, conversion, true, true, false, false);
+        }
 
         // Function to compute the scaling factor and translation values for the SVG element to fit it to the container and apply the transformation
         function setScaleAndTranslate(tabLinkId) {
@@ -2389,8 +2315,6 @@
             d3.selectAll("#orphan svg").remove();
         }
     
-        maxLeafNodeLength = 46;
-        conversion = { "Gs": "#0000FF", "Gi/o": "#FF0000", "Gq/11": "#000000", "G12/13": "#008000", "GPa1 family": "#FFC0CB" };
         $("#UniProtNames").click(function () {
             $("#UniProtNames").addClass("active");
             $("#IUPHARNames").removeClass("active");

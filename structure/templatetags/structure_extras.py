@@ -206,3 +206,23 @@ def br_after_class_code ( objs ):
         return m.group(1) + "<br/>" + m.group(2)
     else:
         return objs
+    
+@register.filter(name='times') 
+def times(number):
+    return range(number)
+
+@register.filter(name='class_code_to_name') 
+def class_code_to_name(class_code):
+    class_names = {
+        "A": "Class A (Rhodopsin)",
+        "B1": "Class B1 (Secretin)",
+        "B2": "Class B2 (Adhesion)",
+        "C": "Class C (Glutamate)",
+        "D1": "Class D1 (Ste2-like fungal pheromone)",
+        "F": "Class F (Frizzled)",
+        "O1": "Class O1 (Fish-like olfactory)",
+        "O2": "Class O2 (Tetrapod specific olfactory)",
+        "T2": "Class T2 (Taste 2)",
+        "O": "Other GPCRs"
+    }
+    return class_names.get(class_code, "Invalid class code")
