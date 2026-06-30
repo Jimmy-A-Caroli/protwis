@@ -81,27 +81,27 @@ function preparePlotlyConfiguration(config) {
     {
         data_entry.name = category;
         data_entry.type = "bar";
-        data_entry.marker = {color: config.color_pallete[i] };
+        data_entry.marker = {color: config.color_palette[i] };
         i++;
     }    
     return Object.values(data);
 }
 
 function generatePlotTitle(config) {
-let category_label = config.category === "class" ? "Class" : config.category ===  "chemotype" ? "Chemotype" : "Family";
-let count_type_label = "";
-switch (config.count_type) {
-    case "distinct_receptors":
-    count_type_label = "Count of Distinct Receptors";
-    break;
-    case "distinct_gpcrligandcomplexes":
-    count_type_label = "Count of Distinct GPCR-Ligand Complexes";
-    break;
-    case "all_structures":
-    count_type_label = "Total Structure Count (including redundant receptors)";
-    break;
-}
-return `${count_type_label} by ${category_label}`;
+
+    let count_type_label = "";
+    switch (config.count_type) {
+        case "distinct_receptors":
+        count_type_label = "Count of distinct receptors";
+        break;
+        case "distinct_gpcrligandcomplexes":
+        count_type_label = "Count of distinct GPCR-ligand complexes";
+        break;
+        case "all_structures":
+        count_type_label = "Total structure count (including redundant receptors)";
+        break;
+    }
+return `${count_type_label} by ${config.category}`;
 }
 
 function preparePlotlyLayout(config) {  
@@ -211,7 +211,8 @@ generateBarTotalAnnotations = function (data) {
           confirmFamilyBtn.addEventListener('click', function() {
               chart_configuration.category = "family";
               var selected = [];
-              document.querySelectorAll('#familyCheckboxList input[type="checkbox"]:checked').forEach(function(cb) {
+              // Only leaf checkboxes carry a family value; parent (class/super-family) rows are skipped.
+              document.querySelectorAll('#familyCheckboxList input[type="checkbox"][value]:checked').forEach(function(cb) {
                   selected.push(cb.value);
               });
               chart_configuration.selection_list = selected;
@@ -276,21 +277,95 @@ function displayChemotypeSelection() {
 }
 
 function displayFamilySelection() {
-    var family_options = family__all_structures__data.map(x => x.key).sort();
     var checkboxList = document.getElementById('familyCheckboxList');
     checkboxList.innerHTML = '';
 
-    family_options.forEach(function(family) {
-        var isChecked = Array.isArray(chart_configuration.selection_list) &&
-                        chart_configuration.selection_list.includes(family);
-        var div = document.createElement('div');
-        div.className = 'checkbox';
-        div.innerHTML = '<label><input type="checkbox" value="' + family + '"' +
-                        (isChecked ? ' checked' : '') + '> ' + family + '</label>';
-        checkboxList.appendChild(div);
+    var selection = Array.isArray(chart_configuration.selection_list) ? chart_configuration.selection_list : [];
+
+    // family_hierarchy is structured as { gpcr_class: { chemotype: [family, ...] } }.
+    // Leaf checkboxes are families (the level the chart filters on); parent rows
+    // (gpcr_class, chemotype) are tri-state and select/deselect everything underneath.
+    Object.keys(family_hierarchy).sort().forEach(function(gpcr_class) {
+        var classNode = buildFamilyTreeNode(gpcr_class, 0);
+        var classChildren = document.createElement('div');
+
+        Object.keys(family_hierarchy[gpcr_class]).sort().forEach(function(chemotype) {
+            var chemotypeNode = buildFamilyTreeNode(chemotype, 1);
+            var chemotypeChildren = document.createElement('div');
+
+            family_hierarchy[gpcr_class][chemotype].slice().sort().forEach(function(family) {
+                var leaf = buildFamilyTreeNode(family, 2, family, selection.includes(family));
+                chemotypeChildren.appendChild(leaf);
+            });
+
+            chemotypeNode.appendChild(chemotypeChildren);
+            classChildren.appendChild(chemotypeNode);
+        });
+
+        classNode.appendChild(classChildren);
+        checkboxList.appendChild(classNode);
     });
 
+    // Wire up parent <-> child synchronisation and initialise parent states.
+    checkboxList.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            var container = cb.closest('.family-tree-node');
+            // Apply this checkbox's state to all descendant leaf checkboxes.
+            container.querySelectorAll('input[type="checkbox"]').forEach(function(child) {
+                if (child !== cb) {
+                    child.checked = cb.checked;
+                    child.indeterminate = false;
+                }
+            });
+            // Recompute the state of all ancestors.
+            updateFamilyParentStates(checkboxList);
+        });
+    });
+    updateFamilyParentStates(checkboxList);
+
     $('#familySelectionModal').modal('show');
+}
+
+// Build one row of the family tree. `value` (leaf only) becomes the checkbox value
+// collected into selection_list; parent rows carry no value.
+function buildFamilyTreeNode(label, depth, value, isChecked) {
+    var node = document.createElement('div');
+    node.className = 'family-tree-node';
+
+    var div = document.createElement('div');
+    div.className = 'checkbox';
+    div.style.marginLeft = (depth * 20) + 'px';
+
+    var valueAttr = (typeof value !== 'undefined') ? ' value="' + value + '"' : '';
+    div.innerHTML = '<label><input type="checkbox"' + valueAttr +
+                    (isChecked ? ' checked' : '') + '> ' + label + '</label>';
+
+    node.appendChild(div);
+    return node;
+}
+
+// Set each parent checkbox to checked / unchecked / indeterminate based on its leaf descendants.
+function updateFamilyParentStates(root) {
+    var parents = Array.prototype.slice.call(root.querySelectorAll('.family-tree-node'));
+    // Process deepest nodes first so child states are settled before parents read them.
+    parents.reverse().forEach(function(node) {
+        var cb = node.querySelector(':scope > .checkbox input[type="checkbox"]');
+        if (!cb || cb.hasAttribute('value')) return; // leaf nodes have a value
+        var descendants = node.querySelectorAll('input[type="checkbox"][value]');
+        if (descendants.length === 0) return;
+        var checkedCount = 0;
+        descendants.forEach(function(d) { if (d.checked) checkedCount++; });
+        if (checkedCount === 0) {
+            cb.checked = false;
+            cb.indeterminate = false;
+        } else if (checkedCount === descendants.length) {
+            cb.checked = true;
+            cb.indeterminate = false;
+        } else {
+            cb.checked = false;
+            cb.indeterminate = true;
+        }
+    });
 }
 
 function setDisplayDataType(sender) {

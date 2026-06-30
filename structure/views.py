@@ -239,7 +239,7 @@ class StructureDataJsonView(View):
                     pub_link = pub.web_link.web_resource.url.replace("$index", pub_ref)
                 else:
                     pub_ref, pub_link = "-", "#"
-                
+
                 # GPCRdb internal link (rename your existing field)
                 gpcrdb_link = f"/protein/{pp.entry_name}"
 
@@ -532,7 +532,7 @@ class ServeComplexModels(TemplateView):
                 cm["Bouvier"] = "-"
                 # cm["transduction"] = "-"
                 cm['gene_entrez_weblink'] = str(WebLink(index=cm['gene_entrez_id'], web_resource=entrez_websource)) if cm['gene_entrez_id'] != "" else ""
-            
+
                 for coupling in couplings_data:
                     if coupling["source"] == 'GuideToPharma':
                         if (cm["protein_conformation__protein__entry_name"] == coupling["protein__entry_name"]) and (cm["signprot_complex__protein__family__parent__name"] == coupling["g_protein__name"]):
@@ -1754,6 +1754,245 @@ class StructureStatistics(TemplateView):
     template_name = 'structure_statistics.html'
     origin = 'gpcr'
 
+    @staticmethod
+    def initialise_gpcr_query_data_structure():
+        data = OrderedDict()
+        for data_source in ['distinct', 'redundant']:
+            data[data_source] = {}
+            for complexed in ['complexed_or_not', 'complexed_ligand']:
+                data[data_source][complexed] = {}
+                for category in ['by_state', 'by_class']:
+                    data[data_source][complexed][category] = {}
+        return data
+
+    def initialise_gpcr_structure_queries(self):
+
+        '''
+        Create a data structure containing query objects for the different datasets we want to show in the tables or charts.
+        Resulting data structure looks like this:
+
+        gpcr_structure_queries['redundant|distinct']['complexed_or_not|complexed_ligand']['all_states|active|intermediate|inactive'] = (Queryset of structures)
+
+        '''
+
+        gpcr_structure_queries = self.initialise_gpcr_query_data_structure()
+
+        q = Structure.objects.all() \
+                .exclude(structure_type__slug__startswith='af-') \
+                .prefetch_related('protein_conformation__protein__family')
+        gpcr_structure_queries['redundant']['complexed_or_not']['all_states'] = q
+
+        gpcr_structure_queries['redundant']['complexed_ligand']['all_states'] = q.exclude(ligands=None)
+
+        q = Structure.objects.exclude(structure_type__slug__startswith='af-') \
+                .order_by('protein_conformation__protein__family__name',
+                          'state',
+                          'publication_date',
+                          'resolution') \
+                .distinct('protein_conformation__protein__family__name') \
+                .prefetch_related('protein_conformation__protein__family')
+        gpcr_structure_queries['distinct']['complexed_or_not']['all_states'] = q
+
+        q = StructureLigandInteraction.objects.filter(annotated=True) \
+                .exclude(structure__structure_type__slug__startswith='af-') \
+                .distinct('ligand',
+                          'structure__protein_conformation__protein__family') \
+                .prefetch_related('structure', 'structure__protein_conformation',
+                                  'structure__protein_conformation__protein',
+                                  'structure__protein_conformation__protein__family')
+        gpcr_structure_queries['distinct']['complexed_ligand']['all_states'] = q
+
+        for data_source in gpcr_structure_queries.keys():
+            for state in ['active', 'intermediate', 'inactive']:
+                ref = gpcr_structure_queries[data_source]['complexed_or_not']
+                ref[state] = ref['all_states'].filter(protein_conformation__state__slug=state)
+
+        return gpcr_structure_queries
+
+    def initialise_sigprot_structure_queries(self, sigprot):
+
+        '''
+        Create a data structure containing query objects for the different datasets we want to show in the tables.
+        Resulting data structure looks like this:
+
+        sigprot_structure_queries['redundant|distinct']['complexed|receptor_only']['all_classes|A1|B1|B2|C|D1|F|O1|O2|T2|O'] = Queryset of structures
+
+        '''
+
+        if sigprot == 'gprot':
+            family_slug = '100'
+            sig_cat = 'G alpha'
+        elif sigprot == 'arrestin':
+            family_slug = '200'
+            sig_cat = 'Arrestin'
+        else:
+            raise ValueError("Invalid sigprot type")
+
+        sigprot_structure_queries = OrderedDict([('distinct', {"complexed": {}, "receptor_only": {} }), ('redundant', {"complexed": {}, "receptor_only": {} })])
+
+        q1 = StructureExtraProteins.objects.filter(category=sig_cat) \
+                .exclude(structure__structure_type__slug__startswith='af-') \
+                .prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
+        sigprot_structure_queries['redundant']['complexed']['all_classes'] = q1
+
+        q2 = StructureExtraProteins.objects.filter(category=sig_cat) \
+                .exclude(structure__structure_type__slug__startswith='af-') \
+                .prefetch_related("wt_protein", "structure__protein_conformation__protein__family") \
+                .distinct('structure__protein_conformation__protein__family__name')
+        sigprot_structure_queries['distinct']['complexed']['all_classes'] = q2
+
+        q3 = SignprotStructure.objects.filter(protein__family__slug__startswith=family_slug) \
+                .exclude(structure_type__slug__startswith='af-') \
+                .prefetch_related("protein")
+        sigprot_structure_queries['redundant']['receptor_only']['all_classes'] = q3
+
+        q4 = SignprotStructure.objects.filter(protein__family__slug__startswith=family_slug) \
+                .exclude(structure_type__slug__startswith='af-') \
+                .prefetch_related("protein") \
+                .distinct('protein__family__name')
+        sigprot_structure_queries['distinct']['receptor_only']['all_classes'] = q4
+
+        for slug, class_name in class_dict.items():
+            sigprot_structure_queries['redundant']['complexed'][class_name] = q1.filter(structure__protein_conformation__protein__family__slug__startswith=slug)
+            sigprot_structure_queries['distinct']['complexed'][class_name] = q2.filter(structure__protein_conformation__protein__family__slug__startswith=slug)
+
+        return sigprot_structure_queries
+
+    def compute_gpcr_table_data(self, gpcr_structure_queries, gprot_structure_queries, lookup):
+
+        '''
+        Compute structure statistics and store them in a data structure suitable for table creation with Django templates.
+        Resulting data structure looks like this:
+
+        gprot_structure_queries =
+        {
+            "distinct|redundant": {
+                "complexed_or_not|complexed_ligand": {
+                    "by_state": {
+                        "all_states|active|intermediate|inactive": {
+                        "by_class": {
+                            <CLASS_NAME> : count
+                        },
+                        "total": count
+                    }
+                },
+                "complexed_gprotein": { #No state level separation for G protein complexed structures, so we skip the 'by_state' level go straight to class separation
+                    "by_class": {
+                        <CLASS_NAME> : count
+                    },
+                    "total": count
+                }
+            }
+        }
+        '''
+
+        gpcr_table_data_counts =  self.initialise_gpcr_query_data_structure()
+
+        for data_source in gpcr_structure_queries.keys():
+            for is_complex in gpcr_structure_queries[data_source].keys():
+                for state in ['all_states', 'active', 'intermediate', 'inactive']:
+                    if is_complex != 'complexed_or_not' and state != 'all_states':
+                        continue #states only queried for "all structures" (i.e. complexed or not) dataset, not for ligand-complex dataset, so we skip
+                    ref = gpcr_table_data_counts[data_source][is_complex]['by_state']
+                    ref[state] = dict()
+                    ref[state]['by_class'] = self.count_by_class(gpcr_structure_queries[data_source][is_complex][state], lookup)
+                    ref[state]['total'] = len(gpcr_structure_queries[data_source][is_complex][state])
+                #Move 'all_states' up a level to make template loop cleaner
+                gpcr_table_data_counts[data_source][is_complex]['all_states'] = gpcr_table_data_counts[data_source][is_complex]['by_state'].pop('all_states')
+
+        for data_source in gpcr_structure_queries.keys():
+            gpcr_table_data_counts[data_source]['complexed_gprotein'] = dict()
+            gpcr_table_data_counts[data_source]['complexed_gprotein']['by_class'] = self.count_by_class(gprot_structure_queries[data_source]['complexed']['all_classes'], lookup, extra=True)
+            gpcr_table_data_counts[data_source]['complexed_gprotein']['total'] = len(gprot_structure_queries[data_source]['complexed']['all_classes'])
+
+        return gpcr_table_data_counts
+
+    def compute_sigprot_table_data(self, sigprot_structure_queries, lookup, sigprot):
+
+        '''
+        Executes the queries defined in 'initialise_sigprot_structure_queries', 
+        computes structure statistics and store them in a data structure suitable 
+        for table creation with Django templates.
+        
+        Resulting data structure looks like this:
+        sigprot_table_data_counts =
+        {
+            "distinct|redundant": {
+                "effector_totals": { "total": count, "by_effector": { <effector_group>: count} }, #EFFECTOR TOTALS SUMMED ACROSS ALL CLASSES AND STRUCTURE TYPES
+                "complexed|receptor_only": { 
+                    "by_class": { <class_name>: { "by_effector": { <effector_group>: count }, "total": count } }, #COUNTS STRATIFIED BY STRUCTURE TYPE, CLASS, AND EFFECTOR GROUP 
+                    "all_classes": { "by_effector": { <effector_group>: count }, "total": count }, #COUNTS STRATIFIED BY STRUCTURE TYPE, AND EFFECTOR GROUP SUMMED ACROSS ALL CLASSES
+                    "total": count #TOTAL COUNTS FOR THE STRUCTURE TYPE
+                }
+            }
+        }
+        '''
+
+        sigprot_table_data_counts =  OrderedDict([('distinct', {"complexed": {}, "receptor_only": {} }), ('redundant', {"complexed": {}, "receptor_only": {} })])
+
+        for data_source in sigprot_structure_queries.keys(): #redundant, distinct
+                sigprot_table_data_counts[data_source] = {'effector_totals': {"total": 0, "by_effector": {}}}
+                for structure_type, data_set in sigprot_structure_queries[data_source].items():  #complexed, receptor_only
+                    sigprot_table_data_counts[data_source][structure_type] = {"by_class": {}, "effector_totals":{"by_effector": {}}}
+                    ref = sigprot_table_data_counts[data_source]
+                    for class_name in data_set.keys():
+                        ref[structure_type]['by_class'][class_name] = dict()
+                        ref[structure_type]['by_class'][class_name]['by_effector'] = self.count_by_effector_class(data_set[class_name], lookup, non_complexed=(structure_type == 'receptor_only'), effector=sigprot)
+                        ref[structure_type]['by_class'][class_name]['total'] = len(data_set[class_name])
+
+                    for effector_group, count in ref[structure_type]['by_class']['all_classes']['by_effector'].items():
+                        ref['effector_totals']['by_effector'][effector_group] = ref['effector_totals']['by_effector'].get(effector_group, 0) + count
+                        ref['effector_totals']['total'] += count
+
+                    ref[structure_type]['all_classes'] = ref[structure_type]['by_class'].pop('all_classes') #bump 'all_classes' up a level for easier separation in HTML/Django template
+                    ref[structure_type]['total'] = len(data_set['all_classes'])
+        return sigprot_table_data_counts
+
+
+    def prepare_chart_data(self, gpcr_structure_queries, lookup):
+        years = self.get_years_range(list(set([x.publication_date.year for x in gpcr_structure_queries['redundant']['complexed_or_not']['all_states']])))
+
+        chart_data_counts =  OrderedDict([('distinct', {"complexed_or_not" : {}, "complexed_ligand" : {}}),
+                                             ('redundant', {"complexed_or_not" : {}, "complexed_ligand" : {}})])
+
+        for data_source in gpcr_structure_queries.keys():
+            for is_complex in gpcr_structure_queries[data_source].keys():
+                for mode in ['family', 'chemotype', 'class']:
+                    chart_data_counts[data_source][is_complex][mode] = self.get_structure_cumulative_data_series(years,
+                                                                                                              gpcr_structure_queries[data_source][is_complex]['all_states'],
+                                                                                                              lookup,
+                                                                                                              mode=mode)
+        return chart_data_counts
+
+    @staticmethod
+    def get_structure_family_hierarchy(gpcr_structure_queries):
+        q = gpcr_structure_queries['distinct']['complexed_or_not']['all_states']
+        hierarchy = dict()
+        for structure in q:
+            gpcr_class = structure.protein_conformation.protein.parent.family.parent.parent.parent.name
+            chemotype = structure.protein_conformation.protein.parent.family.parent.parent.name
+            family = structure.protein_conformation.protein.parent.family.parent.name
+            if gpcr_class not in hierarchy.keys():
+                hierarchy[gpcr_class] = {}
+
+            if chemotype not in hierarchy[gpcr_class].keys():
+                hierarchy[gpcr_class][chemotype] = []
+
+            if family not in hierarchy[gpcr_class][chemotype]:
+                hierarchy[gpcr_class][chemotype].append(family)
+
+        return hierarchy
+
+    @staticmethod
+    def get_familily_lookup_table():
+        #Get lookup table for family name based on slug
+        families = ProteinFamily.objects.all()
+        lookup = {}
+
+        for f in families:
+            lookup[f.slug] = f.name
+        return lookup
+
     def get_context_data (self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
 
@@ -1764,170 +2003,42 @@ class StructureStatistics(TemplateView):
             domain = current_site(self.request)
             self.origin = domain['current_site']
         context["page"] = self.origin
-        families = ProteinFamily.objects.all()
-        lookup = {}
 
-        for f in families:
-            lookup[f.slug] = f.name
-        #GENERIC
-        all_structs = Structure.objects.all().exclude(structure_type__slug__startswith='af-').prefetch_related('protein_conformation__protein__family')
-        all_complexes = all_structs.exclude(ligands=None)
-        unique_structs = Structure.objects.exclude(structure_type__slug__startswith='af-').order_by('protein_conformation__protein__family__name', 'state',
-            'publication_date', 'resolution').distinct('protein_conformation__protein__family__name').prefetch_related('protein_conformation__protein__family')
-        unique_complexes = StructureLigandInteraction.objects.filter(annotated=True).exclude(structure__structure_type__slug__startswith='af-').distinct('ligand', 'structure__protein_conformation__protein__family').prefetch_related('structure', 'structure__protein_conformation', 'structure__protein_conformation__protein', 'structure__protein_conformation__protein__family')
-        all_active = all_structs.filter(protein_conformation__state__slug = 'active')
-        all_intermediate = all_structs.filter(protein_conformation__state__slug = 'intermediate')
-        all_inactive = all_structs.filter(protein_conformation__state__slug = 'inactive')
-        years = self.get_years_range(list(set([x.publication_date.year for x in all_structs])))
-        unique_active = unique_structs.filter(protein_conformation__state__slug = 'active')
-        unique_intermediate = unique_structs.filter(protein_conformation__state__slug = 'intermediate')
-        unique_inactive = unique_structs.filter(protein_conformation__state__slug = 'inactive')
-        #Stats
-        # struct_count = Structure.objects.all().annotate(Count('id'))
-        struct_lig_count = Structure.objects.exclude(ligands=None).exclude(structure_type__slug__startswith='af-')
-        context['all_structures'] = len(all_structs)
-        context['all_structures_by_class'] = self.count_by_class(all_structs, lookup)
-        context['all_complexes'] = len(all_complexes)
-        context['all_complexes_by_class'] = self.count_by_class(all_complexes, lookup)
-        context['all_active'] = len(all_active)
-        context['all_active_by_class'] = self.count_by_class(all_active, lookup)
-        context['all_intermediate'] = len(all_intermediate)
-        context['all_intermediate_by_class'] = self.count_by_class(all_intermediate, lookup)
-        context['all_inactive'] = len(all_inactive)
-        context['all_inactive_by_class'] = self.count_by_class(all_inactive, lookup)
-        context['unique_structures'] = len(unique_structs)
-        context['unique_structures_by_class'] = self.count_by_class(unique_structs, lookup)
-        context['unique_complexes'] = len(unique_complexes)
-        context['unique_complexes_by_class'] = self.count_by_class([x.structure for x in unique_complexes], lookup)
-        context['unique_active'] = len(unique_active)
-        context['unique_active_by_class'] = self.count_by_class(unique_active, lookup)
-        context['unique_intermediate'] = len(unique_intermediate)
-        context['unique_intermediate_by_class'] = self.count_by_class(unique_intermediate, lookup)
-        context['unique_inactive'] = len(unique_inactive)
-        context['unique_inactive_by_class'] = self.count_by_class(unique_inactive, lookup)
-        context['release_notes'] = ReleaseNotes.objects.all()[0]
+        lookup = self.get_familily_lookup_table()
+
+        #Stat table querysets
+        gpcr_structure_queries = self.initialise_gpcr_structure_queries()
+        gprot_structure_queries = self.initialise_sigprot_structure_queries(sigprot='gprot')
+
         context['latest_structure'] = Structure.objects.exclude(structure_type__slug__startswith='af-').latest('publication_date').publication_date
-        context['chartdata_reso'] = self.get_resolution_coverage_data_series(all_structs)
-        context['family__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="family")
-        context['family__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="family")
-        context['family__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="family")
-        context['chemotype__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="chemotype")
-        context['chemotype__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="chemotype")
-        context['chemotype__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="chemotype")
-        context['class__distinct_structure'] = self.get_structure_cumulative_data_series(years, unique_structs, lookup, mode="class")
-        context['class__distinct_gpcrligand'] = self.get_structure_cumulative_data_series(years, unique_complexes, lookup, mode="class")
-        context['class__all_structures'] = self.get_structure_cumulative_data_series(years, all_structs, lookup, mode="class")
 
-        # GPROT Complex information
-        gprot_table_data_raw = OrderedDict([('distinct', {"complexed": {}, "receptor_only": {} }), ('redundant', {"complexed": {}, "receptor_only": {} })])
-        table_data_processed =  OrderedDict([('distinct', {"complexed": {}, "receptor_only": {} }), ('redundant', {"complexed": {}, "receptor_only": {} })])
-        gprot_table_data_raw['redundant']['complexed']['all'] = StructureExtraProteins.objects.filter(category='G alpha').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
-        
-        ###### these are query sets for G-Prot Structure Statistics
-        if self.origin != 'arrestin':
-            gprot_table_data_raw['distinct']['complexed']['all'] = StructureExtraProteins.objects.filter(category='G alpha').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein", "wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family").distinct('structure__protein_conformation__protein__family__name')
-            if self.origin == 'gprotein':
-                gprot_table_data_raw['redundant']['receptor_only']['all'] = SignprotStructure.objects.filter(protein__family__slug__startswith='100').exclude(structure_type__slug__startswith='af-').prefetch_related("protein")
-                gprot_table_data_raw['distinct']['receptor_only']['all'] = SignprotStructure.objects.filter(protein__family__slug__startswith='100').exclude(structure_type__slug__startswith='af-').prefetch_related("protein").distinct('protein__family__name')
-            
-            for slug, class_name in class_dict.items():
-                gprot_table_data_raw['redundant']['complexed'][class_name] = gprot_table_data_raw['redundant']['complexed']['all'].filter(structure__protein_conformation__protein__family__slug__startswith=slug)
-                gprot_table_data_raw['distinct']['complexed'][class_name] = gprot_table_data_raw['distinct']['complexed']['all'].filter(structure__protein_conformation__protein__family__slug__startswith=slug)
-            
-            for data_source in gprot_table_data_raw.keys(): #redundant, distinct
-                table_data_processed[data_source] = {'effector_totals': {"total": 0, "by_effector": {}}}
-                for structure_type, data_set in gprot_table_data_raw[data_source].items():  #complexed, receptor_only
-                    if self.origin != 'gprotein' and structure_type == 'receptor_only': continue                    
-                    table_data_processed[data_source][structure_type] = {"by_class": {}, "effector_totals":{"by_effector": {}}}
-                    ref = table_data_processed[data_source][structure_type] # table_data_processed["redundant|distinct"]["complexed|receptor_only"]
-                    for class_name in data_set.keys():
-                        ref['by_class'][class_name] = dict()       
-                        ref['by_class'][class_name]['by_effector'] = self.count_by_effector_class(data_set[class_name], lookup, non_complexed=(structure_type == 'receptor_only'))                        
-                        ref['by_class'][class_name]['total'] = len(data_set[class_name])                        
-                        #table_data_processed[data_source]['totals'][class_name] = table_data_processed[data_source]['totals'].get(class_name, 0) + ref['by_class'][class_name]['total']                        
-                    for effector_class, count in ref['by_class']['all']['by_effector'].items():
-                        table_data_processed[data_source][structure_type]['effector_totals']['by_effector'][effector_class] = table_data_processed[data_source][structure_type]['effector_totals']['by_effector'].get(effector_class, 0) + count
-                        table_data_processed[data_source][structure_type]['effector_totals']['total'] = table_data_processed[data_source][structure_type]['effector_totals'].get('total', 0) + count
-                        table_data_processed[data_source]['effector_totals']['by_effector'][effector_class] = table_data_processed[data_source]['effector_totals']['by_effector'].get(effector_class, 0) + count
-                        table_data_processed[data_source]['effector_totals']['total'] += count
+        if self.origin == 'gpcr':
+            #GPCR Stat table data
+            context['gpcr_table_data'] = self.compute_gpcr_table_data(gpcr_structure_queries, gprot_structure_queries, lookup)
 
-                    ref['all'] = ref['by_class'].pop('all') #bump 'all' up a level for easier separation in HTML/Django template
-                    ref['total'] = len(data_set['all'])
-                    #table_data_processed[data_source]['totals']['total'] += ref['total']
+            #GPCR year-to-year structure data for chart
+            context['family_hierarchy'] = self.get_structure_family_hierarchy(gpcr_structure_queries)
+            context['chart_data'] = self.prepare_chart_data(gpcr_structure_queries, lookup)
 
-            context['gprot_table_data'] = table_data_processed
+            group_cols = ["state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index"]
+            circle_data = gpcr_structure_queries['redundant']['complexed_or_not']['all_states'] \
+                        .values_list(*group_cols) \
+                        .order_by(*group_cols) \
+                        .distinct(*group_cols)
 
-            #GPROT
-            if self.origin == 'gprotein':
-                circle_data = gprot_table_data_raw['redundant']['complexed']['all'].values_list(
-                              "wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index").order_by(
-                              "wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index").distinct(
-                              "wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index")                
-            else:
-                circle_data = all_structs.values_list(
-                              "state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index").order_by(
-                              "state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index").distinct(
-                              "state_id__slug", "protein_conformation__protein__parent__entry_name", "pdb_code_id__index")
+        if self.origin == 'gprotein':
+            #Gprotein statistics table data
+            context['sigprot_table_data'] = self.compute_sigprot_table_data(gprot_structure_queries, lookup, sigprot='gprot')
 
-        #ARRESTIN
-        else:
-            all_arrestins = StructureExtraProteins.objects.filter(category='Arrestin').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein","wt_protein__family", "wt_protein__family__parent", "structure__protein_conformation__protein__family")
-            noncomplex_arrestins = SignprotStructure.objects.filter(protein__family__slug__startswith='200').exclude(structure_type__slug__startswith='af-').prefetch_related("protein")
-            ###### these are query sets for Arrestin Structure Statistics
-            all_arr_A_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='001')
-            all_arr_B1_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='002')
-            all_arr_B2_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='003')
-            all_arr_C_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='004')
-            all_arr_D1_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='005')
-            all_arr_F_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='006')
-            all_arr_T2_complexes = all_arrestins.filter(structure__protein_conformation__protein__family__slug__startswith='009')
-            # unique_arrestins = unique_structs.filter(id__in=StructureExtraProteins.objects.filter(category='Arrestin').values_list("structure__id", flat=True))
-            unique_arrestins = StructureExtraProteins.objects.filter(category='Arrestin').exclude(structure__structure_type__slug__startswith='af-').prefetch_related("wt_protein", "structure__protein_conformation__protein__family").distinct('structure__protein_conformation__protein__family__name')
-            unique_arr_A_complexes = all_arr_A_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_B1_complexes = all_arr_B1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_B2_complexes = all_arr_B2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_C_complexes = all_arr_C_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_D1_complexes = all_arr_D1_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_F_complexes = all_arr_F_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            unique_arr_T2_complexes = all_arr_T2_complexes.annotate(distinct_name=Concat('wt_protein__family__name', 'structure__protein_conformation__protein__family__name', output_field=TextField())).order_by('distinct_name').distinct('distinct_name')
-            context['all_arrestins'] = len(all_arrestins)
-            context['all_arrestins_by_class'] = self.count_by_class(all_arrestins, lookup, extra=True)
-            context['all_arrestins_by_gclass'] = self.count_by_effector_class(all_arrestins, lookup, effector='arrestin')
-            context['noncomplex_arrestins_by_gclass'] = self.count_by_effector_class(noncomplex_arrestins, lookup, effector='arrestin', non_complexed=True)
-            context['noncomplex_arrestins'] = len(noncomplex_arrestins)
-            context['arrA_complexes'] = zip(list(self.count_by_effector_class(all_arr_A_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_A_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_A_complexes'] = len(all_arr_A_complexes)
-            context['unique_arr_A_complexes'] = len(unique_arr_A_complexes)
-            context['arrB1_complexes'] = zip(list(self.count_by_effector_class(all_arr_B1_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_B1_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_B1_complexes'] = len(all_arr_B1_complexes)
-            context['unique_arr_B1_complexes'] = len(unique_arr_B1_complexes)
-            context['arrB2_complexes'] = zip(list(self.count_by_effector_class(all_arr_B2_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_B2_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_B2_complexes'] = len(all_arr_B2_complexes)
-            context['unique_arr_B2_complexes'] = len(unique_arr_B2_complexes)
-            context['arrC_complexes'] = zip(list(self.count_by_effector_class(all_arr_C_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_C_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_C_complexes'] = len(all_arr_C_complexes)
-            context['unique_arr_C_complexes'] = len(unique_arr_C_complexes)
-            context['arrD1_complexes'] = zip(list(self.count_by_effector_class(all_arr_D1_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_D1_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_D1_complexes'] = len(all_arr_D1_complexes)
-            context['unique_arr_D1_complexes'] = len(unique_arr_D1_complexes)
-            context['arrF_complexes'] = zip(list(self.count_by_effector_class(all_arr_F_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_F_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_F_complexes'] = len(all_arr_F_complexes)
-            context['unique_arr_F_complexes'] = len(unique_arr_F_complexes)
-            context['arrT2_complexes'] = zip(list(self.count_by_effector_class(all_arr_T2_complexes, lookup, effector='arrestin').items()), list(self.count_by_effector_class(unique_arr_T2_complexes, lookup, effector='arrestin').items()))
-            context['all_arr_T2_complexes'] = len(all_arr_T2_complexes)
-            context['unique_arr_T2_complexes'] = len(unique_arr_T2_complexes)
-            context['unique_arrestins'] = len(unique_arrestins)
-            context['unique_arrestins_by_gclass'] = self.count_by_effector_class(unique_arrestins, lookup, effector='arrestin')
-            context['unique_arrestins_by_class'] = self.count_by_class(unique_arrestins, lookup, extra=True)
-            context['total_arrestins_by_gclass'] = []
-            for key in context['all_arrestins_by_gclass']:
-                context['total_arrestins_by_gclass'].append(context['all_arrestins_by_gclass'][key] + context['noncomplex_arrestins_by_gclass'][key])
-            context['total_arrestins'] = sum(context['total_arrestins_by_gclass'])
+            group_cols = ["wt_protein__family__parent__name", "structure__protein_conformation__protein__parent__entry_name", "structure__pdb_code_id__index"]
+            circle_data = gprot_structure_queries['redundant']['complexed']['all_classes'] \
+                .values_list(*group_cols) \
+                .order_by(*group_cols) \
+                .distinct(*group_cols)
 
-        for key in list(context['unique_structures_by_class'].keys()):
-            context['unique_structures_by_class'][key.replace('Class','')] = context['unique_structures_by_class'].pop(key)
-        for key in list(context['all_structures_by_class'].keys()):
-            context['all_structures_by_class'][key.replace('Class','')] = context['all_structures_by_class'].pop(key)
+        if self.origin == 'arrestin':
+            arrestin_table_data_queries = self.initialise_sigprot_structure_queries(sigprot='arrestin')
+            context['sigprot_table_data'] = self.compute_sigprot_table_data(arrestin_table_data_queries, lookup, sigprot='arrestin')
 
         #if not structure coverage, then generate the trees
         if self.origin == 'gprotein':
@@ -2123,7 +2234,7 @@ class StructureStatistics(TemplateView):
                         elif 'active' in result_dict[key]['states']:
                             result_dict[key]['status'] = 'Active'
                         elif 'inactive' in result_dict[key]['states']:
-                            result_dict[key]['status'] = 'Inactive'                
+                            result_dict[key]['status'] = 'Inactive'
 
                 # Optionally, reduce to key-status dictionary
                 result_dict = {k: v['status'] for k, v in result_dict.items()}
@@ -2241,11 +2352,15 @@ class StructureStatistics(TemplateView):
         records = []
         if extra == False:
             for s in queryset:
+                if (s.__class__.__name__ == "StructureLigandInteraction"):
+                    s = s.structure
                 fid = s.protein_conformation.protein.family.slug.split("_")
                 cname = lookup[fid[0]]
                 records.append(cname)
         else:
             for s in queryset:
+                if (s.__class__.__name__ == "StructureLigandInteraction"):
+                    s = s.structure
                 fid = s.structure.protein_conformation.protein.family.slug.split("_")
                 cname = lookup[fid[0]]
                 records.append(cname)
@@ -2297,7 +2412,7 @@ class StructureStatistics(TemplateView):
 
         min_y = min(years_list)
         max_y = max(years_list)
-        return range(min_y, max_y+1)    
+        return range(min_y, max_y+1)
 
     def get_structure_cumulative_data_series(self, years, structures, lookup, mode):
         """
@@ -2322,13 +2437,13 @@ class StructureStatistics(TemplateView):
                         structure = structure.structure
                     fid = structure.protein_conformation.protein.family.slug.split("_")
                     # if structure.protein_conformation.protein.get_protein_family() == family and structure.publication_date.year == year:
-                    
+
                     if mode == "chemotype":
                         group_key = fid[0]+"_"+fid[1]
                     elif mode == "family":
                         group_key = fid[0]+"_"+fid[1]+"_"+fid[2]
                     elif mode == "class":
-                        group_key = fid[0] 
+                        group_key = fid[0]
 
                     if lookup[group_key] == group and structure.publication_date.year == year:
                         count += 1
@@ -4839,7 +4954,7 @@ class StructureBlastView(View):
 
                 ref_structures = StructureModel.objects.filter(main_template__isnull=False).annotate( gene_name=Subquery(gene_subquery_models)
                 ).values_list(
-                    'protein__entry_name', 
+                    'protein__entry_name',
                     'state__slug',
                     'protein__family__parent__parent__parent__name',  # Class
                     'protein__family__parent__name',  # Family
@@ -4870,8 +4985,8 @@ class StructureBlastView(View):
                 structure_values = structures_info.get(protein)
                 data.append({
                     'input_chain': entry['input_chain'].strip(),
-                    'protein': protein, 
-                    'chain': entry["chain"].strip(), 
+                    'protein': protein,
+                    'chain': entry["chain"].strip(),
                     'type': entry["origin"].replace('Experimental', 'exp').replace('experimental', 'exp').strip(),
                     'TM_score': entry["TM_score"], 'lddt': entry['lddt'], 'E_value': entry["E_value"], 'link': entry["linking"],
                     'state': entry["state"] or structure_values[1],
@@ -4962,7 +5077,7 @@ class LigandComplexModels(TemplateView):
                     ),
                     to_attr="prefetch_ligands"
                 )
-            ).annotate(                
+            ).annotate(
             #Fetch single gene name and entrez_id for each target using subqueries, prioritizing lowest entrez_id
             gene_name=Subquery(
                 Gene.objects.filter(proteins=OuterRef('protein_conformation__protein__pk')).order_by('entrez_id').values('name')[:1]),
@@ -4971,8 +5086,8 @@ class LigandComplexModels(TemplateView):
                 experimental_pdb_exists=Exists(
                     StructureLigandInteraction.objects.filter(
                         structure__structure_type__slug__in=[
-                            'x-ray-diffraction', 
-                            'electron-crystallography', 
+                            'x-ray-diffraction',
+                            'electron-crystallography',
                             'electron-microscopy'
                         ],
                         structure__protein_conformation__protein__parent__entry_name=OuterRef('protein_conformation__protein__entry_name'),

@@ -223,6 +223,22 @@ def class_code_to_name(class_code):
         "O1": "Class O1 (Fish-like olfactory)",
         "O2": "Class O2 (Tetrapod specific olfactory)",
         "T2": "Class T2 (Taste 2)",
-        "O": "Other GPCRs"
+        "O": "Class U (Unclassified)"
     }
     return class_names.get(class_code, "Invalid class code")
+
+@register.filter(name='format_class_header') 
+def format_class_header(class_code):
+    class_names = {
+        "Class A (Rhodopsin)": "Class A<br>(Rhodopsin)",
+        "Class B1 (Secretin)": "Class B1<br>(Secretin)",
+        "Class B2 (Adhesion)": "Class B2<br>(Adhesion)",
+        "Class C (Glutamate)": "Class C<br>(Glutamate)",
+        "Class D1 (Ste2-like fungal pheromone)": "Class D1<br>(Ste2-like fungal pheromone)",
+        "Class F (Frizzled)": "Class F<br>(Frizzled)",
+        "Class O1 (fish-like odorant)": "Class O1<br>(Fish-like olfactory)",
+        "Class O2 (tetrapod specific odorant)": "Class O2<br>(Tetrapod specific olfactory)",
+        "Class T2 (Taste 2)": "Class T2<br>(Taste&nbsp;2)",
+        "Other GPCRs": "Class U<br>(Unclassified)"
+    }
+    return class_names.get(class_code, class_code)
