@@ -1,7 +1,17 @@
 from rest_framework import serializers
 from common.models import WebResource, WebLink
 
-class StatisticsSummarySerializer(serializers.Serializer):
+class GpcrStatisticsSummarySerializer(serializers.Serializer):
+
+    '''
+        This serializer is used to generate JSON for the structure statistics data for GPCRs stored in 
+        the gpcr_structure_statistics database table.
+        The Meta data subclass provides additional information used for filter processing.  
+        Meta.datatypes: contains data types of each field which is used when  building server-side filters
+        Meta.serializer_method_to_filter_field_map: contains a mapping for fields that use SerializerMethodField (e.g. weblinks) to a single source 
+        field in the database (serializer_method_to_filter_field_map). 
+    '''
+
     _uniprot_resource = None
     _entrez_resource = None
     
@@ -17,10 +27,10 @@ class StatisticsSummarySerializer(serializers.Serializer):
     st_interm_c = serializers.ReadOnlyField(read_only=True)
     st_act_c = serializers.ReadOnlyField(read_only=True)
 
-    # Best resolution by state
-    best_res_inact = serializers.ReadOnlyField(read_only=True)
-    best_res_interm = serializers.ReadOnlyField(read_only=True)
-    best_res_act = serializers.ReadOnlyField(read_only=True)
+    # Best resolution by state ("-" when no structure of that state exists)
+    best_res_inact = serializers.SerializerMethodField()
+    best_res_interm = serializers.SerializerMethodField()
+    best_res_act = serializers.SerializerMethodField()
 
     # Transducer / extra-protein counts (map to annotated names)
     transd_gio_c = serializers.ReadOnlyField(read_only=True)
@@ -60,9 +70,24 @@ class StatisticsSummarySerializer(serializers.Serializer):
             'limod_ag_partial_c': 'numeric', 'limod_allo_antag_c': 'numeric', 'limod_antag_c': 'numeric', 'limod_inv_ag_c': 'numeric', 'limod_nam_c': 'numeric', 
             'limod_pam_c': 'numeric', 'limod_unk_c': 'numeric',
         }
-        complex_filter_field_map = {
-            'uniprot': 'uniprot_entry_name', 'gene': 'gene_name', 
+        #Mapping for fields that use a SerializerMethodField to a single source field in the database. This is used for filtering and sorting.
+        serializer_method_to_filter_field_map = {
+            'uniprot': 'uniprot_entry_name', 'gene': 'gene_name',
+            'best_res_inact': 'best_res_inact', 'best_res_interm': 'best_res_interm', 'best_res_act': 'best_res_act',
         }
+
+    @staticmethod
+    def _format_resolution(value):
+        return value if value is not None else "-"
+
+    def get_best_res_inact(self, obj):
+        return self._format_resolution(getattr(obj, 'best_res_inact', None))
+
+    def get_best_res_interm(self, obj):
+        return self._format_resolution(getattr(obj, 'best_res_interm', None))
+
+    def get_best_res_act(self, obj):
+        return self._format_resolution(getattr(obj, 'best_res_act', None))
 
     def get_gene_weblink(self, entrez_id):
         if entrez_id:
@@ -73,7 +98,10 @@ class StatisticsSummarySerializer(serializers.Serializer):
         if hasattr(obj, 'gene_name') and obj.gene_name:
             gene_anchor = {}
             gene_anchor['anchor_content'] = obj.gene_name
-            gene_anchor['anchor_href'] = self.get_gene_weblink(obj.gene_entrez_id)
+            if hasattr(obj, 'gene_entrez_id') and obj.gene_entrez_id:
+                gene_anchor['anchor_href'] = self.get_gene_weblink(obj.gene_entrez_id)
+            else: 
+                gene_anchor['anchor_href'] = None
             return gene_anchor
         return None
 
@@ -88,6 +116,7 @@ class StatisticsSummarySerializer(serializers.Serializer):
         uniprot_anchor['anchor_href'] = self.get_uniprot_weblink(obj)
         return uniprot_anchor
 
+    #Make WebResource objects for Uniprot and Entrez Gene available at the class level to prevent multiple database queries.
     def _get_uniprot_resource(self):
         if self._uniprot_resource is None:
             self._uniprot_resource = WebResource.objects.get(slug="uniprot")
@@ -100,17 +129,22 @@ class StatisticsSummarySerializer(serializers.Serializer):
 
     @classmethod
     def source_mapping(cls):
+        '''
+            This function generates a mapping of serializer field names to their corresponding source fields in the database.
+            It handles both simple fields and those that use SerializerMethodField, ensuring that all fields are accounted for in the mapping.
+            :return: A dictionary mapping serializer field names to database source field names.
+        '''
         mapping = dict()
         for key, field in cls.__dict__['_declared_fields'].items():
         
             if isinstance(field, serializers.SerializerMethodField):
                 try:
-                    mapping[key] = cls.Meta.complex_filter_field_map[key]
+                    mapping[key] = cls.Meta.serializer_method_to_filter_field_map[key]
                     continue
                 except KeyError:
                     raise KeyError(f"No query source mapping found for field '{key}' in serializer. " + \
                                     "Ensure you have declared all fields that do not have a source " + \
-                                    "parameter in complex_filter_field_map under meta data")
+                                    "parameter in serializer_method_to_filter_field_map under meta data")
             
             mapping[key] = key
 

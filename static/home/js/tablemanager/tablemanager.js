@@ -1,9 +1,25 @@
+import { Column } from "./column.js";
+import { DataTypeFactory } from "./datatypefactory.js";
+
+// This class represents the TableManager, which is responsible for managing the data table and its associated columns, filters, and rendering logic.
+// The TableManager interacts with the back end TableProvider to fetch configuration and content data, then initializes a DataTable with the appropriate settings and column definitions.
+// TableManager supports both server-side and client-side processing modes, allowing for flexible handling of large datasets and dynamic filtering capabilities.
+
 class TableManager {
+
+  /**
+   * Constructs a new TableManager instance.
+   * @param {Array} columnSpecification - An array of column specification objects defining the properties and behaviors of each column in the data table.
+   * @param {string} tableId - The ID of the HTML table element to be managed by the TableManager.
+   * @param {DataTypeFactory} DataTypeFactoryReference - An optional reference to a DataTypeFactory instance for initializing data types. Only required if you want to override the default factory with a custom one.
+  **/
   constructor(
     columnSpecification,
-    tableId,
+    tableId, 
+    DataTypeFactoryReference
   ) {
-    this.columnsSpecifications = columnSpecification;
+    this.dataTypeFactory = DataTypeFactoryReference || new DataTypeFactory();
+    this.columns = this.initialiseColumns(columnSpecification);
     this.tableId = tableId;
     //Array to store functions that need to be run after data is loaded into the table, 
     // e.g. to populate filter interfaces that require access to the dataset to determine their options (e.g. select dropdowns populated with unique values from the dataset)
@@ -11,9 +27,32 @@ class TableManager {
     this.documentReadyCallBacks = []; 
   }
 
-  initialiseDataTable(dataTableOptions) {
+  /**
+   * Initialize the columns based on the provided column specifications. 
+   * @param {Array} columnSpecification - An array of column specification objects defining the properties and behaviors of each column in the data table.
+   * @returns {Array} An array of initialized Column instances.
+  **/   
+  initialiseColumns(columnSpecification) {
+    return columnSpecification.map(
+      (colSpec) =>
+        new Column(colSpec, this.dataTypeFactory),
+    );
+  }
+
+  /**
+   * This method initializes the DataTable with the provided options, setting up the table structure, headers, and filters based on the column specifications.
+   * It also handles the execution of callbacks for data loading and document readiness, ensuring that filter interfaces are properly populated and initialized.
+   * @param {Object} dataTableOptions -  Object containing the configuration options for initializing the DataTable, including column definitions, server-side processing settings, and any custom callbacks.
+   */
+  initialiseDataTable(dataTableOptions) {   
+    
     try {
-      this.validateColumnSpecifications();
+      if (this._columnIndexesAbsent()) {
+        // If no columns have col_idx, we assume they are in the correct order and assign col_idx based on their position in the array
+        this._createColumnIndexes();
+      } else {
+        this.validateColumnSpecifications();
+      }
     } catch (error) {
       alert(
         "Error in column specifications during DataTable initialisation:" + error.message        
@@ -21,14 +60,15 @@ class TableManager {
       return;
     }
 
+
     //Returns [table, tableHead,  primaryHeaderRow, tableBody] HTML object references after adding them to DOM
     let tableComponents = this.createPrimaryTableStructure();
 
     this.populateColumnTitleHeaders(tableComponents.primaryHeaderRow);
 
     if (!dataTableOptions.columns) {
-      dataTableOptions.columns = this.columnsSpecifications.map((colSpec) =>
-        this.colSpecToDataTableColDef(colSpec),
+      dataTableOptions.columns = this.columns.map((col) =>
+        this.columnToDataTableColDef(col),
       );
     } else {
       console.log(
@@ -38,9 +78,15 @@ class TableManager {
 
     // We need to wait until the initial data has been loaded into the table before populating the filter headers, 
     // as the filter interfaces (e.g. select dropdowns) may need to be populated with unique values from the dataset which are not available until the data is loaded. 
+    const userInitComplete = dataTableOptions.initComplete; // store any initComplete function that was supplied in config, may be undefined
     dataTableOptions.initComplete = (settings, json) => {
       this.dataLoadedCallBacks.forEach((callBack) => callBack());
-    }
+
+      // invoke original callback, if one was provided
+      if (typeof userInitComplete === "function") {
+        userInitComplete(settings, json);
+      }
+    }    
 
     this.dataTableReference = $(`#${this.tableId}`).DataTable(dataTableOptions);
 
@@ -58,6 +104,10 @@ class TableManager {
 
   }
 
+/**
+ * Populates the primary table structure by creating and appending the table header, primary header row, and table body elements to the specified HTML table element.
+ * @returns - A dictionary-like object containing references to the table, table header, primary header row, and table body HTML elements
+ */
   createPrimaryTableStructure() {
     let table = document.getElementById(this.tableId);
 
@@ -87,6 +137,11 @@ class TableManager {
     };
   }
 
+  /**
+   * Creates the secondary table structure by adding super-headers and filter headers to the table.
+   * @param {Object} TableComponents - A dictionary-like object containing references to the table, table header, primary header row, and table body HTML elements.
+   * @returns {Object} - The updated table components with secondary structure added.
+   */
   createSecondaryTableStructure(TableComponents) {
     let superHeaderRow = null;
     if (this._hasSuperHeaders()) {
@@ -115,6 +170,7 @@ class TableManager {
   //                         /
   //-------------------------/
 
+  // Creates the <thead> section of the table and assigns it an ID based on the table's ID.
   _createTableHeaderSection() {
     const tableHead = document.createElement("thead");
     this.headerSetId = this.tableId + "_headerSet";
@@ -126,48 +182,61 @@ class TableManager {
   //  Super(/grouped) headers  /
   //---------------------------/
 
+  // Checks if all columns have a column_group property defined, indicating that super-headers should be created for the table.
   _hasSuperHeaders() {
-    return this.columnsSpecifications.every((col) => col.column_group);
+    return this.columns.every((col) => col.column_group);
   }
 
+  // Checks if any columns have allow_filter set to true, indicating that a filter row should be created for the table.
   _hasFilters() {
-    return this.columnsSpecifications.some((col) => col.column_group);
+    return this.columns.some((col) => col.allow_filter);
   }
-
-  //Uses column_group property of column specifications to create and append a super-header row to the table,
-  // grouping columns under shared headers as specified. E.g. if columns 0-4 have column_group 'Classification' and columns 5-7 have column_group 'State',
-  // creates a super-header row with 'Classification' spanning columns 0-4 and 'State' spanning columns 5-7.
+  
+  /**
+   * Uses column_group property of column specifications to create and append a super-header row to the table,
+   * grouping columns under shared headers as specified. 
+   * @Example 
+   * If columns 0-4 have column_group 'Classification' and columns 5-7 have column_group 'State',
+   * a super-header row is created with 'Classification' spanning columns 0-4 and 'State' spanning columns 5-7.
+   * @param {HTMLElement} superHeaderRow - The <tr> element representing the super-header row to which the grouped headers will be appended.
+  **/
   populateSuperHeaders(superHeaderRow) {
-    //Add super-header row if any column groups defined in specifications, otherwise remove super-header row (which would just be empty)
+    //Add super-header row if all columns have a column groups defined in specifications, otherwise remove super-header row (which would just be empty)
     if (!this._hasSuperHeaders()) {
       console.log(
-        "No column groups defined in specifications, skipping super-header creation.",
+        "Column groups incomplete or absent in specifications, skipping super-header creation.",
       );
       return;
     }
 
     const superHeaderStructure = this._getSuperHeaderStructure(
-      this.columnsSpecifications,
+      this.columns,
     );
 
     superHeaderStructure.forEach(({ name, colspan }) => {
       let th = document.createElement("th");
       th.textContent = name;
       th.colSpan = colspan;
+      th.classList.add("super_header_cell");
       superHeaderRow.append(th);
     });
   }
 
+  // Creates a super-header row element with the specified ID and returns it.
   _createSuperHeaderRow(superHeaderRowId) {
     const superHeaderRow = document.createElement("tr");
     superHeaderRow.id = superHeaderRowId;
     return superHeaderRow;
   }
 
-  //Return an array of { name, colspan } objects in col_idx order, e.g. [{ name: 'Classification', colspan: 5 }, { name: 'State', colspan: 3 }, ...]
+  /**
+   * Computes the required colspan values for super-headers based on the column_group properties of the column specifications
+   * @param {Array} columnsSpecifications 
+   * @returns - An array of { name, colspan } objects in col_idx order, e.g. [{ name: 'Classification', colspan: 5 }, { name: 'State', colspan: 3 }, ...] 
+   */
   _getSuperHeaderStructure(columnsSpecifications) {
     try {
-      this.validateColumnSpecifications(columnsSpecifications);
+      this.validateColumnSpecifications();
     } catch (error) {
       console.error(
         "Error in column specification when getting super header structure:",
@@ -194,14 +263,20 @@ class TableManager {
   //  Primary headers  /
   //-------------------/
 
+  /**
+   * Populates the primary header row with column title cells.
+   * @param {HTMLElement} primaryHeaderRow - The <tr> element representing the primary header row.
+   */
   populateColumnTitleHeaders(primaryHeaderRow) {
-    this.columnsSpecifications.forEach((col) => {
+    this.columns.forEach((col) => {
       // add header
       const th = document.createElement("th");
       th.textContent = col.title;
       
       if (col.cssClassHeaderCell) {
         th.classList.add(col.cssClassHeaderCell);
+      } else {
+        th.classList.add("primary_header_cell");
       }
       
       primaryHeaderRow.append(th);
@@ -214,311 +289,40 @@ class TableManager {
 
   // Filter Header row
 
+  // Creates a filter header row element with the specified ID and returns it.
   _createFilterHeaderRow(filterHeaderRowId) {
     const filterHeaderRow = document.createElement("tr");
     filterHeaderRow.id = filterHeaderRowId;
     return filterHeaderRow;
   }
 
-  populateFilterHeaders(filterHeaderRow) { //, jsonData=null
-    this.columnsSpecifications.forEach((col) => {
-      // add filter interface if allowed
+  /**
+   * Populates the filter header row with filter interface elements for each column that allows filtering.
+   * @param {HTMLElement} filterHeaderRow - The <tr> element representing the filter header row.
+   */
+  populateFilterHeaders(filterHeaderRow) {
+    this.columns.forEach((col) => {
       const filterTh = document.createElement("th");
 
       if (col.cssClassFilterCell) {
         filterTh.classList.add(col.cssClassFilterCell);
+      } else {
+        filterTh.classList.add("filter_header_cell");
       }
 
       if (col.allow_filter) {
-        const filterInterface = this.filterInterfaceFactory(
-          col,
-          this.dataTableReference,
-          //jsonData
-        );
+        const filterInterface = col.createFilterInterface(this);
         if (filterInterface) {
           //Add filter <input> elements  to filter header cell
-          filterInterface.forEach((el) => filterTh.appendChild(el));
+          if (!Array.isArray(filterInterface)) {
+            filterTh.appendChild(filterInterface);
+          } else {
+            filterInterface.forEach((el) => filterTh.appendChild(el));
+          }
         }
       }
       filterHeaderRow.append(filterTh);
     });
-  }
-
-  //--------------------------/
-  //  Filter user interfaces  /
-  //--------------------------/
-
-  filterInterfaceFactory(col, dataTableReference) { //, jsonData=null
-    if (col.data_type === "text" || col.data_type === "weblink") {
-      return [this._createTextFilterInterface(col, dataTableReference)];
-    } else if (col.data_type === "numeric") {
-      return this._createNumericRangeFilterInterface(col, dataTableReference);
-    }
-    else if (col.data_type === "textselect") {
-      return [this._createTextSelectFilterInterface(col, dataTableReference)]; //, jsonData
-    }
-    return null;
-  }
-
-  _createTextFilterInterface(col, dataTableReference) {
-    let filterInput = document.createElement("input");
-
-    let data_field = document.createAttribute("data-field");
-    data_field.value = col.json_id;
-    filterInput.setAttributeNode(data_field);
-
-    let id = document.createAttribute("id");
-    id.value = col.json_id + "_search";
-    filterInput.setAttributeNode(id);
-
-    filterInput.classList.add("col-filter");
-    filterInput.classList.add("text-filter");
-
-    if (col.cssClassFilterInput) {
-      filterInput.classList.add(col.cssClassFilterInput);
-    }
-
-    filterInput.addEventListener("blur", function () {
-      let currentSearchValue =
-        dataTableReference.columns(col.col_idx).search()[0] || "%";
-
-      let newSearchValue = this.value;
-      if (dataTableReference.settings()[0].oFeatures.bServerSide == true) {
-        newSearchValue = newSearchValue + "%"; // append wildcard for "contains" search
-      }
-
-      if (newSearchValue !== currentSearchValue) {
-        dataTableReference.columns(col.col_idx).search(newSearchValue).draw();
-      }
-    });
-
-    return filterInput;
-  }
-
-  _createTextSelectFilterInterface(col, dataTableReference) { //jsonData
-
-    //------------------//
-    //  Event Handlers  //
-    //------------------//
-
-    function onSelectChangeHandler() {
-      let currentSearchValue = dataTableReference.columns(col.col_idx).search()[0] || "%";
-
-      let newSearchValue = this.value;
-      if (dataTableReference.settings()[0].oFeatures.bServerSide == true) {
-        newSearchValue = newSearchValue + "%"; // append wildcard for "contains" search
-      }
-
-      if (newSearchValue !== currentSearchValue) {
-        dataTableReference.columns(col.col_idx).search(newSearchValue).draw();
-        clearButton.style.display = newSearchValue && newSearchValue !== "%" ? "inline-block" : "none";
-      }
-    }
-
-    //Unsupported on Server Side fallback
-    if (dataTableReference.settings()[0].oFeatures.bServerSide == true)
-    {
-      console.warn("Select filter interfaces are not currently supported in server-side processing mode. Falling back to text input filter for column " + col.json_id);
-      return this._createTextFilterInterface(col, dataTableReference);
-    }
-
-    //-----------------//
-    //  HTML Elements  //
-    //-----------------//
-
-    let filterInput = this._createInputForSelectFilter(col);
-
-    let clearButton = this._createClearButtonForSelectFilter(col, dataTableReference, filterInput.attributes.id.value);
-
-    let wrapper = document.createElement("div");
-    wrapper.classList.add("col-filter-wrapper");
-    wrapper.appendChild(filterInput);
-    wrapper.appendChild(clearButton);
-
-    //-----------------------------------------------------------------//
-    /// Callbacks for post processing and event handler registration ////
-    //-----------------------------------------------------------------//
-
-    // Add function to populate select options as a callback to be run once data is loaded into the table,
-    // as we need access to the dataset to determine the unique values for the options.
-    this.dataLoadedCallBacks.push( () => this._populateTextSelectFilterOptions(filterInput, col, dataTableReference.ajax.json()));
-
-    // Add select2 initialization as a callback to be run when document is ready to ensure the relevant DOM element is available
-    this.documentReadyCallBacks.push( () => $(`#${filterInput.attributes.id.value}`).select2());
-
-    //Add event handler registration to callback for when document is ready
-    this.documentReadyCallBacks.push( () => $(`#${filterInput.attributes.id.value}`).on('select2:select', onSelectChangeHandler));
-
-    return wrapper;
-  }
-
-_createInputForSelectFilter(col) {
-    let filterInput = document.createElement("select");
-
-    let data_field = document.createAttribute("data-field");
-    data_field.value = col.json_id;
-    filterInput.setAttributeNode(data_field);
-
-    let id = document.createAttribute("id");
-    id.value = col.json_id + "_search";
-    filterInput.setAttributeNode(id);
-
-    let name = document.createAttribute("name");
-    name.value = col.json_id + "_select";
-    filterInput.setAttributeNode(name);
-
-    filterInput.classList.add("col-filter");
-    filterInput.classList.add("select-filter");
-
-    if (col.cssClassFilterInput) {
-      filterInput.classList.add(col.cssClassFilterInput);
-    }
-
-    return filterInput;
-}
-
-  _createClearButtonForSelectFilter(col, dataTableReference, selectInputId) {
-        // Create clear button
-    let clearButton = document.createElement("button");
-    clearButton.type = "button";
-    clearButton.textContent = "✕";
-    clearButton.id = col.json_id + "_clear";
-    clearButton.classList.add("col-filter-clear");
-    clearButton.style.display = "none";
-
-        // Add clear button click handler
-    clearButton.addEventListener("click", function(e) {
-      e.preventDefault();
-      $(`#${selectInputId}`).val("Select...").trigger('change');
-      dataTableReference.columns(col.col_idx).search("").draw();
-      clearButton.style.display = "none";
-    });
-
-    return clearButton;
-  }
-
-  _populateTextSelectFilterOptions(filterInput, col, DTjson) {
-    const uniqueValues = new Set(["Select...", ...DTjson.data.map(row => row[col.json_id])]);    
-    
-    uniqueValues.forEach(value => {
-      let option = document.createElement("option");
-      option.value = value;
-      option.textContent = value;
-      filterInput.appendChild(option);
-    });
-  }
-
-  _createNumericRangeFilterInterface(col, dataTableReference) {
-    let filterInputMin = document.createElement("input");
-    let filterInputMax = document.createElement("input");
-
-    let min_data_field = document.createAttribute("data-field");
-    min_data_field.value = col.json_id;
-    filterInputMin.setAttributeNode(min_data_field);
-
-    let maxDataField = document.createAttribute("data-field");
-    maxDataField.value = col.json_id;
-    filterInputMax.setAttributeNode(maxDataField);
-
-    let idMin = document.createAttribute("id");
-    idMin.value = col.json_id + "_search_min";
-    filterInputMin.setAttributeNode(idMin);
-
-    let idMax = document.createAttribute("id");
-    idMax.value = col.json_id + "_search_max";
-    filterInputMax.setAttributeNode(idMax);
-
-    let placeholderMin = document.createAttribute("placeholder");
-    placeholderMin.value = "min";
-    filterInputMin.setAttributeNode(placeholderMin);
-
-    let placeholderMax = document.createAttribute("placeholder");
-    placeholderMax.value = "max";
-    filterInputMax.setAttributeNode(placeholderMax);
-
-    filterInputMin.classList.add("col-filter");
-    filterInputMin.classList.add("numericrange-filter");
-    filterInputMax.classList.add("col-filter");
-    filterInputMax.classList.add("numericrange-filter");
-
-    if (col.cssClassFilterInput) {
-      filterInputMin.classList.add(col.cssClassFilterInput);
-      filterInputMax.classList.add(col.cssClassFilterInput);
-    }
-
-    let filterChangeListener = null;
-    if (dataTableReference.settings()[0].oFeatures.bServerSide == true) {
-      // ---- SERVER SIDE PROCESSING MODE ----
-      filterChangeListener = this._createNumericFilterChangeListener(
-        filterInputMin,
-        filterInputMax,
-        col,
-        dataTableReference,
-      );
-    } else {
-      // ---- CLIENT SIDE PROCESSING MODE ----
-      // add a custom search function to DataTables which will read the current values of the min and max
-      // inputs and apply the appropriate filtering logic to the relevant column.
-      // This function will be called automatically by DataTables whenever the table is redrawn
-      // so we just need to trigger a redraw whenever the filter inputs change to ensure the filtering is applied.
-      this._attachFixedSearchToDataTable(col, filterInputMin, filterInputMax, dataTableReference);
-      // trigger redraw on filter input change to apply the filtering
-      filterChangeListener = function () {
-        dataTableReference.draw();
-      };
-    }
-
-    filterInputMin.addEventListener("blur", filterChangeListener);
-    filterInputMax.addEventListener("blur", filterChangeListener);
-
-    return [filterInputMin, filterInputMax];
-  }
-
-  _attachFixedSearchToDataTable(col, filterInputMin, filterInputMax, dataTableReference) {
-    dataTableReference.search.fixed(
-      "range_" + col.json_id,
-      function (searchStr, data, index) {
-        var min = parseInt(filterInputMin.value, 10);
-        var max = parseInt(filterInputMax.value, 10);
-        var value = parseFloat(data[col.json_id]) || 0;
-
-        if (
-          (isNaN(min) && isNaN(max)) ||
-          (isNaN(min) && value <= max) ||
-          (min <= value && isNaN(max)) ||
-          (min <= value && value <= max)
-        ) {
-          return true;
-        }
-        return false;
-      },
-    );
-  }
-
-  _createNumericFilterChangeListener(
-    filterInputMin,
-    filterInputMax,
-    col,
-    dataTableReference,
-  ) {
-    //create event callback function
-    return function () {
-      // For server-side processing, we will encode the range filter as a single search string in the format "min~max"
-      // where min and max are the values from the two inputs, or -Inf/Inf if not set. The server can then parse this string to apply the appropriate filtering.
-      let rangeMin = filterInputMin.value || "-Inf";
-      let rangeMax = filterInputMax.value || "Inf";
-
-      // DataTables sends the current search value for the column as the first element of the array returned by .search()
-      // we can use this to avoid unnecessary reloads if the range hasn't actually changed
-      let currentSearchValue =
-        dataTableReference.columns(col.col_idx).search()[0] || "-Inf~Inf"; // default to full range if no search value currently set
-
-      let newSearchValue = `${rangeMin}~${rangeMax}`;
-
-      if (newSearchValue !== currentSearchValue) {
-        dataTableReference.columns(col.col_idx).search(newSearchValue).draw();
-      }
-    };
   }
 
   //------------------------------------/
@@ -526,34 +330,36 @@ _createInputForSelectFilter(col) {
   //------------------------------------/
 
   validateColumnSpecifications() {
-    if (!this._checkColumnsIdxContinuous(this.columnsSpecifications)) {
+    if (!this._checkColumnsIdxContinuous(this.columns)) {
       throw new Error(
         "Column specifications must have continuous col_idx values starting from 0 with no gaps",
       );
     }
 
-    if (!this._checkColumnsIdxSorted(this.columnsSpecifications)) {
+    if (!this._checkColumnsIdxSorted(this.columns)) {
       throw new Error(
         "Column specifications must be sorted in ascending order of col_idx",
       );
     }
 
-    if (!this._checkConsecutiveColumnGroups(this.columnsSpecifications)) {
+    if (!this._checkConsecutiveColumnGroups(this.columns)) {
       throw new Error(
         "Column specifications must have column groups that form contiguous blocks of columns",
       );
     }
   }
 
+  _createColumnIndexes() {
+    this.columns.forEach((col, index) => col.col_idx = index);
+  }
+
+  _columnIndexesAbsent() {
+    return this.columns.every((col) => !col.hasOwnProperty("col_idx"));
+  }
+
+  // Checks if the col_idx values of the column specifications are continuous, meaning that they form a sequence without any gaps.
   _checkColumnsIdxContinuous(columnsSpecifications) {
     let someColumnsMissingColIdx = columnsSpecifications.some((col) => !col.hasOwnProperty("col_idx"));
-    let allColumnsMissingColIdx = columnsSpecifications.every((col) => !col.hasOwnProperty("col_idx"));
-
-    if(allColumnsMissingColIdx) {
-      // If no columns have col_idx, we can assume they are in the correct order and assign col_idx based on their position in the array
-      columnsSpecifications.forEach((col, index) => col.col_idx = index);
-      return true;
-    }
 
     if (someColumnsMissingColIdx) {      
         throw new Error("Either all or none of the column specifications should have a col_idx property");
@@ -561,9 +367,7 @@ _createInputForSelectFilter(col) {
 
     for (let i = 1; i < columnsSpecifications.length; i++) {
       if (
-        columnsSpecifications[i].col_idx -
-          columnsSpecifications[i - 1].col_idx !==
-        1
+        columnsSpecifications[i].col_idx - columnsSpecifications[i - 1].col_idx !== 1
       ) {
         return false;
       }
@@ -571,6 +375,7 @@ _createInputForSelectFilter(col) {
     return true;
   }
 
+  // Checks if the col_idx values of the column specifications are sorted in ascending order.
   _checkColumnsIdxSorted(columnsSpecifications) {
     for (let i = 1; i < columnsSpecifications.length; i++) {
       if (
@@ -582,6 +387,11 @@ _createInputForSelectFilter(col) {
     return true;
   }
 
+  /**
+   * Checks if the column groups are consecutive, meaning that they form contiguous blocks of columns.
+   * @param {Array} columnSpecification - An array of column specification objects defining the properties and behaviors of each column in the data table.
+   * @returns Boolean indicating whether the column groups are consecutive/contiguous
+  */
   _checkConsecutiveColumnGroups(columnsSpecifications) {
     const sorted = [...columnsSpecifications].sort(
       (a, b) => a.col_idx - b.col_idx,
@@ -609,30 +419,30 @@ _createInputForSelectFilter(col) {
   //  Data Table Initialisation   /
   //------------------------------/
 
-  colSpecToDataTableColDef(colSpec) {
-    const colDef = { data: colSpec.json_id };
-    if (colSpec.data_type === "weblink") {
-      colDef.render = this.renderWeblink;
-    }
+  /**
+    * Converts a column specification into a DataTables column definition object.
+    * @param {Column} column - The Column instance representing the column specification.
+    * @returns {Object} - The DataTables column definition object with the appropriate data and render properties.
+  */
+  columnToDataTableColDef(column) {
+    const colDef = { data: column.json_id };
+    colDef.render = (data, type, row, meta) => column.dataTableRenderer(data, type, row, meta);
     return colDef;
   }
 
-  //------------------------------/
-  //  Custom rendering handlers   /
-  //------------------------------/
-
-  renderWeblink(data, type, row, meta) {
-    if (type === "display" && data) {
-      return `<a href="${data.anchor_href}" target="_blank">${data.anchor_content}</a>`;
-    }
-    // Search, order and type return
-    return data.anchor_content;
-  }
 
   //-------------------------/
   //  Configuration request  /
   //-------------------------/
 
+  /**
+   * Fetches the configuration for a data table and its columns.
+   * @param {string} dataTableConfigName - The name of the data table configuration.
+   * @param {string} dataTableConfigVariant - The variant of the data table configuration.
+   * @param {string} columnConfigName - The name of the column configuration.
+   * @param {string} columnConfigVariant - The variant of the column configuration.
+   * @returns {Promise<Object>} - A promise resolving to the fetched configuration objects.
+   */
   static async fetchConfiguration(dataTableConfigName, dataTableConfigVariant, columnConfigName, columnConfigVariant,) {
     
      const [cols, datatable] = await Promise.all([
@@ -654,7 +464,14 @@ _createInputForSelectFilter(col) {
   }
 
   // Fetch table configuration JSON from API endpoint
-  // endpoint format: /table_provider/configuration/{configurationType}/{tableName}/{configurationVariant}
+  // 
+  /**
+   * Fetches a configuration asynchronously from the API endpoint. Endpoint format: /table_provider/configuration/{configurationType}/{tableName}/{configurationVariant}
+   * @param {string} configurationType - The type of the configuration.
+   * @param {string} tableName - The name of the table.
+   * @param {string} configurationVariant - The variant of the configuration.
+   * @returns {Promise<Object>} - A promise resolving to the fetched configuration object.
+   */
   static async _fetchConfigurationAsync(
     configurationType,
     tableName,
@@ -694,3 +511,5 @@ _createInputForSelectFilter(col) {
     }
   }
 }
+
+export { TableManager };

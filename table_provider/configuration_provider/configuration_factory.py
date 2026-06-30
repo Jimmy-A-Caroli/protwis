@@ -21,7 +21,7 @@ class ColumnConfigurationFactory(ConfigurationFactory):
                 config = json.load(file)
                 return config
         except FileNotFoundError:
-            raise Exception(f"Column configuration for {self.table_name} with variant {self.configuration_variant} not found.")
+            raise FileNotFoundError(f"Column configuration file for {self.table_name} with variant {self.configuration_variant} not found.")
 
 class DataTablesConfigurationFactory(ConfigurationFactory):
     """
@@ -34,4 +34,4 @@ class DataTablesConfigurationFactory(ConfigurationFactory):
                 config = json.load(file)
                 return config
         except FileNotFoundError:
-            raise Exception(f"DataTables configuration for {self.table_name} with variant {self.configuration_variant} not found.")
+            raise FileNotFoundError(f"DataTables configuration file for {self.table_name} with variant {self.configuration_variant} not found.")

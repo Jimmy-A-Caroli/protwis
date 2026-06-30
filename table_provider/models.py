@@ -1,6 +1,11 @@
 from django.db import models
 
-class StructureModelStatisticsTable(models.Model):
+class GpcrStructureStatisticsTable(models.Model):
+
+    '''
+        This model represents the structure statistics table for GPCRs generated from the data retrieved by GpcrStructureCoverageStatisticsQuery
+    '''
+
     uniprot_entry_name = models.CharField(max_length=20, null=False)
     uniprot_accession = models.CharField(max_length=20, null=False)
     protein_name = models.CharField(max_length=100, null=False)
@@ -86,7 +91,7 @@ class StructureModelStatisticsTable(models.Model):
             
 
     class Meta:
-        db_table = "structure_model_statistics"
+        db_table = "gpcr_structure_statistics"
         indexes = [
                 models.Index(fields=["uniprot_entry_name"], name="uniprot_entry_name_idx"),
                 models.Index(fields=["protein_name"], name="protein_name_idx"),

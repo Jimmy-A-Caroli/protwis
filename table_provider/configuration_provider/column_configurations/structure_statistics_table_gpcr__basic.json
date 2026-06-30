@@ -4,23 +4,21 @@
     "json_id": "protein_name",
     "title": "Protein",
     "data_type": "text",
-    "allow_filter": true
+    "allow_filter": true,
+    "show_symbol_popup": true    
   },
   {
     "column_group": "Classification",
     "json_id": "uniprot",
     "title": "UniProt",
-    "data_type": "weblink",
-    "allow_filter": true,
-    "cssClassHeaderCell": "uniprot_column_header",
-    "cssClassFilterCell": "uniprot_column_filter_cell",
-    "cssClassFilterInput": "uniprot_filter_input"
+    "data_type": "weblinktext",
+    "allow_filter": true
   },
   {
     "column_group": "Classification",
     "json_id": "gene",
     "title": "Gene",
-    "data_type": "weblink",
+    "data_type": "weblinktext",
     "allow_filter": true,    
     "cssClassFilterInput": "gene_filter_input"
   },

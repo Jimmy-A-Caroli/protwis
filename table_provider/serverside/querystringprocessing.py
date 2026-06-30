@@ -3,8 +3,11 @@ import re
 class datatablesQueryStringProcessor:
     def __init__(self, request):
         self.query_set = self._process_query_string(request.query_params)
-    
-    # This function unpacks the datatables query string into a nested dictionary structure, handling both simple and complex keys with array indices.
+    '''
+     This function unpacks the DataTables query string into a nested dictionary structure, handling both simple and complex keys with array indices.
+     :param query_dict: The query string parameters from the request, typically a dictionary-like object.
+     :return: A nested dictionary representing the structured query parameters.
+    '''
     def _process_query_string(self, query_dict):
         query_set = {}
         for key, value in query_dict.items():

@@ -1,4 +1,12 @@
 from table_provider.serverside.querystringprocessing import datatablesQueryStringProcessor 
+from django.db.models import Q
+
+'''
+ This module provides classes and functions for filtering and ordering data in a server-side processing context, specifically for use with DataTables. 
+ It defines a FilterSet class that processes query parameters from the request to generate filter requirements and ordering instructions based on the 
+ specified serializer's field mappings and data types. The module also includes specific filter classes for text and numeric range filtering, 
+ allowing for flexible and dynamic filtering of data based on user input.
+'''
 
 class FilterSet:
     def __init__(self, request, SerializerClass):
@@ -22,6 +30,12 @@ class FilterSet:
 
     def parseFilters(self):
         
+        '''
+         This function parses the query parameters from the request 
+         to generate filter requirements based on the specified 
+         serializer's field mappings and data types.
+        '''
+
         if 'columns' not in self.query_parameters:
             return
         
@@ -49,6 +63,12 @@ class FilterSet:
                 self.add_filter(filter_req)
 
     def parseOrdering(self):
+
+        '''
+         This function parses the query parameters from the request to generate ordering 
+         instructions based on the specified serializer's field mappings and data types.
+        '''
+
         if 'order' not in self.query_parameters:
             return
         
@@ -76,48 +96,81 @@ class filterRequirement:
         self.filter_values = None
 
 class textFilter(filterRequirement):
+
+    '''
+     This class represents a text filter requirement for a specific database field.
+     It supports filtering based on exact matches or regular expressions, allowing for flexible text-based filtering
+     It interacts with Select2 "tag" system to allow partial matches and multiple values to be filtered on a single field.
+     Queries are built using Django's Q objects, allowing for complex filtering logic to be constructed and applied to the database query. 
+    '''
+
     def __init__(self, db_field_name, filter_value):
         super().__init__(db_field_name, 'text')
+        self.tag_filters = []
+        self.standard_filters = []
 
-        if "," in filter_value:
-            self.filter_values = filter_value.split(',')
-            self.filter_action = 'in'
-        elif "%" in filter_value:
-            self.filter_values = filter_value.replace("%", "")
-            self.filter_action = 'contains'
-        else:
-            self.filter_values = filter_value
-            self.filter_action = ''    
+        filter_value = filter_value.split('|')
+
+        #remove regex anchors added for datatables from filter values
+        for fv in filter_value:
+            if fv.startswith('('):
+                fv = fv.strip("()")
+            if fv.startswith('^'):
+                fv = fv.strip("^$")
+            if ".*" in fv:
+                self.tag_filters.append(fv)
+            else:
+                fv = fv.replace("\\", "") #Remove escape characters from standard filters (added for regex compatibility with datatables)
+                self.standard_filters.append(fv)
     
-    def format_django(self):
-        if(self.filter_action == 'in'):
-            return {f"{self.db_field_name}__in": self.filter_values}
-        if(self.filter_action == 'contains'):
-            return {f"{self.db_field_name}__contains": self.filter_values}
-        else:
-            return {f"{self.db_field_name}": self.filter_values}
+    #Convert the filter values into a Django Q object for querying the database
+    def format_query(self):
+        if len(self.tag_filters) == 0 and len(self.standard_filters) == 1:
+            return Q(**{f"{self.db_field_name}": self.standard_filters[0]})
+        
+        query = Q()
+        if len(self.standard_filters) > 1:        
+            query &= Q(**{f"{self.db_field_name}__in": self.standard_filters})
+        
+        for tag_filter in self.tag_filters:
+            query |= Q(**{f"{self.db_field_name}__regex": rf"{tag_filter}"})
+        
+        return query
+
+            
 
 class numericRangeFilter(filterRequirement):
+
+    '''
+     This class represents a numeric range filter requirement for a specific database field.
+     It supports filtering based on minimum and maximum values. Values can be specified as '-Inf' or 'Inf' 
+     to represent unbounded ranges, allowing for filtering based on only a minimum or maximum value.
+    '''
+
     def __init__(self, db_field_name, filter_min, filter_max):
         super().__init__(db_field_name, 'numeric')
+        
         if (filter_min == '-Inf' and filter_max == 'Inf'):
             self.filter_values = { 'min': filter_min, 'max': filter_max }
-            self.filter_action = 'between'
+            self.filter_action = 'between'        
+        
         if (filter_min != '-Inf' and filter_max != 'Inf'):
             self.filter_values = { 'min': filter_min, 'max': filter_max }
             self.filter_action = 'between'
+        
         elif filter_min != '-Inf':
             self.filter_values = { 'min': filter_min }
             self.filter_action = 'gt'
+        
         elif filter_max != 'Inf':
             self.filter_values = { 'max': filter_max }
             self.filter_action = 'lt'
 
-    def format_django(self):
+    #Convert the filter values into a Django Q object for querying the database
+    def format_query(self):
         if(self.filter_action == 'between'):
-            return {f"{self.db_field_name}__gt": self.filter_values.get('min'), 
-                    f"{self.db_field_name}__lt": self.filter_values.get('max')}
-        elif(self.filter_action == 'gt'):
-            return {f"{self.db_field_name}__{self.filter_action}": self.filter_values['min']}
-        elif(self.filter_action == 'lt'):
-            return {f"{self.db_field_name}__{self.filter_action}": self.filter_values['max']}
+            return (Q(**{f"{self.db_field_name}__gt": self.filter_values.get('min')}) & Q(**{f"{self.db_field_name}__lt": self.filter_values.get('max')}))
+        else:
+            comp = 'min' if self.filter_action == 'gt' else 'max'
+            return Q(**{f"{self.db_field_name}__{self.filter_action}": self.filter_values[comp]})
+        

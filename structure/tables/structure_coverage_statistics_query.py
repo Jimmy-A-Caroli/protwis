@@ -9,6 +9,10 @@ from protein.models import Protein, Gene
 from common.models import WebResource
 
 
+######################################
+# GPCR Structure Coverage Statistics #
+######################################
+
 STIMULATORY_ROLES  = ['Agonist', 'Partial agonist', 'PAM']
 INHIBITORY_ROLES   = ['Allosteric antagonist', 'Antagonist', 'Inverse agonist', 'NAM']
 
@@ -119,10 +123,14 @@ def get_primary_gene_entrezid_subquery():
 #------------#
 # Main Query #
 #------------#
-def StructureCoverageModelStatisticsQuery(database):
+def GpcrStructureCoverageStatisticsQuery():
 
-    _uniprot_resource = WebResource.objects.get(slug="uniprot")
-    _entrez_resource = WebResource.objects.get(slug="entrez_gene")
+    '''
+        This query generates a summary of structure coverage statistics for GPCRs, 
+        including counts of structures in different states, 
+        best resolution, transducer counts, ligand types, and modality counts.
+        Returns a queryset of Protein objects annotated with these statistics.
+    '''
 
     queryset = Protein.objects.filter(
         #Q(source__name='SWISSPROT') | Q(source__name='TREMBL'),
