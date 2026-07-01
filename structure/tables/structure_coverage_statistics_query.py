@@ -1,12 +1,11 @@
 #Django Framework imports
-from django.db.models import Count, Q, Prefetch, TextField, Avg, Case, When, IntegerField, F, Value, CharField, Subquery, OuterRef, Exists, FloatField, BooleanField, ExpressionWrapper, Min, Max, DecimalField, Window
-from django.db.models.functions import Concat, Length, Round, Coalesce, Cast, Replace
+from django.db.models import Count, Q, IntegerField, F, Value, Subquery, OuterRef,  Min, DecimalField
+from django.db.models.functions import Coalesce, Replace
 
 #GPCRdb imports
 from structure.models import Structure, StructureExtraProteins, StructureType
 from interaction.models import StructureLigandInteraction
 from protein.models import Protein, Gene
-from common.models import WebResource
 
 
 ######################################
@@ -93,7 +92,7 @@ def _ligand_type_count(type_slugs):
 
 # ── subquery: count annotated ligand roles by name ────────────────
 def _role_count(role_names, invert=False):
-    
+
     qry = StructureLigandInteraction.objects.filter(
         structure__protein_conformation__protein__parent=OuterRef('pk'),
         annotated=True)
@@ -102,13 +101,13 @@ def _role_count(role_names, invert=False):
         qry = qry.filter(ligand_role__name__in=role_names)
     else:
         qry = qry.filter(~Q(ligand_role__name__in=role_names))
-    
+
     return (qry
             .filter(structure__structure_type__slug__in=LABORATORY_STRUCTURE_SOURCE)
             .values('structure__protein_conformation__protein__parent')
             .annotate(c=Count('id'))
             .values('c')
-    )   
+    )
 
 def get_primary_gene_name_subquery():
     return Subquery(
@@ -124,14 +123,12 @@ def get_primary_gene_entrezid_subquery():
 # Main Query #
 #------------#
 def GpcrStructureCoverageStatisticsQuery():
+    """Query to generate a summary of structure coverage statistics for GPCRs
 
-    '''
-        This query generates a summary of structure coverage statistics for GPCRs, 
-        including counts of structures in different states, 
-        best resolution, transducer counts, ligand types, and modality counts.
-        Returns a queryset of Protein objects annotated with these statistics.
-    '''
-
+    Generates summary statistics for each receptor including counts of structures
+    in different states, best resolution, transducer counts, ligand types, and modality counts.
+    Returns a queryset of Protein objects annotated with these statistics.
+    """
     queryset = Protein.objects.filter(
         #Q(source__name='SWISSPROT') | Q(source__name='TREMBL'),
         parent__isnull=True,
@@ -149,7 +146,7 @@ def GpcrStructureCoverageStatisticsQuery():
         gene_name = get_primary_gene_name_subquery(),
         gene_entrez_id = get_primary_gene_entrezid_subquery(),
         species_common_name = F('species__common_name'),
-        
+
         # ── structure counts by state ──────────────────────────────
         st_inact_c=Coalesce(Subquery(
             _struct_count('inactive'), output_field=IntegerField()), 0),
@@ -250,32 +247,33 @@ def GpcrStructureCoverageStatisticsQuery():
             "limod_nam_c",
             "limod_pam_c",
             "limod_unk_c",
-            ).filter(         
+            ).filter(
+            # Filter to only include proteins with at least one structure or ligand interaction
             Q(best_res_inact__isnull = False) |
             Q(best_res_interm__isnull = False) |
             Q(best_res_act__isnull = False) |
-            Q(st_inact_c__gt=0) | 
-            Q(st_interm_c__gt=0) | 
-            Q(st_act_c__gt=0) | 
-            Q(transd_gio_c__gt=0) | 
-            Q(transd_gq11_c__gt=0) | 
-            Q(transd_g1213_c__gt=0) | 
-            Q(transd_arrest_c__gt=0) | 
-            Q(transd_grks_c__gt=0) | 
-            Q(ligand_types_smmol_c__gt=0) | 
-            Q(ligand_types_pep_c__gt=0) | 
-            Q(limodgrp_stim_c__gt=0) | 
-            Q(limodgrp_inhib_c__gt=0) | 
-            Q(limodgrp_unk_c__gt=0) | 
-            Q(limod_apo_c__gt=0) | 
-            Q(limod_ag_c__gt=0) | 
-            Q(limod_ag_partial_c__gt=0) | 
-            Q(limod_allo_antag_c__gt=0) | 
-            Q(limod_antag_c__gt=0) | 
-            Q(limod_inv_ag_c__gt=0) | 
-            Q(limod_nam_c__gt=0) | 
-            Q(limod_pam_c__gt=0) | 
+            Q(st_inact_c__gt=0) |
+            Q(st_interm_c__gt=0) |
+            Q(st_act_c__gt=0) |
+            Q(transd_gio_c__gt=0) |
+            Q(transd_gq11_c__gt=0) |
+            Q(transd_g1213_c__gt=0) |
+            Q(transd_arrest_c__gt=0) |
+            Q(transd_grks_c__gt=0) |
+            Q(ligand_types_smmol_c__gt=0) |
+            Q(ligand_types_pep_c__gt=0) |
+            Q(limodgrp_stim_c__gt=0) |
+            Q(limodgrp_inhib_c__gt=0) |
+            Q(limodgrp_unk_c__gt=0) |
+            Q(limod_apo_c__gt=0) |
+            Q(limod_ag_c__gt=0) |
+            Q(limod_ag_partial_c__gt=0) |
+            Q(limod_allo_antag_c__gt=0) |
+            Q(limod_antag_c__gt=0) |
+            Q(limod_inv_ag_c__gt=0) |
+            Q(limod_nam_c__gt=0) |
+            Q(limod_pam_c__gt=0) |
             Q(limod_unk_c__gt=0)
         )
-    
+
     return queryset

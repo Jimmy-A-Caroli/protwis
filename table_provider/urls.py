@@ -1,6 +1,5 @@
 from django.conf.urls import url
-from django.urls import path
-from table_provider.views import *
+from table_provider.views import GpcrStructureStatisticsSummaryTable, ConfigurationFactoryView
 from django.views.decorators.cache import cache_page
 
 urlpatterns = [

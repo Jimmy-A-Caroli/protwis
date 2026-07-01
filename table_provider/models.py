@@ -1,10 +1,7 @@
 from django.db import models
 
 class GpcrStructureStatisticsTable(models.Model):
-
-    '''
-        This model represents the structure statistics table for GPCRs generated from the data retrieved by GpcrStructureCoverageStatisticsQuery
-    '''
+    """Model representing the structure statistics table for GPCRs generated from the data retrieved by GpcrStructureCoverageStatisticsQuery"""
 
     uniprot_entry_name = models.CharField(max_length=20, null=False)
     uniprot_accession = models.CharField(max_length=20, null=False)
@@ -36,7 +33,7 @@ class GpcrStructureStatisticsTable(models.Model):
     ligand_types_smmol_c = models.IntegerField(null=False)
     ligand_types_pep_c = models.IntegerField(null=False)
 
-    # Modality group counts 
+    # Modality group counts
     limodgrp_stim_c = models.IntegerField(null=False)
     limodgrp_inhib_c = models.IntegerField(null=False)
     limodgrp_unk_c = models.IntegerField(null=False)
@@ -53,8 +50,13 @@ class GpcrStructureStatisticsTable(models.Model):
     limod_unk_c = models.IntegerField(null=False)
 
     def __str__(self):
+        """Creates a string representation of the GpcrStructureStatisticsTable instance, including all relevant fields and their values.
+
+        Returns:
+            str: A string representation of the GpcrStructureStatisticsTable instance.
+        """
         str = f'''
-            "uniprot_entry_name" : {self.uniprot_entry_name}, 
+            "uniprot_entry_name" : {self.uniprot_entry_name},
             "protein_name" : {self.protein_name},
             "receptor_family" : {self.receptor_family},
             "receptor_class" : {self.receptor_class},
@@ -88,9 +90,11 @@ class GpcrStructureStatisticsTable(models.Model):
             "limod_unk_count" : {self.limod_unk_c },
             '''
         return "{" + str + "}"
-            
+
 
     class Meta:
+        """Index definitions for the GpcrStructureStatisticsTable model to optimize query performance during table filtering"""
+        
         db_table = "gpcr_structure_statistics"
         indexes = [
                 models.Index(fields=["uniprot_entry_name"], name="uniprot_entry_name_idx"),

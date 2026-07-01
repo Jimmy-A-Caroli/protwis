@@ -1,18 +1,14 @@
 import json
 
 class ConfigurationFactory():
-    """
-    Factory class for providing dataTables configurations to the frontend.
-    """
+    """Factory class for providing dataTables configurations to the frontend."""
 
     def __init__(self, table_name, configuration_variant):
         self.table_name = table_name
         self.configuration_variant = configuration_variant
 
 class ColumnConfigurationFactory(ConfigurationFactory):
-    """
-    Factory class for providing column configurations to the frontend.
-    """
+    """Factory class for providing column configurations to the frontend."""
 
     def fetch(self):
         # Implement logic to fetch column configuration based on self.table_name and self.configuration_variant
@@ -24,9 +20,8 @@ class ColumnConfigurationFactory(ConfigurationFactory):
             raise FileNotFoundError(f"Column configuration file for {self.table_name} with variant {self.configuration_variant} not found.")
 
 class DataTablesConfigurationFactory(ConfigurationFactory):
-    """
-    Factory class for providing dataTables configurations to the frontend.
-    """
+    """Factory class for providing dataTables configurations to the frontend."""
+    
     def fetch(self):
         # Implement logic to fetch dataTables configuration based on self.table_name and self.configuration_variant
         try:
