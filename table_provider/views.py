@@ -1,0 +1,130 @@
+#Django Framework imports
+from django.http import JsonResponse
+
+#Rest Framework imports
+from rest_framework import generics
+from rest_framework.response import Response
+from rest_framework.pagination import LimitOffsetPagination
+
+#Table provider imports
+from table_provider.configuration_provider.configuration_factory import ColumnConfigurationFactory, DataTablesConfigurationFactory
+from table_provider.models import GpcrStructureStatisticsTable
+from table_provider.serializers import GpcrStatisticsSummarySerializer
+from table_provider.serverside.filters import *
+from table_provider.serverside.querystringprocessing import datatablesQueryStringProcessor
+from structure.tables.structure_coverage_statistics_query import GpcrStructureCoverageStatisticsQuery
+
+#Pagination handler for dataTables server side processing
+class DataTablesLimitOffsetPagination(LimitOffsetPagination):
+    default_limit = 30
+    max_limit = 200
+    limit_query_param = "length"  
+    offset_query_param = "start"  
+
+class GpcrStructureStatisticsSummaryTable(generics.ListCreateAPIView):
+    """
+        Get general summary statistics for GPCR entries     
+    """
+    
+    #############
+    # API setup #
+    #############
+
+    serializer_class = GpcrStatisticsSummarySerializer
+    pagination_class = DataTablesLimitOffsetPagination
+
+    def get_queryset(self):
+        filters = FilterSet(self.request, GpcrStatisticsSummarySerializer)
+        queryset = self.statistics_table_fetch(filters)
+        return queryset
+
+    def list(self, request, *args, **kwargs):        
+        
+        unfilteredCount = GpcrStructureStatisticsTable.objects.all().count()
+        
+        if GpcrStructureStatisticsTable.objects.all().count() == 0:
+            self.BuildStatisticsSummaryTable()
+            unfilteredCount = GpcrStructureStatisticsTable.objects.all().count()
+        
+        queryset = self.get_queryset()
+        url_params = datatablesQueryStringProcessor(self.request).query_set 
+
+        # server side datatables processing response format
+        if 'draw' in url_params:
+
+            response = {}
+            
+            rows = list(queryset)  # Default to full queryset if pagination is not applied
+            
+            # unfilteredCount = self.fetchQueryMaxResultCount()
+            filteredCount = len(rows)
+            
+            page = self.paginate_queryset(rows)
+            if page is not None:
+                rows = page
+                
+            serializer = self.get_serializer(rows, many=True)  
+            
+            response["draw"] = url_params["draw"]
+            response["recordsTotal"] = unfilteredCount
+            response["recordsFiltered"] = filteredCount
+            response["data"] = serializer.data        
+            
+            return JsonResponse(response)
+        
+        else:
+            # client side datatables processing response format
+            serializer = self.get_serializer(queryset, many=True)  
+            # for consistency with server side processing response format, 
+            # wrap data in "data" key, even though client side processing doesn't require this
+            response = {}
+            response["data"] = serializer.data   
+            return Response(response)
+
+
+    def statistics_table_fetch(self, filters):
+        
+        queryset = GpcrStructureStatisticsTable.objects.all()
+
+        for query_filter in filters.get_filters():            
+            queryset = queryset.filter(query_filter.format_query())
+
+        if filters.get_ordering():
+            queryset = queryset.order_by(*filters.get_ordering())
+
+        return queryset
+    
+    @staticmethod
+    def get_select_options(request, column):
+        if column in GpcrStatisticsSummarySerializer.Meta.serializer_method_to_filter_field_map:
+            column = GpcrStatisticsSummarySerializer.Meta.serializer_method_to_filter_field_map[column]
+
+        queryset = GpcrStructureStatisticsTable.objects.all().values_list(column, flat=True).distinct().order_by(column)
+        
+        return JsonResponse(list(queryset), safe=False)
+
+    def BuildStatisticsSummaryTable(self):
+        stat_data_model = [ GpcrStructureStatisticsTable(**data_item) for data_item in GpcrStructureCoverageStatisticsQuery() ]
+        GpcrStructureStatisticsTable.objects.bulk_create(stat_data_model, batch_size=10000)
+
+
+class ConfigurationFactoryView(generics.ListCreateAPIView):
+    def get(self, request, *args, **kwargs):
+        configuration_type = self.kwargs.get('configuration_type')
+        table_name = self.kwargs.get('table_name')
+        configuration_variant = self.kwargs.get('configuration_variant')
+        
+        
+        if configuration_type == 'column':
+            config_factory = ColumnConfigurationFactory(table_name, configuration_variant)
+        elif configuration_type == 'datatable':
+            config_factory = DataTablesConfigurationFactory(table_name, configuration_variant)
+        else:
+            return JsonResponse({'error': 'Invalid configuration type requested. Config: ' + configuration_type}, status=400)
+
+        try:
+            config = config_factory.fetch()
+        except FileNotFoundError as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+        return JsonResponse(config, safe=False)
