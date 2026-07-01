@@ -33,7 +33,7 @@ class TextSelect extends DataTypeBase {
 
       // Add function to populate select options as a callback to be run once data is loaded into the table,
       // as we need access to the dataset to determine the unique values for the options.
-      if(tableManagerReference.dataTableReference.settings()[0].oFeatures.bServerSide == true) {
+      if(tableManagerReference.dataTableReference.settings()[0].oFeatures.bServerSide === true) {
         tableManagerReference.dataLoadedCallBacks.push( () => this._populateTextSelectFilterOptionsServerSide(this.json_id, this.col_idx, filterInput, tableManagerReference.dataTableReference));
       } else {
         tableManagerReference.dataLoadedCallBacks.push( () => this._populateTextSelectFilterOptionsClientSide(this.json_id, this.col_idx, filterInput, tableManagerReference.dataTableReference));

@@ -206,12 +206,12 @@ def br_after_class_code ( objs ):
         return m.group(1) + "<br/>" + m.group(2)
     else:
         return objs
-    
-@register.filter(name='times') 
+
+@register.filter(name='times')
 def times(number):
     return range(number)
 
-@register.filter(name='class_code_to_name') 
+@register.filter(name='class_code_to_name')
 def class_code_to_name(class_code):
     class_names = {
         "A": "Class A (Rhodopsin)",
@@ -227,7 +227,7 @@ def class_code_to_name(class_code):
     }
     return class_names.get(class_code, "Invalid class code")
 
-@register.filter(name='format_class_header') 
+@register.filter(name='format_class_header')
 def format_class_header(class_code):
     class_names = {
         "Class A (Rhodopsin)": "Class A<br>(Rhodopsin)",

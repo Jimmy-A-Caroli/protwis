@@ -389,7 +389,8 @@ def PdbTableData(request):
         r['protein_family'] = shorted.family.parent.short()
         r['class'] = shorted.family.parent.parent.parent.shorter()
         r['species'] = s.protein_conformation.protein.species.common_name
-        r['gene'] = shorted.genes.first().name        
+        gene_obj = shorted.genes.first()
+        r['gene'] = gene_obj.name if gene_obj else "-"
         # # r['date'] = s.publication_date
         r['state'] = s.state.name
         r['distance_representative'] = 'Yes' if s.distance_representative else 'No'

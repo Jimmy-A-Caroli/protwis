@@ -27,7 +27,7 @@ class Numeric extends DataTypeBase {
         }
 
         let filterChangeListener = null;
-        if (tableManagerReference.dataTableReference.settings()[0].oFeatures.bServerSide == true) {
+        if (tableManagerReference.dataTableReference.settings()[0].oFeatures.bServerSide === true) {
         // ---- SERVER SIDE PROCESSING MODE ----
         filterChangeListener = this._createNumericFilterChangeListener(
             this.col_idx,

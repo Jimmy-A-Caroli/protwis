@@ -411,7 +411,7 @@ def getTargetTable():
             # data-search="{t["pdbid"]}" is hidden and used for search box. 
             # t["pdbid_two"] is one shown. Show only first two pdb's.
             is_human = ("No" if t['slug'] in missing_slugs else "Yes")
-            data_toggle = "tooltip" if t["pdbid_tooltip"]!="-" else ""
+            data_toggle = 'data-toggle="tooltip"' if t["pdbid_tooltip"]!="-" else ""
             data_table += f'''<tr> 
             <td data-sort="0"><input autocomplete="off" class="form-check-input" type="checkbox" 
                 name="targets" id="{t["slug"]}" data-entry="{t["name"]}" 
@@ -424,7 +424,7 @@ def getTargetTable():
             <td><span class="expand">{t["iuphar"]}</span></td> 
             <td>{t["ligand_count"]}</td> 
             <td>{t["pdb_count"]}</td> 
-            <td><span data-toggle={data_toggle} data-html="true" 
+            <td><span {data_toggle} data-html="true" 
                 data-placement="bottom" title="{t["pdbid_tooltip"]}" 
                 data-search="{t["pdbid"]}" >{ t["pdbid_two"]}</span></td> 
             <!--<td>{t["approved_target"]}</td> 

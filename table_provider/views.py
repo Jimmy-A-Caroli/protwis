@@ -52,14 +52,10 @@ class GpcrStructureStatisticsSummaryTable(generics.ListCreateAPIView):
 
             response = {}
 
-            rows = list(queryset)  # Default to full queryset if pagination is not applied
+            filteredCount = queryset.count()
 
-            # unfilteredCount = self.fetchQueryMaxResultCount()
-            filteredCount = len(rows)
-
-            page = self.paginate_queryset(rows)
-            if page is not None:
-                rows = page
+            page = self.paginate_queryset(queryset)
+            rows = page if page is not None else queryset
 
             serializer = self.get_serializer(rows, many=True)
 

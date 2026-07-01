@@ -4,7 +4,7 @@
 import { DataTypeBase } from "./datatypebase.js";
 
 class Text extends DataTypeBase {
-    
+
     createFilterInterface(tableManagerReference) {
         if (!this.allow_filter) {
             return null;
@@ -14,7 +14,7 @@ class Text extends DataTypeBase {
         filterInput.setAttribute("data-field", this.json_id);
         filterInput.setAttribute("id", this.json_id + "_search");
 
-        filterInput.classList.add("this.col-filter");
+        filterInput.classList.add("col-filter");
         filterInput.classList.add("text-filter");
 
         if (this.cssClassFilterInput) {
@@ -31,7 +31,7 @@ class Text extends DataTypeBase {
         const wrapper = document.createElement("div");
         wrapper.style.cssText = "position:relative;display:inline-flex;align-items:center;gap:2px;";
         wrapper.appendChild(filterInput);
-        
+
         if (this.show_symbol_popup) {
             const { symbolBtn, popup } = this.createSymbolPopup(filterInput);
             wrapper.appendChild(symbolBtn);
@@ -121,17 +121,17 @@ class Text extends DataTypeBase {
         }
 
         const currentSearchValue = tableManagerReference.dataTableReference.columns(col_idx).search()[0];
-        
+
         let newSearchValue = e.target.value;
-        
+
         const dataOptions = tableManagerReference.dataTableReference.column(col_idx).data(0).toArray().map((item) => stripHtmlTags(item));
 
         const useRegex = !dataOptions.includes(newSearchValue)
 
         if (useRegex) {
               newSearchValue = newSearchValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex special characters
-              newSearchValue = ".*" + newSearchValue + ".*"; // wrap tag values with wildcards for "contains" search              
-        } 
+              newSearchValue = ".*" + newSearchValue + ".*"; // wrap tag values with wildcards for "contains" search
+        }
 
         if (newSearchValue !== currentSearchValue) {
             tableManagerReference.dataTableReference.columns(col_idx).search(newSearchValue, useRegex).draw();

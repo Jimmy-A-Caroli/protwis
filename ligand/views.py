@@ -4181,9 +4181,12 @@ class PhysiologicalLigands(TemplateView):
                 publications[ligand_receptor] = {}
             if data['publication__web_link__index']:
                 if data['publication__web_link__index'].isdigit():
-                    websource = pubmed_websource if data['publication__web_link__index'].isdigit() else doi_websource
-                    pub_link = str(WebLink(index=data['publication__web_link__index'], web_resource=websource))
-                
+                    pub_link = str(WebLink(index=data['publication__web_link__index'], web_resource=pubmed_websource))
+                elif data['publication__web_link__index'].startswith('10.'):
+                    pub_link = str(WebLink(index=data['publication__web_link__index'], web_resource=doi_websource))
+                else:
+                    pub_link = ""
+
                 #skipping publications without info (probably bug in the database)
                 if data['publication__year'] == None:
                     continue
@@ -4220,7 +4223,7 @@ class PhysiologicalLigands(TemplateView):
                 data_subset['UniProt'] = data['receptor__entry_name'].split('_')[0].upper()
                 data_subset['IUPHAR'] = data['receptor__name'].replace(" receptor","").replace("-adrenoceptor","")
                 data_subset['Gene'] = data['receptor__genes__name']
-                data_subset['Gene_weblink'] = str(WebLink(index=data['receptor__genes__entrez_id'], web_resource=entrez_websource))
+                data_subset['Gene_weblink'] = str(WebLink(index=data['receptor__genes__entrez_id'], web_resource=entrez_websource)) if data['receptor__genes__entrez_id'] else ""
                 data_subset['Species'] = data['receptor__species__common_name']
                 data_subset['Ligand name'] = data['ligand__name']
                 data_subset['GtP link'] =  str(WebLink(index=gtpidlinks[data['ligand']], web_resource=gtplig_websource))

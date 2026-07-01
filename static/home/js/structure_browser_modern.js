@@ -155,10 +155,13 @@
   {
     data: "gene",
     name: "Gene",
-    render: (d, t, r) =>
-      t != "display" || d?.entrez_url === "-"
-        ? d.name
-        : `<a href="${d.entrez_url}" target="_blank" rel="noopener">${d.name}</a>`,
+    render: (d, t) => {
+       if (!d) return "";
+       const name = d.name || "";
+       const url = d.entrez_url;
+       if (t !== "display" || !url || url === "-") return name;
+       return `<a href="${url}" target="_blank" rel="noopener">${name}</a>`;
+     },
   },
   {
     data: "iuphar_name",
@@ -869,7 +872,7 @@
       columns.forEach(key => {
         const td = document.createElement("td");
         if(key == 'gene') {
-          td.innerHTML = row[key].name || '';
+          td.innerHTML = row[key] ? row[key].name || '' : '';
         } else {
           td.innerHTML = row[key] || ''; 
         }

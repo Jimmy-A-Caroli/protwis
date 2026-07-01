@@ -10,7 +10,7 @@ urlpatterns = [
     #DataTables/TableManager data source - Non-cached URL for server-side processing
     url(r'^structure_statistics_table/gpcr/?$', (GpcrStructureStatisticsSummaryTable.as_view()), name='structure_statistics_table'),
     #DataTables/TableManager data source - Cached URL for client side processing
-    url(r'^structure_statistics_table_cached/gpcr/?$$', cache_page(60*60*24)(GpcrStructureStatisticsSummaryTable.as_view()), name='structure_statistics_table_cached'),  
+    url(r'^structure_statistics_table_cached/gpcr/?$', cache_page(60*60*24)(GpcrStructureStatisticsSummaryTable.as_view()), name='structure_statistics_table_cached'),  
 
     #AJAX source for dropdown select options for filtering various columns in the GPCR Structure Statistics Table
     url(r'^structure_statistics_table/gpcr/options/(?P<column>[^/]+)/?$', (GpcrStructureStatisticsSummaryTable.get_select_options), name='structure_statistics_table_options'),

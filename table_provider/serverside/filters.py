@@ -71,12 +71,11 @@ class FilterSet:
 
         order_array = []
         for order_column in self.query_parameters['order']:
-            order_array = []
             column_idx = int(order_column['column'])
             json_name = self.query_parameters['columns'][column_idx]['data']
             db_name = self.field_mappings.get(json_name)
             order_direction = '' if order_column['dir'] == 'asc' else '-'
-            order_array.append((f"{order_direction}{db_name}") )
+            order_array.append(f"{order_direction}{db_name}")
         self._ordering = order_array
 
 
