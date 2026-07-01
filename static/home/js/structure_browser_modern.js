@@ -294,6 +294,16 @@
 
 
   // ===== 3) COLVIS (Table Control) ===========================================
+  function syncTableControlBtn(table) {
+    const hasHidden = table.columns().indexes().toArray()
+      .filter(i => i >= 6)
+      .some(i => !table.column(i).visible());
+    $('.btn-table-control span:first').html(
+      'Table Control' +
+      (hasHidden ? ' <i class="glyphicon glyphicon-eye-close" style="font-size:11px;" title="Some columns are hidden"></i>' : '')
+    );
+  }
+
   function controlTableButtonWithGroups(table) {
     const managedIdx = table.columns().indexes().toArray().filter(i => i >= 6); // lock 0..5
     return {
@@ -499,8 +509,14 @@
       },
       stateLoadParams: function (settings, state) {
         state.search = { search: "" };
-        state.columns.forEach(c => { c.search = { search: "" }; });
         state.start = 0;
+        const inWorkflow = window.location.hash.startsWith('#keepselection') ||
+                           sessionStorage.getItem('sbReturnWorkflow') === '1';
+        sessionStorage.removeItem('sbReturnWorkflow');
+        state.columns.forEach((c, i) => {
+          c.search = { search: "" };
+          if (!inWorkflow && i !== 5) c.visible = true; // col 5 = internal ID, always hidden
+        });
       },
       buttons: [
         {
@@ -762,6 +778,7 @@
     ClearSelection("targets");
     if (selectedData.length === 0) { showAlert("No entries selected for sequence alignment", "danger"); return; }
     selectedData.forEach(row => AddToSelection("targets", "structure", row.pdb));
+    sessionStorage.setItem('sbReturnWorkflow', '1');
     window.location.href = "/structure/selection_convert";
   }
 
@@ -772,6 +789,7 @@
     if (selectedData.length > 100){ showAlert("Maximum number of selected entries is 100", "warning"); return; }
     const ids = selectedData.map(row => row.pdb.replace(/\s+/g, ""));
     AddToSelection("targets", "structure_many", ids.join(","));
+    sessionStorage.setItem('sbReturnWorkflow', '1');
     window.location.href = "/structure/pdb_download";
   }
 
@@ -1005,8 +1023,8 @@
           });
         });
 
-        // Keep dividers in sync with visibility toggles
-        table.on('column-visibility.dt', function(){ applyGroupBorders(table); });
+        // Keep dividers and Table Control indicator in sync with visibility toggles
+        table.on('column-visibility.dt', function(){ applyGroupBorders(table); syncTableControlBtn(table); });
 
         // Build the column filters
         createFilters();
@@ -1015,6 +1033,7 @@
         $("#Init_loader").busyLoad("hide").hide();
         $("#StructureBrowserTableContainer").show();
         table.columns.adjust().draw(false);
+        syncTableControlBtn(table);
 
         // initial export state
         updateExportSelectedState();
