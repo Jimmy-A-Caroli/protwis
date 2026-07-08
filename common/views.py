@@ -1084,6 +1084,7 @@ class AbsSegmentSelection(TemplateView):
         slug = (seg.slug or '').upper()
         name = (seg.name or '')
         category = (seg.category or '').lower()
+        domain = (seg.domain or '').upper()
 
         # Terminus: split into N-term / C-term
         if category == 'terminus':
@@ -1094,6 +1095,16 @@ class AbsSegmentSelection(TemplateView):
         # Helix 8 explicitly
         if slug == 'H8' or name.startswith('Helix 8'):
             return 'seg-h8'
+
+        # GAIN domain and Class D1 sub-segments: color by structural category
+        if domain == 'GAIN' or slug.startswith('D1'):
+            if category == 'sheet':
+                return 'seg-sheet'
+            if category in ('loop', 'turn'):
+                return 'seg-ecl'
+            if category == 'helix':
+                return 'seg-tm'
+            return 'seg-default'
 
         # Transmembrane helices (TM1–TM7 etc.)
         if slug.startswith('TM'):
@@ -1110,12 +1121,29 @@ class AbsSegmentSelection(TemplateView):
         # Fallback
         return 'seg-default'
 
+    # --- helper: decide which of the 3 schematic rows a segment belongs on ---
+    def _get_segment_row_class(self, seg):
+        """
+        All-GPCR snake-plot rows: extracellular/N-term on top, TMs in the
+        middle, intracellular/H8/C-term on the bottom.
+        """
+        slug = (seg.slug or '').upper()
+
+        if slug.startswith('N-TERM') or slug.startswith('ECL'):
+            return 'seg-row-1'
+        if slug.startswith('TM'):
+            return 'seg-row-2'
+        # ICL*, H8, C-term
+        return 'seg-row-3'
+
     def _assign_segment_colors(self, segments):
         """
-        Attach ui_color_class attribute to each segment.
+        Attach ui_color_class, ui_row_class and display_slug attributes to each segment.
         """
         for seg in segments:
             seg.ui_color_class = self._get_segment_color_class(seg)
+            seg.ui_row_class = self._get_segment_row_class(seg)
+            seg.display_slug = (seg.slug or '').replace('ECL', 'EL').replace('ICL', 'IL')
         return segments
 
     def get_context_data(self, **kwargs):
@@ -1165,6 +1193,7 @@ class AbsSegmentSelection(TemplateView):
             .exclude(name__startswith='ECD')
             .exclude(domain='GAIN')          # keep GAIN separate
             .exclude(slug__startswith='D1')  # keep D1 sheets/turns separate
+            .exclude(slug='ICL4')            # not shown in the schematic segment layout
             .order_by('id')
             .prefetch_related('generic_numbers')
         )
@@ -2233,6 +2262,12 @@ def ExpandSegment(request):
     cgn = False
     if numbering_scheme_slug == 'cgn':
         cgn = True
+    elif numbering_scheme_slug == 'false' and ProteinSegment.objects.filter(id=segment_id, slug__startswith='D1').exists():
+        # Class D1's fungal-pheromone segments only exist on Class D1
+        # receptors - always default to the Class D scheme, rather than
+        # whichever selected protein happens to be first (which could be
+        # any class, e.g. Class A, if it isn't the D1 target itself).
+        numbering_scheme = ResidueNumberingScheme.objects.get(slug='gpcrdbd')
     elif numbering_scheme_slug == 'false' and simple_selection:
         first_item = False
         if simple_selection.reference:

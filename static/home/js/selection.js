@@ -34,12 +34,25 @@ function toggleButtonClass(button_id) {
     $('#'+button_id).toggleClass('active')
 }
 
+// Flips a toggle button's arrow glyph to reflect the section it controls:
+// pointing up while open, down while collapsed.
+function setToggleArrow(toggleButton, isOpen) {
+    var arrow = toggleButton && toggleButton.querySelector('.glyphicon');
+    if (!arrow) return;
+    arrow.classList.toggle('glyphicon-arrow-up', isOpen);
+    arrow.classList.toggle('glyphicon-arrow-down', !isOpen);
+}
+
 function ToggleSegments() {
+    var isHidden = !$('#sequence_segments').is(':visible');
     $('#sequence_segments').slideToggle("fast");
+    setToggleArrow(event.currentTarget, isHidden);
 }
 
 function ToggleResidueSets() {
+    var isHidden = !$('#residue_sets').is(':visible');
     $('#residue_sets').slideToggle("fast");
+    setToggleArrow(event.currentTarget, isHidden);
 }
 
 function AddToSelection(selection_type, selection_subtype, selection_id) {
@@ -521,21 +534,8 @@ function ToggleSubGroup(id) {
     var isHidden = (el.style.display === 'none' || !el.style.display);
     el.style.display = isHidden ? 'block' : 'none';
 
-    // Find the arrow icon inside the toggle button
     // `event.currentTarget` is the <a> element that was clicked
-    var arrow = event.currentTarget.querySelector('.glyphicon');
-
-    if (arrow) {
-        if (isHidden) {
-            // Now opened → show arrow up
-            arrow.classList.remove('glyphicon-arrow-down');
-            arrow.classList.add('glyphicon-arrow-up');
-        } else {
-            // Now closed → show arrow down
-            arrow.classList.remove('glyphicon-arrow-up');
-            arrow.classList.add('glyphicon-arrow-down');
-        }
-    }
+    setToggleArrow(event.currentTarget, isHidden);
 }
 
 function updateSegmentAvailability() {

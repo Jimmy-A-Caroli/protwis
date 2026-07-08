@@ -5,6 +5,10 @@
     <script src="{% static 'home/js/selection.js' %}"></script>
 {% endblock %}
 
+{% block left_column_class %}col-md-3{% endblock %}
+{% block middle_column_class %}col-md-6{% endblock %}
+{% block right_column_class %}col-md-3{% endblock %}
+
 {% block middle_column %}
             {% if segment_list %}
             <!-- segment list -->
