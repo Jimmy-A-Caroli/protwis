@@ -1,4 +1,5 @@
 import json
+import pathlib
 
 class ConfigurationFactory():
     """Factory class for providing dataTables configurations to the frontend."""
@@ -13,7 +14,8 @@ class ColumnConfigurationFactory(ConfigurationFactory):
     def fetch(self):
         # Implement logic to fetch column configuration based on self.table_name and self.configuration_variant
         try:
-            with open(f'table_provider/configuration_provider/column_configurations/{self.table_name}__{self.configuration_variant}.json', 'r') as file:
+            config_path = pathlib.Path(__file__).resolve().parent / "column_configurations" / f"{self.table_name}__{self.configuration_variant}.json"
+            with open(config_path, 'r') as file:
                 config = json.load(file)
                 return config
         except FileNotFoundError:
@@ -25,7 +27,8 @@ class DataTablesConfigurationFactory(ConfigurationFactory):
     def fetch(self):
         # Implement logic to fetch dataTables configuration based on self.table_name and self.configuration_variant
         try:
-            with open(f'table_provider/configuration_provider/datatables_configurations/{self.table_name}__{self.configuration_variant}.json', 'r') as file:
+            config_path = pathlib.Path(__file__).resolve().parent / "datatables_configurations" / f"{self.table_name}__{self.configuration_variant}.json"
+            with open(config_path, 'r') as file:
                 config = json.load(file)
                 return config
         except FileNotFoundError:

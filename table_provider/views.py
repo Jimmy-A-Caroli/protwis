@@ -1,5 +1,6 @@
 #Django Framework imports
 from django.http import JsonResponse
+from django.core.exceptions import FieldError
 
 #Rest Framework imports
 from rest_framework import generics
@@ -38,11 +39,12 @@ class GpcrStructureStatisticsSummaryTable(generics.ListCreateAPIView):
 
     def list(self, request, *args, **kwargs):
 
-        unfilteredCount = GpcrStructureStatisticsTable.objects.all().count()
-
-        if GpcrStructureStatisticsTable.objects.all().count() == 0:
+        table_qs = GpcrStructureStatisticsTable.objects.all()
+        
+        if not table_qs.exists():
             self.build_statistics_summary_table()
-            unfilteredCount = GpcrStructureStatisticsTable.objects.all().count()
+        
+        unfilteredCount = table_qs.count()
 
         queryset = self.get_queryset()
         url_params = DatatablesQueryStringProcessor(self.request).query_set
@@ -89,10 +91,14 @@ class GpcrStructureStatisticsSummaryTable(generics.ListCreateAPIView):
 
     @staticmethod
     def get_select_options(request, column):
+        #Map any complex table columns back to their primary data column for the query (e.g. weblinks with custom renderers)
         if column in GpcrStatisticsSummarySerializer.Meta.serializer_method_to_filter_field_map:
             column = GpcrStatisticsSummarySerializer.Meta.serializer_method_to_filter_field_map[column]
 
-        queryset = GpcrStructureStatisticsTable.objects.all().values_list(column, flat=True).distinct().order_by(column)
+        try:
+            queryset = GpcrStructureStatisticsTable.objects.values_list(column, flat=True).distinct().order_by(column)
+        except FieldError:
+            return JsonResponse({'error': f'Invalid column requested: {column}'}, status=400)
 
         return JsonResponse(list(queryset), safe=False)
 
