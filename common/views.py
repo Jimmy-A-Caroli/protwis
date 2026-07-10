@@ -1,5 +1,6 @@
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.views.generic import TemplateView
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
@@ -3357,10 +3358,55 @@ def check_selection_status(request):
         if fname.startswith("Class D1"):
             has_class_d1 = True
 
-    return JsonResponse({
+    # ------------------------------------------------------------------
+    # Bulk-remove any GAIN/D1 segment or residue selection that's no longer
+    # valid (its Class B2/D1 target was removed) - whole segments and
+    # individual residues both, in one pass, not one RemoveFromSelection
+    # AJAX call per stale item. Residue items resolve their segment via
+    # default_generic_number - batched into a single query rather than one
+    # per residue.
+    # ------------------------------------------------------------------
+    segments = getattr(selection, 'segments', [])
+    residue_items = [s for s in segments if isinstance(s.item, ResidueGenericNumberEquivalent)]
+
+    residue_segment_info = {}
+    if residue_items:
+        default_gn_ids = [s.item.default_generic_number_id for s in residue_items]
+        residue_segment_info = {
+            row['id']: (row['protein_segment__domain'], row['protein_segment__slug'] or '')
+            for row in ResidueGenericNumber.objects.filter(id__in=default_gn_ids)
+                .values('id', 'protein_segment__domain', 'protein_segment__slug')
+        }
+
+    def _is_still_valid(sel_item):
+        if isinstance(sel_item.item, ProteinSegment):
+            domain, slug = sel_item.item.domain, sel_item.item.slug
+        elif isinstance(sel_item.item, ResidueGenericNumberEquivalent):
+            domain, slug = residue_segment_info.get(sel_item.item.default_generic_number_id, (None, ''))
+        else:
+            return True
+
+        if domain == 'GAIN' and not has_class_b2:
+            return False
+        if slug.startswith('D1') and not has_class_d1:
+            return False
+        return True
+
+    filtered_segments = [s for s in segments if _is_still_valid(s)]
+
+    response = {
         'has_class_b2': has_class_b2,
         'has_class_d1': has_class_d1,
-    })
+    }
+
+    if len(filtered_segments) != len(segments):
+        selection.segments = filtered_segments
+        request.session['selection'] = selection.exporter()
+        response['segments_html'] = render_to_string(
+            'common/selection_lists.html', selection.dict('segments'), request=request
+        )
+
+    return JsonResponse(response)
 
 def get_gpcr_class_name_for_item(sel_item):
     """

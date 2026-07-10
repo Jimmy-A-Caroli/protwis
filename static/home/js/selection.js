@@ -588,9 +588,6 @@ function updateSegmentAvailability() {
                 if (gainHeading.length) {
                     gainHeading.text("Class B2 – GAIN domain (No Class B2 in selection)");
                 }
-
-                // remove any selected GAIN segments on the right side
-                removeGainSegmentsFromSelection();
             }
 
 
@@ -601,9 +598,19 @@ function updateSegmentAvailability() {
 
             if (!hasD1) {
                 d1Buttons.addClass("segment-disabled");
-                removeD1SegmentsFromSelection();
             } else {
                 d1Buttons.removeClass("segment-disabled");
+            }
+
+            // The server already bulk-removed any now-invalid GAIN/D1
+            // segment/residue selections (in this same request) if hasB2/
+            // hasD1 came back false - segments_html is only present when
+            // something actually changed, so refresh the list + re-sync the
+            // outlines in that case rather than issuing per-item removals.
+            if (data.segments_html) {
+                $("#selection-segments").html(data.segments_html);
+                syncSegmentButtonSelectionState();
+                syncResidueButtonSelectionState();
             }
 
 
@@ -646,22 +653,6 @@ function updateSegmentAvailability() {
 }
 
 
-
-function removeGainSegmentsFromSelection() {
-    $("#selection-segments .target-selection[data-segment-domain='GAIN']").each(function() {
-        RemoveFromSelection('segments',
-            $(this).data("selection-subtype"),
-            $(this).data("segment-id"));
-    });
-}
-
-function removeD1SegmentsFromSelection() {
-    $("#selection-segments .target-selection[data-segment-domain='D1']").each(function() {
-        RemoveFromSelection('segments',
-            $(this).data("selection-subtype"),
-            $(this).data("segment-id"));
-    });
-}
 
 // Toggle a segment when clicking its left-hand button
 function ToggleSegmentSelection(btn) {
