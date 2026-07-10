@@ -41,11 +41,14 @@ import xlrd
 
 
 def _filter_context_selection_domain(context, domain):
-    """Non-destructively filters context['selection'][...] lists built by
-    the parent get_context_data, so cross-flow items never render even on a
-    fresh page load - nothing touches the session here, matching the
-    non-destructive filtering _current_alignment_domain does for the
-    AddToSelection/RemoveFromSelection AJAX responses in common/views.py."""
+    """
+    Non-destructively filter context['selection'][...] lists.
+
+    Built by the parent get_context_data, so cross-flow items never render
+    even on a fresh page load - nothing touches the session here, matching
+    the non-destructive filtering _current_alignment_domain does for the
+    AddToSelection/RemoveFromSelection AJAX responses in common/views.py.
+    """
     selection_ctx = context.get('selection') or {}
     for selection_type in ('reference', 'targets', 'segments'):
         if selection_type in selection_ctx:
