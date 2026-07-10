@@ -2382,6 +2382,12 @@ def ExpandSegment(request):
     cgn = False
     if numbering_scheme_slug == 'cgn':
         cgn = True
+    elif numbering_scheme_slug == 'false' and ProteinSegment.objects.filter(id=segment_id, domain='GAIN').exists():
+        # GAIN domain segments only exist on Class B2 receptors - always
+        # default to the GAIN scheme, rather than whichever selected protein
+        # happens to be first (which could be any class, e.g. Class A, if it
+        # isn't the B2 target itself).
+        numbering_scheme = ResidueNumberingScheme.objects.get(slug='gpcrdbgain')
     elif numbering_scheme_slug == 'false' and ProteinSegment.objects.filter(id=segment_id, slug__startswith='D1').exists():
         # Class D1's fungal-pheromone segments only exist on Class D1
         # receptors - always default to the Class D scheme, rather than
@@ -2410,6 +2416,13 @@ def ExpandSegment(request):
     else:
         numbering_scheme = ResidueNumberingScheme.objects.get(slug="gpcrdba")
 
+    # GAIN/D1 labels (e.g. "B.S13.50", "D1S1.49") are noticeably longer than
+    # normal generic-number labels (e.g. "3x39") - the residue grid needs
+    # wider columns (fewer per row) for these or the text gets cramped.
+    residue_grid_wide = ProteinSegment.objects.filter(id=segment_id).filter(
+        Q(domain='GAIN') | Q(slug__startswith='D1')
+    ).exists()
+
     if cgn ==True:
         # fetch the generic numbers for CGN differently
         context = {}
@@ -2420,6 +2433,7 @@ def ExpandSegment(request):
         context['scheme'] = ResidueNumberingScheme.objects.filter(slug='cgn')
         context['schemes'] = ResidueNumberingScheme.objects.filter(slug='cgn')
         context['segment_id'] = segment_id
+        context['residue_grid_wide'] = residue_grid_wide
     else:
         # fetch the generic numbers
         context = {}
@@ -2430,6 +2444,7 @@ def ExpandSegment(request):
         context['scheme'] = numbering_scheme
         context['schemes'] = ResidueNumberingScheme.objects.filter(parent__isnull=False)
         context['segment_id'] = segment_id
+        context['residue_grid_wide'] = residue_grid_wide
 
     return render(request, 'common/segment_generic_numbers.html', context)
 

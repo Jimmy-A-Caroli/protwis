@@ -192,6 +192,12 @@
         grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
         gap: 6px;
     }
+    /* GAIN/D1 labels (e.g. "B.S13.50", "D1S1.49") are longer than normal
+       generic-number labels (e.g. "3x39") - wider columns, so ~7-8 fit per
+       row instead of ~9 cramped ones */
+    #segment-generic-numbers .residue-grid.residue-grid-wide {
+        grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+    }
     #segment-generic-numbers .residue-grid .btn {
         margin: 0;
         width: 100%;

@@ -7,7 +7,7 @@ onchange="ExpandSegment('{{ segment_id }}', '{{ position_type }}', this.value)">
     </option>
 {% endfor %}
 </select></p>
-<div class="residue-grid">
+<div class="residue-grid{% if residue_grid_wide %} residue-grid-wide{% endif %}">
 {% for gn in generic_numbers %}
     <a href="javascript:void(0)" onclick="ToggleResidueSelection(this, '{{ position_type }}')"
     class="btn btn-success btn-sm"
