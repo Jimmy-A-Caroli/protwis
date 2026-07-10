@@ -9,6 +9,7 @@ $(document).ready(function() {
     resetButtonState();
     updateSegmentAvailability();  // sync GAIN + D1 state with current targets on load
     syncSegmentButtonSelectionState();
+    syncResidueButtonSelectionState();
 });
 
 window.addEventListener('pageshow', function(event) {
@@ -69,6 +70,7 @@ function AddToSelection(selection_type, selection_subtype, selection_id) {
             $("#selection-" + selection_type).html(data);
             updateSegmentAvailability();
             syncSegmentButtonSelectionState();
+            syncResidueButtonSelectionState();
         },
     });
 }
@@ -86,6 +88,7 @@ function RemoveFromSelection(selection_type, selection_subtype, selection_id) {
             $("#selection-" + selection_type).html(data);
             updateSegmentAvailability();
             syncSegmentButtonSelectionState();
+            syncResidueButtonSelectionState();
         }
     });
 }
@@ -102,6 +105,7 @@ function ClearSelection(selection_type) {
             $("#selection-" + selection_type).html(data);
             updateSegmentAvailability();
             syncSegmentButtonSelectionState();
+            syncResidueButtonSelectionState();
         }
     });
 }
@@ -134,6 +138,7 @@ function SelectFullSequence(selection_type) {
             $("#selection-" + selection_type).html(data);
             updateSegmentAvailability();
             syncSegmentButtonSelectionState();
+            syncResidueButtonSelectionState();
         },
     });
 }
@@ -189,8 +194,20 @@ function SelectAlignableResidues(selection_type) {
         'type': 'GET',
         'success': function(data) {
             $("#selection-" + selection_type).html(data);
+
+            // If this added GAIN/D1 (class-specific) segments, expand the
+            // panel so they're not left hidden inside a collapsed sub-panel.
+            // updateSegmentAvailability() (called next) reads this panel's
+            // now-current visibility to set the toggle arrow correctly.
+            var addedClassSpecific = $("#selection-" + selection_type)
+                .find("[data-segment-domain='GAIN'], [data-segment-domain='D1']").length > 0;
+            if (addedClassSpecific) {
+                document.getElementById('class-specific').style.display = 'block';
+            }
+
             updateSegmentAvailability();
             syncSegmentButtonSelectionState();
+            syncResidueButtonSelectionState();
         },
     });
 }
@@ -300,6 +317,7 @@ function ExpandSegment(segment_id, position_type, scheme) {
         'type': 'GET',
         'success': function(data) {
             $("#segment-generic-numbers").html(data);
+            syncResidueButtonSelectionState();
         }
     });
 }
@@ -602,9 +620,9 @@ function updateSegmentAvailability() {
                 classBtn.addClass("sub-dropdown-disabled disabled");
                 classPanel.hide();
 
-                // Replace label with info message
+                // Replace label with info message, on its own line
                 classBtn.html(
-                    'Class-specific segments ' +
+                    'Class-specific segments<br>' +
                     '<span style="font-size:85%;">(no class-specific targets in selection)</span>' +
                     '<span class="glyphicon glyphicon-arrow-down pull-right"></span>'
                 );
@@ -613,10 +631,14 @@ function updateSegmentAvailability() {
                 // Enable the toggle
                 classBtn.removeClass("sub-dropdown-disabled disabled");
 
-                // Restore normal label (don’t auto-open)
+                // Restore normal label (don't auto-open) - but keep whatever
+                // arrow direction already matches the panel's current state
+                // (e.g. left open by an auto-expand elsewhere) instead of
+                // always resetting it to "down".
+                let arrowClass = classPanel.is(':visible') ? 'glyphicon-arrow-up' : 'glyphicon-arrow-down';
                 classBtn.html(
                     'Class-specific segments ' +
-                    '<span class="glyphicon glyphicon-arrow-down pull-right"></span>'
+                    '<span class="glyphicon ' + arrowClass + ' pull-right"></span>'
                 );
             }
         }
@@ -684,5 +706,44 @@ function syncSegmentButtonSelectionState() {
             // (optional) still mark the label button as "selected"
             $labelBtn.addClass("segment-selected");
         }
+    });
+}
+
+// Toggle an individual residue position when clicking its button in the
+// expand panel. Matches by data-default-gn-id, not the button's own
+// data-gn-id, because the same conceptual position has a different
+// ResidueGenericNumberEquivalent id per numbering scheme - switching the
+// scheme dropdown must still recognise it as already selected.
+function ToggleResidueSelection(btn, position_type) {
+    var $btn = $(btn);
+    var defaultGnId = $btn.data("default-gn-id");
+
+    // Bootstrap's .btn-success:focus sets a visibly darker green background
+    // that otherwise lingers until focus moves elsewhere, since clicking an
+    // <a> keeps it focused - drop that focus immediately so the button's
+    // look tracks only its actual (un)selected state.
+    btn.blur();
+
+    var $existing = $("#selection-segments .target-selection[data-default-gn-id='" + defaultGnId + "']");
+
+    if ($existing.length) {
+        // Already selected (maybe under a different scheme) -> remove using
+        // the id that's actually stored in the selection, not this button's.
+        RemoveFromSelection('segments', 'residue', $existing.data("gn-id"));
+    } else {
+        AddToSelection('segments', position_type, $btn.data("gn-id"));
+    }
+}
+
+// Sync the "selected" outline on residue buttons in the expand panel with
+// the right-hand selection list, keyed by the scheme-independent
+// data-default-gn-id rather than the scheme-specific data-gn-id.
+function syncResidueButtonSelectionState() {
+    $("#segment-generic-numbers .btn[data-default-gn-id]").removeClass("residue-selected");
+
+    $("#selection-segments .target-selection[data-default-gn-id]").each(function() {
+        var defaultGnId = $(this).data("default-gn-id");
+        $("#segment-generic-numbers .btn[data-default-gn-id='" + defaultGnId + "']")
+            .addClass("residue-selected");
     });
 }

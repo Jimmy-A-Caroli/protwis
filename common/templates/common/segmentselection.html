@@ -5,9 +5,20 @@
     <script src="{% static 'home/js/selection.js' %}"></script>
 {% endblock %}
 
-{% block left_column_class %}col-md-3{% endblock %}
-{% block middle_column_class %}col-md-6{% endblock %}
-{% block right_column_class %}col-md-3{% endblock %}
+{% comment %}
+    Only the plain "segments" position_type uses the new All-GPCR/GAIN/D1
+    grid layout that needs a wider middle column - gprotein/arrestin/
+    site_residue use the older selection_segments_*.html partials and should
+    keep the default col-md-4/4/4 like every other selection page.
+    (The if/else has to live INSIDE each block, not wrap two separate block
+    definitions - Django resolves same-named blocks at compile time by
+    scanning the whole node tree, so two blocks with the same name guarded by
+    an outer {% if %} collapse to just the last one, ignoring position_type
+    entirely.)
+{% endcomment %}
+{% block left_column_class %}{% if position_type == 'gprotein' or position_type == 'arrestin' or position_type == 'site_residue' %}col-md-4{% else %}col-md-3{% endif %}{% endblock %}
+{% block middle_column_class %}{% if position_type == 'gprotein' or position_type == 'arrestin' or position_type == 'site_residue' %}col-md-4{% else %}col-md-6{% endif %}{% endblock %}
+{% block right_column_class %}{% if position_type == 'gprotein' or position_type == 'arrestin' or position_type == 'site_residue' %}col-md-4{% else %}col-md-3{% endif %}{% endblock %}
 
 {% block middle_column %}
             {% if segment_list %}

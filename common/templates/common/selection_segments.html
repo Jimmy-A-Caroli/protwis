@@ -170,6 +170,33 @@
         background-color: transparent;
     }
 
+  /* Highlight a selected residue button directly (not a wrapping .btn-group,
+     unlike segment-group-selected above) - must NOT reset padding/background,
+     or it strips the button's own Bootstrap styling (shrinks it and turns
+     its fill transparent/white). */
+    .residue-selected {
+        /* !important so this survives Bootstrap's .btn:active inset shadow
+           (higher specificity: class + pseudo-class) during the brief
+           mousedown-to-mouseup window on a deselect click - otherwise the
+           ring gets replaced by the inset shadow, then reappears once
+           :active clears (item is still selected pre-AJAX), then finally
+           disappears once the removal completes: a visible 3-state flash. */
+        box-shadow: 0 0 0 2px #000000 !important;
+        border-radius: 5px;
+    }
+
+  /* Grid of residue-position buttons in the expand panel, for predictable
+     alignment instead of default inline-block wrapping */
+    #segment-generic-numbers .residue-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+        gap: 6px;
+    }
+    #segment-generic-numbers .residue-grid .btn {
+        margin: 0;
+        width: 100%;
+    }
+
   /* ================================ */
   /*   ALL-GPCR 3-ROW SCHEMATIC ROW   */
   /* ================================ */
@@ -479,6 +506,16 @@
                 Select a file to upload.
             </div>
             <div class="modal-body">
+                <p>
+                    To restore a saved setup, use the file downloaded from the 
+                    <strong>Save residue positions</strong> link in the 
+                    "Selected segments" box (right). That file is already in 
+                    the required format and can be re-uploaded later to restore 
+                    the same selection.
+                </p>
+                <p>
+                    To create a new setup manually, <a href="/common/residuestemplate">download an example template</a> to see the expected layout.
+                </p>
                 <form id="xls-form" enctype="multipart/form-data" method="post" onsubmit="return ReadDefinitionFromFile(document.getElementById('xls-file').files[0], '/common/residuesupload')">
                     <input id="xls-file" type="file" /> {% csrf_token %}
                 </form>

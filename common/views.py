@@ -34,8 +34,103 @@ import xlsxwriter, xlrd
 import time
 import json
 import urllib
+import copy
 
 default_schemes_excluded = ["cgn", "ecd", "can"]
+
+
+# ---------------------------------------------------------------------------
+# Alignment-flow domain filtering. GPCR / G-protein / Arrestin alignment are
+# three independent flows that all share this one session's Selection object
+# (there's no per-flow session namespace). This keeps a target/segment
+# selected in one flow from leaking into another's "Selected targets/segments"
+# list - it never deletes anything from the session, only filters what a
+# given request renders, since AddToSelection/RemoveFromSelection are shared
+# AJAX endpoints that don't know which page called them. Scoped to the
+# alignment app only: every other page's calls have no matching Referer
+# below, so _current_alignment_domain returns None and nothing changes.
+# ---------------------------------------------------------------------------
+
+def _alignment_protein_family_domain(family):
+    """
+    Classifies a ProteinFamily as 'gpcr', 'gprotein', 'arrestin', or None.
+    Arrestin's root ('200') has no parent; G-protein ('100') and every GPCR
+    class ('001' Class A, '002' Class B1, '003' Class B2, ...) are direct
+    children of the same abstract root ('000') - so G-protein has to be told
+    apart from GPCR by which direct child of '000' it descends from.
+    """
+    node = family
+    while node.parent is not None:
+        node = node.parent
+    absolute_root_slug = node.slug
+
+    if absolute_root_slug == '200':
+        return 'arrestin'
+    if absolute_root_slug == '000':
+        node = family
+        while node.parent is not None and node.parent.slug != '000':
+            node = node.parent
+        return 'gprotein' if node.slug == '100' else 'gpcr'
+    return None
+
+
+_ALIGNMENT_SEGMENT_PROTEINFAMILY_TO_DOMAIN = {'GPCR': 'gpcr', 'Alpha': 'gprotein', 'Arrestin': 'arrestin'}
+
+
+def _alignment_selection_item_domain(sel_item):
+    """Resolves a SelectionItem - a target/reference protein, or a segment/
+    residue selection - to its alignment domain, or None if unclassifiable
+    (left alone rather than guessed wrong)."""
+    try:
+        if sel_item.type == 'protein':
+            return _alignment_protein_family_domain(sel_item.item.family)
+        if sel_item.type == 'family':
+            return _alignment_protein_family_domain(sel_item.item)
+        if sel_item.type == 'structure':
+            return _alignment_protein_family_domain(sel_item.item.protein_conformation.protein.family)
+        if isinstance(sel_item.item, ProteinSegment):
+            return _ALIGNMENT_SEGMENT_PROTEINFAMILY_TO_DOMAIN.get(sel_item.item.proteinfamily)
+        if isinstance(sel_item.item, ResidueGenericNumberEquivalent):
+            segment = sel_item.item.default_generic_number.protein_segment
+            return _ALIGNMENT_SEGMENT_PROTEINFAMILY_TO_DOMAIN.get(segment.proteinfamily) if segment else None
+    except AttributeError:
+        return None
+    return None
+
+
+# Longer/more specific paths first - 'targetselection' is a literal substring
+# of 'targetselectiongprot', so order matters for correct matching.
+_ALIGNMENT_REFERER_DOMAINS = [
+    ('/alignment/targetselectiongprot', 'gprotein'),
+    ('/alignment/segmentselectiongprot', 'gprotein'),
+    ('/alignment/targetselectionarrestin', 'arrestin'),
+    ('/alignment/segmentselectionarrestin', 'arrestin'),
+    ('/alignment/targetselection', 'gpcr'),
+    ('/alignment/segmentselection', 'gpcr'),
+]
+
+
+def _current_alignment_domain(request):
+    """Identifies which alignment flow issued this AJAX call from the Referer
+    header - stateless, per-request, nothing stored in the session. Returns
+    None (no filtering applied) for every other app/page's calls."""
+    referer = request.META.get('HTTP_REFERER') or ''
+    for path, domain in _ALIGNMENT_REFERER_DOMAINS:
+        if path in referer:
+            return domain
+    return None
+
+
+def _filter_selection_for_alignment_domain(selection, domain):
+    """Shallow copy of `selection` (a Selection or SimpleSelection) with
+    reference/targets/segments filtered to `domain`. Never mutates the
+    original or touches the session - purely a display/build-time view, so
+    nothing is ever lost when switching between alignment flows."""
+    filtered = copy.copy(selection)
+    for selection_type in ('reference', 'targets', 'segments'):
+        items = getattr(selection, selection_type)
+        setattr(filtered, selection_type, [i for i in items if _alignment_selection_item_domain(i) in (domain, None)])
+    return filtered
 
 def getLigandTable(receptor_id, browser_type):
     cache_key = "reference_table_" + str(receptor_id) + browser_type
@@ -1414,8 +1509,11 @@ def AddToSelection(request):
     # add simple selection to session
     request.session['selection'] = simple_selection
 
-    # context
-    context = selection.dict(selection_type)
+    # context - filtered to the calling alignment flow's domain if applicable
+    # (never affects what was just saved to session above, only what renders)
+    domain = _current_alignment_domain(request)
+    display_selection = _filter_selection_for_alignment_domain(selection, domain) if domain else selection
+    context = display_selection.dict(selection_type)
 
     # template to load
     if selection_subtype == 'site_residue':
@@ -1457,8 +1555,10 @@ def RemoveFromSelection(request):
     # add simple selection to session
     request.session['selection'] = simple_selection
 
-    # context
-    context = selection.dict(selection_type)
+    # context - filtered to the calling alignment flow's domain if applicable
+    domain = _current_alignment_domain(request)
+    display_selection = _filter_selection_for_alignment_domain(selection, domain) if domain else selection
+    context = display_selection.dict(selection_type)
 
     # template to load
     if selection_subtype == 'site_residue':
@@ -1828,6 +1928,26 @@ def SelectAlignableResidues(request):
                 has_b2 = True
             if cname.startswith('Class D1'):
                 has_d1 = True
+
+        # ------------------------------------------------------------------
+        # 3b) Strip any already-selected GAIN/D1 segments that are no longer
+        #     valid (e.g. their Class B2/D1 target was removed since they
+        #     were added). The add loop further down only ever ADDS segments
+        #     - without this, a stale GAIN/D1 segment from an earlier click
+        #     would survive here indefinitely and get re-added every time
+        #     this button is pressed, even with no matching target present.
+        # ------------------------------------------------------------------
+        def _is_still_valid_class_specific(sel_item):
+            seg = sel_item.item
+            if not isinstance(seg, ProteinSegment):
+                return True
+            if seg.domain == 'GAIN' and not has_b2:
+                return False
+            if seg.slug.startswith('D1') and not has_d1:
+                return False
+            return True
+
+        selection.segments = [s for s in selection.segments if _is_still_valid_class_specific(s)]
 
         # ------------------------------------------------------------------
         # 4) Drop segments that are not relevant:
@@ -2680,6 +2800,32 @@ def ResiduesDownload(request):
     outstream.seek(0)
     response = HttpResponse(outstream.read(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response['Content-Disposition'] = "attachment; filename=segment_selection.xlsx"
+
+    return response
+
+def ResiduesTemplateDownload(request):
+    """
+    Generates a small example .xlsx on the fly, illustrating the column
+    layout expected by ResiduesUpload (col A: 'helix'/'residue', col B:
+    numbering scheme slug for 'residue' rows only, col C: segment slug or
+    residue label) - not tied to any actual selection, just a reference.
+    """
+    example_rows = [
+        ['helix', '', 'TM1'],
+        ['helix', '', 'TM2'],
+        ['residue', 'gpcrdba', '1x50'],
+        ['residue', 'gpcrdbb', '2x50'],
+    ]
+
+    outstream = BytesIO()
+    wb = xlsxwriter.Workbook(outstream, {'in_memory': True})
+    worksheet = wb.add_worksheet()
+    for row_count, row in enumerate(example_rows):
+        worksheet.write_row(row_count, 0, row)
+    wb.close()
+    outstream.seek(0)
+    response = HttpResponse(outstream.read(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response['Content-Disposition'] = "attachment; filename=residue_positions_template.xlsx"
 
     return response
 
