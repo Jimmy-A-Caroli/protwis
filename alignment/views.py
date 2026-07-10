@@ -187,8 +187,8 @@ class SegmentSelection(AbsSegmentSelection):
         + '<span class="btn btn-xs seg-nterm" style="cursor:default; margin:2px 4px 2px 0;">Terminus</span>' \
         + '<span class="btn btn-xs seg-tm" style="cursor:default; margin:2px 4px 2px 0;">Helix</span>' \
         + '<span class="btn btn-xs seg-sheet" style="cursor:default; margin:2px 4px 2px 0;">Sheet</span>' \
-        + '<span class="btn btn-xs seg-icl" style="cursor:default; margin:2px 4px 2px 0;">Intracellular loop/turn</span>' \
-        + '<span class="btn btn-xs seg-ecl" style="cursor:default; margin:2px 4px 2px 0;">Extracellular loop/turn</span>' \
+        + '<span class="btn btn-xs seg-icl" style="cursor:default; margin:2px 4px 2px 0;">Intracellular loop</span>' \
+        + '<span class="btn btn-xs seg-ecl" style="cursor:default; margin:2px 4px 2px 0;">Extracellular loop</span>' \
         + '\n\nSelected segments will appear in the' \
         + ' right column, where you can edit the list.\n\nOnce you have selected all your segments, click the' \
         + ' "Show alignment" button (top right).\n\n'
