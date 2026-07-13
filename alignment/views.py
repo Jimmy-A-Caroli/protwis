@@ -41,8 +41,7 @@ import xlrd
 
 
 def _filter_context_selection_domain(context, domain):
-    """
-    Non-destructively filter context['selection'][...] lists.
+    """Non-destructively filter context['selection'][...] lists.
 
     Built by the parent get_context_data, so cross-flow items never render
     even on a fresh page load - nothing touches the session here, matching
