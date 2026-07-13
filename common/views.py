@@ -5,7 +5,7 @@ from django.views.generic import TemplateView
 from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from django.db.models import Count, Case, When, Min, Q
+from django.db.models import Count, Case, When, Min
 from django.core.cache import cache
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.views.decorators.http import require_GET
@@ -1173,7 +1173,8 @@ class AbsSegmentSelection(TemplateView):
     amino_acid_group_names_old = definitions.AMINO_ACID_GROUP_NAMES_OLD
 
     # --- helper: decide color class for one segment ---
-    def _get_segment_color_class(self, seg):
+    @staticmethod
+    def _get_segment_color_class(seg):
         """
         Decide which UI color class to use based on category/slug/name.
         """
@@ -2379,17 +2380,23 @@ def ExpandSegment(request):
     # get simple selection from session
     simple_selection = request.session.get('selection', False)
 
+    # fetch the segment once - reused below for scheme defaulting, the
+    # wide-grid check and the residue button color coding
+    segment = ProteinSegment.objects.get(id=segment_id)
+    is_gain = segment.domain == 'GAIN'
+    is_d1 = (segment.slug or '').startswith('D1')
+
     # find the relevant numbering scheme (based on target selection)
     cgn = False
     if numbering_scheme_slug == 'cgn':
         cgn = True
-    elif numbering_scheme_slug == 'false' and ProteinSegment.objects.filter(id=segment_id, domain='GAIN').exists():
+    elif numbering_scheme_slug == 'false' and is_gain:
         # GAIN domain segments only exist on Class B2 receptors - always
         # default to the GAIN scheme, rather than whichever selected protein
         # happens to be first (which could be any class, e.g. Class A, if it
         # isn't the B2 target itself).
         numbering_scheme = ResidueNumberingScheme.objects.get(slug='gpcrdbgain')
-    elif numbering_scheme_slug == 'false' and ProteinSegment.objects.filter(id=segment_id, slug__startswith='D1').exists():
+    elif numbering_scheme_slug == 'false' and is_d1:
         # Class D1's fungal-pheromone segments only exist on Class D1
         # receptors - always default to the Class D scheme, rather than
         # whichever selected protein happens to be first (which could be
@@ -2420,9 +2427,10 @@ def ExpandSegment(request):
     # GAIN/D1 labels (e.g. "B.S13.50", "D1S1.49") are noticeably longer than
     # normal generic-number labels (e.g. "3x39") - the residue grid needs
     # wider columns (fewer per row) for these or the text gets cramped.
-    residue_grid_wide = ProteinSegment.objects.filter(id=segment_id).filter(
-        Q(domain='GAIN') | Q(slug__startswith='D1')
-    ).exists()
+    residue_grid_wide = is_gain or is_d1
+
+    # color residue buttons the same as this segment's arrow on the schematic
+    ui_color_class = AbsSegmentSelection._get_segment_color_class(segment)
 
     if cgn ==True:
         # fetch the generic numbers for CGN differently
@@ -2435,6 +2443,7 @@ def ExpandSegment(request):
         context['schemes'] = ResidueNumberingScheme.objects.filter(slug='cgn')
         context['segment_id'] = segment_id
         context['residue_grid_wide'] = residue_grid_wide
+        context['ui_color_class'] = ui_color_class
     else:
         # fetch the generic numbers
         context = {}
@@ -2446,6 +2455,7 @@ def ExpandSegment(request):
         context['schemes'] = ResidueNumberingScheme.objects.filter(parent__isnull=False)
         context['segment_id'] = segment_id
         context['residue_grid_wide'] = residue_grid_wide
+        context['ui_color_class'] = ui_color_class
 
     return render(request, 'common/segment_generic_numbers.html', context)
 
