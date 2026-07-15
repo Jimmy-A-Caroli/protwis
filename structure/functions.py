@@ -1345,7 +1345,7 @@ class ParseStructureCSV(AbsParseStructureCSV):
                 # Chain ID format check - remove .0 from number type chain ID e.g. 8JCU
                 if '.' in s[5]:
                     s[5] = s[5][0]
-                self.structures[s[0]]= {'protein':s[1], 'name':s[0].lower(), 'state':s[4], 'preferred_chain':s[5], 'resolution':s[3], 'date_from_file':s[7], 'method_from_file':s[2]}
+                self.structures[s[0]]= {'protein':s[1], 'name':s[0].lower(), 'state':s[4], 'preferred_chain':s[5], 'resolution':s[3], 'date_from_file':s[7], 'method_from_file':s[2], 'label_asym_id':s[8], 'partner_uniprot':s[9], 'partner_chain':s[10]}
 
     def __str__(self):
         return '<ParsedStructures: {} entries>'.format(len(self.pdb_ids))
@@ -1360,7 +1360,7 @@ class ParseStructureCSV(AbsParseStructureCSV):
                 in_structure = True
                 if ligand[8]!='':
                     in_structure = False
-                self.structures[ligand[0]]['ligand'].append({'chain':ligand[1], 'name':ligand[2], 'pubchemId':ligand[3], 'role':ligand[4], 'title':ligand[5], 'type': ligand[6], 'in_structure': in_structure})
+                self.structures[ligand[0]]['ligand'].append({'chain':ligand[1], 'name':ligand[2], 'pubchemId':ligand[3], 'role':ligand[4], 'title':ligand[5], 'type': ligand[6], 'in_structure': in_structure, 'label_asym_id':ligand[9], 'smiles':ligand[10], 'inchikey':ligand[11], 'sequence':ligand[12], 'is_endogenous':ligand[13], 'site':ligand[14], 'residue_seq_id':ligand[15]})
 
     def parse_nanobodies(self):
         self.parse_aux_file('nanobodies.csv')
@@ -1374,19 +1374,28 @@ class ParseStructureCSV(AbsParseStructureCSV):
     def parse_grk(self):
         self.parse_aux_file('grk.csv')
 
+    def parse_antibodies(self):
+        self.parse_aux_file('antibodies.csv')
+
+    def parse_scfv(self):
+        self.parse_aux_file('scfv.csv')
+
+    def parse_other_aux_proteins(self):
+        self.parse_aux_file('other_aux_proteins.csv')
+
     def parse_g_proteins(self):
         with open(os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'g_proteins.csv']), newline='') as csvfile:
             g_proteins = csv.reader(csvfile, delimiter='\t')
             next(g_proteins, None)
             for g in g_proteins:
-                self.structures[g[0]]['g_protein'] = {'alpha_uniprot': g[1], 'alpha_chain': g[2], 'beta_uniprot': g[3], 'beta_chain': g[4], 'gamma_uniprot': g[5], 'gamma_chain': g[6], 'note': g[7]}
+                self.structures[g[0]]['g_protein'] = {'alpha_uniprot': g[1], 'alpha_chain': g[2], 'beta_uniprot': g[3], 'beta_chain': g[4], 'gamma_uniprot': g[5], 'gamma_chain': g[6], 'note': g[7], 'alpha_label_asym_id': g[8], 'beta_label_asym_id': g[9], 'gamma_label_asym_id': g[10], 'alpha_alpha5_identity': g[11], 'alpha_backbone': g[12]}
 
     def parse_arrestins(self):
         with open(os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'arrestins.csv']), newline='') as csvfile:
             arrestins = csv.reader(csvfile, delimiter='\t')
             next(arrestins, None)
             for a in arrestins:
-                self.structures[a[0]]['arrestin'] = {'protein': a[1], 'chain': a[2], 'note': a[3]}
+                self.structures[a[0]]['arrestin'] = {'protein': a[1], 'chain': a[2], 'note': a[3], 'label_asym_id': a[4]}
 
     def parse_aux_file(self, aux_csv):
         with open(os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', aux_csv]), newline='') as csvfile:
