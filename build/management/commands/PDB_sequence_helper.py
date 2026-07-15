@@ -219,9 +219,41 @@ def distances_stats(distances, threshold=3):
     for idx, d in enumerate(distances):
         if d is None:
             continue
-        if d < lower_bound or d > upper_bound:
-            print(f"Outlier at position {idx}")
+        # if d < lower_bound or d > upper_bound:
+        #     print(f"Outlier at position {idx}")
     return outlier_indexes
+
+
+def find_chain_breaks(distances, threshold=4.5):
+    """
+    Flags real backbone chain breaks using an absolute CA-CA distance
+    threshold, rather than `distances_stats`'s whole-structure relative
+    z-score.
+
+    A real peptide-bonded CA-CA distance is tightly clustered around 3.8 A
+    regardless of local backbone conformation, so any missing residue pushes
+    the effective distance far beyond that. A fixed threshold catches this
+    reliably even when the rest of the structure's distance distribution has
+    enough natural spread to hide a real break from a `mean +/- 3*std` test
+    (as happens with `distances_stats`).
+
+    Parameters
+    ----------
+    distances : list of float or None
+        CA-CA distances, as returned by
+        `generate_seq_and_distances_from_pdb_text` (distances[i] is the
+        distance between residue i-1 and i).
+    threshold : float, optional
+        Distance in Angstrom beyond which a gap is considered a real chain
+        break, by default 4.5.
+
+    Returns
+    -------
+    list of int
+        Indexes into `distances`/the sequence where a chain break occurs
+        (index i means the break falls between residue i-1 and i).
+    """
+    return [i for i, d in enumerate(distances) if d is not None and d > threshold]
 
 
 def pre_align_modifications(pdb_code, seq):
@@ -289,7 +321,7 @@ def decide_penalty(pdb_code):
         "8W8S",
     ]:
         return 3, -4, -3, -1
-    elif pdb_code in ["6KUX", "6KUY", "6KUW", "7SRS"]:
+    elif pdb_code in ["6KUX", "6KUY", "6KUW"]:
         return 3, -4, -4, -1.5
     elif pdb_code in ["7YMJ"]:
         return 3, -5, -4, -4
@@ -583,14 +615,14 @@ def detect_alignment_mistakes_and_reposition(
     label_width = 50
     temp_seq_list = list(temp_seq)  # so we can mutate temp_seq characters
 
-    print(f"\n=== Detecting alignment mistakes for {pdb_code} ===")
-    print(f"Number of outliers: {len(outlier_indexes)}\n")
+    # print(f"\n=== Detecting alignment mistakes for {pdb_code} ===")
+    # print(f"Number of outliers: {len(outlier_indexes)}\n")
 
     for outlier_pdb_idx in outlier_indexes:
         if outlier_pdb_idx not in pdb_map:
-            print(
-                f"  - Outlier PDB index {outlier_pdb_idx} is not in pdb_map; skipping."
-            )
+            # print(
+            #     f"  - Outlier PDB index {outlier_pdb_idx} is not in pdb_map; skipping."
+            # )
             continue
 
         # Find where this residue is in the aligned PDB sequence
@@ -673,20 +705,180 @@ def detect_alignment_mistakes_and_reposition(
                         if ref_gap_end <= len(temp_seq_list):
                             for i, ch in enumerate(suspicious_chunk):
                                 temp_seq_list[ref_gap_start + i] = ch
-                        else:
-                            print(
-                                "    [Warning] Not enough space to move chunk in temp_seq.\n"
-                            )
+                        # else:
+                        #     print(
+                        #         "    [Warning] Not enough space to move chunk in temp_seq.\n"
+                        #     )
 
                 # Print alignment after fix attempt
                 updated_temp_seq = "".join(temp_seq_list)
                 print("  Full alignment after fix attempt:")
                 print("  ref_seq: ", ref_seq)
                 print("  temp_seq:", updated_temp_seq)
-                print()
 
         if not found_something:
             print("  No suspicious gap found nearby.\n")
 
     fixed_temp_seq = "".join(temp_seq_list)
     return fixed_temp_seq
+
+
+def consolidate_structural_islands(
+    pdb_seq, temp_seq, break_indexes, min_anchor_len=5
+):
+    """
+    Detects and fixes PDB residues that are scattered across a gap in the
+    alignment even though they are physically bonded (no chain break between
+    them) and therefore must occupy adjacent alignment columns.
+
+    Unlike `detect_alignment_mistakes_and_reposition`, which looks for
+    sequence-level clues (a chunk matching the ref sequence near a gap),
+    this uses chain-break data directly (see `find_chain_breaks`): any run
+    of `pdb_seq` residues not separated by a break is a "structural island"
+    that is physically contiguous in 3D, so it must map to contiguous
+    alignment columns. A local aligner can still coincidentally match a few
+    of an island's residues to unrelated WT positions purely by letter
+    similarity (e.g. inside a disordered loop where only a handful of
+    residues are resolved) -- this splits one physical island across
+    several isolated, gap-separated alignment columns, which is a
+    structural impossibility rather than a legitimate deletion.
+
+    An island can straddle a mix of already-correct and scattered residues
+    (e.g. a short stray cluster directly bonded to the start of an otherwise
+    long, already well-aligned helix -- this can happen at a genetic fusion
+    junction, which is a real, unbroken peptide bond with no distance
+    signal at all to mark it as a boundary). Rather than trusting a single
+    "longest run" within the island and treating literally everything else
+    as leftover to relocate (which would drag an unrelated, independently
+    correct long block sideways), every already-contiguous run at least
+    `min_anchor_len` residues long is treated as its own protected anchor
+    and left untouched. Only the genuinely short, scattered leftovers
+    between anchors get relocated, snapped immediately next to their
+    neighboring anchor. This means a missed chain break can, at worst,
+    misplace a short cluster -- it can never again corrupt an
+    independently long, already-correct run.
+
+    Parameters
+    ----------
+    pdb_seq : str
+        The raw (ungapped) PDB sequence, in chain order.
+    temp_seq : str
+        The current gapped PDB alignment string (e.g. the output of
+        `detect_alignment_mistakes_and_reposition`).
+    break_indexes : list of int
+        Indexes into `pdb_seq` flagged as chain breaks (e.g. by
+        `find_chain_breaks`; index i means the break falls between residue
+        i-1 and i).
+    min_anchor_len : int, optional
+        Minimum length of an already-contiguous run to be trusted as an
+        untouchable anchor, by default 5.
+
+    Returns
+    -------
+    str
+        The consolidated alignment string for the PDB sequence.
+    """
+    n = len(pdb_seq)
+    if n == 0:
+        return temp_seq
+
+    breaks = set(break_indexes)
+    temp_list = list(temp_seq)
+
+    # 1) Partition pdb_seq into islands: runs with no real chain break between members.
+    islands = []
+    current = [0]
+    for i in range(1, n):
+        if i in breaks:
+            islands.append(current)
+            current = [i]
+        else:
+            current.append(i)
+    islands.append(current)
+
+    # 2) Recompute raw-pdb-index -> alignment-column map fresh from temp_seq. Any
+    # prior repair pass may have moved characters without updating a pdb_map, so we
+    # can't trust one passed in -- this is always correct given the current string.
+    fresh_map = {}
+    pdb_idx = 0
+    for aln_idx, ch in enumerate(temp_list):
+        if ch != "-":
+            fresh_map[pdb_idx] = aln_idx
+            pdb_idx += 1
+
+    for island in islands:
+        if len(island) < 2 or not all(idx in fresh_map for idx in island):
+            continue
+
+        positions = [fresh_map[idx] for idx in island]
+
+        # Find every maximal already-contiguous run within the island.
+        runs = []  # (start index within island/positions, length)
+        run_start = 0
+        for k in range(1, len(positions)):
+            if positions[k] != positions[k - 1] + 1:
+                runs.append((run_start, k - run_start))
+                run_start = k
+        runs.append((run_start, len(positions) - run_start))
+
+        anchors = [r for r in runs if r[1] >= min_anchor_len]
+        if not anchors:
+            # Whole island is short/scattered with no run long enough to trust as
+            # a reference point -- consolidate it as one block at its own longest
+            # run's current position (best effort, no independent anchor exists).
+            anchors = [max(runs, key=lambda r: r[1])]
+
+        if len(anchors) == len(runs):
+            continue  # every run already qualifies as an anchor -- nothing loose
+
+        anchor_set = set()
+        for start, length in anchors:
+            anchor_set.update(range(start, start + length))
+
+        # Walk the island, relocating each maximal run of non-anchor ("loose")
+        # members as one block, snapped next to its neighboring anchor.
+        i = 0
+        while i < len(island):
+            if i in anchor_set:
+                i += 1
+                continue
+            j = i
+            while j < len(island) and j not in anchor_set:
+                j += 1
+
+            loose_island_idxs = island[i:j]
+            loose_positions = positions[i:j]
+            chars = [pdb_seq[idx] for idx in loose_island_idxs]
+
+            prev_anchor_end_pos = positions[i - 1] if i > 0 else None
+            next_anchor_start_pos = positions[j] if j < len(island) else None
+            if prev_anchor_end_pos is not None:
+                new_start = prev_anchor_end_pos + 1
+            elif next_anchor_start_pos is not None:
+                new_start = next_anchor_start_pos - len(chars)
+            else:
+                new_start = loose_positions[0]
+            new_end = new_start + len(chars) - 1
+
+            # Bail out (leave this loose run untouched) rather than clobber
+            # unrelated data if there isn't clean room to relocate it.
+            if new_start < 0 or new_end >= len(temp_list):
+                i = j
+                continue
+            old_positions = set(loose_positions)
+            destination_clear = all(
+                p in old_positions or temp_list[p] == "-"
+                for p in range(new_start, new_end + 1)
+            )
+            if not destination_clear:
+                i = j
+                continue
+
+            for p in loose_positions:
+                temp_list[p] = "-"
+            for k, ch in enumerate(chars):
+                temp_list[new_start + k] = ch
+
+            i = j
+
+    return "".join(temp_list)
