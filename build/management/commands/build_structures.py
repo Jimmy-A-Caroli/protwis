@@ -11,7 +11,7 @@ from build.management.commands.PDB_sequence_helper import *
 from build.management.commands.base_build import Command as BaseBuild
 from build.management.commands.build_ligand_functions import get_or_create_ligand, match_id_via_unichem
 from protein.models import (Protein, ProteinConformation, ProteinState, ProteinAnomaly, ProteinAnomalyType,
-    ProteinSegment)
+    ProteinSegment, Site)
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, Residue, ResidueGenericNumberEquivalent
 from common.models import WebLink, WebResource, Publication
 from common.tools import test_model_updates, find_role
@@ -166,6 +166,7 @@ class Command(BaseBuild):
             self.parsed_structures.parse_files(options['custom'])
             self.xtal_seg_ends = self.parsed_structures.xtal_seg_ends
         else:
+            self.custom = None
             self.parsed_structures = ParseStructureCSV()
             self.parsed_structures.parse_ligands()
             self.parsed_structures.parse_nanobodies()
@@ -428,338 +429,337 @@ class Command(BaseBuild):
         
         #align WT with structure seq -- make gaps penalties big, so to avoid too much overfitting
 
-        if structure.pdb_code.index=='6U1N':
-            seq = seq[:265]
-        elif structure.pdb_code.index in ['1GZM', '3C9L']:
-            seq = seq[:-3]
-        elif structure.pdb_code.index=='8WU1':
-            seq = seq[:-13]
-        if structure.pdb_code.index in ['6NBI','6NBF','6NBH','6U1N','6M1H','6PWC','7JVR','7SHF','7EJ0','7EJ8','7EJA','7EJK','7VVJ','7TS0','7W6P','7W7E','8IRS',
-                                        '8FLQ','8FLR','8FLS','8FLU','8FU6','8IRU','7Y35','7Y36','8TB7','8SZI','8TZQ','8U02','8W8Q','8W8R','8W8S','8YN2']:
-            pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -3, -1)
-        elif structure.pdb_code.index in ['6KUX','6KUY','6KUW','7SRS']:
-            pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -4, -1.5)
-        elif structure.pdb_code.index in ['7YMJ']:
-            pw2 = pairwise2.align.localms(parent_seq, seq, 3, -5, -4, -4)
-        else:
-            pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -5, -2)
+        # if structure.pdb_code.index=='6U1N':
+        #     seq = seq[:265]
+        # elif structure.pdb_code.index in ['1GZM', '3C9L']:
+        #     seq = seq[:-3]
+        # elif structure.pdb_code.index=='8WU1':
+        #     seq = seq[:-13]
+        # if structure.pdb_code.index in ['6NBI','6NBF','6NBH','6U1N','6M1H','6PWC','7JVR','7SHF','7EJ0','7EJ8','7EJA','7EJK','7VVJ','7TS0','7W6P','7W7E','8IRS',
+        #                                 '8FLQ','8FLR','8FLS','8FLU','8FU6','8IRU','7Y35','7Y36','8TB7','8SZI','8TZQ','8U02','8W8Q','8W8R','8W8S','8YN2']:
+        #     pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -3, -1)
+        # elif structure.pdb_code.index in ['6KUX','6KUY','6KUW','7SRS']:
+        #     pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -4, -1.5)
+        # elif structure.pdb_code.index in ['7YMJ']:
+        #     pw2 = pairwise2.align.localms(parent_seq, seq, 3, -5, -4, -4)
+        # else:
+        #     pw2 = pairwise2.align.localms(parent_seq, seq, 3, -4, -5, -2)
 
-        gaps = 0
-        unmapped_ref = {}
-        ref_seq, temp_seq = str(pw2[0][0]), str(pw2[0][1])
-        # if structure.pdb_code.index in ['5WIU','5WIV']:
-        #     temp_seq = temp_seq[:144]+'D'+temp_seq[145:]
-        #     temp_seq = temp_seq[:149]+'-'+temp_seq[150:]
-        # Custom fixes for alignment issues
-        if structure.pdb_code.index=='5ZKP':
-            ref_seq = ref_seq[:197]+'-'+ref_seq[198:]
-            ref_seq = ref_seq[:198]+'A'+ref_seq[199:]
-        elif structure.pdb_code.index in ['5VEW','5VEX']:
-            ref_seq = ref_seq[:164]+'IG'+ref_seq[167:]
-            temp_seq = temp_seq[:166]+temp_seq[167:]
-        elif structure.pdb_code.index in ['3V2W']:
-            ref_seq = ref_seq[:201]+ref_seq[202:]
-            temp_seq = temp_seq[:207]+temp_seq[208:]
-        elif structure.pdb_code.index in ['3V2Y']:
-            ref_seq = ref_seq[:209]+ref_seq[210:]
-            temp_seq = temp_seq[:215]+temp_seq[216:]
-        elif structure.pdb_code.index in ['6KUX','6KUY']:
-            ref_seq = ref_seq[:416]+('-'*(416-233))+ref_seq[416:]
-            temp_seq = temp_seq[:233]+('-'*(416-233))+temp_seq[233:]
-        elif structure.pdb_code.index in ['6KJV','6KK1','6KK7']:
-            ref_seq = ref_seq[:176]+ref_seq[177:]
-            temp_seq = temp_seq[:178]+temp_seq[179:]
-        elif structure.pdb_code.index in ['6LN2']:
-            ref_seq = ref_seq[:292]+ref_seq[293:]
-            temp_seq = temp_seq[:294]+temp_seq[295:]
-        elif structure.pdb_code.index in ['6WHA']:
-            temp_seq = temp_seq[:76]+'P--'+temp_seq[79:]
-        elif structure.pdb_code.index in ['6X18']:
-            temp_seq = temp_seq[:105]+'S------'+temp_seq[112:]
-        elif structure.pdb_code.index in ['6K41']:
-            temp_seq = temp_seq[:71]+'W------'+temp_seq[78:]
-        elif structure.pdb_code.index in ['6LPB']:
-            temp_seq = temp_seq[:316]+'S--------'+temp_seq[325:]
-        elif structure.pdb_code.index in ['6RZ5']:
-            temp_seq = temp_seq[:221]+'K-'+temp_seq[223:]
-        elif structure.pdb_code.index in ['6TPK']:
-            temp_seq = temp_seq[:30]+'H-----'+temp_seq[36:]
-        elif structure.pdb_code.index in ['6W25']:
-            temp_seq = temp_seq[:94]+'T--'+temp_seq[97:]
-        elif structure.pdb_code.index in ['7C61']:
-            temp_seq = temp_seq[:207]+'-'+temp_seq[207:225]+'-'+temp_seq[225:238]+'-'+temp_seq[238:251]+'-'+temp_seq[251:]
-            ref_seq = ref_seq[:304]+'----'+ref_seq[304:]
-        elif structure.pdb_code.index in ['6WHC']:
-            temp_seq = temp_seq[:202]+'S----------'+temp_seq[213:]
-        elif structure.pdb_code.index=='5T1A':
-            temp_seq = temp_seq[:229]+temp_seq[231:238]+temp_seq[239:242]+temp_seq[245:]
-            ref_seq = ref_seq[:224]+ref_seq[227:233]+ref_seq[236:]
-        elif structure.pdb_code.index=='5UEN':
-            temp_seq = temp_seq[:218]+temp_seq[222:]
-            ref_seq = ref_seq[:210]+ref_seq[214:]
-        elif structure.pdb_code.index=='6DO1':
-            temp_seq = temp_seq[:228]+temp_seq[230:]
-            ref_seq = ref_seq[:225]+ref_seq[227:]
-        elif structure.pdb_code.index=='7KH0':
-            temp_seq = temp_seq[:240]+'S'+temp_seq[240:262]+temp_seq[263:]
-        elif structure.pdb_code.index=='7BB6':
-            temp_seq = temp_seq[:231]+'A'+temp_seq[231:257]+temp_seq[258:]
-        elif structure.pdb_code.index=='7C4S':
-            temp_seq = temp_seq[:224]+'S'+temp_seq[224:234]+temp_seq[235:]
-        elif structure.pdb_code.index=='7M3J':
-            temp_seq = temp_seq[:100]+'I'+temp_seq[100:115]+temp_seq[116:337]+'N'+temp_seq[337:380]+temp_seq[381:]
-        elif structure.pdb_code.index=='7DUQ':
-            temp_seq = temp_seq[:105]+'S------'+temp_seq[112:]
-        elif structure.pdb_code.index in ['7KI0','7KI1']:
-            temp_seq = temp_seq[:105]+'S-------'+temp_seq[113:]
-        elif structure.pdb_code.index=='7MTQ':
-            temp_seq = temp_seq[:694]+'E---'+temp_seq[698:]
-        elif structure.pdb_code.index=='7FD9':
-            temp_seq = temp_seq[:99]+'S'+temp_seq[99:118]+temp_seq[119:]
-        elif structure.pdb_code.index in ['6ZFZ', '6ZG4', '6ZG9']:
-            temp_seq = temp_seq[:28]+temp_seq[29:207]+temp_seq[208:]
-            ref_seq = ref_seq[:23]+ref_seq[24:211]+ref_seq[212:]
-        elif structure.pdb_code.index in ['7NA7', '7NA8']:
-            temp_seq = temp_seq[:242]+'R'+temp_seq[242:253]+temp_seq[254:]
-        elif structure.pdb_code.index in ['7F8V', '7F8W']:
-            temp_seq = temp_seq[:247]+'L'+temp_seq[247:323]+temp_seq[324:]
-        elif structure.pdb_code.index=='7RTB':
-            temp_seq = temp_seq[:107]+'S'+temp_seq[107:113]+temp_seq[114:]
-        elif structure.pdb_code.index=='6Z4Q':
-            temp_seq = temp_seq[:131]+'H-'+temp_seq[133:]
-        elif structure.pdb_code.index=='6ZA8':
-            temp_seq = temp_seq[:212]+'L'+temp_seq[212:219]+temp_seq[220:]
-        elif structure.pdb_code.index=='7EO4':
-            temp_seq = temp_seq[:36]+'I'+temp_seq[36:44]+temp_seq[45:]
-        elif structure.pdb_code.index in ['7EWP','7EWR']:
-            temp_seq = temp_seq[:667]+'S'+temp_seq[667:701]+temp_seq[702:]
-        elif structure.pdb_code.index in ['7T10','7T11']:
-            temp_seq = temp_seq[:237]+temp_seq[239:246]+'R'+temp_seq[251:]
-            ref_seq = ref_seq[:244]+ref_seq[245:253]+ref_seq[258:]
-        elif structure.pdb_code.index in ['7FIY']:
-            temp_seq = temp_seq[:306]+'R---'+temp_seq[310:]
-        elif structure.pdb_code.index in ['7B6W']:
-            temp_seq = temp_seq[:318]+'L----'+temp_seq[323:]
-            temp_seq = temp_seq[:245]+temp_seq[246:282]+'-S'+temp_seq[283:]
-        elif structure.pdb_code.index in ['7SIL','7SIM','7SIN']:
-            temp_seq = temp_seq[:702]+'L'+temp_seq[702:720]+temp_seq[721:]
-        elif structure.pdb_code.index in ['7WIH']:
-            temp_seq = temp_seq[:26]+'E'+temp_seq[26:33]+temp_seq[34:94]+'L'+temp_seq[94:117]+temp_seq[118:]
-        elif structure.pdb_code.index=='7SBF':
-            temp_seq = temp_seq[:8]+temp_seq[10:]
-            ref_seq = ref_seq[2:]
-        elif structure.pdb_code.index=='7RA3':
-            temp_seq = temp_seq[:306]+'R'+temp_seq[306:311]+temp_seq[312:]
-        elif structure.pdb_code.index in ['7EJ8']:
-            temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:]
-        elif structure.pdb_code.index in ['7EJ0']:
-            temp_seq = temp_seq[:242]+'R'+temp_seq[242:377]+temp_seq[378:]
-        elif structure.pdb_code.index in ['7EJK']:
-            temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:242]+'R'+temp_seq[242:379]+temp_seq[380:]
-        elif structure.pdb_code.index=='7EZC':
-            temp_seq = temp_seq[:146]+'Q'+temp_seq[146:155]+temp_seq[156:]
-        elif structure.pdb_code.index=='7RBT':
-            temp_seq = temp_seq[:306]+'R'+temp_seq[306:311]+temp_seq[312:]
-        elif structure.pdb_code.index=='7WUJ':
-            temp_seq = temp_seq[:158]+'T'+temp_seq[158:163]+temp_seq[164:]
-        elif structure.pdb_code.index=='5JQH':
-            temp_seq = temp_seq[:211]+'--D'+temp_seq[214:]
-        elif structure.pdb_code.index=='2YCW':
-            temp_seq = temp_seq[:242]+'R'+temp_seq[242:270]+temp_seq[271:]
-        elif structure.pdb_code.index=='7EPT':
-            temp_seq = temp_seq[:197]+'SA'+temp_seq[197:208]+temp_seq[210:]
-        elif structure.pdb_code.index=='7SK5':
-            temp_seq = temp_seq[:186]+'S--'+temp_seq[189:]
-        elif structure.pdb_code.index=='7WU9':
-            temp_seq = temp_seq[:261]+'Q'+temp_seq[261:275]+temp_seq[276:]
-        elif structure.pdb_code.index=='7SRS':
-            temp_seq = temp_seq[:246]+'VRLLS'+61*'-'+'R'+temp_seq[313:]
-        elif structure.pdb_code.index=='7UL2':
-            ref_seq = ref_seq[:257]+ref_seq[259:305]+ref_seq[306:]
-            temp_seq = temp_seq[:264]+'SVRL'+19*'-'+'LSGS'+temp_seq[291:296]+temp_seq[298:308]+temp_seq[309:]
-        elif structure.pdb_code.index=='7UL3':
-            ref_seq = ref_seq[:202]+ref_seq[206:211]+ref_seq[212:236]+ref_seq[242:244]+ref_seq[246:255]+ref_seq[256:]
-            temp_seq = temp_seq[:208]+'LKSVRLLS'+5*'-'+'SRE'+temp_seq[235:247]+'L'+temp_seq[251:]
-        elif structure.pdb_code.index=='7UL5':
-            ref_seq = ref_seq[:244]+ref_seq[245:253]+ref_seq[258:]
-            temp_seq = temp_seq[:237]+temp_seq[239:242]+'LSGSR'+temp_seq[251:]
-        elif structure.pdb_code.index=='7PP1':
-            temp_seq = temp_seq[:128]+'P'+temp_seq[128:134]+temp_seq[135:161]+'L'+temp_seq[161:177]+temp_seq[178:]
-        elif structure.pdb_code.index=='7RAN':
-            temp_seq = temp_seq[:283]+'C'+temp_seq[283:287]+temp_seq[288:]
-        elif structure.pdb_code.index=='7S0F':
-            temp_seq = temp_seq[:247]+temp_seq[248:283]+'F'+temp_seq[283:]
-        elif structure.pdb_code.index=='7VIH':
-            temp_seq = temp_seq[:33]+'KL'+temp_seq[33:45]+temp_seq[47:]
-        elif structure.pdb_code.index=='7VQX':
-            temp_seq = temp_seq[:288]+'S'+temp_seq[288:297]+temp_seq[298:]
-        elif structure.pdb_code.index in ['7VVK']:
-            temp_seq = temp_seq[:4]+temp_seq[65:84]+temp_seq[4:65]+temp_seq[84:]
-        elif structure.pdb_code.index in ['7VVL']:
-            temp_seq = temp_seq[:4]+temp_seq[62:81]+temp_seq[4:62]+temp_seq[81:]
-        elif structure.pdb_code.index in ['7VVM']:
-            temp_seq = temp_seq[:4]+temp_seq[61:80]+temp_seq[4:61]+temp_seq[80:]
-        elif structure.pdb_code.index=='7VVN':
-            temp_seq = temp_seq[:6]+temp_seq[78:95]+temp_seq[6:67]+temp_seq[95:102]+11*'-'+temp_seq[102:365]+'T'+temp_seq[365:372]+temp_seq[373:403]+'T'+temp_seq[403:408]+temp_seq[409:]
-        elif structure.pdb_code.index=='7VVO':
-            temp_seq = temp_seq[:6]+temp_seq[79:99]+temp_seq[6:79]+temp_seq[99:]
-        elif structure.pdb_code.index=='7W57':
-            temp_seq = temp_seq[:192]+'P'+temp_seq[192:198]+temp_seq[199:]
-        elif structure.pdb_code.index in ['7W6P']:
-            temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:]
-        elif structure.pdb_code.index=='7W7E':
-            temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:242]+'R'+temp_seq[242:377]+temp_seq[378:]
-        elif structure.pdb_code.index=='7WBJ':
-            temp_seq = temp_seq[:288]+'S'+temp_seq[288:297]+temp_seq[298:]
-        elif structure.pdb_code.index in ['7X8R']:
-            temp_seq = temp_seq[:7]+temp_seq[89:113]+temp_seq[7:89]+temp_seq[113:]
-        elif structure.pdb_code.index in ['7X8S']:
-            temp_seq = temp_seq[:7]+temp_seq[90:114]+temp_seq[7:90]+temp_seq[114:]
-        elif structure.pdb_code.index=='8HA0':
-            temp_seq = temp_seq[:4]+temp_seq[58:78]+temp_seq[4:58]+temp_seq[78:]
-        elif structure.pdb_code.index=='8HAF':
-            temp_seq = temp_seq[:4]+temp_seq[53:78]+temp_seq[4:53]+temp_seq[78:]
-        elif structure.pdb_code.index=='8HAO':
-            temp_seq = temp_seq[:4]+temp_seq[57:78]+temp_seq[4:57]+temp_seq[78:]
-        elif structure.pdb_code.index=='7T8X':
-            temp_seq = temp_seq[:214]+'K'+temp_seq[214:237]+temp_seq[238:]
-        elif structure.pdb_code.index in ['7ZBE','8A6C']:
-            temp_seq = temp_seq[:228]+'T'+temp_seq[228:242]+temp_seq[243:]
-        elif structure.pdb_code.index=='8FMZ':
-            temp_seq = temp_seq[:172]+'A-'+temp_seq[174:]
-        elif structure.pdb_code.index=='8ID4':
-            temp_seq = temp_seq[:72]+'A--'+temp_seq[75:]
-        elif structure.pdb_code.index=='7XJJ':
-            temp_seq = temp_seq[:140]+'R'+temp_seq[140:146]+temp_seq[147:]
-        elif structure.pdb_code.index=='8DZS':
-            temp_seq = temp_seq[:247]+'S----'+temp_seq[252:]
-        elif structure.pdb_code.index=='8G94':
-            temp_seq = temp_seq[:36]+'I'+temp_seq[36:44]+temp_seq[45:]
-        elif structure.pdb_code.index=='8IW1':
-            temp_seq = temp_seq[:170]+'G'+temp_seq[170:188]+temp_seq[189:]
-        elif structure.pdb_code.index in ['8IW4','8IWE']:
-            temp_seq = temp_seq[:180]+'V-'+temp_seq[182:]
-        elif structure.pdb_code.index in ['8JWY','8JWZ']:
-            ref_seq = ref_seq[:221]+ref_seq[222:]
-            temp_seq = temp_seq[:217]+temp_seq[218:]
-        elif structure.pdb_code.index in ['7Y35','7Y36']:
-            temp_seq = temp_seq[:31]+'R'+temp_seq[31:77]+temp_seq[78:]
-        elif structure.pdb_code.index=='7YMJ':
-            ref_seq = ref_seq[:215]+ref_seq[216:]
-            temp_seq = temp_seq[:212]+temp_seq[214:217]+40*'-'+temp_seq[218:222]+temp_seq[223:227]+'D'+temp_seq[232:236]+'RITRLVL'+temp_seq[276:]
-        elif structure.pdb_code.index=='8H0P':
-            temp_seq = temp_seq[:244]+'N'+temp_seq[244:250]+temp_seq[251:]
-        elif structure.pdb_code.index in ['8JCV','8JCX']:
-            temp_seq = temp_seq[:641]+'I'+temp_seq[641:655]+temp_seq[656:]
-        elif structure.pdb_code.index in ['8JD1']:
-            temp_seq = temp_seq[:642]+'F'+temp_seq[642:654]+temp_seq[655:]
-        elif structure.pdb_code.index in ['8JRV']:
-            temp_seq = temp_seq[79:100]+temp_seq[:79]+temp_seq[100:]
-        elif structure.pdb_code.index in ['8GTG','8GTM']:
-            temp_seq = temp_seq[:117]+'T---'+temp_seq[121:]
-        elif structure.pdb_code.index in ['8HTI','8J46','8W77']:
-            ref_seq = ref_seq[:114]+ref_seq[115:145]+'IL'+ref_seq[149:160]+ref_seq[161:170]+ref_seq[171:215]+ref_seq[216:]
-            temp_seq = temp_seq[:118]+temp_seq[119:150]+temp_seq[152:156]+temp_seq[157:168]+temp_seq[169:209]+temp_seq[210:]
-        elif structure.pdb_code.index=='8J24':
-            ref_seq = ref_seq[:245]+ref_seq[246:]
-            temp_seq = temp_seq[:247]+temp_seq[248:]
-        elif structure.pdb_code.index in ['7YFC','7FYD']:
-            temp_seq = temp_seq[:203]+'R'+temp_seq[203:296]+temp_seq[297:]
-        elif structure.pdb_code.index in ['8GGA','8GGP']:
-            temp_seq = temp_seq[:236]+'E'+temp_seq[236:267]+temp_seq[268:]
-        elif structure.pdb_code.index=='8GGB':
-            temp_seq = temp_seq[:95]+'T-'+temp_seq[97:236]+'E'+temp_seq[236:267]+temp_seq[268:]
-        elif structure.pdb_code.index=='8GGE':
-            temp_seq = temp_seq[:186]+'E-'+temp_seq[188:]
-        elif structure.pdb_code.index=='8GTI':
-            temp_seq = temp_seq[:219]+'T---'+temp_seq[223:]
-        elif structure.pdb_code.index in ['8HN8','8HOC']:
-            ref_seq = ref_seq[:180]+ref_seq[181:]
-            temp_seq = temp_seq[:182]+temp_seq[183:202]+'G'+temp_seq[202:222]+'-----'+temp_seq[230:291]+'HL'+temp_seq[291:]
-        elif structure.pdb_code.index=='8IKH':
-            temp_seq = temp_seq[:78]+'F---'+temp_seq[82:]
-        elif structure.pdb_code.index in ['8J22','8J23']:
-            ref_seq = ref_seq[:245]+ref_seq[246:]
-            temp_seq = temp_seq[:247]+temp_seq[248:]
-        elif structure.pdb_code.index=='8JXW':
-            temp_seq = temp_seq[:205]+'H'+temp_seq[205:291]+temp_seq[292:]
-        elif structure.pdb_code.index=='8KH5':
-            temp_seq = temp_seq[:154]+'RT'+temp_seq[154:163]+temp_seq[165:]
-        elif structure.pdb_code.index=='8PJK':
-            temp_seq = temp_seq[:175]+'R'+temp_seq[175:180]+temp_seq[181:]
-        elif structure.pdb_code.index=='8QJ2':
-            temp_seq = temp_seq[:70]+'KN--'+temp_seq[74:]
-        elif structure.pdb_code.index=='8QW4':
-            temp_seq = temp_seq[:460]+'Y'+temp_seq[460:466]+temp_seq[467:]
-        elif structure.pdb_code.index=='8SZF':
-            temp_seq = temp_seq[:684]+'L'+temp_seq[684:702]+temp_seq[703:]
-        elif structure.pdb_code.index=='8T3Q':
-            temp_seq = temp_seq[:123]+'RG---'+temp_seq[128:]
-        elif structure.pdb_code.index=='8TR2':
-            temp_seq = temp_seq[:472]+'QT-G'+temp_seq[476:511]+'P---'+temp_seq[515:629]+'F--'+temp_seq[632:]
-        elif structure.pdb_code.index in ['8TRC','8TRD']:
-            temp_seq = temp_seq[:472]+'Q----'+temp_seq[477:]
-        elif structure.pdb_code.index=='8UWL':
-            temp_seq = temp_seq[:200]+'T'+temp_seq[200:245]+temp_seq[246:]
-        elif structure.pdb_code.index=='8V6U':
-            temp_seq = temp_seq[:283]+'C----'+temp_seq[288:]
-        elif structure.pdb_code.index=='8WCB':
-            temp_seq = temp_seq[:178]+'G-'+temp_seq[180:]
-        elif structure.pdb_code.index=='8WKY':
-            temp_seq = temp_seq[:94]+'TD--'+temp_seq[98:]
-        elif structure.pdb_code.index=='8WPG':
-            temp_seq = temp_seq[:683]+'L'+temp_seq[683:701]+temp_seq[702:]
-        elif structure.pdb_code.index in ['8X79','8X7A']:
-            temp_seq = temp_seq[:221]+'G'+temp_seq[221:230]+temp_seq[231:]
-        elif structure.pdb_code.index=='8XQO':
-            temp_seq = temp_seq[:160]+'N'+temp_seq[160:169]+temp_seq[170:215]+'K'+temp_seq[215:223]+temp_seq[224:]
-        elif structure.pdb_code.index=='8XQP':
-            temp_seq = temp_seq[:160]+'N'+temp_seq[160:169]+temp_seq[170:]
-        elif structure.pdb_code.index in ['8YW3']:
-            temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
-        elif structure.pdb_code.index=='8YW4':
-            temp_seq = temp_seq[:9]+temp_seq[87:105]+temp_seq[9:87]+temp_seq[105:]
-        elif structure.pdb_code.index=='8YW5':
-            temp_seq = temp_seq[:20]+'L'+temp_seq[20:29]+temp_seq[30:]
-        elif structure.pdb_code.index=='8ZFJ':
-            temp_seq = temp_seq[:263]+'C--'+temp_seq[266:]
-        elif structure.pdb_code.index=='8ZSJ':
-            temp_seq = temp_seq[:228]+'K'+temp_seq[228:243]+temp_seq[244:]
-        elif structure.pdb_code.index=='9AVL':
-            temp_seq = temp_seq[:123]+'N'+temp_seq[123:129]+temp_seq[130:]
-        elif structure.pdb_code.index=='8UXY':
-            ref_seq = ref_seq[:90]+ref_seq[92:108]+ref_seq[109:151]+ref_seq[152:200]+ref_seq[201:213]+ref_seq[214:]
-            temp_seq = temp_seq[:84]+'I'+temp_seq[87:105]+temp_seq[106:149]+temp_seq[150:202]+temp_seq[203:211]+temp_seq[212:271]+'-YS'+temp_seq[274:]
-        elif structure.pdb_code.index=='8UXV':
-            ref_seq = ref_seq[:144]+ref_seq[145:210]+ref_seq[211:266]+ref_seq[267:]
-            temp_seq = temp_seq[:146]+temp_seq[147:208]+temp_seq[209:268]+temp_seq[269:]
-        elif structure.pdb_code.index=='8WVV':
-            temp_seq = temp_seq[:542]+'S---'+temp_seq[546:673]+'P-----'+temp_seq[679:]
-        elif structure.pdb_code.index in ['8XWP','8XWQ']:
-            temp_seq = temp_seq[:235]+'L'+temp_seq[235:245]+temp_seq[246:]
-        elif structure.pdb_code.index=='8YN4':
-            temp_seq = temp_seq[:215]+'I'+temp_seq[215:226]+temp_seq[227:]
-        elif structure.pdb_code.index in ['9JR2']:
-            temp_seq = temp_seq[:5]+temp_seq[58:81]+temp_seq[5:58]+temp_seq[81:]
-        elif structure.pdb_code.index in ['9JR3']:
-            temp_seq = temp_seq[:4]+temp_seq[57:81]+temp_seq[4:57]+temp_seq[81:]
-        elif structure.pdb_code.index in ['8S4D']:
-            temp_seq = temp_seq[:48]+'R------'+temp_seq[55:]
-        elif structure.pdb_code.index in ['8XWQ']:
-            temp_seq = temp_seq[:235]+'L'+temp_seq[235:245]+temp_seq[246:]
-        elif structure.pdb_code.index in ['8Y69']:
-            ref_seq = ref_seq[:567]+ref_seq[568:]
-            temp_seq = temp_seq[:565]+temp_seq[566:]
-        elif structure.pdb_code.index=='9IVM':
-            temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
-        elif structure.pdb_code.index=='8RVW':
-            ref_seq = ref_seq[:206]+'L'+ref_seq[206:249]+ref_seq[250:]
-        elif structure.pdb_code.index=='8XQE':
-            temp_seq = temp_seq[:54]+'R'+temp_seq[54:61]+temp_seq[62:]
-        elif structure.pdb_code.index in ['9II2','9II3']:
-            temp_seq = temp_seq[:48]+'E'+temp_seq[48:55]+temp_seq[56:]
-        elif structure.pdb_code.index=='9JVM':
-            temp_seq = temp_seq[:209]+'R'+temp_seq[209:221]+temp_seq[222:]
+        
+        # ref_seq, temp_seq = str(pw2[0][0]), str(pw2[0][1])
+        # # if structure.pdb_code.index in ['5WIU','5WIV']:
+        # #     temp_seq = temp_seq[:144]+'D'+temp_seq[145:]
+        # #     temp_seq = temp_seq[:149]+'-'+temp_seq[150:]
+        # # Custom fixes for alignment issues
+        # if structure.pdb_code.index=='5ZKP':
+        #     ref_seq = ref_seq[:197]+'-'+ref_seq[198:]
+        #     ref_seq = ref_seq[:198]+'A'+ref_seq[199:]
+        # elif structure.pdb_code.index in ['5VEW','5VEX']:
+        #     ref_seq = ref_seq[:164]+'IG'+ref_seq[167:]
+        #     temp_seq = temp_seq[:166]+temp_seq[167:]
+        # elif structure.pdb_code.index in ['3V2W']:
+        #     ref_seq = ref_seq[:201]+ref_seq[202:]
+        #     temp_seq = temp_seq[:207]+temp_seq[208:]
+        # elif structure.pdb_code.index in ['3V2Y']:
+        #     ref_seq = ref_seq[:209]+ref_seq[210:]
+        #     temp_seq = temp_seq[:215]+temp_seq[216:]
+        # elif structure.pdb_code.index in ['6KUX','6KUY']:
+        #     ref_seq = ref_seq[:416]+('-'*(416-233))+ref_seq[416:]
+        #     temp_seq = temp_seq[:233]+('-'*(416-233))+temp_seq[233:]
+        # elif structure.pdb_code.index in ['6KJV','6KK1','6KK7']:
+        #     ref_seq = ref_seq[:176]+ref_seq[177:]
+        #     temp_seq = temp_seq[:178]+temp_seq[179:]
+        # elif structure.pdb_code.index in ['6LN2']:
+        #     ref_seq = ref_seq[:292]+ref_seq[293:]
+        #     temp_seq = temp_seq[:294]+temp_seq[295:]
+        # elif structure.pdb_code.index in ['6WHA']:
+        #     temp_seq = temp_seq[:76]+'P--'+temp_seq[79:]
+        # elif structure.pdb_code.index in ['6X18']:
+        #     temp_seq = temp_seq[:105]+'S------'+temp_seq[112:]
+        # elif structure.pdb_code.index in ['6K41']:
+        #     temp_seq = temp_seq[:71]+'W------'+temp_seq[78:]
+        # elif structure.pdb_code.index in ['6LPB']:
+        #     temp_seq = temp_seq[:316]+'S--------'+temp_seq[325:]
+        # elif structure.pdb_code.index in ['6RZ5']:
+        #     temp_seq = temp_seq[:221]+'K-'+temp_seq[223:]
+        # elif structure.pdb_code.index in ['6TPK']:
+        #     temp_seq = temp_seq[:30]+'H-----'+temp_seq[36:]
+        # elif structure.pdb_code.index in ['6W25']:
+        #     temp_seq = temp_seq[:94]+'T--'+temp_seq[97:]
+        # elif structure.pdb_code.index in ['7C61']:
+        #     temp_seq = temp_seq[:207]+'-'+temp_seq[207:225]+'-'+temp_seq[225:238]+'-'+temp_seq[238:251]+'-'+temp_seq[251:]
+        #     ref_seq = ref_seq[:304]+'----'+ref_seq[304:]
+        # elif structure.pdb_code.index in ['6WHC']:
+        #     temp_seq = temp_seq[:202]+'S----------'+temp_seq[213:]
+        # elif structure.pdb_code.index=='5T1A':
+        #     temp_seq = temp_seq[:229]+temp_seq[231:238]+temp_seq[239:242]+temp_seq[245:]
+        #     ref_seq = ref_seq[:224]+ref_seq[227:233]+ref_seq[236:]
+        # elif structure.pdb_code.index=='5UEN':
+        #     temp_seq = temp_seq[:218]+temp_seq[222:]
+        #     ref_seq = ref_seq[:210]+ref_seq[214:]
+        # elif structure.pdb_code.index=='6DO1':
+        #     temp_seq = temp_seq[:228]+temp_seq[230:]
+        #     ref_seq = ref_seq[:225]+ref_seq[227:]
+        # elif structure.pdb_code.index=='7KH0':
+        #     temp_seq = temp_seq[:240]+'S'+temp_seq[240:262]+temp_seq[263:]
+        # elif structure.pdb_code.index=='7BB6':
+        #     temp_seq = temp_seq[:231]+'A'+temp_seq[231:257]+temp_seq[258:]
+        # elif structure.pdb_code.index=='7C4S':
+        #     temp_seq = temp_seq[:224]+'S'+temp_seq[224:234]+temp_seq[235:]
+        # elif structure.pdb_code.index=='7M3J':
+        #     temp_seq = temp_seq[:100]+'I'+temp_seq[100:115]+temp_seq[116:337]+'N'+temp_seq[337:380]+temp_seq[381:]
+        # elif structure.pdb_code.index=='7DUQ':
+        #     temp_seq = temp_seq[:105]+'S------'+temp_seq[112:]
+        # elif structure.pdb_code.index in ['7KI0','7KI1']:
+        #     temp_seq = temp_seq[:105]+'S-------'+temp_seq[113:]
+        # elif structure.pdb_code.index=='7MTQ':
+        #     temp_seq = temp_seq[:694]+'E---'+temp_seq[698:]
+        # elif structure.pdb_code.index=='7FD9':
+        #     temp_seq = temp_seq[:99]+'S'+temp_seq[99:118]+temp_seq[119:]
+        # elif structure.pdb_code.index in ['6ZFZ', '6ZG4', '6ZG9']:
+        #     temp_seq = temp_seq[:28]+temp_seq[29:207]+temp_seq[208:]
+        #     ref_seq = ref_seq[:23]+ref_seq[24:211]+ref_seq[212:]
+        # elif structure.pdb_code.index in ['7NA7', '7NA8']:
+        #     temp_seq = temp_seq[:242]+'R'+temp_seq[242:253]+temp_seq[254:]
+        # elif structure.pdb_code.index in ['7F8V', '7F8W']:
+        #     temp_seq = temp_seq[:247]+'L'+temp_seq[247:323]+temp_seq[324:]
+        # elif structure.pdb_code.index=='7RTB':
+        #     temp_seq = temp_seq[:107]+'S'+temp_seq[107:113]+temp_seq[114:]
+        # elif structure.pdb_code.index=='6Z4Q':
+        #     temp_seq = temp_seq[:131]+'H-'+temp_seq[133:]
+        # elif structure.pdb_code.index=='6ZA8':
+        #     temp_seq = temp_seq[:212]+'L'+temp_seq[212:219]+temp_seq[220:]
+        # elif structure.pdb_code.index=='7EO4':
+        #     temp_seq = temp_seq[:36]+'I'+temp_seq[36:44]+temp_seq[45:]
+        # elif structure.pdb_code.index in ['7EWP','7EWR']:
+        #     temp_seq = temp_seq[:667]+'S'+temp_seq[667:701]+temp_seq[702:]
+        # elif structure.pdb_code.index in ['7T10','7T11']:
+        #     temp_seq = temp_seq[:237]+temp_seq[239:246]+'R'+temp_seq[251:]
+        #     ref_seq = ref_seq[:244]+ref_seq[245:253]+ref_seq[258:]
+        # elif structure.pdb_code.index in ['7FIY']:
+        #     temp_seq = temp_seq[:306]+'R---'+temp_seq[310:]
+        # elif structure.pdb_code.index in ['7B6W']:
+        #     temp_seq = temp_seq[:318]+'L----'+temp_seq[323:]
+        #     temp_seq = temp_seq[:245]+temp_seq[246:282]+'-S'+temp_seq[283:]
+        # elif structure.pdb_code.index in ['7SIL','7SIM','7SIN']:
+        #     temp_seq = temp_seq[:702]+'L'+temp_seq[702:720]+temp_seq[721:]
+        # elif structure.pdb_code.index in ['7WIH']:
+        #     temp_seq = temp_seq[:26]+'E'+temp_seq[26:33]+temp_seq[34:94]+'L'+temp_seq[94:117]+temp_seq[118:]
+        # elif structure.pdb_code.index=='7SBF':
+        #     temp_seq = temp_seq[:8]+temp_seq[10:]
+        #     ref_seq = ref_seq[2:]
+        # elif structure.pdb_code.index=='7RA3':
+        #     temp_seq = temp_seq[:306]+'R'+temp_seq[306:311]+temp_seq[312:]
+        # elif structure.pdb_code.index in ['7EJ8']:
+        #     temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:]
+        # elif structure.pdb_code.index in ['7EJ0']:
+        #     temp_seq = temp_seq[:242]+'R'+temp_seq[242:377]+temp_seq[378:]
+        # elif structure.pdb_code.index in ['7EJK']:
+        #     temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:242]+'R'+temp_seq[242:379]+temp_seq[380:]
+        # elif structure.pdb_code.index=='7EZC':
+        #     temp_seq = temp_seq[:146]+'Q'+temp_seq[146:155]+temp_seq[156:]
+        # elif structure.pdb_code.index=='7RBT':
+        #     temp_seq = temp_seq[:306]+'R'+temp_seq[306:311]+temp_seq[312:]
+        # elif structure.pdb_code.index=='7WUJ':
+        #     temp_seq = temp_seq[:158]+'T'+temp_seq[158:163]+temp_seq[164:]
+        # elif structure.pdb_code.index=='5JQH':
+        #     temp_seq = temp_seq[:211]+'--D'+temp_seq[214:]
+        # elif structure.pdb_code.index=='2YCW':
+        #     temp_seq = temp_seq[:242]+'R'+temp_seq[242:270]+temp_seq[271:]
+        # elif structure.pdb_code.index=='7EPT':
+        #     temp_seq = temp_seq[:197]+'SA'+temp_seq[197:208]+temp_seq[210:]
+        # elif structure.pdb_code.index=='7SK5':
+        #     temp_seq = temp_seq[:186]+'S--'+temp_seq[189:]
+        # elif structure.pdb_code.index=='7WU9':
+        #     temp_seq = temp_seq[:261]+'Q'+temp_seq[261:275]+temp_seq[276:]
+        # elif structure.pdb_code.index=='7SRS':
+        #     temp_seq = temp_seq[:246]+'VRLLS'+61*'-'+'R'+temp_seq[313:]
+        # elif structure.pdb_code.index=='7UL2':
+        #     ref_seq = ref_seq[:257]+ref_seq[259:305]+ref_seq[306:]
+        #     temp_seq = temp_seq[:264]+'SVRL'+19*'-'+'LSGS'+temp_seq[291:296]+temp_seq[298:308]+temp_seq[309:]
+        # elif structure.pdb_code.index=='7UL3':
+        #     ref_seq = ref_seq[:202]+ref_seq[206:211]+ref_seq[212:236]+ref_seq[242:244]+ref_seq[246:255]+ref_seq[256:]
+        #     temp_seq = temp_seq[:208]+'LKSVRLLS'+5*'-'+'SRE'+temp_seq[235:247]+'L'+temp_seq[251:]
+        # elif structure.pdb_code.index=='7UL5':
+        #     ref_seq = ref_seq[:244]+ref_seq[245:253]+ref_seq[258:]
+        #     temp_seq = temp_seq[:237]+temp_seq[239:242]+'LSGSR'+temp_seq[251:]
+        # elif structure.pdb_code.index=='7PP1':
+        #     temp_seq = temp_seq[:128]+'P'+temp_seq[128:134]+temp_seq[135:161]+'L'+temp_seq[161:177]+temp_seq[178:]
+        # elif structure.pdb_code.index=='7RAN':
+        #     temp_seq = temp_seq[:283]+'C'+temp_seq[283:287]+temp_seq[288:]
+        # elif structure.pdb_code.index=='7S0F':
+        #     temp_seq = temp_seq[:247]+temp_seq[248:283]+'F'+temp_seq[283:]
+        # elif structure.pdb_code.index=='7VIH':
+        #     temp_seq = temp_seq[:33]+'KL'+temp_seq[33:45]+temp_seq[47:]
+        # elif structure.pdb_code.index=='7VQX':
+        #     temp_seq = temp_seq[:288]+'S'+temp_seq[288:297]+temp_seq[298:]
+        # elif structure.pdb_code.index in ['7VVK']:
+        #     temp_seq = temp_seq[:4]+temp_seq[65:84]+temp_seq[4:65]+temp_seq[84:]
+        # elif structure.pdb_code.index in ['7VVL']:
+        #     temp_seq = temp_seq[:4]+temp_seq[62:81]+temp_seq[4:62]+temp_seq[81:]
+        # elif structure.pdb_code.index in ['7VVM']:
+        #     temp_seq = temp_seq[:4]+temp_seq[61:80]+temp_seq[4:61]+temp_seq[80:]
+        # elif structure.pdb_code.index=='7VVN':
+        #     temp_seq = temp_seq[:6]+temp_seq[78:95]+temp_seq[6:67]+temp_seq[95:102]+11*'-'+temp_seq[102:365]+'T'+temp_seq[365:372]+temp_seq[373:403]+'T'+temp_seq[403:408]+temp_seq[409:]
+        # elif structure.pdb_code.index=='7VVO':
+        #     temp_seq = temp_seq[:6]+temp_seq[79:99]+temp_seq[6:79]+temp_seq[99:]
+        # elif structure.pdb_code.index=='7W57':
+        #     temp_seq = temp_seq[:192]+'P'+temp_seq[192:198]+temp_seq[199:]
+        # elif structure.pdb_code.index in ['7W6P']:
+        #     temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:]
+        # elif structure.pdb_code.index=='7W7E':
+        #     temp_seq = temp_seq[:182]+'P'+temp_seq[182:200]+temp_seq[201:242]+'R'+temp_seq[242:377]+temp_seq[378:]
+        # elif structure.pdb_code.index=='7WBJ':
+        #     temp_seq = temp_seq[:288]+'S'+temp_seq[288:297]+temp_seq[298:]
+        # elif structure.pdb_code.index in ['7X8R']:
+        #     temp_seq = temp_seq[:7]+temp_seq[89:113]+temp_seq[7:89]+temp_seq[113:]
+        # elif structure.pdb_code.index in ['7X8S']:
+        #     temp_seq = temp_seq[:7]+temp_seq[90:114]+temp_seq[7:90]+temp_seq[114:]
+        # elif structure.pdb_code.index=='8HA0':
+        #     temp_seq = temp_seq[:4]+temp_seq[58:78]+temp_seq[4:58]+temp_seq[78:]
+        # elif structure.pdb_code.index=='8HAF':
+        #     temp_seq = temp_seq[:4]+temp_seq[53:78]+temp_seq[4:53]+temp_seq[78:]
+        # elif structure.pdb_code.index=='8HAO':
+        #     temp_seq = temp_seq[:4]+temp_seq[57:78]+temp_seq[4:57]+temp_seq[78:]
+        # elif structure.pdb_code.index=='7T8X':
+        #     temp_seq = temp_seq[:214]+'K'+temp_seq[214:237]+temp_seq[238:]
+        # elif structure.pdb_code.index in ['7ZBE','8A6C']:
+        #     temp_seq = temp_seq[:228]+'T'+temp_seq[228:242]+temp_seq[243:]
+        # elif structure.pdb_code.index=='8FMZ':
+        #     temp_seq = temp_seq[:172]+'A-'+temp_seq[174:]
+        # elif structure.pdb_code.index=='8ID4':
+        #     temp_seq = temp_seq[:72]+'A--'+temp_seq[75:]
+        # elif structure.pdb_code.index=='7XJJ':
+        #     temp_seq = temp_seq[:140]+'R'+temp_seq[140:146]+temp_seq[147:]
+        # elif structure.pdb_code.index=='8DZS':
+        #     temp_seq = temp_seq[:247]+'S----'+temp_seq[252:]
+        # elif structure.pdb_code.index=='8G94':
+        #     temp_seq = temp_seq[:36]+'I'+temp_seq[36:44]+temp_seq[45:]
+        # elif structure.pdb_code.index=='8IW1':
+        #     temp_seq = temp_seq[:170]+'G'+temp_seq[170:188]+temp_seq[189:]
+        # elif structure.pdb_code.index in ['8IW4','8IWE']:
+        #     temp_seq = temp_seq[:180]+'V-'+temp_seq[182:]
+        # elif structure.pdb_code.index in ['8JWY','8JWZ']:
+        #     ref_seq = ref_seq[:221]+ref_seq[222:]
+        #     temp_seq = temp_seq[:217]+temp_seq[218:]
+        # elif structure.pdb_code.index in ['7Y35','7Y36']:
+        #     temp_seq = temp_seq[:31]+'R'+temp_seq[31:77]+temp_seq[78:]
+        # elif structure.pdb_code.index=='7YMJ':
+        #     ref_seq = ref_seq[:215]+ref_seq[216:]
+        #     temp_seq = temp_seq[:212]+temp_seq[214:217]+40*'-'+temp_seq[218:222]+temp_seq[223:227]+'D'+temp_seq[232:236]+'RITRLVL'+temp_seq[276:]
+        # elif structure.pdb_code.index=='8H0P':
+        #     temp_seq = temp_seq[:244]+'N'+temp_seq[244:250]+temp_seq[251:]
+        # elif structure.pdb_code.index in ['8JCV','8JCX']:
+        #     temp_seq = temp_seq[:641]+'I'+temp_seq[641:655]+temp_seq[656:]
+        # elif structure.pdb_code.index in ['8JD1']:
+        #     temp_seq = temp_seq[:642]+'F'+temp_seq[642:654]+temp_seq[655:]
+        # elif structure.pdb_code.index in ['8JRV']:
+        #     temp_seq = temp_seq[79:100]+temp_seq[:79]+temp_seq[100:]
+        # elif structure.pdb_code.index in ['8GTG','8GTM']:
+        #     temp_seq = temp_seq[:117]+'T---'+temp_seq[121:]
+        # elif structure.pdb_code.index in ['8HTI','8J46','8W77']:
+        #     ref_seq = ref_seq[:114]+ref_seq[115:145]+'IL'+ref_seq[149:160]+ref_seq[161:170]+ref_seq[171:215]+ref_seq[216:]
+        #     temp_seq = temp_seq[:118]+temp_seq[119:150]+temp_seq[152:156]+temp_seq[157:168]+temp_seq[169:209]+temp_seq[210:]
+        # elif structure.pdb_code.index=='8J24':
+        #     ref_seq = ref_seq[:245]+ref_seq[246:]
+        #     temp_seq = temp_seq[:247]+temp_seq[248:]
+        # elif structure.pdb_code.index in ['7YFC','7FYD']:
+        #     temp_seq = temp_seq[:203]+'R'+temp_seq[203:296]+temp_seq[297:]
+        # elif structure.pdb_code.index in ['8GGA','8GGP']:
+        #     temp_seq = temp_seq[:236]+'E'+temp_seq[236:267]+temp_seq[268:]
+        # elif structure.pdb_code.index=='8GGB':
+        #     temp_seq = temp_seq[:95]+'T-'+temp_seq[97:236]+'E'+temp_seq[236:267]+temp_seq[268:]
+        # elif structure.pdb_code.index=='8GGE':
+        #     temp_seq = temp_seq[:186]+'E-'+temp_seq[188:]
+        # elif structure.pdb_code.index=='8GTI':
+        #     temp_seq = temp_seq[:219]+'T---'+temp_seq[223:]
+        # elif structure.pdb_code.index in ['8HN8','8HOC']:
+        #     ref_seq = ref_seq[:180]+ref_seq[181:]
+        #     temp_seq = temp_seq[:182]+temp_seq[183:202]+'G'+temp_seq[202:222]+'-----'+temp_seq[230:291]+'HL'+temp_seq[291:]
+        # elif structure.pdb_code.index=='8IKH':
+        #     temp_seq = temp_seq[:78]+'F---'+temp_seq[82:]
+        # elif structure.pdb_code.index in ['8J22','8J23']:
+        #     ref_seq = ref_seq[:245]+ref_seq[246:]
+        #     temp_seq = temp_seq[:247]+temp_seq[248:]
+        # elif structure.pdb_code.index=='8JXW':
+        #     temp_seq = temp_seq[:205]+'H'+temp_seq[205:291]+temp_seq[292:]
+        # elif structure.pdb_code.index=='8KH5':
+        #     temp_seq = temp_seq[:154]+'RT'+temp_seq[154:163]+temp_seq[165:]
+        # elif structure.pdb_code.index=='8PJK':
+        #     temp_seq = temp_seq[:175]+'R'+temp_seq[175:180]+temp_seq[181:]
+        # elif structure.pdb_code.index=='8QJ2':
+        #     temp_seq = temp_seq[:70]+'KN--'+temp_seq[74:]
+        # elif structure.pdb_code.index=='8QW4':
+        #     temp_seq = temp_seq[:460]+'Y'+temp_seq[460:466]+temp_seq[467:]
+        # elif structure.pdb_code.index=='8SZF':
+        #     temp_seq = temp_seq[:684]+'L'+temp_seq[684:702]+temp_seq[703:]
+        # elif structure.pdb_code.index=='8T3Q':
+        #     temp_seq = temp_seq[:123]+'RG---'+temp_seq[128:]
+        # elif structure.pdb_code.index=='8TR2':
+        #     temp_seq = temp_seq[:472]+'QT-G'+temp_seq[476:511]+'P---'+temp_seq[515:629]+'F--'+temp_seq[632:]
+        # elif structure.pdb_code.index in ['8TRC','8TRD']:
+        #     temp_seq = temp_seq[:472]+'Q----'+temp_seq[477:]
+        # elif structure.pdb_code.index=='8UWL':
+        #     temp_seq = temp_seq[:200]+'T'+temp_seq[200:245]+temp_seq[246:]
+        # elif structure.pdb_code.index=='8V6U':
+        #     temp_seq = temp_seq[:283]+'C----'+temp_seq[288:]
+        # elif structure.pdb_code.index=='8WCB':
+        #     temp_seq = temp_seq[:178]+'G-'+temp_seq[180:]
+        # elif structure.pdb_code.index=='8WKY':
+        #     temp_seq = temp_seq[:94]+'TD--'+temp_seq[98:]
+        # elif structure.pdb_code.index=='8WPG':
+        #     temp_seq = temp_seq[:683]+'L'+temp_seq[683:701]+temp_seq[702:]
+        # elif structure.pdb_code.index in ['8X79','8X7A']:
+        #     temp_seq = temp_seq[:221]+'G'+temp_seq[221:230]+temp_seq[231:]
+        # elif structure.pdb_code.index=='8XQO':
+        #     temp_seq = temp_seq[:160]+'N'+temp_seq[160:169]+temp_seq[170:215]+'K'+temp_seq[215:223]+temp_seq[224:]
+        # elif structure.pdb_code.index=='8XQP':
+        #     temp_seq = temp_seq[:160]+'N'+temp_seq[160:169]+temp_seq[170:]
+        # elif structure.pdb_code.index in ['8YW3']:
+        #     temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
+        # elif structure.pdb_code.index=='8YW4':
+        #     temp_seq = temp_seq[:9]+temp_seq[87:105]+temp_seq[9:87]+temp_seq[105:]
+        # elif structure.pdb_code.index=='8YW5':
+        #     temp_seq = temp_seq[:20]+'L'+temp_seq[20:29]+temp_seq[30:]
+        # elif structure.pdb_code.index=='8ZFJ':
+        #     temp_seq = temp_seq[:263]+'C--'+temp_seq[266:]
+        # elif structure.pdb_code.index=='8ZSJ':
+        #     temp_seq = temp_seq[:228]+'K'+temp_seq[228:243]+temp_seq[244:]
+        # elif structure.pdb_code.index=='9AVL':
+        #     temp_seq = temp_seq[:123]+'N'+temp_seq[123:129]+temp_seq[130:]
+        # elif structure.pdb_code.index=='8UXY':
+        #     ref_seq = ref_seq[:90]+ref_seq[92:108]+ref_seq[109:151]+ref_seq[152:200]+ref_seq[201:213]+ref_seq[214:]
+        #     temp_seq = temp_seq[:84]+'I'+temp_seq[87:105]+temp_seq[106:149]+temp_seq[150:202]+temp_seq[203:211]+temp_seq[212:271]+'-YS'+temp_seq[274:]
+        # elif structure.pdb_code.index=='8UXV':
+        #     ref_seq = ref_seq[:144]+ref_seq[145:210]+ref_seq[211:266]+ref_seq[267:]
+        #     temp_seq = temp_seq[:146]+temp_seq[147:208]+temp_seq[209:268]+temp_seq[269:]
+        # elif structure.pdb_code.index=='8WVV':
+        #     temp_seq = temp_seq[:542]+'S---'+temp_seq[546:673]+'P-----'+temp_seq[679:]
+        # elif structure.pdb_code.index in ['8XWP','8XWQ']:
+        #     temp_seq = temp_seq[:235]+'L'+temp_seq[235:245]+temp_seq[246:]
+        # elif structure.pdb_code.index=='8YN4':
+        #     temp_seq = temp_seq[:215]+'I'+temp_seq[215:226]+temp_seq[227:]
+        # elif structure.pdb_code.index in ['9JR2']:
+        #     temp_seq = temp_seq[:5]+temp_seq[58:81]+temp_seq[5:58]+temp_seq[81:]
+        # elif structure.pdb_code.index in ['9JR3']:
+        #     temp_seq = temp_seq[:4]+temp_seq[57:81]+temp_seq[4:57]+temp_seq[81:]
+        # elif structure.pdb_code.index in ['8S4D']:
+        #     temp_seq = temp_seq[:48]+'R------'+temp_seq[55:]
+        # elif structure.pdb_code.index in ['8XWQ']:
+        #     temp_seq = temp_seq[:235]+'L'+temp_seq[235:245]+temp_seq[246:]
+        # elif structure.pdb_code.index in ['8Y69']:
+        #     ref_seq = ref_seq[:567]+ref_seq[568:]
+        #     temp_seq = temp_seq[:565]+temp_seq[566:]
+        # elif structure.pdb_code.index=='9IVM':
+        #     temp_seq = temp_seq[:105]+'S'+temp_seq[105:111]+temp_seq[112:]
+        # elif structure.pdb_code.index=='8RVW':
+        #     ref_seq = ref_seq[:206]+'L'+ref_seq[206:249]+ref_seq[250:]
+        # elif structure.pdb_code.index=='8XQE':
+        #     temp_seq = temp_seq[:54]+'R'+temp_seq[54:61]+temp_seq[62:]
+        # elif structure.pdb_code.index in ['9II2','9II3']:
+        #     temp_seq = temp_seq[:48]+'E'+temp_seq[48:55]+temp_seq[56:]
+        # elif structure.pdb_code.index=='9JVM':
+        #     temp_seq = temp_seq[:209]+'R'+temp_seq[209:221]+temp_seq[222:]
 
         # --- [END OF LEGACY PIPELINE] ---
 
@@ -778,41 +778,53 @@ class Command(BaseBuild):
         
         # # ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
 
-        # pdb_code = structure.pdb_code.index
-        # wt_seq = parent_seq  # Use the already prepared WT sequence
-        # pdb_text = structure.pdb_data.pdb
+        gaps = 0
+        unmapped_ref = {}
+        pdb_code = structure.pdb_code.index
+        wt_seq = parent_seq  # Use the already prepared WT sequence
+        pdb_text = structure.pdb_data.pdb
 
-        # # 'removed' list (for fusion proteins) is already calculated above.
-        # # We pass it to our helper to get a clean PDB sequence.
-        # pdb_seq, distances = generate_seq_and_distances_from_pdb_text(
-        #     pdb_text, preferred_chain, residues_to_remove=removed
-        # )
+        # 'removed' list (for fusion proteins) is already calculated above.
+        # We pass it to our helper to get a clean PDB sequence.
+        pdb_seq, distances = generate_seq_and_distances_from_pdb_text(
+            pdb_text, preferred_chain, residues_to_remove=removed
+        )
 
-        # # Get initial alignment and residue mapping
-        # initial_ref_seq, initial_temp_seq, pdb_map = run_pairwisealigner(
-        #     pdb_code, wt_seq, pdb_seq
-        # )
+        # Get initial alignment and residue mapping
+        initial_ref_seq, initial_temp_seq, pdb_map = run_pairwisealigner(
+            pdb_code, wt_seq, pdb_seq
+        )
 
-        # # Find outliers which might indicate misalignments
-        # outlier_indexes = distances_stats(distances)
+        # Find outliers which might indicate misalignments
+        outlier_indexes = distances_stats(distances)
 
-        # # Attempt to automatically fix misalignments based on outliers and gaps
-        # # The function returns the final, corrected alignment string for the PDB sequence.
-        # fixed_temp_seq = detect_alignment_mistakes_and_reposition(
-        #     pdb_code,
-        #     wt_seq,
-        #     pdb_seq,
-        #     initial_ref_seq,
-        #     initial_temp_seq,
-        #     pdb_map,
-        #     distances,
-        #     outlier_indexes,
-        #     aanumber=3,
-        # )
+        # Attempt to automatically fix misalignments based on outliers and gaps
+        # The function returns the final, corrected alignment string for the PDB sequence.
+        fixed_temp_seq = detect_alignment_mistakes_and_reposition(
+            pdb_code,
+            wt_seq,
+            pdb_seq,
+            initial_ref_seq,
+            initial_temp_seq,
+            pdb_map,
+            distances,
+            outlier_indexes,
+            aanumber=3,
+        )
 
-        # # Assign the final, corrected alignment strings to be used by the rest of the function.
-        # ref_seq = initial_ref_seq
-        # temp_seq = fixed_temp_seq
+        # Collapse any physically-bonded PDB residues (no real chain break between
+        # them) that ended up scattered across a gap by coincidental letter matches.
+        # Uses an absolute CA-CA distance threshold rather than distances_stats'
+        # whole-structure relative outlier test, which can miss a real break if the
+        # rest of the structure's distances already have enough natural spread.
+        chain_breaks = find_chain_breaks(distances)
+        fixed_temp_seq = consolidate_structural_islands(
+            pdb_seq, fixed_temp_seq, chain_breaks
+        )
+
+        # Assign the final, corrected alignment strings to be used by the rest of the function.
+        ref_seq = initial_ref_seq
+        temp_seq = fixed_temp_seq
 
 
         # # ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
@@ -1762,8 +1774,15 @@ class Command(BaseBuild):
                             for entry in uc_entries:
                                 if entry["type"] not in ids:
                                     ids[entry["type"]] = entry["id"]
+                        # use smiles, inchikey, sequence from annotation CSV
+                        if ligand.get('smiles'):
+                            ids['smiles'] = ligand['smiles']
+                        if ligand.get('inchikey'):
+                            ids['inchikey'] = ligand['inchikey']
+                        if ligand.get('sequence'):
+                            ids['sequence'] = ligand['sequence']
                         # sequence
-                        if peptide_chain in self.parsed_pdb:
+                        if ligand['type'] in ['peptide', 'protein'] and peptide_chain in self.parsed_pdb:
                             seq = ''
                             for res in self.parsed_pdb[peptide_chain]:
                                 one_letter = Polypeptide.protein_letters_3to1.get(res.get_resname())
@@ -1796,12 +1815,23 @@ class Command(BaseBuild):
                         # except IntegrityError:
                         #     lr = LigandRole.objects.get(slug=role_slug)
 
+                        site_obj = None
+                        site_val = ligand.get('site', '')
+                        if site_val:
+                            site_obj, _ = Site.objects.get_or_create(
+                                slug=slugify(site_val), defaults={'name': site_val})
+                        chain_res_val = ligand.get('residue_seq_id', '') or None
+
                         i, created = StructureLigandInteraction.objects.get_or_create(structure=s,
                             ligand=l, ligand_role=lr, annotated=True,
-                            defaults={'pdb_reference': pdb_reference})
+                            defaults={'pdb_reference': pdb_reference, 'site': site_obj, 'chain_res': chain_res_val})
                         if i.pdb_reference != pdb_reference:
                             i.pdb_reference = pdb_reference
-                            i.save()
+                        if i.site != site_obj:
+                            i.site = site_obj
+                        if i.chain_res != chain_res_val:
+                            i.chain_res = chain_res_val
+                        i.save()
 
             # protein anomalies
             anomaly_entry = self.xtal_anomalies[s.protein_conformation.protein.parent.entry_name]
@@ -1973,11 +2003,12 @@ class Command(BaseBuild):
                     self.contactnetwork_errors.append(s)
 
             for ligand in ligands:
-                if ligand['type'].strip() in ['small molecule', 'protein', 'peptide'] and ligand['in_structure']:
+                ligand_type = ligand['type'].strip().replace('-', ' ')
+                if ligand_type in ['small molecule', 'protein', 'peptide', 'lipid'] and ligand['in_structure']:
                     try:
                         current = time.time()
                         peptide_chain = ""
-                        if ligand['chain']!='':
+                        if ligand['chain']!='' and ligand_type in ['protein', 'peptide']:
                             peptide_chain = ligand['chain']
                         # mypath = '/tmp/interactions/results/' + sd['pdb'] + '/output'
                         # if not os.path.isdir(mypath):
