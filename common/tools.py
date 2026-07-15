@@ -453,6 +453,17 @@ def urlopen_with_retry(url, data = None, retries = 5, sleeptime = 5):
 def find_role(role_str, fuzzy_cutoff=0.75):
     from ligand.models import LigandRole
     role_dict = definitions.ROLE_DICTIONARY
+
+    # 1) Exact case-insensitive match against known synonyms — checked first so a
+    #    specific synonym (e.g. "Agonist (partial)", "Inverse agonist") isn't
+    #    shadowed by a more generic pattern (e.g. "Agonist") that happens to
+    #    appear earlier in ROLE_DICTIONARY or match as a substring.
+    role_norm = role_str.strip().lower()
+    for subs in role_dict.values():
+        for sub_key, synonyms in subs.items():
+            if any(s and s.lower() == role_norm for s in synonyms):
+                return LigandRole.objects.filter(name=sub_key)
+
     # Pre‐compile your regex patterns once
     _role_patterns = []
     for _, subs in role_dict.items():
@@ -471,17 +482,17 @@ def find_role(role_str, fuzzy_cutoff=0.75):
         for subs in role_dict.values()
         for sub_key in subs.keys()
     ]
-    # 1) Regex‐based exact/insensitive match
+    # 2) Regex‐based exact/insensitive substring match (fallback)
     for pattern, sub_key in _role_patterns:
         if pattern.search(role_str):
             return LigandRole.objects.filter(name=sub_key)
 
-    # 2) Fuzzy‐string fallback
+    # 3) Fuzzy‐string fallback
     candidates = get_close_matches(role_str, _all_sub_keys, n=1, cutoff=fuzzy_cutoff)
     if candidates:
         return LigandRole.objects.filter(name=candidates[0])
 
-    # 3) Default to “Unknown”
+    # 4) Default to “Unknown”
     #    Assumes you’ve already bulk‐created a LigandRole with name='Unknown'
     return LigandRole.objects.filter(name='Unknown')
 
