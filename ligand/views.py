@@ -3808,6 +3808,9 @@ class LigandInformationView(AbsLigand):
         affinity_values = ['pKi', 'pKd', 'Ki', 'Kd']
         for key in return_dict.keys():
             for data_type in return_dict[key]['data_type'].keys():
+                ### Temp FIX to ignore assay data with value_type set to None
+                if not data_type:
+                    continue
                 label = '_'.join([key,data_type])
                 if data_type in potency_values:
                     unpacked_potency[label] = deepcopy(return_dict[key])
