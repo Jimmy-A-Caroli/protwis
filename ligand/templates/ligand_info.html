@@ -398,7 +398,7 @@
                                     <li><a href="{{ ex.link }}" target="_blank">{{ ex.name }}</a></li>
                                     {% endfor %}
                                     <li><a href="/ligand/{{ ligand.ligand_id }}/group">
-									{% if ligand.related_ids|length > 2 %}
+									{% if ligand.related_ids|length > 1 %}
 									GPCRdb related ligands
 									{% endif %}
 									</a></li>

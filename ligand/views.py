@@ -3260,7 +3260,7 @@ class LigandGroup(AbsLigand):
         ligand_id = self.kwargs['gpcrdb_id']
         self.this_ligand, self.ligands = AbsLigand.get_related_ligands(ligand_id)
 
-        if len(self.ligands) <= 2:
+        if len(self.ligands) < 2:
             return redirect(f"/ligand/{ligand_id}/info")
 
         return super().get(request, *args, **kwargs)
