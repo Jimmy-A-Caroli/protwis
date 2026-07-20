@@ -1,4 +1,5 @@
-"""
+"""Find candidate per-TM anchor generic-number positions for the snake plot.
+
 Standalone analysis script (not a management command) for finding candidate
 per-TM "anchor" generic-number positions used by DrawSnakePlot
 (common/diagrams_gpcr.py) as a static, per-render lookup instead of a live

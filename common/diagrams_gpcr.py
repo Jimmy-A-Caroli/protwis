@@ -30,6 +30,7 @@ TM_ANCHOR_CANDIDATES = {
 class DrawSnakePlot(Diagram):
 
     def __init__(self, residue_list, protein_class, protein_name, nobuttons = None, domain=None, residue_distance_lookup=None):
+        """Build the snake plot SVG for residue_list, optionally TM-aligned via residue_distance_lookup."""
         self.nobuttons = nobuttons
         self.domain = domain
         if self.domain:

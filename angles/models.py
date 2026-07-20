@@ -41,8 +41,8 @@ class ResidueAngle(models.Model):
         unique_together = ("residue", "structure")
 
 def get_snake_plot_distance_lookup(protein):
-    """
-    Per-residue midplane_distance for a protein's snake plot TM alignment.
+    """Look up per-residue midplane_distance for a protein's snake plot TM alignment.
+
     Returns {sequence_number: {'best_midplane':, 'avg_midplane':}}, joined across the
     protein's experimental structures by sequence_number (ResidueAngle.residue is FK'd to
     each structure's own protein_conformation, not the snake plot's reference conformation).
