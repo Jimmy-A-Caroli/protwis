@@ -66,22 +66,10 @@ class Command(BaseCommand):
 
         fasta_results = ""
         for pdb_set in pdb_sets:
-            post_data = {
-                    "structureIdList": ",".join(pdb_set),
-                    "type": "entry",
-                    "outputType": "single"
-                }
-            rcsb_response = requests.post(self.rcsb_fasta_url, data=post_data)
-
-
-            if rcsb_response.status_code == 200:
-                for header,sequence in grouped(rcsb_response.text.splitlines(), 2):
-                    # Removal of RNA sequences and short sequences
-                    if "U" not in sequence and len(sequence) > 100:
-                        fasta_results = fasta_results + header + "\n" + sequence + "\n"
-            else:
-                print("Incorrect response from RCSB web services - exiting")
-                return
+            for header, sequence in grouped(self.fetch_fasta(pdb_set).splitlines(), 2):
+                # Removal of RNA sequences and short sequences
+                if "U" not in sequence and len(sequence) > 100:
+                    fasta_results = fasta_results + header + "\n" + sequence + "\n"
 
         # BLAST against local BLAST database
         blast = Popen('%s -db %s -outfmt 5 -evalue 0.001 -max_target_seqs 1' % ('blastp',
@@ -104,6 +92,28 @@ class Command(BaseCommand):
                         pdb_list.append(result.query.split('_')[0])
         print(pdb_list)
         return pdb_list
+
+    def fetch_fasta(self, pdb_ids):
+        # RCSB's batch FASTA endpoint occasionally returns HTTP 200 with an error body
+        # (e.g. "Error processing gql data: {}") for a single problematic entry in the
+        # list, which would otherwise silently drop every entry in the batch. Bisect on
+        # failure to isolate and skip only the offending id(s).
+        post_data = {
+                "structureIdList": ",".join(pdb_ids),
+                "type": "entry",
+                "outputType": "single"
+            }
+        rcsb_response = requests.post(self.rcsb_fasta_url, data=post_data)
+
+        if rcsb_response.status_code == 200 and rcsb_response.text.strip().startswith(">"):
+            return rcsb_response.text
+
+        if len(pdb_ids) == 1:
+            print("Skipping", pdb_ids[0], "- FASTA download failed")
+            return ""
+
+        mid = len(pdb_ids) // 2
+        return self.fetch_fasta(pdb_ids[:mid]) + self.fetch_fasta(pdb_ids[mid:])
 
 def grouped(iterable, n):
     return zip(*[iter(iterable)]*n)
