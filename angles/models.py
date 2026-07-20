@@ -40,6 +40,38 @@ class ResidueAngle(models.Model):
         db_table = 'residue_angles'
         unique_together = ("residue", "structure")
 
+def get_snake_plot_distance_lookup(protein):
+    """
+    Per-residue midplane_distance/mid_distance for a protein's snake plot hover text.
+    Returns {sequence_number: {'best_midplane':, 'best_mid':, 'avg_midplane':, 'avg_mid':}},
+    joined across the protein's experimental structures by sequence_number (ResidueAngle.residue
+    is FK'd to each structure's own protein_conformation, not the snake plot's reference conformation).
+    """
+    structures = list(Structure.objects.filter(protein_conformation__protein__parent=protein
+                ).exclude(structure_type__slug__startswith='af-').order_by('resolution'))
+    if not structures:
+        return {}
+
+    best_structure_id = structures[0].pk
+    by_sequence_number = {}
+    for structure_id, sequence_number, midplane_distance, mid_distance in ResidueAngle.objects.filter(
+                structure__in=structures
+            ).values_list('structure_id', 'residue__sequence_number', 'midplane_distance', 'mid_distance'):
+        by_sequence_number.setdefault(sequence_number, {})[structure_id] = (midplane_distance, mid_distance)
+
+    lookup = {}
+    for sequence_number, by_structure in by_sequence_number.items():
+        midplane_values = [v[0] for v in by_structure.values() if v[0] is not None]
+        mid_values = [v[1] for v in by_structure.values() if v[1] is not None]
+        best_midplane, best_mid = by_structure.get(best_structure_id, (None, None))
+        lookup[sequence_number] = {
+            'best_midplane': best_midplane,
+            'best_mid': best_mid,
+            'avg_midplane': sum(midplane_values) / len(midplane_values) if midplane_values else None,
+            'avg_mid': sum(mid_values) / len(mid_values) if mid_values else None,
+        }
+    return lookup
+
 def get_angle_averages(pdbs,s_lookup,normalized = False, standard_deviation = False, split_by_amino_acid = False, forced_class_a = False):
     start_time = time.time()
     pdbs_upper = [pdb.upper() for pdb in pdbs]
