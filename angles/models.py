@@ -42,10 +42,10 @@ class ResidueAngle(models.Model):
 
 def get_snake_plot_distance_lookup(protein):
     """
-    Per-residue midplane_distance/mid_distance for a protein's snake plot hover text.
-    Returns {sequence_number: {'best_midplane':, 'best_mid':, 'avg_midplane':, 'avg_mid':}},
-    joined across the protein's experimental structures by sequence_number (ResidueAngle.residue
-    is FK'd to each structure's own protein_conformation, not the snake plot's reference conformation).
+    Per-residue midplane_distance for a protein's snake plot TM alignment.
+    Returns {sequence_number: {'best_midplane':, 'avg_midplane':}}, joined across the
+    protein's experimental structures by sequence_number (ResidueAngle.residue is FK'd to
+    each structure's own protein_conformation, not the snake plot's reference conformation).
     """
     structures = list(Structure.objects.filter(protein_conformation__protein__parent=protein
                 ).exclude(structure_type__slug__startswith='af-').order_by('resolution'))
@@ -54,21 +54,17 @@ def get_snake_plot_distance_lookup(protein):
 
     best_structure_id = structures[0].pk
     by_sequence_number = {}
-    for structure_id, sequence_number, midplane_distance, mid_distance in ResidueAngle.objects.filter(
+    for structure_id, sequence_number, midplane_distance in ResidueAngle.objects.filter(
                 structure__in=structures
-            ).values_list('structure_id', 'residue__sequence_number', 'midplane_distance', 'mid_distance'):
-        by_sequence_number.setdefault(sequence_number, {})[structure_id] = (midplane_distance, mid_distance)
+            ).values_list('structure_id', 'residue__sequence_number', 'midplane_distance'):
+        by_sequence_number.setdefault(sequence_number, {})[structure_id] = midplane_distance
 
     lookup = {}
     for sequence_number, by_structure in by_sequence_number.items():
-        midplane_values = [v[0] for v in by_structure.values() if v[0] is not None]
-        mid_values = [v[1] for v in by_structure.values() if v[1] is not None]
-        best_midplane, best_mid = by_structure.get(best_structure_id, (None, None))
+        midplane_values = [v for v in by_structure.values() if v is not None]
         lookup[sequence_number] = {
-            'best_midplane': best_midplane,
-            'best_mid': best_mid,
+            'best_midplane': by_structure.get(best_structure_id),
             'avg_midplane': sum(midplane_values) / len(midplane_values) if midplane_values else None,
-            'avg_mid': sum(mid_values) / len(mid_values) if mid_values else None,
         }
     return lookup
 

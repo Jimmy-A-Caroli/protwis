@@ -29,15 +29,6 @@ TM_ANCHOR_CANDIDATES = {
 
 class DrawSnakePlot(Diagram):
 
-    @staticmethod
-    def _format_distance(best, avg):
-        if best is not None and avg is not None:
-            return "{:.2f} (avg {:.2f})".format(best, avg)
-        elif best is not None:
-            return "{:.2f}".format(best)
-        else:
-            return "avg {:.2f}".format(avg)
-
     def __init__(self, residue_list, protein_class, protein_name, nobuttons = None, domain=None, residue_distance_lookup=None):
         self.nobuttons = nobuttons
         self.domain = domain
@@ -74,6 +65,8 @@ class DrawSnakePlot(Diagram):
         self.sequence = residue_list
         self.segments = {}
         self.segments_full = OrderedDict()
+        # per-residue midplane_distance, keyed by sequence_number; feeds the per-TM alignment
+        # calculation in drawSnakePlotHelix (measured vs. TM_ANCHOR_CANDIDATES approximation)
         self.residue_distance_lookup = residue_distance_lookup or {}
 
         i = 0
@@ -98,16 +91,6 @@ class DrawSnakePlot(Diagram):
             displaylabel = r.amino_acid + str(r.sequence_number) + " " + displaylabel
             if hasattr(r, 'frequency'):
                 displaylabel = displaylabel + " " + str(r.frequency)
-            if residue_distance_lookup:
-                distances = residue_distance_lookup.get(r.sequence_number)
-                if distances:
-                    if r.generic_number:
-                        displaylabel = displaylabel + " [" + r.generic_number.label + "]"
-                    parts = []
-                    if distances['best_midplane'] is not None or distances['avg_midplane'] is not None:
-                        parts.append("plane: " + self._format_distance(distances['best_midplane'], distances['avg_midplane']))
-                    if parts:
-                        displaylabel = displaylabel + " (" + ", ".join(parts) + ")"
             self.segments[segment].append([r.sequence_number,r.amino_acid,label,displaylabel])
             i += 1
         for helix_num in range(1,8): #FIX for missing generic numbers
@@ -147,7 +130,7 @@ class DrawSnakePlot(Diagram):
         self.TBCoords = {}
 
         # per-TM y position used as this TM's membrane-midplane reference (None if not found)
-        self.anchor_row_y = {}
+        self.tm_reference_y = {}
         # per-TM 'measured' (from this receptor's own midplane_distance data), 'approximated'
         # (from TM_ANCHOR_CANDIDATES) or 'missing' (neither available)
         self.tm_alignment_status = {}
@@ -155,7 +138,6 @@ class DrawSnakePlot(Diagram):
         self.output = ""
         self.traceoutput = ""
         self.helixoutput = ""
-        self.backgroundoutput = ""
         self.overlayoutput = ""
 
         if self.family.startswith('Class B2') and self.domain=='GAIN':
@@ -200,18 +182,17 @@ class DrawSnakePlot(Diagram):
                     print('error with helix',i,msg)
                     pass
 
-            anchor_ys = [y for y in self.anchor_row_y.values() if y is not None]
-            reference_y = sum(anchor_ys)/len(anchor_ys) if anchor_ys else None
-            row_height = self.residue_radius*2.4
-            shift_report = []
+            # Shift each TM as a rigid block so its own reference position (real crossing if
+            # measured, TM_ANCHOR_CANDIDATES match otherwise) lines up with reference_y, the
+            # average reference position across whichever TMs have one for this receptor.
+            reference_ys = [y for y in self.tm_reference_y.values() if y is not None]
+            reference_y = sum(reference_ys)/len(reference_ys) if reference_ys else None
             for i in range(1,8):
-                anchor_y = self.anchor_row_y.get(i)
-                if anchor_y is None or reference_y is None:
+                tm_y = self.tm_reference_y.get(i)
+                if tm_y is None or reference_y is None:
                     shift = 0
-                    shift_report.append("TM{}: n/a".format(i))
                 else:
-                    shift = reference_y - anchor_y
-                    shift_report.append("TM{}: {:+.2f}".format(i, shift/row_height))
+                    shift = reference_y - tm_y
                     self.TBCoords[i]['top'][1] += shift
                     self.TBCoords[i]['bottom'][1] += shift
                 if shift:
@@ -220,11 +201,6 @@ class DrawSnakePlot(Diagram):
                 # re-include this TM's (possibly shifted) extent so the canvas isn't clipped
                 if self.TBCoords[i]['top'][1] < self.low: self.low = self.TBCoords[i]['top'][1]
                 if self.TBCoords[i]['bottom'][1] > self.high: self.high = self.TBCoords[i]['bottom'][1]
-            print("Anchor-based alignment shift (rows) for", self.receptorId, ":", ", ".join(shift_report))
-
-            if reference_y is not None:
-                self.backgroundoutput = "<line x1='{}' y1='{}' x2='{}' y2='{}' stroke='red' stroke-width='1' stroke-dasharray='4,3' />".format(
-                    self.maxX['left']-40, round(reference_y), self.maxX['right']+40, round(reference_y))
 
             if "H8" in self.segments: #if helix8
                 try:
@@ -274,7 +250,7 @@ class DrawSnakePlot(Diagram):
             id_tag = 'snake2'
         else:
             id_tag = 'snake'
-        self.output_final = "<g id="+id_tag+" transform='translate(0, " + str(-self.low+ self.offsetY) + ")'>" + self.backgroundoutput+self.traceoutput+self.output+self.helixoutput+self.overlayoutput+self.drawToolTip() + "</g>"; #for resizing height
+        self.output_final = "<g id="+id_tag+" transform='translate(0, " + str(-self.low+ self.offsetY) + ")'>" + self.traceoutput+self.output+self.helixoutput+self.overlayoutput+self.drawToolTip() + "</g>"; #for resizing height
         if self.domain:
             id_tag = 'snakeplot2'
         else:
@@ -413,6 +389,13 @@ class DrawSnakePlot(Diagram):
             prevY = y
             prevGeneric = rs[i][2]
 
+        # Decide this TM's membrane-midplane reference position, in priority order:
+        # 1. 'measured' - interpolate where this receptor's own midplane_distance crosses zero
+        #    between two consecutive residues (falls back to the single closest-to-zero residue
+        #    if there's no sign change), whenever any residue_distance_lookup data exists for it.
+        # 2. 'approximated' - otherwise, use whichever TM_ANCHOR_CANDIDATES generic number is
+        #    present in this receptor's own sequence.
+        # 3. 'missing' - neither is available; this TM is left unshifted.
         crossings = []
         for (y1, v1), (y2, v2) in zip(residue_positions, residue_positions[1:]):
             if (v1 >= 0) != (v2 >= 0) or v1 == 0 or v2 == 0:
@@ -421,18 +404,18 @@ class DrawSnakePlot(Diagram):
                 crossings.append(y1 + t*(y2-y1))
 
         if crossings:
-            self.anchor_row_y[helix_num] = sum(crossings)/len(crossings)
+            self.tm_reference_y[helix_num] = sum(crossings)/len(crossings)
             self.tm_alignment_status[helix_num] = 'measured'
         elif residue_positions:
-            self.anchor_row_y[helix_num] = min(residue_positions, key=lambda p: abs(p[1]))[0]
+            self.tm_reference_y[helix_num] = min(residue_positions, key=lambda p: abs(p[1]))[0]
             self.tm_alignment_status[helix_num] = 'measured'
         else:
-            self.anchor_row_y[helix_num] = None
+            self.tm_reference_y[helix_num] = None
             for candidate in anchor_candidates:
                 if candidate in anchor_matches:
-                    self.anchor_row_y[helix_num] = anchor_matches[candidate]
+                    self.tm_reference_y[helix_num] = anchor_matches[candidate]
                     break
-            self.tm_alignment_status[helix_num] = 'approximated' if self.anchor_row_y[helix_num] is not None else 'missing'
+            self.tm_alignment_status[helix_num] = 'approximated' if self.tm_reference_y[helix_num] is not None else 'missing'
 
         temp = ''
         if helix_num%2==0: output_residues.reverse()
