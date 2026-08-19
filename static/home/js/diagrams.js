@@ -396,10 +396,14 @@ function maxmin() {
     counter = 0;
     if (!$('#snake').length) return
     // console.log("temp",y_max,y_min);
-    $('#snake').children('.rtext').each(function () {
+    $('#snake').find('text').each(function () {
         counter += 1;
         y = parseInt($(this).attr( "y" ));
         x = parseInt($(this).attr( "x" ));
+        $(this).parentsUntil('#snake', 'g[transform]').each(function () {
+            var m = /translate\(\s*[\d.\-]+\s*,\s*([\d.\-]+)\s*\)/.exec($(this).attr('transform'));
+            if (m) y += parseFloat(m[1]);
+        });
         classtext = $(this).attr( "class" );
         // test = $(this).attr("original_title");
         // test2 = $(this).css("display");
