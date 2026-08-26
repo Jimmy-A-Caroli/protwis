@@ -40,15 +40,43 @@ _WEB_RESOURCE_CACHE: dict = {}
 
 _GTP_CACHE_TTL = 7 * 24 * 3600  # 7 days
 
+# Curated GtP ligands to force-include in the build even when GtP's own
+# interactions/endogenous data doesn't link them to a GPCR target (e.g.
+# covalently-bound chromophores like retinal, which GtP does not tabulate
+# as a standard ligand-target interaction). Add new rules here as needed.
+# Each rule supports "name_contains" (case-insensitive substrings matched
+# against the ligand name) and/or "ligand_ids" (explicit GtP ligand_id list).
+CUSTOM_GTP_LIGAND_INCLUSIONS = [
+    {
+        "reason": "retinal isomers (rhodopsin/opsin chromophore; not recorded by GtP as a ligand-target interaction)",
+        "name_contains": ["retinal"],
+    },
+]
+
+
+def get_custom_gtp_ligand_ids(gtp_complete_ligands):
+    """Return GtP ligand_ids to force-include per CUSTOM_GTP_LIGAND_INCLUSIONS,
+    regardless of GPCR-target linkage in interactions/endogenous data."""
+    ids = set()
+    for rule in CUSTOM_GTP_LIGAND_INCLUSIONS:
+        mask = pd.Series(False, index=gtp_complete_ligands.index)
+        for substr in rule.get("name_contains", []):
+            mask |= gtp_complete_ligands["name"].str.contains(substr, case=False, na=False)
+        if rule.get("ligand_ids"):
+            mask |= gtp_complete_ligands["ligand_id"].isin(rule["ligand_ids"])
+        ids.update(gtp_complete_ligands.loc[mask, "ligand_id"].dropna().unique().tolist())
+    return ids
+
 
 def load_gtp_source_data():
     """Fetch, cache, and normalise all Guide to Pharmacology source CSVs.
 
-    Filters interactions and endogenous data to GPCR-linked ligands only.
+    Filters interactions and endogenous data to GPCR-linked ligands only,
+    plus any ligand matched by CUSTOM_GTP_LIGAND_INCLUSIONS.
     Returns a dict with keys:
         iuphar_ids              - list[str] GtP target IDs mapping to GPCR proteins
         ligand_ids              - list[str] ligand IDs linked to GPCR targets
-                                  (bioactivity + endogenous, deduplicated)
+                                  (bioactivity + endogenous + custom inclusions, deduplicated)
         gtp_uniprot             - normalised DataFrame
         gtp_complete_ligands    - normalised DataFrame
         gtp_ligand_mapping      - normalised DataFrame
@@ -74,7 +102,7 @@ def load_gtp_source_data():
     gpcr_accessions_base = {
         acc.split("-")[0]
         for acc in Protein.objects.filter(
-            family__slug__startswith="00", sequence_type__slug="wt"
+            family__slug__startswith="0", sequence_type__slug="wt"
         ).values_list("accession", flat=True)
     }
     iuphar_ids = list(
@@ -93,7 +121,8 @@ def load_gtp_source_data():
 
     bioactivity_ids = _ligand_ids_for(gtp_interactions)
     endogenous_ids  = _ligand_ids_for(gtp_detailed_endogenous)
-    ligand_ids      = list(set(bioactivity_ids + endogenous_ids))
+    custom_ids      = get_custom_gtp_ligand_ids(gtp_complete_ligands)
+    ligand_ids      = list(set(bioactivity_ids + endogenous_ids) | custom_ids)
 
     # Peptides linked to GPCR targets: filter by uniprot_id column (pipe-separated)
     def _any_gpcr_uniprot(val):
@@ -443,7 +472,20 @@ def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule",
         if not _skip_structural and found_child is None and entry.get("_ck"):
             candidate = existing_by_norm_ik.get((entry["_ck"], entry_radioactive_label))
             if candidate is not None and _props_compatible(entry_props, candidate):
-                found_child = candidate
+                # Guard: if entry has a specific raw_inchikey (e.g. an E/Z stereo block that
+                # tautomer canonicalization stripped from _ck), verify it is compatible with
+                # the candidate's inchikey before accepting the match.
+                _entry_raw_ik = entry.get("raw_inchikey") or ""
+                _erp = _entry_raw_ik.split("-")
+                if (len(_erp) >= 2
+                        and _erp[1] not in ("", "UHFFFAOYSA")
+                        and not _inchikeys_compatible(_entry_raw_ik, candidate.inchikey or "")):
+                    log.info(
+                        f"norm-ik match rejected: entry raw_inchikey {_entry_raw_ik!r} "
+                        f"incompatible with candidate inchikey {candidate.inchikey!r}"
+                    )
+                else:
+                    found_child = candidate
             elif candidate is not None and not _props_compatible(entry_props, candidate):
                 log.warning(
                     f"InChIKey match rejected by property mismatch: entry {entry.get('name')!r} "
@@ -481,7 +523,18 @@ def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule",
             if mol is not None:
                 from rdkit import Chem as _Chem
                 _Chem.AssignStereochemistry(mol, cleanIt=True, force=True)
-                if not _Chem.FindMolChiralCenters(mol, includeUnassigned=True):
+                _no_chiral_centers = not _Chem.FindMolChiralCenters(mol, includeUnassigned=True)
+                _no_ez_bonds = not any(
+                    b.GetStereo() not in (_Chem.BondStereo.STEREONONE, _Chem.BondStereo.STEREOANY)
+                    for b in mol.GetBonds()
+                )
+                _raw_ik_ac = entry.get("raw_inchikey") or entry.get("_ck") or ""
+                _raw_ik_ac_parts = _raw_ik_ac.split("-")
+                _has_specific_stereo_ik = (
+                    len(_raw_ik_ac_parts) >= 2
+                    and _raw_ik_ac_parts[1] not in ("", "UHFFFAOYSA")
+                )
+                if _no_chiral_centers and _no_ez_bonds and not _has_specific_stereo_ik:
                     if entry_radioactive_label:
                         _rac_filter = {"radioactive": entry_radioactive_label}
                     else:
@@ -1377,12 +1430,21 @@ SMALL_MOLECULE = LigandType.objects.get(slug='small-molecule')
 PEPTIDE        = LigandType.objects.get(slug='peptide')
 PROTEIN        = LigandType.objects.get(slug='protein')
 UNKNOWN        = LigandType.objects.get(slug='na')
+LIPID          = LigandType.objects.get(slug='lipid')
+
+from rdkit import Chem as _RDChem
+from rdkit.Chem import Descriptors as _RDDesc
+
+# 8+ consecutive non-ring sp3 CH2 — characteristic of fatty acid / acylglycerol / sphingolipid chains
+_LIPID_CHAIN_SMARTS = _RDChem.MolFromSmarts('[CH2;!R][CH2;!R][CH2;!R][CH2;!R][CH2;!R][CH2;!R][CH2;!R][CH2;!R]')
+# Steroid tetracyclic nucleus (cholesterol, bile acids, steroid hormones)
+_STEROID_SMARTS = _RDChem.MolFromSmarts('[#6]1~[#6]~[#6]~[#6]2~[#6]~[#6]~[#6]3~[#6]~[#6]~[#6]~[#6]~[#6]3~[#6]~[#6]2~[#6]~1')
 
 def predict_type(ligand):
     """
-    Predict small-molecule vs peptide vs protein from
+    Predict small-molecule vs peptide vs protein vs lipid from
     the presence/length of sequence *or* the pattern of amide
-    bonds in SMILES if sequence is missing.
+    bonds and lipid structural features in SMILES if sequence is missing.
     """
     seq = (ligand.sequence or '').strip()
     smiles = (ligand.smiles or '').strip()
@@ -1393,6 +1455,18 @@ def predict_type(ligand):
 
     # 2) No sequence: look at SMILES
     if smiles:
+        mol = _RDChem.MolFromSmiles(smiles)
+        if mol is not None:
+            frac_sp3 = _RDDesc.FractionCSP3(mol)
+            n_aromatic_rings = sum(
+                1 for r in mol.GetRingInfo().AtomRings()
+                if all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in r)
+            )
+            has_long_chain = mol.HasSubstructMatch(_LIPID_CHAIN_SMARTS)
+            has_steroid = mol.HasSubstructMatch(_STEROID_SMARTS)
+            if (has_long_chain and frac_sp3 >= 0.65 and n_aromatic_rings <= 1) or has_steroid:
+                return LIPID
+
         # count amide bonds (one per residue) in either orientation
         smiles_up = smiles.upper()
         count = (
@@ -1502,3 +1576,43 @@ def apply_canonical_ligand_types():
             total_updated += updated
 
     return total_updated
+
+
+def classify_lipids():
+    """
+    Reclassify small-molecule children whose SMILES match lipid structural
+    patterns (long aliphatic chain or steroid nucleus), and propagate the
+    lipid type to their parent records.
+    Returns count of updated records.
+    """
+    candidates = Ligand.objects.filter(
+        ligand_type=SMALL_MOLECULE,
+        smiles__isnull=False,
+        parent__isnull=False,
+    ).select_related('parent')
+
+    lipid_ids, parent_ids = [], set()
+    for lig in candidates.iterator(chunk_size=500):
+        mol = _RDChem.MolFromSmiles(lig.smiles or '')
+        if mol is None:
+            continue
+        frac_sp3 = _RDDesc.FractionCSP3(mol)
+        n_ar = sum(
+            1 for r in mol.GetRingInfo().AtomRings()
+            if all(mol.GetAtomWithIdx(i).GetIsAromatic() for i in r)
+        )
+        has_chain = mol.HasSubstructMatch(_LIPID_CHAIN_SMARTS)
+        has_steroid = mol.HasSubstructMatch(_STEROID_SMARTS)
+        if (has_chain and frac_sp3 >= 0.65 and n_ar <= 1) or has_steroid:
+            lipid_ids.append(lig.pk)
+            parent_ids.add(lig.parent_id)
+
+    if not lipid_ids:
+        return 0
+
+    with transaction.atomic():
+        updated = Ligand.objects.filter(
+            pk__in=lipid_ids + list(parent_ids)
+        ).update(ligand_type=LIPID)
+
+    return updated

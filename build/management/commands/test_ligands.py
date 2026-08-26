@@ -3,7 +3,7 @@ from django.db.models import Count, Q
 
 from ligand.models import Ligand, LigandID
 from build.management.commands.build_ligand_functions import get_radioactive_info
-from build.management.commands.build_ligand_functions_copy import load_gtp_source_data
+from build.management.commands.build_ligand_functions import load_gtp_source_data
 
 
 class Command(BaseBuild):

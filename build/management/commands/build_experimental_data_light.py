@@ -1,6 +1,6 @@
 from django.core.management.base import CommandError
 from build.management.commands.base_build import Command as BaseBuild
-from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, get_or_create_ligands_batch, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types, allocate_next_gpcrdb_id, load_gtp_source_data
+from build.management.commands.build_ligand_functions import get_ligand_by_id, match_id_via_unichem, get_or_create_ligand, get_or_create_ligands_batch, is_float, standardize_smiles, generate_parent, apply_canonical_ligand_types, classify_lipids, allocate_next_gpcrdb_id, load_gtp_source_data
 from django.conf import settings
 from django.utils.text import slugify
 from django.db import IntegrityError, transaction, connection
@@ -287,12 +287,12 @@ class Command(BaseBuild):
         print('Performing checks')
         test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
-        #Evolvus bioactivity data
-        print("\n\nStarted building Evolvus bioactivities")
-        self.build_evolvus_bioactivities()
-        print("\n\nEnded building Evolvus bioactivities")
-        print('Performing checks')
-        test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
+        # #Evolvus bioactivity data
+        # print("\n\nStarted building Evolvus bioactivities")
+        # self.build_evolvus_bioactivities()
+        # print("\n\nEnded building Evolvus bioactivities")
+        # print('Performing checks')
+        # test_model_updates(self.all_models, self.tracker, check=True, rebuild=True)
 
         #ENDOGENOUS LIGANDS
         print("\n\nStarted building the Endogenous data from Guide to Pharmacology")
@@ -317,6 +317,10 @@ class Command(BaseBuild):
         print("\n\nFixing mismatched LigandType definition")
         n  = apply_canonical_ligand_types()
         print("\n\nUpdated LigandType on {} records to their canonical type".format(n))
+
+        print("\n\nClassifying lipid ligands")
+        n = classify_lipids()
+        print("\n\nReclassified {} records as lipid".format(n))
 
         if options["make_dump"]:
             print("\n\nRunning the Dump Checker and saving new csvs")
@@ -1857,7 +1861,7 @@ class Command(BaseBuild):
     @staticmethod
     def compare_proteins(gtp_data):
         gpcrdb_proteins = Protein.objects.filter(
-            family__slug__startswith="00", sequence_type__slug="wt").values_list('entry_name', 'accession')
+            family__slug__startswith="0", sequence_type__slug="wt").values_list('entry_name', 'accession')
         entries = gtp_data.loc[gtp_data['uniprotkb_id'].isin([protein[1].split(
             "-")[0] for protein in gpcrdb_proteins]), ['uniprotkb_id', 'gtopdb_iuphar_id']]
         return list(entries['gtopdb_iuphar_id'].unique())
