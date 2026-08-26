@@ -977,12 +977,20 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
         for k, g in groupby(enumerate(pos_in_wt), lambda x:x[0]-x[1]):
             group = list(map(itemgetter(1), g))
             d['deletions'].append({'start':group[0], 'end':group[-1], 'origin':'user'})
+        if len(set(pos_in_wt)) == len(d['wt_seq']):
+            # entire WT sequence flagged as deleted is a parsing failure, not a real deletion
+            logger.warning('{} entire sequence (1-{}) flagged as deleted, likely a parsing error - clearing deletions'.format(pdbname.lower(), len(d['wt_seq'])))
+            d['deletions'] = []
         d['not_observed'] = []
         if len(d['xml_not_observed']):
             # print(d['xml_not_observed'])
             for k, g in groupby(enumerate(sorted(d['xml_not_observed'])), lambda x:x[0]-x[1]):
                 group = list(map(itemgetter(1), g))
                 d['not_observed'].append((group[0], group[-1]))
+        if len(set(d['xml_not_observed'])) == len(d['wt_seq']):
+            # entire WT sequence flagged as not observed is a parsing failure, not a real finding
+            logger.warning('{} entire sequence (1-{}) flagged as not observed, likely a parsing error - clearing not_observed'.format(pdbname.lower(), len(d['wt_seq'])))
+            d['not_observed'] = []
 
         # Custom fix for 6PT2
         if pdbname in ['6PT2','6PT3']:
@@ -1826,7 +1834,7 @@ def construct_structure_annotation_override(pdb_code, removed, deletions):
                       '8T3S','8ZR5','8ZQE','8K4O','8GTI','8TRC','8TRD','8WU1','8J9N','8UXY','8UXV','8K4S','8Y69','8KIG','8ZD1','8WSS',
                       '8YH5','8YH6']:
         deletions, removed = [], []
-    elif pdb_code in ['7ZLY']:
+    elif pdb_code in ['7ZLY','6YVR']:
         deletions = []
     elif pdb_code in ['8TH3','8TH4']:
         deletions = []
