@@ -69,15 +69,24 @@ POSITIVE = {'H', 'K', 'R'}
 cation_atoms =  ['NZ', 'CZ', 'NE', 'NH1', 'NH2']
 AROMATIC = {'TYR', 'TRP', 'PHE', 'HIS'}
 CHARGEDAA = {'ARG', 'LYS', 'ASP', 'GLU'}
+# PDB chemical-component ids for monoatomic ions whose single atom is named
+# after their element and happens to start with 'C' — the entry[0][0]=='C'
+# check in analyze_interactions() assumes any ligand atom name starting with
+# 'C' is carbon, which is wrong for these ions.
+NON_CARBON_C_IONS = {'CA', 'CD', 'CO', 'CU', 'CS'}
 HYDROPHOBIC_AA = {'A', 'C', 'F', 'I', 'L', 'M', 'P', 'V', 'W', 'Y'}
 ignore_het = ['NA', 'W']  # ignore sodium and water
 radius = 5
 hydrophob_radius = 4.5
+# Safety margin for the coarse CA-to-ligand-center pre-filter in find_interactions():
+# covers the largest residue CA-to-sidechain-tip distance (~8A for Arg/Lys/Trp)
+# plus the interaction radius above, with headroom.
+PRE_FILTER_MARGIN = 15
 pdb_dir = os.sep.join([settings.DATA_DIR, 'structure_data', 'pdbs'])
 
 #RETURN THE DICTIONARY RESULTS
-def runcalculation_2022(pdbname, peptide="", file_input=False):
-    output = calculate_interactions(pdbname, None, peptide, file_input)
+def runcalculation_2022(pdbname, peptide="", file_input=False, target_ligand=None, target_chain=None, target_resnum=None):
+    output = calculate_interactions(pdbname, None, peptide, file_input, target_ligand, target_chain, target_resnum)
     return output
 
 #RETURN THE DICTIONARY RESULTS
@@ -85,7 +94,7 @@ def runusercalculation_2022(filename, session):
     output = calculate_interactions(filename, session, None)
     return output
 
-def calculate_interactions(pdb, session=None, peptide=None, file_input=False):
+def calculate_interactions(pdb, session=None, peptide=None, file_input=False, target_ligand=None, target_chain=None, target_resnum=None):
     # REMEMBER TO GET THE RETURNS FROM ALL THE BELOW FUNCTIONS
     hetlist = {}
     ligand_atoms = {}
@@ -126,13 +135,14 @@ def calculate_interactions(pdb, session=None, peptide=None, file_input=False):
             pdb = complex_name
         scroller = parser.get_structure(pdb, pdb_location)
         # print('Creating ligand and poseview')
-        create_ligands_and_poseview(hetlist_display, scroller, projectdir, pdb, peptide) #ignore_het (should be global), inchikeys, smiles (should not be used)
+        create_ligands_and_poseview(hetlist_display, scroller, projectdir, pdb, peptide, target_ligand, target_chain, target_resnum) #ignore_het (should be global), inchikeys, smiles (should not be used)
         # print('Building ligand info')
         hetlist, ligand_charged, ligand_donors, ligand_atoms, ligand_acceptors, ligandcenter, ligand_rings = build_ligand_info(
                                                                                                                 scroller, hetlist_display,
                                                                                                                 projectdir, pdb, peptide, hetlist,
                                                                                                                 ligand_atoms, ligand_charged, ligand_donors,
-                                                                                                                ligand_acceptors, ligandcenter, ligand_rings)
+                                                                                                                ligand_acceptors, ligandcenter, ligand_rings,
+                                                                                                                target_ligand, target_chain, target_resnum)
         # print('Finding interactions')
         summary_results, new_results, results = find_interactions(
                                                     scroller, projectdir, pdb, peptide,
@@ -313,15 +323,17 @@ def accept_residue(residue, hetflag, peptide=None):
     else:
         return 0
 
-def create_ligands_and_poseview(ligand_het, scroller, projectdir, pdb, peptide=None):
+def create_ligands_and_poseview(ligand_het, scroller, projectdir, pdb, peptide=None, target_ligand=None, target_chain=None, target_resnum=None):
 
     class HetSelect(Select):
         @staticmethod
         def accept_residue(residue):
-            if residue.get_resname().strip() == hetflag:
-                return 1
-            else:
+            if residue.get_resname().strip() != hetflag:
                 return 0
+            if hetflag == target_ligand and target_chain is not None and (
+                    residue.get_parent().id != target_chain or residue.id[1] != target_resnum):
+                return 0
+            return 1
 
     class ClassSelect(Select):
         @staticmethod
@@ -399,7 +411,7 @@ def isRingAromatic(mol, bondRing):
             return False
     return True
 
-def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, ligand_atoms, ligand_charged, ligand_donors, ligand_acceptors, ligandcenter, ligand_rings):
+def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, ligand_atoms, ligand_charged, ligand_donors, ligand_acceptors, ligandcenter, ligand_rings, target_ligand=None, target_chain=None, target_resnum=None):
     count_atom_ligand = {}
 
     for model in scroller:
@@ -417,6 +429,9 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
 
                 # REMEMBER TO PARSE ONLY THE ACTUAL LIGAND
                 if hetflag in lig_het.keys():
+                    if hetflag == target_ligand and target_chain is not None and (
+                            chain.id != target_chain or residue.id[1] != target_resnum):
+                        continue
                     if (hetflag not in hetlist) or (chain.id==peptide):
                         if MolFromPDBFile(projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + '.pdb') == 0:
                             # This ligand has no molecules
@@ -527,7 +542,12 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                                 ligand_atoms[hetflag].append([count_atom_ligand[hetflag], atom_vector, het_atom])
                                 count_atom_ligand[hetflag] += 1
                         center2 = center / count_atom_ligand[hetflag]
-                        ligandcenter[hetflag] = [center2, count_atom_ligand[hetflag],center]
+                        # Pre-filter radius must reflect the ligand's actual spatial extent, not
+                        # its atom count (a single-atom ligand like a metal ion otherwise gets a
+                        # ~1A cutoff here and every candidate residue is skipped before the real
+                        # radius/hydrophob_radius check ever runs).
+                        ligand_extent = max((av[1] - center2).norm() for av in ligand_atoms[hetflag])
+                        ligandcenter[hetflag] = [center2, ligand_extent + PRE_FILTER_MARGIN, center]
 
     return hetlist, ligand_charged, ligand_donors, ligand_atoms, ligand_acceptors, ligandcenter, ligand_rings
 
@@ -920,7 +940,7 @@ def analyze_interactions(projectdir, pdb, results, ligand_donors, ligand_accepto
             for entry in interaction:
                 hbondconfirmed = []
                 if (entry[2] <= 3.5):
-                    if entry[0][0] == 'C' or entry[1][0] == 'C':
+                    if (entry[0][0] == 'C' and ligand not in NON_CARBON_C_IONS) or entry[1][0] == 'C':
                         continue  # If either atom is C then no hydrogen bonding
                     aa_donors = get_hydrogen_from_aa(projectdir, pdb, entry[5], pdb_location)
                     hydrogenmatch = False
