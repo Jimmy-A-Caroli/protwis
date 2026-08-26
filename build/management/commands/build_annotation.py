@@ -43,6 +43,10 @@ class Command(BaseBuild):
             dest='proc',
             default=1,
             help='Number of processes to run')
+        parser.add_argument('-r', '--receptor',
+            dest='receptor',
+            default=None,
+            help='Limit annotation to a single receptor by UniProt entry_name')
 
     logger = logging.getLogger(__name__)
 
@@ -87,6 +91,9 @@ class Command(BaseBuild):
     def handle(self, *args, **options):
         try:
             self.logger.info('CREATING RESIDUES')
+
+            if options['receptor']:
+                self.pconfs = [p for p in self.pconfs if p.protein.entry_name == options['receptor']]
 
             self.prepare_input(options['proc'], self.pconfs)
 
