@@ -3,7 +3,6 @@ from django.conf import settings
 
 from protein.models import Protein
 from residue.models import Residue
-from structure.models import Structure
 from structure.functions import ParseStructureCSV, X50Finder
 from tools.management.commands.build_structure_angles import NonHetSelect
 from contactnetwork.interaction import InteractingPair
@@ -99,12 +98,12 @@ class Command(BaseCommand):
 
                     for m in models:
                         c+=1
-                        print(m,c)
+                        print(m,c, flush=True)
                         dssp = None
                         res_dict = OrderedDict()
                         accession = m.split('.')[0]
                         up = deepcopy(parse_uniprot_file(accession, logger=self.logger, local_uniprot_dir=self.local_uniprot_dir))
-
+                        print(up)
                         ### Running x50 finder
                         if up['entry_name'] not in self.nonxtal_seg_ends:
                             x = X50Finder(os.sep.join([path_to_models, m]), self.debug)
@@ -333,16 +332,20 @@ class Command(BaseCommand):
 
             segends = OrderedDict()
             # mismatches = {}
-            new_unique_receptor_structures = {}
             missing_ligand_info = []
 
             errors = {}
 
-            for s, data in self.parsed_structures.structures.items():
+            if self.structures_to_annotate:
+                structures_to_process = self.structures_to_annotate
+            else:
+                structures_to_process = [s for s in self.parsed_structures.structures if s not in self.xtal_seg_ends]
+
+            total = len(structures_to_process)
+            for i, s in enumerate(structures_to_process, 1):
                 try:
-                    ### New structures
-                    if len(self.structures_to_annotate)>0 and s not in self.structures_to_annotate:
-                        continue
+                    data = self.parsed_structures.structures[s]
+                    print('[{}/{}] {}'.format(i, total, s), flush=True)
                     ### Warnings for missing data
                     if 'ligand' not in self.parsed_structures.structures[s]:
                         print('WARNING: {} missing ligand annotation'.format(s))
@@ -354,7 +357,6 @@ class Command(BaseCommand):
                             if l['role']=='':
                                 print('WARNING: {} {} ligand missing modality'.format(s, l['title']))
                     if s not in self.xtal_seg_ends or s in self.structures_to_annotate:
-                        print(s)
                         segends[s] = deepcopy(self.default_segends)
 
                         self.download_pdb(s)
@@ -687,13 +689,6 @@ class Command(BaseCommand):
 
                         if self.debug:
                             pprint.pprint(segends[s])
-                        proteins_in_db = Structure.objects.filter(protein_conformation__protein__parent=parent_protein).exclude(structure_type__slug__startswith='af-')
-                        if len(proteins_in_db)==0:
-                            if parent_protein not in new_unique_receptor_structures:
-                                new_unique_receptor_structures[parent_protein] = [s]
-                            else:
-                                new_unique_receptor_structures[parent_protein].append(s)
-                        # print(new_unique_receptor_structures)
 
                         ### Check with done structures
                         # for seg, val in segends[s].items():
@@ -724,8 +719,6 @@ class Command(BaseCommand):
             print('Missing ligand info:')
             print(missing_ligand_info)
             # pprint.pprint(segends)
-            print('New unique receptor structures')
-            pprint.pprint(new_unique_receptor_structures)
 
             print('ERRORS:')
             pprint.pprint(errors)
