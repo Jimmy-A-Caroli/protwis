@@ -18,6 +18,7 @@ class Command(BaseCommand):
     logger = logging.getLogger(__name__)
     rcsb_search_url = "https://search.rcsb.org/rcsbsearch/v2/query"
     rcsb_fasta_url = "https://www.rcsb.org/fasta"
+    to_skip = ['8TII', '8TIL', '8TIN', '8TIO', '8VJ9', '8VTI'] # excluded from annotation, don't re-flag as new
 
     def add_arguments(self, parser):
         parser.add_argument('-m', '--months',
@@ -85,11 +86,14 @@ class Command(BaseCommand):
             # Process results and remove structures already present in GPCRdb
             blast_results = NCBIXML.parse(StringIO(blast_out))
             for result in blast_results:
+                pdb_code = result.query.split('_')[0]
+                if pdb_code in self.to_skip:
+                    continue
                 if len(result.alignments)>=1 and Structure.objects.filter(pdb_code__index=result.query[:4]).count() == 0:
                     top_hit = result.alignments[0].hsps[0]
                     if top_hit.score > 100:
                         print("HIT", "{0:>7}{1:>8}".format(top_hit.score, round(top_hit.expect,5)), result.query)
-                        pdb_list.append(result.query.split('_')[0])
+                        pdb_list.append(pdb_code)
         print(pdb_list)
         return pdb_list
 
