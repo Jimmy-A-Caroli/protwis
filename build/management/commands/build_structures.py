@@ -263,8 +263,6 @@ class Command(BaseBuild):
                          'D':8, 'C':6, 'R':11, 'P':7, 'Q':9, 'N':8, 'W':14}
 
 
-        entry_name = d['construct_crystal']['uniprot']
-
         # print(d['xml_segments'])
         # print(d['deletions'])
         deletions = []
@@ -278,31 +276,13 @@ class Command(BaseBuild):
                 for i in range(del_range['start'],del_range['end']+1):
                     deletions.append(i)
             #print("Annotation missing WT residues",d['deletions'])
-        removed = []
-        ## Remove segments that arent receptor (tags, fusion etc)
-        if 'xml_segments' in d:
-            for seg in d['xml_segments']:
-                if seg[1]:
-                    # Odd rules to fit everything..
-                    # print(seg[1][0], entry_name)
-                    if seg[1][0]!=entry_name and seg[-1]!=True and seg[1][0]!='Uncharacterized protein' and 'receptor' not in seg[1][0]:
-                        if seg[0].split("_")[1]==preferred_chain:
-                            #print(seg[2],seg[3]+1)
-                            #for i in range(seg[2],seg[3]+1):
-                            # print(seg)
-                            for i in seg[6]:
-                                removed.append(i)
-        # Reset removed, since it causes more problems than not
+        removed = d.get('removed', [])
 
         removed, deletions = construct_structure_annotation_override(structure.pdb_code.index, removed, deletions)
 
         if self.debug:
             print('Deletions: ', deletions)
             print('Removed: ', removed)
-        if len(deletions)>len(d['wt_seq'])*0.9:
-            #if too many deletions
-            removed = []
-            deletions = []
 
         s = self.parsed_pdb
         chain = s[preferred_chain] #select only one chain (avoid n-mer receptors)
@@ -1338,7 +1318,7 @@ class Command(BaseBuild):
         if debug: print("WT",structure.protein_conformation.protein.parent.entry_name,"length",len(parent_seq),structure.pdb_code.index,'length',len(seq),len(mapped_seq),'mapped res',str(mismatch_seq+match_seq+aa_mismatch),'pos mismatch',mismatch_seq,'aa mismatch',aa_mismatch,'not mapped',not_matched,' mapping off, matched on pos,aa',matched_by_pos,"generic_segment_changes",generic_change)
         if (len(segments_present)<8 and 'H8' in segments_present) or len(segments_present)<7:
             print("Present helices:",segments_present)
-            print("MISSING HELICES?!")
+            print(structure,"MISSING HELICES?!")
         if debug: print("===============**================")
 
         if not os.path.exists(os.sep.join([settings.DATA_DIR, 'structure_data', 'wt_pdb_lookup'])):
