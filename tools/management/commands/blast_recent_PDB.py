@@ -18,7 +18,7 @@ class Command(BaseCommand):
     logger = logging.getLogger(__name__)
     rcsb_search_url = "https://search.rcsb.org/rcsbsearch/v2/query"
     rcsb_fasta_url = "https://www.rcsb.org/fasta"
-    to_skip = ['8TII', '8TIL', '8TIN', '8TIO', '8VJ9', '8VTI'] # excluded from annotation, don't re-flag as new
+    to_skip = ['8TII', '8TIL', '8TIN', '8TIO', '8VJ9', '8VTI', '9J7I', '9UOK', '9UT9', '9UTC', '9W1Z', '9OQ2', '9OQ3', '9OQ4', '9OQ5', '9OQ6'] # excluded from annotation, don't re-flag as new
 
     def add_arguments(self, parser):
         parser.add_argument('-m', '--months',
