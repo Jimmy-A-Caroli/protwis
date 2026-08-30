@@ -1714,12 +1714,19 @@ class Command(BaseBuild):
             [settings.DATA_DIR, "ligand_data", "assay_data", "pubchem_vendor_links.csv.gz"])
         vendor_links_data = pd.read_csv(vendor_links_url, dtype=str)
         links = []
+        missed = 0
         for _, row in vendor_links_data.iterrows():
             if len(row["SourceRecordURL"])<=400 and len(row["RegistryID"])<=500:
-                links.append(LigandVendorLink(
-                    vendor_id=vendor_dict[row["SourceName"]], ligand_id=lig_dict[row["chembl_id"]], url=row["SourceRecordURL"], external_id=row["RegistryID"]))
+                try:
+                    links.append(LigandVendorLink(
+                        vendor_id=vendor_dict[row["SourceName"]], ligand_id=lig_dict[row["chembl_id"]], url=row["SourceRecordURL"], external_id=row["RegistryID"]))
+                except KeyError:
+                    missed += 1
+                    continue
 
         LigandVendorLink.objects.bulk_create(links)
+        if missed:
+            print(f"Skipped {missed} vendor links with an unknown vendor or ligand")
 
     @staticmethod
     def uniprot_mapper_update(protein, organism):
@@ -2026,8 +2033,7 @@ class Command(BaseBuild):
         for _, row in gtp_biodata.iterrows():
             receptor = Command.fetch_protein(
                 row['target_id'], 'GtoP', row['target_species'])
-            # TODO Handle multiple matches (uniprot filter?)
-            ligand = get_ligand_by_id("gtoplig", row['ligand_id'], forced=False)
+            ligand = get_ligand_by_id("gtoplig", row['ligand_id'], forced=False, name=row.get('ligand_name'))
 
             try:
                 low_value = "{:.2f}".format(float(row['affinity_low']))
@@ -2274,6 +2280,7 @@ class Command(BaseBuild):
         bio_entries = len(pdsp)
         print("\n===============\n#1 Start parsing PDSP data")
         bioacts = []
+        missed_no_name = 0
         for index, (_, row) in enumerate(pdsp.iterrows()):
             receptor = None
             label = '_'.join([row[conversion['Gene'][src]], row[conversion['Species'][src]]])
@@ -2281,6 +2288,11 @@ class Command(BaseBuild):
                 protein = Command.uniprot_mapper_update(row[conversion['Gene'][src]], row[conversion['Species'][src]])
                 if protein is not None:
                     protein_names[label] = Command.fetch_protein(protein, 'PDSP')
+
+            ligand_name = row[conversion['Ligand'][src]]
+            if not ligand_name or not ligand_name.strip() or ligand_name == 'None':
+                missed_no_name += 1
+                continue
 
             ids = {}
             if row['SMILES'] != 'None':
@@ -2291,14 +2303,17 @@ class Command(BaseBuild):
                     ids['inchikey'] = dm.to_inchikey(input_mol)
             if row['CAS'] != 'None':
                 ids['CAS'] = row['CAS']
-            if row[conversion['Ligand'][src]] not in ligand_cache.keys():
-                ligand = get_or_create_ligand(row[conversion['Ligand'][src]], ids, source='PDSP KiDatabase')
-                ligand_cache[row[conversion['Ligand'][src]]] = ligand
+            # Keyed on name + structural identifiers (not name alone) so two different
+            # compounds that happen to share a display name aren't merged into one ligand.
+            cache_key = (ligand_name, row['SMILES'], row['CAS'])
+            if cache_key not in ligand_cache.keys():
+                ligand = get_or_create_ligand(ligand_name, ids, source='PDSP KiDatabase')
+                ligand_cache[cache_key] = ligand
             if label in protein_names.keys():
                 receptor = protein_names[label]
-            if (receptor is not None) and (ligand_cache[row[conversion['Ligand'][src]]] is not None):
+            if (receptor is not None) and (ligand_cache[cache_key] is not None):
                 bioacts.append(AssayExperiment())
-                bioacts[-1].ligand_id = ligand_cache[row[conversion['Ligand'][src]]].id
+                bioacts[-1].ligand_id = ligand_cache[cache_key].id
                 bioacts[-1].protein_id = receptor.id
                 bioacts[-1].assay_type = 'B'
                 bioacts[-1].assay_description = None
@@ -2318,7 +2333,9 @@ class Command(BaseBuild):
                       bio_entries, "bioactivities")
                 bioacts = []
 
-            Command.assign_ligand_target_pairing(ligand_cache[row[conversion['Ligand'][src]]], receptor, None, 'pKi')
+            Command.assign_ligand_target_pairing(ligand_cache[cache_key], receptor, None, 'pKi')
+        if missed_no_name:
+            print(f"Skipped {missed_no_name} PDSP KiDatabase rows with a missing ligand name")
 
     @staticmethod
     def build_drugcentral_bioactivities():
@@ -2349,6 +2366,7 @@ class Command(BaseBuild):
 
         print("# Parsing DrugCentral data")
         bioacts = []
+        missed_no_name = 0
         for index, (_, row) in enumerate(merged_data_filtered.iterrows()):
             receptor = None
             code = row['ACCESSION']
@@ -2357,6 +2375,10 @@ class Command(BaseBuild):
                 if protein is not None:
                     accession_numbers[code] = protein
 
+            if not row['DRUG_NAME'] or not row['DRUG_NAME'].strip() or row['DRUG_NAME'] == 'None':
+                missed_no_name += 1
+                continue
+
             ids = {'drug_central':row['ID']}
             if row['SMILES'] != 'None':
                 ids['smiles'] = row['SMILES']
@@ -2364,9 +2386,13 @@ class Command(BaseBuild):
             #     ids['CAS'] = row['CAS_RN']
             if row['InChIKey'] != 'None':
                 ids['inchikey'] = row['InChIKey']
-            if row['DRUG_NAME'] not in ligand_cache.keys():
+            # Keyed on the DrugCentral STRUCT_ID (row['ID']), not the display name, so two
+            # different structures that happen to share a DRUG_NAME aren't merged into one
+            # ligand and each structure's own drug_central id reaches get_or_create_ligand.
+            cache_key = row['ID']
+            if cache_key not in ligand_cache.keys():
                 ligand = get_or_create_ligand(row['DRUG_NAME'], ids, source='Drug Central')
-                ligand_cache[row['DRUG_NAME']] = ligand
+                ligand_cache[cache_key] = ligand
             if code in accession_numbers.keys():
                 receptor = accession_numbers[code]
 
@@ -2377,10 +2403,10 @@ class Command(BaseBuild):
                 act_type = 'pKB'
             else:
                 act_type = row['ACT_TYPE']
-            if (receptor is not None) and (ligand_cache[row['DRUG_NAME']] is not None):
+            if (receptor is not None) and (ligand_cache[cache_key] is not None):
                 calc_val = round(-math.log10(float(row['ACT_VALUE']) * 1e-9), 2) if act_type != 'pA2' else round(float(row['ACT_VALUE']), 2)
                 bioacts.append(AssayExperiment())
-                bioacts[-1].ligand_id = ligand_cache[row['DRUG_NAME']].id
+                bioacts[-1].ligand_id = ligand_cache[cache_key].id
                 bioacts[-1].protein_id = receptor.id
                 bioacts[-1].assay_type = row['assay_type']
                 bioacts[-1].assay_description = row['ACT_COMMENT']
@@ -2400,7 +2426,9 @@ class Command(BaseBuild):
                 bioacts = []
             value_type = 'p'+act_type if act_type != 'pA2' else act_type
 
-            Command.assign_ligand_target_pairing(ligand_cache[row['DRUG_NAME']], receptor, row['ACT_COMMENT'], value_type)
+            Command.assign_ligand_target_pairing(ligand_cache[cache_key], receptor, row['ACT_COMMENT'], value_type)
+        if missed_no_name:
+            print(f"Skipped {missed_no_name} Drug Central rows with a missing ligand name")
 
     @staticmethod
     def build_drugbank_ligands():
