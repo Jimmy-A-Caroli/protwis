@@ -1016,7 +1016,7 @@ def match_id_via_unichem(type, id):
     return results
 
 
-def get_ligand_by_id(type, id, uniprot = None, forced=True):
+def get_ligand_by_id(type, id, uniprot = None, forced=True, name=None):
     if forced:
         if uniprot is None:
             result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, parent__isnull=False)
@@ -1027,6 +1027,13 @@ def get_ligand_by_id(type, id, uniprot = None, forced=True):
             result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type)
         else:
             result = Ligand.objects.filter(ids__index=str(id), ids__web_resource__slug=type, uniprot__contains=uniprot.upper())
+
+    if result.count() > 1 and name and name != "None":
+        # Same source id can be shared by a compound and its radiolabeled variant
+        # (e.g. "DAMGO" vs "[3H]DAMGO") - narrow down by name when possible.
+        name_matched = result.filter(name__iexact=name)
+        if name_matched.exists():
+            result = name_matched
 
     if result.count() > 0:
         # For drugs we allow multiple entries because of stereochemistry if drug is racemic
