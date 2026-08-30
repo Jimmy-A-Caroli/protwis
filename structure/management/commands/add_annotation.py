@@ -20,8 +20,11 @@ from collections import OrderedDict
 import pprint
 from datetime import datetime
 from urllib.request import urlopen
+from urllib.error import HTTPError
 from copy import deepcopy
 import shutil
+import json
+import gemmi
 
 
 starttime = datetime.now()
@@ -40,6 +43,8 @@ class Command(BaseCommand):
     anomalies_file = os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'all_anomalies.yaml'])
     with open(anomalies_file, 'r') as f2:
         anomalies = yaml.load(f2, Loader=yaml.FullLoader)
+    with open(os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'custom_mappings.json'])) as cm:
+        custom_mappings = json.load(cm)
     pdb_data_dir = os.sep.join([settings.DATA_DIR, 'structure_data', 'pdbs'])
 
     sequence_file = os.sep.join([settings.DATA_DIR, 'structure_data', 'annotation', 'sequences.yaml'])
@@ -387,16 +392,7 @@ class Command(BaseCommand):
                                             for i in range(del_range['start'],del_range['end']+1):
                                                 deletions.append(i)
                                         #print("Annotation missing WT residues",d['deletions'])
-                                    ## Remove segments that arent receptor (tags, fusion etc)
-                                    if 'xml_segments' in d:
-                                        for seg in d['xml_segments']:
-                                            if seg[1]:
-                                                # Odd rules to fit everything..
-                                                # print(seg[1][0], entry_name)
-                                                if seg[1][0]!=data['protein'] and seg[-1]!=True and seg[1][0]!='Uncharacterized protein' and 'receptor' not in seg[1][0]:
-                                                    if seg[0].split("_")[1]==data['preferred_chain']:
-                                                        for i in seg[6]:
-                                                            removed.append(i)
+                                    removed = d.get('removed', [])
 
                                     removed, deletions = construct_structure_annotation_override(s, removed, deletions)
 
@@ -442,19 +438,25 @@ class Command(BaseCommand):
                             seq = seq[:-5]
                         elif s in ['8JD1','8JD2','8JD3','8JD4','8JD5','8IZB','8WPG','8WPU','8WRB']:
                             seq = seq[:-1]
+                        elif s=='9IJR':
+                            seq = seq[:-7]
 
                         if self.debug:
                             print(seq)
 
                         dssp = self.dssp(s, structure[0][data['preferred_chain']], structure)
 
-                        if fusion_present or s in ['7V68','7V69','7V6A','7W6P','7W7E','8E9W','8E9X','8E9Y','8E9Z','8EA0','7T8X','7T90','7T94','7T96',
-                                                   '7TRK','7TRP','7TRQ','7TRS','8IRU','8FX5','8W8R','8W8S','7V9L','8TZQ','8U02','8YN2']:
-                            pw2 = Bio.pairwise2.align.localms(parent_seq, seq, 3, -3, -3.5, -1)
+                        if s in self.custom_mappings:
+                            ref_seq, temp_seq = self.custom_mappings[s]
                         else:
-                            pw2 = Bio.pairwise2.align.localms(parent_seq, seq, 3, -4, -5, -2)
+                            if fusion_present or s in ['7V68','7V69','7V6A','7W6P','7W7E','8E9W','8E9X','8E9Y','8E9Z','8EA0','7T8X','7T90','7T94','7T96',
+                                                    '7TRK','7TRP','7TRQ','7TRS','8IRU','8FX5','8W8R','8W8S','7V9L','8TZQ','8U02','8YN2','9EK0','9N09','9N29',
+                                                    '9LRB','9LRD','9EJZ','9PLN','9PLO','9PQD']:
+                                pw2 = Bio.pairwise2.align.localms(parent_seq, seq, 3, -3, -3.5, -1)
+                            else:
+                                pw2 = Bio.pairwise2.align.localms(parent_seq, seq, 3, -4, -5, -2)
 
-                        ref_seq, temp_seq = str(pw2[0][0]), str(pw2[0][1])
+                            ref_seq, temp_seq = str(pw2[0][0]), str(pw2[0][1])
                         ref_i, temp_i = 0, 0
                         res_dict = OrderedDict()
                         wt_pdb_lookup = {}
@@ -510,6 +512,11 @@ class Command(BaseCommand):
                                 parent_segends[prefix+'x'] = x50
                                 parent_segends[prefix+'e'] = e
 
+                            if '8b' not in parent_segends:
+                                parent_segends['8b'] = '-'
+                                parent_segends['8x'] = '-'
+                                parent_segends['8e'] = '-'
+
                         if self.debug:
                             for i,j in res_dict.items():
                                 print(i,j)
@@ -517,6 +524,7 @@ class Command(BaseCommand):
 
                         ### Helices
                         for i in range(1,9):
+
                             if i==8 and parent_segends[str(i)+'x']=='-':
                                 print('WARNING: no H8 annotated for wt {}'.format(parent_protein))
                                 continue
@@ -615,6 +623,33 @@ class Command(BaseCommand):
                             elif s=='8X9T' and i==6:
                                 start = 753
                                 end = 780
+                            elif s=='9B5Y' and i==6:
+                                start = 402
+                                end = 425
+                            elif s in ['9LZ1','9LZ2'] and i==6:
+                                start = 400
+                                end = 425
+                            elif s=='25NX' and i==6:
+                                start = 398
+                                end = 425
+                            elif s=='9N1P' and i==6:
+                                start = 345
+                                end = 367
+                            elif s=='9P94' and i==6:
+                                start = 347
+                                end = 369
+                            elif s=='9XQB' and i==5:
+                                start = 180
+                                end = 189
+                            elif s=='8YNF' and i==3:
+                                start = 125
+                                end = 154
+                            elif s=='9DGI' and i==3:
+                                start = 187
+                                end = 220
+                            elif s=='9MBC' and i==3:
+                                start = 650
+                                end = 666
 
                             if i<8 and (start=='-' or end=='-'):
                                 print('WARNING: helix {} for {} {} has missing annotation'.format(i, s, parent_protein))
@@ -787,9 +822,25 @@ class Command(BaseCommand):
         if not os.path.isfile(self.pdb_path):
             self.logger.info('Fetching PDB file {}'.format(pdb_code))
             url = 'http://www.rcsb.org/pdb/files/%s.pdb' % pdb_code
-            pdbdata_raw = urlopen(url).read().decode('utf-8')
-            with open(self.pdb_path, 'w') as f:
-                f.write(pdbdata_raw)
+            try:
+                pdbdata_raw = urlopen(url).read().decode('utf-8')
+                with open(self.pdb_path, 'w') as f:
+                    f.write(pdbdata_raw)
+            except HTTPError as e:
+                if e.code != 404:
+                    raise
+                self.logger.info('PDB file not found for {}, fetching CIF file instead'.format(pdb_code))
+                cif_path = os.sep.join([self.pdb_data_dir, pdb_code + '.cif'])
+                cif_url = 'https://files.rcsb.org/download/%s.cif' % pdb_code
+                cifdata_raw = urlopen(cif_url).read().decode('utf-8')
+                with open(cif_path, 'w') as f:
+                    f.write(cifdata_raw)
+                doc = gemmi.cif.read(cif_path)
+                block = doc.sole_block()
+                structure = gemmi.make_structure_from_block(block)
+                structure.setup_entities()
+                structure.write_pdb(self.pdb_path)
+                os.remove(cif_path)
         else:
             with open(self.pdb_path, 'r') as pdb_file:
                 pdbdata_raw = pdb_file.read()
