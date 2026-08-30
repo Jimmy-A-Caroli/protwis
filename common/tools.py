@@ -301,7 +301,7 @@ def fetch_from_web_api(url, index, cache_dir=False, xml=False, raw=False):
             logger.warning('Failed fetching {}, retrying'.format(full_url))
 
         try:
-            req = urlopen(full_url)
+            req = urlopen(full_url, timeout=30)
             if full_url[-2:]=='gz' and xml:
                 try:
                     buf = BytesIO( req.read())
@@ -441,7 +441,7 @@ def urlopen_with_retry(url, data = None, retries = 5, sleeptime = 5):
 
         response = None
         try:
-            response = urlopen(url, data) #nosec
+            response = urlopen(url, data, timeout=30) #nosec
         except urllib.error.URLError as e:
             logger.warning(f'URLopen error (retry {retry} out of {retries}) {e}')
 

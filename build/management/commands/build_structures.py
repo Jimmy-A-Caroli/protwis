@@ -43,6 +43,7 @@ import gc
 from collections import OrderedDict
 import json
 from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from Bio.PDB import parse_pdb_header
 from Bio.PDB.Selection import *
 
@@ -1609,7 +1610,11 @@ class Command(BaseBuild):
             if not os.path.isfile(pdb_path):
                 self.logger.info('Fetching PDB file {}'.format(sd['pdb']))
                 url = 'http://www.rcsb.org/pdb/files/%s.pdb' % sd['pdb']
-                pdbdata_raw = urlopen(url).read().decode('utf-8')
+                try:
+                    pdbdata_raw = urlopen(url, timeout=30).read().decode('utf-8')
+                except (URLError, HTTPError) as e:
+                    self.logger.error('Failed fetching PDB file {} from RCSB: {}'.format(sd['pdb'], e))
+                    continue
                 with open(pdb_path, 'w') as f:
                     f.write(pdbdata_raw)
             else:
