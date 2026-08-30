@@ -15,6 +15,7 @@ import re
 import requests
 import xmltodict
 import logging
+import contextlib
 
 import pandas as pd
 import datamol as dm
@@ -37,6 +38,21 @@ external_sources = ["pubchem", "gtoplig", "chembl_ligand", "chembl_peptide", "dr
 
 _LIGAND_TYPE_CACHE: dict = {}
 _WEB_RESOURCE_CACHE: dict = {}
+
+# Set once per worker process (see build_structures.main_func) to the shared
+# multiprocessing.Lock used to serialize the DB-touching part of ligand
+# resolution across parallel build workers. Left None (no locking) outside
+# a parallel build context, e.g. single-process call sites/tests.
+_ligand_lock = None
+
+
+def set_ligand_lock(lock):
+    global _ligand_lock
+    _ligand_lock = lock
+
+
+def _ligand_lock_cm():
+    return _ligand_lock if _ligand_lock is not None else contextlib.nullcontext()
 
 _GTP_CACHE_TTL = 7 * 24 * 3600  # 7 days
 
@@ -210,21 +226,12 @@ def _props_compatible(entry_props: dict, candidate: "Ligand") -> bool:
     return True
 
 
-def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule", extended_matching=True):
-    """Process a list of ligand entries in batch, minimizing DB round-trips.
-
-    entries: list of dicts with keys:
-        name, raw_smiles, raw_inchikey, raw_helm, raw_sequence,
-        source_ids (dict), radioactive (bool), synonyms (str)
-
-    Returns list of (parent, child) tuples, one per entry (either may be None on failure).
+def _prepare_ligand_entries(entries):
+    """Steps A/A.5 of ligand-batch processing: RDKit normalization/descriptors and
+    UniChem source-ID enrichment. Pure computation + network I/O, no shared DB
+    state — safe (and important for throughput) to run without holding the
+    ligand DB lock, unlike the resolve/create steps that follow.
     """
-    if lig_type not in _LIGAND_TYPE_CACHE:
-        _LIGAND_TYPE_CACHE[lig_type] = LigandType.objects.get_or_create(
-            slug=slugify(lig_type), defaults={"name": lig_type}
-        )[0]
-    lig_type_obj = _LIGAND_TYPE_CACHE[lig_type]
-
     # ── Step A: pre-normalize all entries in memory ───────────────────────────
     for entry in entries:
         entry["_pk"] = None   # parent connectivity key (first InChIKey block)
@@ -291,6 +298,35 @@ def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule",
             for hit in match_id_via_unichem(src_slug, str(src_val)):
                 if hit["type"] in external_sources and hit["type"] not in sids:
                     sids[hit["type"]] = hit["id"]
+
+
+def get_or_create_ligands_batch(entries, source=None, lig_type="small-molecule", extended_matching=True):
+    """Process a list of ligand entries in batch, minimizing DB round-trips.
+
+    entries: list of dicts with keys:
+        name, raw_smiles, raw_inchikey, raw_helm, raw_sequence,
+        source_ids (dict), radioactive (bool), synonyms (str)
+
+    Returns list of (parent, child) tuples, one per entry (either may be None on failure).
+    """
+    _prepare_ligand_entries(entries)
+
+    with _ligand_lock_cm():
+        return _resolve_ligand_entries(entries, source=source, lig_type=lig_type)
+
+
+def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", extended_matching=True):
+    """Steps B-I: DB read/resolve/create for a batch of already-prepared entries.
+
+    Runs under the shared ligand lock during a parallel build (see set_ligand_lock)
+    since the check-then-insert logic below relies on that lock, not a DB
+    constraint, to avoid two workers creating duplicate Ligand rows.
+    """
+    if lig_type not in _LIGAND_TYPE_CACHE:
+        _LIGAND_TYPE_CACHE[lig_type] = LigandType.objects.get_or_create(
+            slug=slugify(lig_type), defaults={"name": lig_type}
+        )[0]
+    lig_type_obj = _LIGAND_TYPE_CACHE[lig_type]
 
     # ── Step B: batch parent lookup ───────────────────────────────────────────
     all_clean_keys = {e["_pk"] for e in entries if e["_pk"]}

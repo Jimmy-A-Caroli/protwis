@@ -9,7 +9,7 @@ from django.core.management import call_command
 from build.management.commands.PDB_sequence_helper import *
 
 from build.management.commands.base_build import Command as BaseBuild
-from build.management.commands.build_ligand_functions import get_or_create_ligand, match_id_via_unichem
+from build.management.commands.build_ligand_functions import get_or_create_ligand, match_id_via_unichem, set_ligand_lock
 from protein.models import (Protein, ProteinConformation, ProteinState, ProteinAnomaly, ProteinAnomalyType,
     ProteinSegment, Site)
 from residue.models import ResidueGenericNumber, ResidueNumberingScheme, Residue, ResidueGenericNumberEquivalent
@@ -1499,6 +1499,9 @@ class Command(BaseBuild):
         #     pdbs = self.parsed_structures[positions[0]:]
         # else:
         #     pdbs = self.parsed_structures[positions[0]:positions[1]]
+        # DB-touching ligand resolution locks internally on this shared lock;
+        # only the counter increment below still locks explicitly here.
+        set_ligand_lock(lock)
         pdbs = self.parsed_structures.pdb_ids
         while count.value<len(pdbs):
             with lock:
@@ -1845,8 +1848,7 @@ class Command(BaseBuild):
                                 seq+=one_letter
                             ids['sequence'] = seq
 
-                        with lock:
-                            l = get_or_create_ligand(ligand_title, ids, ligand['type'])
+                        l = get_or_create_ligand(ligand_title, ids, ligand['type'])
                         # Create LigandPeptideStructure object to store chain ID for peptide ligands - supposed to b TEMP
                         if ligand['type'] in ['peptide','protein']:
                             lps, created = LigandPeptideStructure.objects.get_or_create(structure=s, ligand=l, chain=peptide_chain)
