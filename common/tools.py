@@ -251,19 +251,27 @@ def test_model_updates(model, master_data, initialize=False, check=False, rerun=
 def save_to_cache(path, file_id, data):
     create_cache_dirs(path)
     cache_dir_path = os.sep.join([settings.BUILD_CACHE_DIR] + path)
-    cache_file_path = os.sep.join([cache_dir_path, file_id + '.yaml'])
-    with open(cache_file_path, 'w') as cache_file:
+    cache_file_path = os.sep.join([cache_dir_path, file_id + '.yaml.gz'])
+    with gzip.open(cache_file_path, 'wt') as cache_file:
         yaml.dump(data, cache_file, default_flow_style=False)
 
 def fetch_from_cache(path, file_id):
     cache_dir_path = os.sep.join([settings.BUILD_CACHE_DIR] + path)
-    cache_file_path = os.sep.join([cache_dir_path, file_id + '.yaml'])
+    cache_file_path = os.sep.join([cache_dir_path, file_id + '.yaml.gz'])
+    legacy_file_path = os.sep.join([cache_dir_path, file_id + '.yaml'])
     if os.path.isfile(cache_file_path):
         try:
-            with open(cache_file_path) as cache_file:
+            with gzip.open(cache_file_path, 'rt') as cache_file:
                 return yaml.load(cache_file, Loader=yaml.Loader)
         except TypeError as msg:
             print('WARNING: cannot properly open {} with TypeError: {}'.format(cache_file_path, msg))
+            return None
+    elif os.path.isfile(legacy_file_path):
+        try:
+            with open(legacy_file_path) as cache_file:
+                return yaml.load(cache_file, Loader=yaml.Loader)
+        except TypeError as msg:
+            print('WARNING: cannot properly open {} with TypeError: {}'.format(legacy_file_path, msg))
             return None
     else:
         return None
