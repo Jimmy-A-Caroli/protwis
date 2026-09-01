@@ -29,7 +29,11 @@ AA_three = {'CYS': 'C', 'ASP': 'D', 'SER': 'S', 'GLN': 'Q', 'LYS': 'K',
      'GLY': 'G', 'HIS': 'H', 'LEU': 'L', 'ARG': 'R', 'TRP': 'W',
      'ALA': 'A', 'VAL':'V', 'GLU': 'E', 'TYR': 'Y', 'MET': 'M'}
 # to override some faulty PDB DBREF entries
-uniprot_convert_table = {'Q548Y0_HUMAN':'OX2R_HUMAN'}
+uniprot_convert_table = {
+    'Q548Y0_HUMAN': 'OX2R_HUMAN',
+    'CRFR1_HUMAN': 'CRHR1_HUMAN',
+    'CRFR2_HUMAN': 'CRHR2_HUMAN',
+}
 starttime = datetime.now()
 
 
@@ -482,34 +486,35 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
     cache_dir = ['sifts', 'xml']
     url = 'http://www.uniprot.org/uniprot/$index.xml'
     insert_info = fetch_from_web_api(url, d['construct_crystal']['uniprot'], cache_dir, xml = True)
-    for elm in insert_info.findall('.//{http://uniprot.org/uniprot}feature'):
-        if elm.attrib['type']=="sequence variant":
-            if 'description' in elm.attrib:
-                desc = elm.attrib['description']
-            else:
-                desc = ''
-            if 'id' in elm.attrib:
-                var_id = elm.attrib['id']
-            else :
-                var_id = None
-           #  print(desc,var_id)
-            try:
-                ori = elm.find('{http://uniprot.org/uniprot}original').text
-                var = elm.find('{http://uniprot.org/uniprot}variation').text
-                pos = elm.find('{http://uniprot.org/uniprot}location')[0].attrib['position']
-                if pos not in variants_mapping:
-                    variants_mapping[pos] = {}
-                if var not in variants_mapping[pos]:
-                    variants_mapping[pos][var] = []
-                variants_mapping[pos][var].append([desc,var_id])
-            except:
-                pass
-    for elm in insert_info.findall('.//{http://uniprot.org/uniprot}sequence'):
-        uniprot_seq = elm.text
-        if uniprot_seq:
-            import re
-            uniprot_seq = re.sub('[\s+]', '', uniprot_seq)
-            # print(uniprot_seq)
+    if insert_info:
+        for elm in insert_info.findall('.//{http://uniprot.org/uniprot}feature'):
+            if elm.attrib['type']=="sequence variant":
+                if 'description' in elm.attrib:
+                    desc = elm.attrib['description']
+                else:
+                    desc = ''
+                if 'id' in elm.attrib:
+                    var_id = elm.attrib['id']
+                else :
+                    var_id = None
+               #  print(desc,var_id)
+                try:
+                    ori = elm.find('{http://uniprot.org/uniprot}original').text
+                    var = elm.find('{http://uniprot.org/uniprot}variation').text
+                    pos = elm.find('{http://uniprot.org/uniprot}location')[0].attrib['position']
+                    if pos not in variants_mapping:
+                        variants_mapping[pos] = {}
+                    if var not in variants_mapping[pos]:
+                        variants_mapping[pos][var] = []
+                    variants_mapping[pos][var].append([desc,var_id])
+                except:
+                    pass
+        for elm in insert_info.findall('.//{http://uniprot.org/uniprot}sequence'):
+            uniprot_seq = elm.text
+            if uniprot_seq:
+                import re
+                uniprot_seq = re.sub('[\s+]', '', uniprot_seq)
+                # print(uniprot_seq)
     # print(variants_mapping)
     # if len(uniprot_seq)!=len(d['wt_seq']): print("gpcrdb seq",len(d['wt_seq']),'uniport len',len(uniprot_seq))
 
@@ -628,31 +633,34 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
                                     url = 'http://www.uniprot.org/uniprot/$index.xml'
                                     insert_info = fetch_from_web_api(url, raw_u_id, cache_dir, xml = True)
                                     found_u_id = None
-                                    for elm in insert_info.findall('.//{http://uniprot.org/uniprot}feature'):
-                                        # GRAB NON RECEPTOR VARIANTS
-                                        try:
-                                            if elm.attrib['type']=="sequence variant":
-                                                desc = elm.attrib['description']
-                                                ori = elm.find('{http://uniprot.org/uniprot}original').text
-                                                var = elm.find('{http://uniprot.org/uniprot}variation').text
-                                                pos = elm.find('{http://uniprot.org/uniprot}location')[0].attrib['position']
-                                                # print(raw_u_id,desc,ori,var,pos)
-                                        except:
-                                            pass
+                                    if insert_info:
+                                        for elm in insert_info.findall('.//{http://uniprot.org/uniprot}feature'):
+                                            # GRAB NON RECEPTOR VARIANTS
+                                            try:
+                                                if elm.attrib['type']=="sequence variant":
+                                                    desc = elm.attrib['description']
+                                                    ori = elm.find('{http://uniprot.org/uniprot}original').text
+                                                    var = elm.find('{http://uniprot.org/uniprot}variation').text
+                                                    pos = elm.find('{http://uniprot.org/uniprot}location')[0].attrib['position']
+                                                    # print(raw_u_id,desc,ori,var,pos)
+                                            except:
+                                                pass
 
-                                    for elm in insert_info.findall('.//{http://uniprot.org/uniprot}recommendedName'):
-                                        new_u_id = elm.find('{http://uniprot.org/uniprot}fullName').text
-                                        uniprot_to_name[raw_u_id] = new_u_id
-                                        u_id = new_u_id
-                                        found_u_id = True
-                                        break #no need to continue looking
-                                    if not found_u_id:
-                                        for elm in insert_info.findall('.//{http://uniprot.org/uniprot}submittedName'):
+                                        for elm in insert_info.findall('.//{http://uniprot.org/uniprot}recommendedName'):
                                             new_u_id = elm.find('{http://uniprot.org/uniprot}fullName').text
                                             uniprot_to_name[raw_u_id] = new_u_id
                                             u_id = new_u_id
                                             found_u_id = True
                                             break #no need to continue looking
+                                        if not found_u_id:
+                                            for elm in insert_info.findall('.//{http://uniprot.org/uniprot}submittedName'):
+                                                new_u_id = elm.find('{http://uniprot.org/uniprot}fullName').text
+                                                uniprot_to_name[raw_u_id] = new_u_id
+                                                u_id = new_u_id
+                                                found_u_id = True
+                                                break #no need to continue looking
+                                    if not found_u_id:
+                                        u_id = raw_u_id
 
                             if u_id not in seg_uniprot_ids:
                                 seg_uniprot_ids.append(u_id)

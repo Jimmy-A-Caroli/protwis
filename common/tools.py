@@ -19,6 +19,7 @@ import yaml
 import time
 import logging
 import re
+import socket
 import urllib
 import hashlib
 import json
@@ -354,6 +355,10 @@ def fetch_from_web_api(url, index, cache_dir=False, xml=False, raw=False):
                 time.sleep(2)
         except HTTPException as e:
             tries += 1
+            time.sleep(2)
+        except socket.timeout as e:
+            tries += 1
+            logger.warning('Timed out fetching {}, retrying'.format(full_url))
             time.sleep(2)
         except urllib.error.URLError as e:
             # Catches 101 network is unreachable -- I think it's auto limiting feature

@@ -1819,6 +1819,14 @@ class Command(BaseBuild):
                         if len(pdb_reference)>3 and '.' in pdb_reference:
                             pdb_reference = pdb_reference.split('.')[0]
 
+                        # guard against annotation data (ligands.tsv) containing a full name instead
+                        # of a short PDB CCD code, which would otherwise crash the DB write below
+                        pdb_reference_max_len = StructureLigandInteraction._meta.get_field('pdb_reference').max_length
+                        if pdb_reference and len(pdb_reference) > pdb_reference_max_len:
+                            self.logger.warning('Ligand reference "{}" for structure {} exceeds {} characters ({}) - storing as None instead of crashing the build. Check ligands.tsv for a bad "Name" value.'.format(
+                                pdb_reference, s, pdb_reference_max_len, sd.get('pdb', '?')))
+                            pdb_reference = None
+
                         if ligand['name'] != "pep" and ligand['name'] != "apo":
                             ids["pdb"] = ligand['name']
 
