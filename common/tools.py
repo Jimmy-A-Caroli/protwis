@@ -23,6 +23,8 @@ import urllib
 import hashlib
 import json
 import gzip
+import tempfile
+import zlib
 import csv
 import datetime as dt
 import xml.etree.ElementTree as etree
@@ -252,8 +254,16 @@ def save_to_cache(path, file_id, data):
     create_cache_dirs(path)
     cache_dir_path = os.sep.join([settings.BUILD_CACHE_DIR] + path)
     cache_file_path = os.sep.join([cache_dir_path, file_id + '.yaml.gz'])
-    with gzip.open(cache_file_path, 'wt') as cache_file:
-        yaml.dump(data, cache_file, default_flow_style=False)
+    fd, tmp_path = tempfile.mkstemp(dir=cache_dir_path, prefix='.' + file_id + '.', suffix='.yaml.gz.tmp')
+    os.close(fd)
+    try:
+        with gzip.open(tmp_path, 'wt') as cache_file:
+            yaml.dump(data, cache_file, default_flow_style=False)
+        os.replace(tmp_path, cache_file_path)
+    except Exception:
+        if os.path.isfile(tmp_path):
+            os.remove(tmp_path)
+        raise
 
 def fetch_from_cache(path, file_id):
     cache_dir_path = os.sep.join([settings.BUILD_CACHE_DIR] + path)
@@ -263,15 +273,15 @@ def fetch_from_cache(path, file_id):
         try:
             with gzip.open(cache_file_path, 'rt') as cache_file:
                 return yaml.load(cache_file, Loader=yaml.Loader)
-        except TypeError as msg:
-            print('WARNING: cannot properly open {} with TypeError: {}'.format(cache_file_path, msg))
+        except (TypeError, OSError, EOFError, zlib.error, yaml.YAMLError) as msg:
+            print('WARNING: cannot properly open {} with error: {}'.format(cache_file_path, msg))
             return None
     elif os.path.isfile(legacy_file_path):
         try:
             with open(legacy_file_path) as cache_file:
                 return yaml.load(cache_file, Loader=yaml.Loader)
-        except TypeError as msg:
-            print('WARNING: cannot properly open {} with TypeError: {}'.format(legacy_file_path, msg))
+        except (TypeError, yaml.YAMLError) as msg:
+            print('WARNING: cannot properly open {} with error: {}'.format(legacy_file_path, msg))
             return None
     else:
         return None
