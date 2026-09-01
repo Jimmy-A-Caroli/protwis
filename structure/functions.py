@@ -1455,6 +1455,7 @@ class StructureBuildCheck():
         self.pdbs = ParseStructureCSV().pdb_ids
         self.wt_pdb_lookup_files = [i.split('.')[0] for i in os.listdir(self.local_wt_pdb_lookup_dir)]
         self.missing_seg = []
+        self.missing_parent_seg = []
         self.start_error = []
         self.end_error = []
         self.helix_length_error = []
@@ -1528,6 +1529,9 @@ class StructureBuildCheck():
                     seg_resis = structure_residues.filter(protein_segment__slug=seg)
                     if len(seg_resis)==0:
                         self.missing_seg.append([structure, seg, anno_b, anno_e])
+                        continue
+                    if len(parent_seg_resis)==0:
+                        self.missing_parent_seg.append([structure, seg])
                         continue
                     if i<8 and len(seg_resis)<5:
                         self.helix_length_error.append([structure, seg, len(seg_resis)])

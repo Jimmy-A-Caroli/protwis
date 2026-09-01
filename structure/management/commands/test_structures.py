@@ -25,6 +25,9 @@ class Command(BaseCommand):
                 if str(i[0]) not in p:
                     p.append(str(i[0]))
             print(' '.join(p))
+            print("Missing parent segment residues: ", len(sbc.missing_parent_seg))
+            for i in sbc.missing_parent_seg:
+                print("Error: {} {} — parent protein has no residues for this segment (residue build likely needs to be (re-)run for the parent protein)".format(i[0], i[1]))
             print("Very short helix segments: ", len(sbc.helix_length_error))
             for i in sbc.helix_length_error:
                 print("Error: Very short helix segment for {}: {} {}".format(i[0],i[1],i[2]))
