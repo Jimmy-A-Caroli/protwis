@@ -37,6 +37,22 @@ class Command(BaseCommand):
             print("Residue duplicate errors: ", len(sbc.duplicate_residue_error))
             for i, j in sbc.duplicate_residue_error.items():
                 print("Error: {} has duplicate residue for {}".format(i,j))
+
+            for s in structs:
+                sbc.check_ligand_interactions(s)
+            print("=== Ligand interaction checks ===")
+            print("Ligand count mismatches: ", len(sbc.ligand_count_error))
+            for i in sbc.ligand_count_error:
+                print("Error: {} has {} ligands in ligands.tsv but {} StructureLigandInteraction objects".format(i[0],i[1],i[2]))
+            print("Missing residue-fragment interactions: ", len(sbc.missing_ligand_interaction))
+            for i in sbc.missing_ligand_interaction:
+                print("Error: {} has no ResidueFragmentInteraction objects for ligand {}".format(i[0],i[1]))
+            print("Peptide/protein ligand count mismatches: ", len(sbc.peptide_count_error))
+            for i in sbc.peptide_count_error:
+                print("Error: {} has {} peptide/protein ligands in ligands.tsv but {} LigandPeptideStructure objects".format(i[0],i[1],i[2]))
+            print("Missing peptide residue pairs: ", len(sbc.missing_peptide_residue_pair))
+            for i in sbc.missing_peptide_residue_pair:
+                print("Error: {} has no InteractingPeptideResiduePair objects for peptide ligand {}".format(i[0],i[1]))
         else:
             for sc in SignprotComplex.objects.all():
                 sbc.check_signprot_struct_residues(sc)

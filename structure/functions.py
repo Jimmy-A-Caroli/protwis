@@ -19,7 +19,9 @@ from residue.functions import dgn
 from residue.models import Residue, ResidueGenericNumberEquivalent
 from structure.models import Structure, Rotamer, PdbData, StructureStabilizingAgent, StructureType
 from signprot.models import SignprotStructure
-from ligand.models import Endogenous_GTP
+from ligand.models import Endogenous_GTP, LigandPeptideStructure
+from interaction.models import StructureLigandInteraction, ResidueFragmentInteraction
+from contactnetwork.models import InteractingPeptideResiduePair
 
 from subprocess import Popen, PIPE
 from io import StringIO
@@ -1457,6 +1459,13 @@ class StructureBuildCheck():
         self.end_error = []
         self.helix_length_error = []
         self.duplicate_residue_error = {}
+        psc = ParseStructureCSV()
+        psc.parse_ligands()
+        self.ligand_data = psc.structures
+        self.ligand_count_error = []
+        self.missing_ligand_interaction = []
+        self.peptide_count_error = []
+        self.missing_peptide_residue_pair = []
         self.g_protein_chimeras = SeqIO.to_dict(SeqIO.parse(open(self.local_g_protein_chimeras_gapped), "fasta"))
         self.g_prot_test_exceptions = {}
         for i, j in self.g_protein_chimeras.items():
@@ -1560,6 +1569,28 @@ class StructureBuildCheck():
                                 self.end_error.append([structure, seg, seg_resis.reverse()[0].sequence_number, anno_e])
         else:
             print('Warning: {} not annotated'.format(key))
+
+    def check_ligand_interactions(self, structure):
+        key = structure.pdb_code.index
+        tsv_ligands = self.ligand_data.get(key, {}).get('ligand', [])
+        named_ligands = [l for l in tsv_ligands if l['name'] and l['name'] != 'None']
+
+        sli_qs = StructureLigandInteraction.objects.filter(structure=structure)
+        if len(named_ligands) != sli_qs.count():
+            self.ligand_count_error.append([structure, len(named_ligands), sli_qs.count()])
+
+        for sli in sli_qs:
+            if not ResidueFragmentInteraction.objects.filter(structure_ligand_pair=sli).exists():
+                self.missing_ligand_interaction.append([structure, sli.ligand])
+
+        peptide_ligands = [l for l in named_ligands if l['type'].lower().strip() in ['peptide', 'protein']]
+        lps_qs = LigandPeptideStructure.objects.filter(structure=structure)
+        if len(peptide_ligands) != lps_qs.count():
+            self.peptide_count_error.append([structure, len(peptide_ligands), lps_qs.count()])
+
+        for lps in lps_qs:
+            if not InteractingPeptideResiduePair.objects.filter(peptide=lps).exists():
+                self.missing_peptide_residue_pair.append([structure, lps.ligand])
 
     def check_signprot_struct_residues(self, signprot_complex):
         pdb = PDBParser(PERMISSIVE=True, QUIET=True).get_structure('struct', StringIO(str(signprot_complex.structure.pdb_data.pdb)))[0]
