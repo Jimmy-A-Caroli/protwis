@@ -324,13 +324,14 @@ def accept_residue(residue, hetflag, peptide=None):
         return 0
 
 def create_ligands_and_poseview(ligand_het, scroller, projectdir, pdb, peptide=None, target_ligand=None, target_chain=None, target_resnum=None):
+    target_hetflag = target_ligand[:3] if target_ligand and len(target_ligand) > 3 else target_ligand
 
     class HetSelect(Select):
         @staticmethod
         def accept_residue(residue):
             if residue.get_resname().strip() != hetflag:
                 return 0
-            if hetflag == target_ligand and target_chain is not None and (
+            if target_chain is not None and hetflag == target_hetflag and (
                     residue.get_parent().id != target_chain or residue.id[1] != target_resnum):
                 return 0
             return 1
@@ -413,6 +414,7 @@ def isRingAromatic(mol, bondRing):
 
 def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, ligand_atoms, ligand_charged, ligand_donors, ligand_acceptors, ligandcenter, ligand_rings, target_ligand=None, target_chain=None, target_resnum=None):
     count_atom_ligand = {}
+    target_hetflag = target_ligand[:3] if target_ligand and len(target_ligand) > 3 else target_ligand
 
     for model in scroller:
         for chain in model:
@@ -429,7 +431,7 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
 
                 # REMEMBER TO PARSE ONLY THE ACTUAL LIGAND
                 if hetflag in lig_het.keys():
-                    if hetflag == target_ligand and target_chain is not None and (
+                    if target_chain is not None and hetflag == target_hetflag and (
                             chain.id != target_chain or residue.id[1] != target_resnum):
                         continue
                     if (hetflag not in hetlist) or (chain.id==peptide):
@@ -447,7 +449,8 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                             mol2 = MolFromPDBFile(projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + ".pdb")
                             if not mol2:
                                 mol2 = MolFromPDBFile(projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + ".pdb", sanitize=False)
-                            hetflag_sdf = get_sdf_ligand_from_cache(hetflag)
+                            sdf_comp_id = target_ligand if target_ligand and hetflag == target_hetflag else hetflag
+                            hetflag_sdf = get_sdf_ligand_from_cache(sdf_comp_id)
                             try:
                                 mol2 = AllChem.AssignBondOrdersFromTemplate(refmol=hetflag_sdf, mol=mol2)
                             except ValueError:

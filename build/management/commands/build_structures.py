@@ -779,7 +779,7 @@ class Command(BaseBuild):
         )
 
         # Find outliers which might indicate misalignments
-        outlier_indexes = distances_stats(distances)
+        outlier_indexes = distances_stats(distances, debug=self.debug)
 
         # Attempt to automatically fix misalignments based on outliers and gaps
         # The function returns the final, corrected alignment string for the PDB sequence.
@@ -793,6 +793,7 @@ class Command(BaseBuild):
             distances,
             outlier_indexes,
             aanumber=3,
+            debug=self.debug,
         )
 
         # Collapse any physically-bonded PDB residues (no real chain break between
@@ -1401,7 +1402,7 @@ class Command(BaseBuild):
         return min(np.linalg.norm(a - b) for a in ref_atoms for b in cand_atoms)
 
     @staticmethod
-    def parsecalculation(pdb_id, data, ligand_name, debug=True, ignore_ligand_preset=False, ligand_role=None):
+    def parsecalculation(pdb_id, data, ligand_name, debug=True, ignore_ligand_preset=False, ligand_role=None, peptide_chain=None):
         module_dir = '/tmp/interactions'
         web_resource = WebResource.objects.get(slug='pdb')
         web_link, _ = WebLink.objects.get_or_create(web_resource=web_resource, index=pdb_id)
@@ -1446,6 +1447,8 @@ class Command(BaseBuild):
             base_filter = {'pdb_reference': lig_db_key, 'structure': structure}
             if ligand_role is not None:
                 base_filter['ligand_role'] = ligand_role
+            if peptide_chain:
+                base_filter['chain_res'] = peptide_chain
 
             struct_lig_interactions = StructureLigandInteraction.objects.filter(annotated=True, **base_filter) #, pdb_file=None
             if struct_lig_interactions.exists():  # if the annotated exists
@@ -1455,6 +1458,7 @@ class Command(BaseBuild):
                     ligand = struct_lig_interactions.ligand
                 except Exception as msg:
                     print('error with duplication structureligand',lig_db_key,msg)
+                    return data
             elif StructureLigandInteraction.objects.filter(**base_filter).exists():
                 try:
                     struct_lig_interactions = StructureLigandInteraction.objects.filter(**base_filter).get()
@@ -1462,9 +1466,9 @@ class Command(BaseBuild):
                 except StructureLigandInteraction.DoesNotExist: #already there
                     struct_lig_interactions = StructureLigandInteraction.objects.filter(pdb_file=pdbdata, **base_filter).get()
                 ligand = struct_lig_interactions.ligand
-            else:  # create ligand and pair
-                print(pdb_id, "Skipping interactions with ", pdb_id)
-                pass
+            else:  # no matching StructureLigandInteraction row exists for this ligand/structure/role
+                print(pdb_id, "Skipping interactions with ", pdb_id, "no StructureLigandInteraction match for", base_filter)
+                return data
 
             struct_lig_interactions.save()
 
@@ -1877,7 +1881,10 @@ class Command(BaseBuild):
                         if site_val:
                             site_obj, _ = Site.objects.get_or_create(
                                 slug=slugify(site_val), defaults={'name': site_val})
-                        chain_res_val = ligand.get('residue_seq_id', '') or None
+                        if ligand['type'] in ['peptide', 'protein']:
+                            chain_res_val = peptide_chain or None
+                        else:
+                            chain_res_val = ligand.get('residue_seq_id', '') or None
 
                         i, created = StructureLigandInteraction.objects.get_or_create(structure=s,
                             ligand=l, ligand_role=lr, annotated=True,
@@ -2111,7 +2118,7 @@ class Command(BaseBuild):
                             role_qs = find_role(ligand['role'])
                             if role_qs.exists():
                                 ligand_role = role_qs[0]
-                        self.parsecalculation(sd['pdb'], data_results, ligand['name'], False, ligand_role=ligand_role)
+                        self.parsecalculation(sd['pdb'], data_results, ligand['name'], False, ligand_role=ligand_role, peptide_chain=peptide_chain)
                         end = time.time()
                         diff = round(end - current,1)
                         print('Interaction calculations done for {}. {} seconds.'.format(

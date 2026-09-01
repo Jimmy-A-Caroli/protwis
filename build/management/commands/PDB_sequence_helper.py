@@ -165,7 +165,7 @@ def generate_seq_and_distances_from_pdb_text(
     return sequence, distances
 
 
-def distances_stats(distances, threshold=3):
+def distances_stats(distances, threshold=3, debug=False):
     """
     Computes basic statistics on CA–CA distances and identifies outliers.
 
@@ -176,6 +176,9 @@ def distances_stats(distances, threshold=3):
     threshold : int or float, optional
         The multiplier of standard deviation used to define outliers
         (default is 3, i.e., values beyond mean ± 3*std).
+    debug : bool, optional
+        If True, prints a summary of mean, std, and outlier positions for
+        reference, by default False.
 
     Returns
     -------
@@ -207,14 +210,15 @@ def distances_stats(distances, threshold=3):
     outliers = [d for d in filtered_distances if d < lower_bound or d > upper_bound]
 
     # Print results
-    print(f"Mean of all distances: {mean_all:.4f}")
-    print(f"Standard deviation of all distances: {std_dev_all:.4f}")
-    print(f"Lower bound for normal values: {lower_bound:.4f}")
-    print(f"Upper bound for normal values: {upper_bound:.4f}")
-    print(f"Filtered mean (after removing true outliers): {np.mean(filtered_data):.4f}")
-    print(f"Filtered variance: {np.var(filtered_data, ddof=1):.4f}")
-    print(f"Filtered standard deviation: {np.std(filtered_data, ddof=1):.4f}")
-    print(f"True outliers: {outliers}")
+    if debug:
+        print(f"Mean of all distances: {mean_all:.4f}")
+        print(f"Standard deviation of all distances: {std_dev_all:.4f}")
+        print(f"Lower bound for normal values: {lower_bound:.4f}")
+        print(f"Upper bound for normal values: {upper_bound:.4f}")
+        print(f"Filtered mean (after removing true outliers): {np.mean(filtered_data):.4f}")
+        print(f"Filtered variance: {np.var(filtered_data, ddof=1):.4f}")
+        print(f"Filtered standard deviation: {np.std(filtered_data, ddof=1):.4f}")
+        print(f"True outliers: {outliers}")
     outlier_indexes = [i for i, d in enumerate(distances) if d in outliers]
     for idx, d in enumerate(distances):
         if d is None:
@@ -563,6 +567,7 @@ def detect_alignment_mistakes_and_reposition(
     distances,
     outlier_indexes,
     aanumber=3,
+    debug=False,
 ):
     """
     For each outlier distance, detect suspicious chunk near a large gap and "move" it
@@ -597,6 +602,9 @@ def detect_alignment_mistakes_and_reposition(
     aanumber : int, optional
         How many residues to look backward from the outlier alignment position
         for a suspicious chunk, by default 3.
+    debug : bool, optional
+        If True, prints detailed progress and diagnostic information about
+        each outlier and any repositioning performed, by default False.
 
     Returns
     -------
@@ -615,8 +623,9 @@ def detect_alignment_mistakes_and_reposition(
     label_width = 50
     temp_seq_list = list(temp_seq)  # so we can mutate temp_seq characters
 
-    # print(f"\n=== Detecting alignment mistakes for {pdb_code} ===")
-    # print(f"Number of outliers: {len(outlier_indexes)}\n")
+    if debug:
+        print(f"\n=== Detecting alignment mistakes for {pdb_code} ===")
+        print(f"Number of outliers: {len(outlier_indexes)}\n")
 
     for outlier_pdb_idx in outlier_indexes:
         if outlier_pdb_idx not in pdb_map:
@@ -628,10 +637,11 @@ def detect_alignment_mistakes_and_reposition(
         # Find where this residue is in the aligned PDB sequence
         temp_idx = pdb_map[outlier_pdb_idx]
         snippet_temp_seq_after_gap = "".join(temp_seq_list[temp_idx : temp_idx + 10])
-        print(f"Outlier at raw PDB index {outlier_pdb_idx} (aligned pos {temp_idx})")
-        print(f"Seq after the gap (temp_seq): '{snippet_temp_seq_after_gap}'")
         snippet_pdb_seq_after_gap = pdb_seq[outlier_pdb_idx : outlier_pdb_idx + 10]
-        print(f"Seq after the gap (pdb_seq):  '{snippet_pdb_seq_after_gap}'")
+        if debug:
+            print(f"Outlier at raw PDB index {outlier_pdb_idx} (aligned pos {temp_idx})")
+            print(f"Seq after the gap (temp_seq): '{snippet_temp_seq_after_gap}'")
+            print(f"Seq after the gap (pdb_seq):  '{snippet_pdb_seq_after_gap}'")
 
         found_something = False
 
@@ -655,9 +665,10 @@ def detect_alignment_mistakes_and_reposition(
                     continue
 
                 found_something = True
-                print(
-                    f"  Possible mispositioned block (length={len(suspicious_chunk)}): '{suspicious_chunk}'"
-                )
+                if debug:
+                    print(
+                        f"  Possible mispositioned block (length={len(suspicious_chunk)}): '{suspicious_chunk}'"
+                    )
 
                 # Count how many dashes in that gap going further left
                 gap_length = 0
@@ -671,14 +682,15 @@ def detect_alignment_mistakes_and_reposition(
                 context_end = gap_pos + 1
                 alignment_context = "".join(temp_seq_list[context_start:context_end])
 
-                print(
-                    f"Gap found at alignment pos {gap_pos + 1} (length={gap_length} dashes)"
-                )
-                print(
-                    f"{'Alignment context before gap (temp_seq):':<{label_width}} {alignment_context}"
-                )
                 ref_context = ref_seq[context_start:context_end]
-                print(f"{'Corresponding WT context:':<{label_width}} {ref_context}")
+                if debug:
+                    print(
+                        f"Gap found at alignment pos {gap_pos + 1} (length={gap_length} dashes)"
+                    )
+                    print(
+                        f"{'Alignment context before gap (temp_seq):':<{label_width}} {alignment_context}"
+                    )
+                    print(f"{'Corresponding WT context:':<{label_width}} {ref_context}")
 
                 # Instead of placing chunk AFTER the entire gap,
                 # we place it at the START of the gap:
@@ -689,13 +701,14 @@ def detect_alignment_mistakes_and_reposition(
                 if ref_gap_end <= len(ref_seq):
                     ref_gap_chunk = ref_seq[ref_gap_start:ref_gap_end]
                     if suspicious_chunk == ref_gap_chunk:
-                        print(
-                            f"  >>> The suspicious chunk '{suspicious_chunk}' "
-                            f"matches the ref_seq chunk '{ref_gap_chunk}' right after the gap!"
-                        )
-                        print(
-                            "      This strongly suggests a misalignment. Moving chunk to the gap.\n"
-                        )
+                        if debug:
+                            print(
+                                f"  >>> The suspicious chunk '{suspicious_chunk}' "
+                                f"matches the ref_seq chunk '{ref_gap_chunk}' right after the gap!"
+                            )
+                            print(
+                                "      This strongly suggests a misalignment. Moving chunk to the gap.\n"
+                            )
 
                         # 1) Remove from old place
                         for i in range(block_start, block_end):
@@ -712,12 +725,14 @@ def detect_alignment_mistakes_and_reposition(
 
                 # Print alignment after fix attempt
                 updated_temp_seq = "".join(temp_seq_list)
-                print("  Full alignment after fix attempt:")
-                print("  ref_seq: ", ref_seq)
-                print("  temp_seq:", updated_temp_seq)
+                if debug:
+                    print("  Full alignment after fix attempt:")
+                    print("  ref_seq: ", ref_seq)
+                    print("  temp_seq:", updated_temp_seq)
 
         if not found_something:
-            print("  No suspicious gap found nearby.\n")
+            if debug:
+                print("  No suspicious gap found nearby.\n")
 
     fixed_temp_seq = "".join(temp_seq_list)
     return fixed_temp_seq
