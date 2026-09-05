@@ -75,6 +75,11 @@ class Command(BaseCommand):
             dest='structure',
             help='Structure to annotate',
             nargs='+')
+        parser.add_argument('-f', '--force',
+            action='store_true',
+            dest='force',
+            default=False,
+            help='Force re-annotation of structures listed in -s even if already annotated')
         parser.add_argument('--alphafold',
             action='store_true',
             dest='alphafold',
@@ -84,6 +89,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.debug = options['debug']
         self.save_annotation = options['no_save']
+        self.force = options['force']
 
         with open(self.nonxtal_seg_end_file, 'r') as f:
             self.nonxtal_seg_ends = yaml.load(f, Loader=yaml.FullLoader)
@@ -361,7 +367,7 @@ class Command(BaseCommand):
                                 print('WARNING: {} {} peptide ligand missing chain ID'.format(s, l['title']))
                             if l['role']=='':
                                 print('WARNING: {} {} ligand missing modality'.format(s, l['title']))
-                    if s not in self.xtal_seg_ends or s in self.structures_to_annotate:
+                    if s not in self.xtal_seg_ends or (self.force and s in self.structures_to_annotate):
                         segends[s] = deepcopy(self.default_segends)
 
                         self.download_pdb(s)
