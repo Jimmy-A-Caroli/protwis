@@ -402,6 +402,8 @@ def get_sdf_ligand_from_cache(comp_id):
     cache_dir = ["pdbe", 'sdf_models']
     comp_id += '_ideal.sdf'
     data = fetch_from_web_api(url, comp_id, cache_dir, raw=True)
+    if not data:
+        return None
     mol = AllChem.MolFromMolBlock(data)
     # AllChem.AssignStereochemistryFrom3D(mol) #FOR PYTHON 3
     return mol
@@ -450,16 +452,17 @@ def build_ligand_info(scroller, lig_het, projectdir, pdb, peptide, hetlist, liga
                             if not mol2:
                                 mol2 = MolFromPDBFile(projectdir + 'results/' + pdb + '/ligand/' + hetflag + '_' + pdb + ".pdb", sanitize=False)
                             sdf_comp_id = target_ligand if target_ligand and hetflag == target_hetflag else hetflag
-                            hetflag_sdf = get_sdf_ligand_from_cache(sdf_comp_id)
-                            try:
-                                mol2 = AllChem.AssignBondOrdersFromTemplate(refmol=hetflag_sdf, mol=mol2)
-                            except ValueError:
+                            if hetflag != 'pep':
+                                hetflag_sdf = get_sdf_ligand_from_cache(sdf_comp_id)
                                 try:
-                                    smiles = list(Ligand.objects.filter(pdbe=hetflag).values_list('smiles', flat=True))[0]
-                                    refmol = AllChem.MolFromSmiles(smiles)
-                                    mol2 = AllChem.AssignBondOrdersFromTemplate(refmol=refmol, mol=mol2)
-                                except:
-                                    pass
+                                    mol2 = AllChem.AssignBondOrdersFromTemplate(refmol=hetflag_sdf, mol=mol2)
+                                except (TypeError, ValueError):
+                                    try:
+                                        smiles = list(Ligand.objects.filter(pdbe=hetflag).values_list('smiles', flat=True))[0]
+                                        refmol = AllChem.MolFromSmiles(smiles)
+                                        mol2 = AllChem.AssignBondOrdersFromTemplate(refmol=refmol, mol=mol2)
+                                    except (TypeError, ValueError, IndexError):
+                                        pass
                             mol2 = Chem.AddHs(mol2)
                             rings = Chem.rdmolops.GetSSSR(mol2)
                             ringlist = []
@@ -701,6 +704,13 @@ def find_interactions(scroller, projectdir, pdb, peptide, hetlist, ligandcenter,
                                         remove_hyd(aaname, hetflag, new_results)
                         #Calculate PiStack interactions
                         if (aa_resname in ['ARG', 'LYS']) and ligand_rings[hetflag]:
+                            if hetflag not in results:
+                                results[hetflag] = {}
+                                summary_results[hetflag] = {'score': [], 'hbond': [], 'hbondplus': [], 'pistack': [],
+                                                            'hbond_confirmed': [], 'aromatic': [],'aromaticff': [],
+                                                            'ionaromatic': [], 'aromaticion': [], 'aromaticef': [],
+                                                            'aromaticfe': [], 'hydrophobic': [], 'waals': [], 'accessible':[]}
+                                new_results[hetflag] = {'interactions':[]}
                             for atom in residue:
                                 aa_vector = atom.get_vector()
                                 aa_atom = atom.name

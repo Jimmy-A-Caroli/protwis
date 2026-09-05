@@ -38,6 +38,7 @@ external_sources = ["pubchem", "gtoplig", "chembl_ligand", "chembl_peptide", "dr
 
 _LIGAND_TYPE_CACHE: dict = {}
 _WEB_RESOURCE_CACHE: dict = {}
+_PDBE_MAX_LEN = Ligand._meta.get_field("pdbe").max_length
 
 # Set once per worker process (see build_structures.main_func) to the shared
 # multiprocessing.Lock used to serialize the DB-touching part of ligand
@@ -437,6 +438,29 @@ def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", ext
                         .select_related("ligand", "ligand__parent")):
                 existing_by_source_id[(src_slug, lid.index, lid.ligand.radioactive)] = lid.ligand
 
+    # ── Step D.5: batch pdbe lookup ──────────────────────────────────────────
+    # Checked ahead of every other identifier below (Step E) - a PDB
+    # chemical-component code is a strong, unambiguous match on its own.
+    existing_by_pdbe = {}  # pdbe value → child Ligand
+    all_pdbe_ids = {e["raw_pdbe"] for e in entries if e.get("raw_pdbe")}
+    if all_pdbe_ids:
+        for c in Ligand.objects.filter(pdbe__in=all_pdbe_ids, parent__isnull=False):
+            existing_by_pdbe.setdefault(c.pdbe, c)
+
+    # ── Step D.6: batch sequence lookup (opt-in via seq_and_name_lookup) ─────
+    # Only for entries explicitly opting in (peptide/protein ligands with no pdbe
+    # id - see get_or_create_ligand's seq_and_name_lookup flag). "X" marks a
+    # non-standard/unresolved residue, so a sequence containing it is not a safe
+    # unique key - two different molecules could share the same X-containing string.
+    existing_by_seq_lookup = {}  # sequence → child Ligand
+    all_seq_lookup_seqs = {
+        e["raw_sequence"] for e in entries
+        if e.get("seq_and_name_lookup") and e.get("raw_sequence") and "X" not in e["raw_sequence"]
+    }
+    if all_seq_lookup_seqs:
+        for c in Ligand.objects.filter(sequence__in=all_seq_lookup_seqs, parent__isnull=False):
+            existing_by_seq_lookup.setdefault(c.sequence, c)
+
     # ── Step E: classify each entry ──────────────────────────────────────────
     entries_needing_new_child = []
     entries_needing_new_parent = []  # implies new child too
@@ -476,15 +500,55 @@ def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", ext
         # distinguish different radioactive variants — rely on source-ID only.
         _skip_structural = (entry_radioactive_label == "Yes")
 
+        # PDBe match? — checked ahead of every other identifier below
+        found_child = None
+        raw_pdbe = entry.get("raw_pdbe")
+        if raw_pdbe:
+            found_child = existing_by_pdbe.get(raw_pdbe)
+
+        # Sequence / iexact-name match? (opt-in, for entries with no pdbe id)
+        if found_child is None and entry.get("seq_and_name_lookup"):
+            raw_seq = entry.get("raw_sequence")
+            if raw_seq and "X" not in raw_seq:
+                found_child = existing_by_seq_lookup.get(raw_seq)
+
+            if found_child is None and entry.get("name"):
+                _name_matches = list(
+                    Ligand.objects.filter(name__iexact=entry["name"].strip(), parent__isnull=False)
+                )
+                name_hit = None
+                if len(_name_matches) == 1:
+                    name_hit = _name_matches[0]
+                elif len(_name_matches) > 1:
+                    _exact = [c for c in _name_matches if c.name == entry["name"].strip()]
+                    name_hit = _exact[0] if _exact else _name_matches[0]
+
+                if name_hit is not None:
+                    if not name_hit.sequence:
+                        # Nothing on file contradicts the name match — accept it,
+                        # and back-fill the sequence for future lookups.
+                        if raw_seq:
+                            name_hit.sequence = raw_seq
+                            name_hit.save(update_fields=["sequence"])
+                        found_child = name_hit
+                    elif raw_seq and raw_seq == name_hit.sequence and "X" not in raw_seq:
+                        found_child = name_hit
+                    else:
+                        # Same name, different molecule (sequences differ, or either
+                        # side is ambiguous) — not a match, but keep it in the family:
+                        # a new child will be created under this ligand's parent
+                        # instead of via generic parent resolution below.
+                        entry["_resolved_parent"] = name_hit.parent
+
         # Source ID match?
         _source_id_that_found: Optional[tuple] = None
-        found_child = None
-        for src_slug, src_val in _iter_sids(entry.get("source_ids", {})):
-            key = (src_slug, src_val, entry_radioactive_label)
-            if key in existing_by_source_id:
-                found_child = existing_by_source_id[key]
-                _source_id_that_found = (src_slug, src_val)
-                break
+        if found_child is None:
+            for src_slug, src_val in _iter_sids(entry.get("source_ids", {})):
+                key = (src_slug, src_val, entry_radioactive_label)
+                if key in existing_by_source_id:
+                    found_child = existing_by_source_id[key]
+                    _source_id_that_found = (src_slug, src_val)
+                    break
 
         # If source-ID match found a structurally incompatible child, fall through
         # to InChIKey matching / new child creation so the entry's IDs are not silently lost.
@@ -616,6 +680,11 @@ def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", ext
                 found_child.uniprot = entry["raw_uniprot"]
                 found_child.save(update_fields=["uniprot"])
 
+            # Back-fill pdbe on existing children that lack it (however they were matched)
+            if not found_child.pdbe and entry.get("raw_pdbe") and len(entry["raw_pdbe"]) <= _PDBE_MAX_LEN:
+                found_child.pdbe = entry["raw_pdbe"]
+                found_child.save(update_fields=["pdbe"])
+
             # Queue new LigandIDs — skip the DB fetch entirely when the entry has no source IDs
             entry_source_ids = entry.get("source_ids", {})
             if entry_source_ids:
@@ -628,7 +697,9 @@ def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", ext
 
             resolved.append((found_child.parent, found_child))
         else:
-            existing_parent = _resolve_parent_for_entry(entry)
+            # A name match with an incompatible sequence (above) already pins this
+            # entry's parent so the new child stays in that ligand's family.
+            existing_parent = entry.get("_resolved_parent") or _resolve_parent_for_entry(entry)
             if existing_parent is None:
                 entries_needing_new_parent.append(entry)
             else:
@@ -843,6 +914,9 @@ def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", ext
         c.sequence = entry.get("raw_sequence")
         c.helm = entry.get("raw_helm")
         c.uniprot = entry.get("raw_uniprot")
+        _raw_pdbe = entry.get("raw_pdbe")
+        if _raw_pdbe and len(_raw_pdbe) <= _PDBE_MAX_LEN:
+            c.pdbe = _raw_pdbe
         c.ambiguous_alias = not bool(
             c.clean_inchikey or c.smiles or c.helm or c.sequence or c.uniprot
         )
@@ -910,7 +984,7 @@ def _resolve_ligand_entries(entries, source=None, lig_type="small-molecule", ext
 
 def get_or_create_ligand(name, ids={}, lig_type="small-molecule", unichem=False,
                           extended_matching=True, source=None, helm=None,
-                          radioactive=False, synonyms=False):
+                          radioactive=False, synonyms=False, seq_and_name_lookup=False):
     """Thin wrapper around get_or_create_ligands_batch() for single-ligand call sites."""
     # Normalise / clean the ids dict (CAS → PubChem, type coercions, etc.)
     cas_to_cid_url = "http://www.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pccompound&retmax=100&term=$index"
@@ -920,6 +994,11 @@ def get_or_create_ligand(name, ids={}, lig_type="small-molecule", unichem=False,
     for type_id in list(ids.keys()):
         if ids[type_id] is None or ids[type_id] == "None" or ids[type_id] == "":
             del ids[type_id]
+        elif type_id == "pdbe":
+            # Keep as a string (never numeric-coerced) - some PDB chemical-component
+            # codes are all-digit (e.g. "140", "836") and must not lose type/leading
+            # zeros before being compared against the Ligand.pdbe CharField.
+            ids[type_id] = str(ids[type_id]).strip()
         elif isinstance(ids[type_id], str) and ids[type_id].isnumeric():
             ids[type_id] = int(ids[type_id])
         elif isinstance(ids[type_id], str) and is_float(ids[type_id]):
@@ -942,6 +1021,11 @@ def get_or_create_ligand(name, ids={}, lig_type="small-molecule", unichem=False,
     _source_ids = {k: v for k, v in ids.items() if k in external_sources}
     if ids.get("uniprot"):
         _source_ids["uniprot"] = ids["uniprot"]
+
+    raw_pdbe = ids.get("pdbe")
+    if raw_pdbe is not None and str(raw_pdbe).lower() in ("pep", "apo"):
+        raw_pdbe = None  # sentinel names in the annotation data, not real PDBe codes
+
     entry = {
         "name": name,
         "raw_smiles": ids.get("smiles"),
@@ -949,9 +1033,11 @@ def get_or_create_ligand(name, ids={}, lig_type="small-molecule", unichem=False,
         "raw_helm": helm if helm not in (None, "None", "nan") else None,
         "raw_sequence": ids.get("sequence"),
         "raw_uniprot": ids.get("uniprot"),
+        "raw_pdbe": raw_pdbe,
         "source_ids": _source_ids,
         "radioactive": radioactive,
         "synonyms": synonyms,
+        "seq_and_name_lookup": seq_and_name_lookup,
     }
     results = get_or_create_ligands_batch(
         [entry], source=source, lig_type=lig_type, extended_matching=extended_matching

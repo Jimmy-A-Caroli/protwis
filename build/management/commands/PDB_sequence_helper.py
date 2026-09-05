@@ -32,7 +32,7 @@ Typical Workflow
 ----------------
 1) **Sequence + Distance Extraction**
    - Use `generate_seq_and_distances_from_pdb_text(pdb_text, preferred_chain)`
-     to get `pdb_seq` plus a list of CA–CA distances.
+     to get `pdb_seq` plus a list of CA–CA distances and author residue numbers.
 
 2) **Outlier Detection**
    - Pass the distances to `distances_stats()` to identify positions that deviate
@@ -50,14 +50,26 @@ Typical Workflow
 
 """
 
+import json
 import os
 from io import StringIO
+from django.conf import settings
 from Bio.PDB import PDBParser
 from Bio.SeqUtils import seq1
 
 # from Bio.PDB.Polypeptide import PPBuilder
 from Bio.Align import PairwiseAligner
 import numpy as np
+
+# Pre-computed alignments (pdb_code -> [ref_seq, temp_seq]) for structures where
+# the automatic PairwiseAligner can't be trusted to reproduce the correct result.
+# Same file/format used by add_annotation.py's Command.custom_mappings.
+with open(
+    os.sep.join(
+        [settings.DATA_DIR, "structure_data", "annotation", "custom_mappings.json"]
+    )
+) as _cm:
+    CUSTOM_MAPPINGS = json.load(_cm)
 
 
 # preferred_chain = structure.preferred_chain
@@ -66,7 +78,7 @@ import numpy as np
 
 
 def generate_seq_and_distances_from_pdb_text(
-    pdb_text, preferred_chain="A", residues_to_remove=None
+    pdb_text, preferred_chain="A", residues_to_remove=None, aa_map=None
 ):
     """
     Extracts a protein sequence and computes C-alpha (CA) distances from a raw PDB string.
@@ -76,7 +88,7 @@ def generate_seq_and_distances_from_pdb_text(
       1. Parses the provided PDB text with Biopython's PDBParser.
       2. Selects the specified chain (`preferred_chain`).
       3. If `residues_to_remove` is provided, detaches those residues from the chain.
-      4. Iterates over standard residues (skipping heteroatoms/water).
+      4. Iterates over residues, selecting which to include per `aa_map` (see below).
       5. Builds the amino-acid sequence (single-letter codes).
       6. Computes successive CA–CA distances, or inserts `None` if CA is missing.
 
@@ -89,14 +101,32 @@ def generate_seq_and_distances_from_pdb_text(
     residues_to_remove : list of int, optional
         A list of PDB residue sequence numbers to remove from the chain before
         generating the sequence and distances.
+    aa_map : dict, optional
+        Maps PDB three-letter residue names to one-letter codes (e.g. the
+        `AA` dict in build_structures.py, which also covers modified
+        residues like YCM/CSD/TYS/SEP/TPO). When provided, a residue is
+        included iff its name is a key in this map -- regardless of its
+        hetero-atom flag -- and the caller MUST use the identical map to
+        build any other residue index (e.g. build_structures.py's
+        `pdbseq`) it intends to look up against this function's output by
+        position, since the two indices only stay aligned if both make the
+        same inclusion decision for every residue. When omitted, falls back
+        to the original behavior: skip all hetero-atom-flagged residues,
+        translate the rest via `Bio.SeqUtils.seq1` (falling back to "X" for
+        an unrecognized standard-flagged residue).
 
     Returns
     -------
     tuple
-        (pdb_seq, distances) where:
+        (pdb_seq, distances, resnums) where:
           - pdb_seq (str): the one-letter amino acid sequence extracted from the chain
           - distances (list of float or None): CA–CA distances for each successive pair,
             with None inserted if no distance can be computed at that position.
+          - resnums (list of int): the author (PDB) residue sequence number for each
+            residue in `pdb_seq`, in chain order. A non-consecutive jump between two
+            entries indicates a real gap (e.g. a construct-level deletion) even when
+            the corresponding CA–CA distance looks like a normal bonded distance --
+            see `find_chain_breaks`.
 
     Raises
     ------
@@ -130,20 +160,27 @@ def generate_seq_and_distances_from_pdb_text(
     # 4. Iterate over residues in the modified chain
     sequence = ""
     distances = []
+    resnums = []
     prev_ca = None
 
     for residue in chain:
-        # Skip heteroatoms or waters
-        if residue.id[0] != " ":
-            continue
-
-        # Get one-letter amino acid code
         resname = residue.get_resname()
-        try:
-            aa = seq1(resname)
-        except Exception:
-            aa = "X"  # Unknown amino acid
+
+        if aa_map is not None:
+            aa = aa_map.get(resname)
+            if aa is None:
+                continue
+        else:
+            # Skip heteroatoms or waters
+            if residue.id[0] != " ":
+                continue
+            try:
+                aa = seq1(resname)
+            except Exception:
+                aa = "X"  # Unknown amino acid
+
         sequence += aa
+        resnums.append(residue.id[1])
 
         # First residue has no preceding one, so distance is None
         if prev_ca is None:
@@ -162,7 +199,7 @@ def generate_seq_and_distances_from_pdb_text(
         else:
             prev_ca = None
 
-    return sequence, distances
+    return sequence, distances, resnums
 
 
 def distances_stats(distances, threshold=3, debug=False):
@@ -228,11 +265,11 @@ def distances_stats(distances, threshold=3, debug=False):
     return outlier_indexes
 
 
-def find_chain_breaks(distances, threshold=4.5):
+def find_chain_breaks(distances, threshold=4.5, resnums=None):
     """
     Flags real backbone chain breaks using an absolute CA-CA distance
     threshold, rather than `distances_stats`'s whole-structure relative
-    z-score.
+    z-score, optionally combined with author residue numbering.
 
     A real peptide-bonded CA-CA distance is tightly clustered around 3.8 A
     regardless of local backbone conformation, so any missing residue pushes
@@ -240,6 +277,15 @@ def find_chain_breaks(distances, threshold=4.5):
     reliably even when the rest of the structure's distance distribution has
     enough natural spread to hide a real break from a `mean +/- 3*std` test
     (as happens with `distances_stats`).
+
+    Distance alone still misses one real case: a construct-level deletion
+    (e.g. a flexible loop deliberately excised for crystallization/cryo-EM)
+    can leave the two flanking residues directly, genuinely bonded to each
+    other at a completely normal ~3.8 A distance, even though a real gap in
+    the wild-type sequence separates them. When `resnums` is given, any
+    non-consecutive jump in author residue numbering between two
+    consecutively-modeled residues is flagged as a break too, independent of
+    distance -- this is the only reliable signal for that case.
 
     Parameters
     ----------
@@ -250,6 +296,11 @@ def find_chain_breaks(distances, threshold=4.5):
     threshold : float, optional
         Distance in Angstrom beyond which a gap is considered a real chain
         break, by default 4.5.
+    resnums : list of int, optional
+        Author (PDB) residue sequence numbers, as returned by
+        `generate_seq_and_distances_from_pdb_text`, parallel to `distances`.
+        When provided, a break is also flagged wherever `resnums[i] -
+        resnums[i-1] != 1`.
 
     Returns
     -------
@@ -257,7 +308,12 @@ def find_chain_breaks(distances, threshold=4.5):
         Indexes into `distances`/the sequence where a chain break occurs
         (index i means the break falls between residue i-1 and i).
     """
-    return [i for i, d in enumerate(distances) if d is not None and d > threshold]
+    breaks = {i for i, d in enumerate(distances) if d is not None and d > threshold}
+    if resnums is not None:
+        for i in range(1, len(resnums)):
+            if resnums[i] - resnums[i - 1] != 1:
+                breaks.add(i)
+    return sorted(breaks)
 
 
 def pre_align_modifications(pdb_code, seq):
@@ -323,8 +379,32 @@ def decide_penalty(pdb_code):
         "8W8Q",
         "8W8R",
         "8W8S",
+        "9N29",
+        "9PEE",
+        "9N09",
+        "9UAP",
+        "9UCP",
+        "8ZWF",
+        "9ISI",
+        "9PLO",
+        "9PLN",
+        "9PQD",
+        "9LFA",
+        "9UAZ"
     ]:
         return 3, -4, -3, -1
+    elif pdb_code in ["5VEW", "5VEX"]:
+        # 5VEW's engineered disulfide (I317C/G361C, see structures.tsv) puts two
+        # point mutations one residue apart. With cheap gaps (open<=-5), the
+        # aligner "wobbles" -- opens a 1-residue gap on each side right next to
+        # each other instead of accepting two plain substitutions -- and since
+        # only one side's gap count feeds the WT-position bookkeeping further
+        # down in create_rotamers(), that balanced-looking wobble permanently
+        # shifts every residue after it by one WT position for the rest of the
+        # chain. A steeper gap-open cost makes the straight, no-gap alignment
+        # win instead. 5VEW previously shared the cheap-gap group above, which
+        # was the actual cause here, not a fix for it.
+        return 3, -4, -8, -2
     elif pdb_code in ["6KUX", "6KUY", "6KUW"]:
         return 3, -4, -4, -1.5
     elif pdb_code in ["7YMJ"]:
@@ -356,7 +436,24 @@ def run_pairwisealigner(pdb_code, wt_seq, pdb_seq):
         - temp_seq (str): Gapped alignment of the PDB sequence.
         - pdb_map (dict): raw PDB index -> alignment index, used for
           mapping outlier positions back into 'temp_seq'.
+
+    Notes
+    -----
+    If `pdb_code` has an entry in CUSTOM_MAPPINGS (loaded from
+    gpcr/structure_data/annotation/custom_mappings.json), that pre-computed
+    (ref_seq, temp_seq) pair is used directly and the PairwiseAligner is not
+    run at all -- mirrors the override in add_annotation.py's handle().
     """
+    if pdb_code in CUSTOM_MAPPINGS:
+        ref_seq, temp_seq = CUSTOM_MAPPINGS[pdb_code]
+        pdb_map = {}
+        pdb_idx = 0
+        for aln_idx, ch in enumerate(temp_seq):
+            if ch != "-":
+                pdb_map[pdb_idx] = aln_idx
+                pdb_idx += 1
+        return ref_seq, temp_seq, pdb_map
+
     a1, a2, a3, a4 = decide_penalty(pdb_code)
     aligner = PairwiseAligner()
     aligner.mode = "local"
@@ -738,9 +835,7 @@ def detect_alignment_mistakes_and_reposition(
     return fixed_temp_seq
 
 
-def consolidate_structural_islands(
-    pdb_seq, temp_seq, break_indexes, min_anchor_len=5
-):
+def consolidate_structural_islands(pdb_seq, temp_seq, break_indexes):
     """
     Detects and fixes PDB residues that are scattered across a gap in the
     alignment even though they are physically bonded (no chain break between
@@ -748,30 +843,31 @@ def consolidate_structural_islands(
 
     Unlike `detect_alignment_mistakes_and_reposition`, which looks for
     sequence-level clues (a chunk matching the ref sequence near a gap),
-    this uses chain-break data directly (see `find_chain_breaks`): any run
-    of `pdb_seq` residues not separated by a break is a "structural island"
-    that is physically contiguous in 3D, so it must map to contiguous
-    alignment columns. A local aligner can still coincidentally match a few
-    of an island's residues to unrelated WT positions purely by letter
-    similarity (e.g. inside a disordered loop where only a handful of
+    this uses chain-break data directly (see `find_chain_breaks`, which --
+    when given `resnums` -- flags a break on either an abnormal CA-CA
+    distance or a non-consecutive author residue number, so a genuine
+    construct-level deletion is never mistaken for physical contiguity just
+    because its flanking residues happen to sit at a normal bond distance):
+    any run of `pdb_seq` residues not separated by a break is a "structural
+    island" that is physically contiguous in 3D, so it must map to
+    contiguous alignment columns. A local aligner can still coincidentally
+    match a few of an island's residues to unrelated WT positions purely by
+    letter similarity (e.g. inside a disordered loop where only a handful of
     residues are resolved) -- this splits one physical island across
     several isolated, gap-separated alignment columns, which is a
     structural impossibility rather than a legitimate deletion.
 
     An island can straddle a mix of already-correct and scattered residues
     (e.g. a short stray cluster directly bonded to the start of an otherwise
-    long, already well-aligned helix -- this can happen at a genetic fusion
-    junction, which is a real, unbroken peptide bond with no distance
-    signal at all to mark it as a boundary). Rather than trusting a single
-    "longest run" within the island and treating literally everything else
-    as leftover to relocate (which would drag an unrelated, independently
-    correct long block sideways), every already-contiguous run at least
-    `min_anchor_len` residues long is treated as its own protected anchor
-    and left untouched. Only the genuinely short, scattered leftovers
-    between anchors get relocated, snapped immediately next to their
-    neighboring anchor. This means a missed chain break can, at worst,
-    misplace a short cluster -- it can never again corrupt an
-    independently long, already-correct run.
+    long, already well-aligned helix). Only the single longest
+    already-contiguous run within the island is trusted as a fixed anchor;
+    every other run -- regardless of its own length -- is treated as
+    displaced and relocated as one block, snapped immediately next to its
+    neighboring anchor. This is always safe: because an island is defined
+    by the absence of a real chain break between its members (see
+    `find_chain_breaks`), any split among its members can only be an
+    alignment artifact, never a legitimate deletion, so islands are always
+    fully consolidated into one contiguous run.
 
     Parameters
     ----------
@@ -784,9 +880,6 @@ def consolidate_structural_islands(
         Indexes into `pdb_seq` flagged as chain breaks (e.g. by
         `find_chain_breaks`; index i means the break falls between residue
         i-1 and i).
-    min_anchor_len : int, optional
-        Minimum length of an already-contiguous run to be trusted as an
-        untouchable anchor, by default 5.
 
     Returns
     -------
@@ -836,15 +929,11 @@ def consolidate_structural_islands(
                 run_start = k
         runs.append((run_start, len(positions) - run_start))
 
-        anchors = [r for r in runs if r[1] >= min_anchor_len]
-        if not anchors:
-            # Whole island is short/scattered with no run long enough to trust as
-            # a reference point -- consolidate it as one block at its own longest
-            # run's current position (best effort, no independent anchor exists).
-            anchors = [max(runs, key=lambda r: r[1])]
-
-        if len(anchors) == len(runs):
-            continue  # every run already qualifies as an anchor -- nothing loose
+        # Trust only the single longest already-contiguous run as the anchor
+        # (ties go to the earliest-occurring run in chain order); every other
+        # run in the island, regardless of its own length, is relocated next
+        # to it below.
+        anchors = [max(runs, key=lambda r: r[1])]
 
         anchor_set = set()
         for start, length in anchors:

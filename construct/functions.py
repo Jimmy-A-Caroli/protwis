@@ -55,6 +55,14 @@ def _sifts_segment_chain(elem, ns):
     return elem.attrib['segId'].split('_')[1]  # fallback, old behavior
 
 
+def _int_pdb_seqnum(s):
+    """Parse a DBREF seqBegin/seqEnd that may carry a trailing PDB insertion
+    code (e.g. '229B') glued onto the digits by whitespace-splitting."""
+    while s and s[-1].isalpha():
+        s = s[:-1]
+    return int(s)
+
+
 def _receptor_chain_sequence(pdb_file, preferred_chain):
     """(resnum -> one-letter aa) for preferred_chain, parsed directly from
     ATOM records — independent of SIFTS/DBREF chain-letter mapping."""
@@ -92,10 +100,20 @@ def filter_removed_against_wt(removed, pdb_range, dbref_found, wt_seq, pdb_file,
             chain_seq = ''.join(seq_by_pos.values())
             alignments = pairwise2.align.localms(wt_seq, chain_seq, 3, -4, -5, -2)
             if alignments:
-                aligned_wt, aligned_chain = alignments[0][0], alignments[0][1]
-                chain_i, run = 0, 0
+                aln = alignments[0]
+                aligned_wt, aligned_chain = aln.seqA, aln.seqB
+                # Only [aln.start, aln.end) is the real local match - pairwise2 pads
+                # the rest with the unaligned leftover of the longer sequence shoved
+                # adjacent to the true window, not placed at its real position, so
+                # scanning past the window picks up coincidental matches against
+                # unrelated sequence. Non-gap chars before aln.start are still in
+                # chain_seq's original order, so counting them gives the correct
+                # starting offset into positions[].
+                chain_i = len(aligned_chain[:aln.start].replace('-', ''))
+                run = 0
                 MIN_RUN = 5  # tune against real examples during implementation
-                for wt_c, ch_c in zip(aligned_wt, aligned_chain):
+                for idx in range(aln.start, aln.end):
+                    wt_c, ch_c = aligned_wt[idx], aligned_chain[idx]
                     if ch_c != '-':
                         pos = positions[chain_i]
                         if wt_c == ch_c:
@@ -227,7 +245,11 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
     else:
         pdb_file = pdbdata_raw
     pdb_range = []
+    pdb_range_pdbnum = []  # same positions, but in the chain's own author/PDB numbering
     uniprot_code = ''
+    # preferred_chain may be a comma-joined multi-chain string (e.g. 'A,B'),
+    # so match membership rather than equality against a single DBREF chain letter
+    pref_chains = set(c for c in preferred_chain.split(',') if c) if preferred_chain else set()
 
     # do uniprot_code check to see if they only label with PDB code
     for line in pdb_file.split('\n'):
@@ -256,10 +278,35 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
             start = line[8]
             end = line[9]
             # print(line,uniprot,d['construct_crystal']['uniprot'].upper()) #show DBREF
-            if uniprot == d['construct_crystal']['uniprot'].upper() or (uniprot==pdbname.upper() and uniprot_code==''):
+            # Self-referencing (PDB-type) DBREF records echo the PDB code itself as
+            # the "uniprot" name for every chain lacking a real UniProt link - with
+            # multiple such chains in one file (e.g. receptor + mini-G protein +
+            # nanobody complexes), the first one in file order would otherwise win
+            # and permanently block the real receptor chain's own DBREF line from
+            # ever being picked up. Require a chain-letter match against the
+            # caller's preferred_chain(s) to disambiguate when that's available.
+            is_self_ref_match = uniprot==pdbname.upper() and uniprot_code=='' and (not pref_chains or line[2] in pref_chains)
+            if uniprot == d['construct_crystal']['uniprot'].upper() or is_self_ref_match:
                 uniprot_code = line[6]
                 # print(line)
-                pdb_range += range(int(start),int(end)+1)
+                if is_self_ref_match and pref_chains:
+                    # No real UniProt link, so the declared start/end can't represent
+                    # internal numbering gaps (e.g. an ICL3-truncated construct never
+                    # expresses that span at all) - use the residues actually present
+                    # in this chain's own ATOM records instead of a naive full range.
+                    observed = _receptor_chain_sequence(pdb_file, line[2])
+                    this_range = list(observed.keys()) if observed else range(_int_pdb_seqnum(start),_int_pdb_seqnum(end)+1)
+                    pdb_range += this_range
+                    pdb_range_pdbnum += this_range  # self-ref records have no separate UniProt numbering
+                else:
+                    pdb_range += range(_int_pdb_seqnum(start),_int_pdb_seqnum(end)+1)
+                    # Real UNP DBREF gives both pairs separately: line[3]/line[4] are this
+                    # chain's own author numbers, line[8]/line[9] (start/end) are UniProt
+                    # numbers - keep both, since they can diverge once a fusion protein
+                    # inserted between two UniProt-mapped segments of the same chain shifts
+                    # the author numbering of everything downstream of it. Author numbers
+                    # (unlike UniProt numbers) can carry a PDB insertion-code suffix.
+                    pdb_range_pdbnum += range(_int_pdb_seqnum(line[3]),_int_pdb_seqnum(line[4])+1)
         elif line.startswith('SEQADV'):
             line = line.split()
             # if it is relevant to correct uniprot
@@ -452,6 +499,7 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
     # Snapshot before SIFTS parsing mutates pdb_range (residues get .remove()d below) -
     # needed later to cross-check 'removed' segments against DBREF's own receptor range.
     pdb_range_orig = list(pdb_range)
+    pdb_range_pdbnum_orig = list(pdb_range_pdbnum)
 
     # To prevent the otherwise overrides from faulty SIFTS
     chain_over_ride = None
@@ -595,8 +643,6 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
             prev_receptor = False
             seg_had_receptor = False
 
-            if (chain=="A" or chain=="B") and pdbname.lower()=="4k5y":
-                continue
             # print(chain,'chain')
             for res in elem[0]: #first element is residuelist
                 u_id = 'N/A'
@@ -1103,7 +1149,12 @@ def fetch_pdb_info(pdbname, protein ,new_xtal=False, ignore_gasper_annotation=Fa
                     if seg[-2]==preferred_chain:
                         for i in seg[6]:
                             d['removed'].append(i)
-        d['removed'] = filter_removed_against_wt(d['removed'], pdb_range_orig, dbref_found, d['wt_seq'], pdb_file, preferred_chain, pdbname, logger)
+        # 'removed' is author/PDB-numbered (from SIFTS dbResNum), so it must be
+        # cross-checked against the author-numbered range, not the UniProt-numbered
+        # pdb_range_orig used for WT-position pruning - the two can diverge when a
+        # fusion protein spliced between two UniProt-mapped segments of the same
+        # chain shifts the author numbering of everything downstream of it.
+        d['removed'] = filter_removed_against_wt(d['removed'], pdb_range_pdbnum_orig, dbref_found, d['wt_seq'], pdb_file, preferred_chain, pdbname, logger)
 
         deletions_flat = sum(rng['end']-rng['start']+1 for rng in d['deletions'])
         if deletions_flat > len(d['wt_seq'])*0.9:
@@ -1729,6 +1780,7 @@ def construct_structure_annotation_override(pdb_code, removed, deletions):
         removed = list(range(1001,1473))+list(range(255,260))
     elif pdb_code in ['6KUX', '6KUY']:
         deletions = list(range(1,20))
+        removed = list(range(1000,1107))
     elif pdb_code=='7BZ2':
         deletions = list(range(240,265))
     elif pdb_code=='7C6A':
@@ -1860,7 +1912,7 @@ def construct_structure_annotation_override(pdb_code, removed, deletions):
         deletions = list(range(314,400))
         removed = list(range(1,128))+list(range(188,192))
     elif pdb_code=='7F1Q':
-        removed = list(range(1,113))+list(range(318,350))
+        removed = list(range(1,69))
     elif pdb_code in ['7EPE','7EPF']:
         removed, deletions = list(range(1000,1148)), list(range(1000,1148))
     elif pdb_code in ['7EZM','7EZK','7EZH']:
@@ -1996,9 +2048,43 @@ def construct_structure_annotation_override(pdb_code, removed, deletions):
         deletions = []
     elif pdb_code=='9UVY':
         removed = list(range(237,623))
+        deletions = []
     elif pdb_code=='9UVZ':
         removed = list(range(220,602))
+    elif pdb_code=='9PEE':
+        removed = list(range(236,363))
+    elif pdb_code=='5WB1':
+        removed = list(range(997,1121))
+        deletions = []
+    elif pdb_code=='5WB2':
+        removed = list(range(997,1124))
+    elif pdb_code in ['9UAP','9UCP']:
+        removed = list(range(216,320))
+        deletions = []
+    elif pdb_code in ['9EHS','9JFY','9LLI','6WIV']:
+        deletions = []
+    elif pdb_code=='9LMP':
+        removed+=list(range(288,298))
+    elif pdb_code=='6GPX':
+        # Rubredoxin fusion embedded in ICL3 of chain A (the preferred_chain per
+        # structures.tsv). Chain A matches WT 1:1 through residue 231, the fusion
+        # + a short disordered linker occupy raw residues 232-290, and the real
+        # receptor sequence resumes at 291 offset by +51 relative to WT (confirmed
+        # residue-by-residue against the WT sequence).
+        removed = list(range(232,291))
+        deletions = []
+    elif pdb_code in ['9RKF','9RKH']:
+        for i in range(394,414):
+            deletions.remove(i)
+    elif pdb_code=='8FYN':
+        removed.append(1106)
+    elif pdb_code=='7YMJ':
+        removed = list(range(205,235))
+    elif pdb_code=='9UAZ':
+        removed = list(range(214,369))
+
     
+
 
 
     return removed, deletions

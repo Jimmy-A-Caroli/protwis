@@ -22,7 +22,7 @@ from contactnetwork.models import *
 import contactnetwork.interaction as ci
 from contactnetwork.cube import compute_interactions
 
-from Bio.PDB import PDBParser, PPBuilder, Polypeptide
+from Bio.PDB import PDBParser, Polypeptide
 from Bio import pairwise2
 
 from structure.assign_generic_numbers_gpcr import GenericNumbering
@@ -288,7 +288,6 @@ class Command(BaseBuild):
         s = self.parsed_pdb
         chain = s[preferred_chain] #select only one chain (avoid n-mer receptors)
 
-        ppb=PPBuilder()
         seq = ''
         i = 1
 
@@ -317,60 +316,64 @@ class Command(BaseBuild):
         check_1000 = 0
         prev_id = 0
         bigjump = False
-        all_pdb_residues_in_chain = 0
-        for pp in ppb.build_peptides(chain, aa_only=False): #remove >1000 pos (fusion protein / gprotein)
-            for i,res in enumerate(pp,1 ):
-                all_pdb_residues_in_chain += 1
-                residue_id = res.get_full_id()
+        # Iterate residues directly in chain order (not via Bio.PDB's PPBuilder,
+        # which silently drops any residue that isn't peptide-bonded to a
+        # neighbor -- e.g. an isolated resolved-but-unbonded residue flanked by
+        # chain breaks on both sides, as in 9OPY chain A HIS 50) so this count,
+        # the 'removed' detach below, and pdbseq's index (built further down)
+        # all agree with generate_seq_and_distances_from_pdb_text()'s selection
+        # of "real" receptor residues -- see aa_map usage below and at its call
+        # site. Using the same AA-map membership test everywhere keeps pdbseq's
+        # running index in lockstep with the WT-alignment index built from
+        # pdb_seq/mapped_seq; previously the two disagreed both on unbonded
+        # residues (dropped here, kept there) and on peptide-bonded HETATM
+        # modified residues like YCM/CSD/TYS/SEP (kept here, dropped there),
+        # each causing a permanent one-residue generic-number drift for every
+        # residue after the divergence point.
+        all_pdb_residues_in_chain = sum(
+            1 for res in chain
+            if res.resname != "NH2" and AA.get(res.resname) is not None
+        )
 
         if len(removed)+100>all_pdb_residues_in_chain:
             print(structure,'More (or almost) sequence set to be removed from sequence',len(removed),' than exists',all_pdb_residues_in_chain,' removing removed[]')
             #print(removed)
             removed = []
 
-        for pp in ppb.build_peptides(chain, aa_only=False): #remove >1000 pos (fusion protein / gprotein)
-            for i,res in enumerate(pp,1 ):
-                id = res.id
-                residue_id = res.get_full_id()
-                if id[1] in removed:
-                    chain.detach_child(id)
-                    continue
-                # if id[1]<600:
-                #     check_1000 += 1
-                #     #need check_1000 to catch structures where they lie in 1000s (4LDE, 4LDL, 4LDO, 4N4W, 4QKX)
-                # if structure.pdb_code.index in ["4RWD","3SN6","4L6R"] and id[1]>1000:
-                #     last_valid = 0
-                #     bigjump = True
-                #     removed.append(id[1])
-                # if (id[1]-prev_id)>100 and check_1000>150:
-                #     last_valid = prev_id
-                #     bigjump = True
-                # if bigjump:
-                #     if (id[1]-last_valid)<100 or (id[1]<1000 and (id[1]-last_valid)<300 ):
-                #         bigjump = False
-                # if (id[1]>1000 or bigjump) and check_1000>150 and not (structure.pdb_code.index=="4PHU" and id[1]>2000):
-                #     chain.detach_child(id)
-                #     #print("removing",id)
-                #     removed.append(id[1])
-                prev_id = id[1]
+        for res in list(chain): #snapshot first -- detach_child mutates chain during iteration
+            id = res.id
+            if id[1] in removed:
+                chain.detach_child(id)
+                continue
+            prev_id = id[1]
         ranges = []
         for k, g in groupby(enumerate(removed), lambda x:x[0]-x[1]):
             group = list(map(itemgetter(1), g))
             ranges.append((group[0], group[-1]))
         if debug: print("Removed XTAL positions due to not being WT receptor",ranges)
         i = 1
-        for pp in ppb.build_peptides(chain, aa_only=False):
-            seq += str(pp.get_sequence()) #get seq from fasta (only chain A)
-            for residue in pp:
-                residue_id = residue.get_full_id()
-                chain = residue_id[2]
-                if chain not in pdbseq:
-                    pdbseq[chain] = {}
-                pos = residue_id[3][1]
+        for residue in chain:
+            residue_id = residue.get_full_id()
+            chain_id = residue_id[2]
+            pos = residue_id[3][1]
 
-                if residue.resname != "NH2": # skip amidation of peptide
-                    pdbseq[chain][pos] = [i, AA[residue.resname]]
-                    i += 1
+            if residue.resname == "NH2": # skip amidation of peptide
+                continue
+            aa_code = AA.get(residue.resname)
+            if aa_code is None:
+                # Not a recognized (possibly modified) receptor amino acid.
+                # Only warn for standard-flagged residues (hetflag==" ") --
+                # an unrecognized name there is a genuine anomaly. HETATM
+                # entries not in AA are expected (waters, ions, ligands) and
+                # would otherwise spam a warning per water molecule.
+                if residue.id[0] == " ":
+                    self.logger.warning('{} residue at position {} in structure {} is not a recognized receptor amino acid - excluding from rotamer building'.format(residue.resname, pos, structure))
+                continue
+            if chain_id not in pdbseq:
+                pdbseq[chain_id] = {}
+            seq += aa_code
+            pdbseq[chain_id][pos] = [i, aa_code]
+            i += 1
 
         parent_seq_protein = str(structure.protein_conformation.protein.parent.sequence)
         # print(structure.protein_conformation.protein.parent.entry_name)
@@ -768,9 +771,12 @@ class Command(BaseBuild):
         pdb_text = structure.pdb_data.pdb
 
         # 'removed' list (for fusion proteins) is already calculated above.
-        # We pass it to our helper to get a clean PDB sequence.
-        pdb_seq, distances = generate_seq_and_distances_from_pdb_text(
-            pdb_text, preferred_chain, residues_to_remove=removed
+        # We pass it to our helper to get a clean PDB sequence. aa_map=AA
+        # keeps this selection in lockstep with pdbseq's (see build above) --
+        # both must include/exclude the exact same residues, in the same
+        # order, for their indices to stay aligned.
+        pdb_seq, distances, resnums = generate_seq_and_distances_from_pdb_text(
+            pdb_text, preferred_chain, residues_to_remove=removed, aa_map=AA
         )
 
         # Get initial alignment and residue mapping
@@ -801,7 +807,7 @@ class Command(BaseBuild):
         # Uses an absolute CA-CA distance threshold rather than distances_stats'
         # whole-structure relative outlier test, which can miss a real break if the
         # rest of the structure's distances already have enough natural spread.
-        chain_breaks = find_chain_breaks(distances)
+        chain_breaks = find_chain_breaks(distances, resnums=resnums)
         fixed_temp_seq = consolidate_structural_islands(
             pdb_seq, fixed_temp_seq, chain_breaks
         )
@@ -886,7 +892,14 @@ class Command(BaseBuild):
                 #     print(line)
                 chain = line[21]
                 if preferred_chain and chain!=preferred_chain: #If perferred is defined and is not the same as the current line, then skip
-                    pass
+                    # Invalidate the pending-residue tracker so that returning to the
+                    # preferred chain later (e.g. a trailing modified-residue HETATM
+                    # block, as in 9UYP's chain A SEP1001) starts fresh instead of
+                    # comparing against a stale `check`/`residue_name` left over from
+                    # before this chain gap -- otherwise a spurious residue can get
+                    # built from that stale state, sharing a sequence_number with a
+                    # residue already built earlier (see 9UYP's phantom L30).
+                    check = 0
                 else:
                     nextline = pdblines[i+1]
                     residue_number = line[22:26].strip()
@@ -903,7 +916,10 @@ class Command(BaseBuild):
                             # print(line)
                             residue = Residue()
                             residue.sequence_number = int(check.strip())
-                            residue.amino_acid = AA[residue_name.upper()]
+                            aa_code = AA.get(residue_name.upper())
+                            if aa_code is None:
+                                continue
+                            residue.amino_acid = aa_code
                             residue.protein_conformation = protein_conformation
                             try:
                                 seq_num_pos = pdbseq[chain][residue.sequence_number][0]
@@ -947,7 +963,7 @@ class Command(BaseBuild):
                                         # print('WT pos not same pos, mismatch',residue.sequence_number,residue.amino_acid,wt_r.sequence_number,wt_r.amino_acid)
                                         wt_pdb_lookup.append(OrderedDict([('WT_POS',wt_r.sequence_number), ('PDB_POS',residue.sequence_number), ('AA',wt_r.amino_acid)]))
                                         if structure.pdb_code.index not in ['4GBR','6C1R','6C1Q','7XBX','7F1Q','7ZLY','8JWY','8JWZ','8JMT','8TB7','8ITM','9D3G','9D3E','8YNS','8YNT','8WWJ','8WWK','8WWH',
-                                                                            '8WWM','8WWN','8WSS','8WWI','8WWL']:
+                                                                            '8WWM','8WWN','8WSS','8WWI','8WWL','6GPX','9XQN','8Y6Y','9LFD','9LMO','9P1T','9UPM','9YFU','9P1S']:
                                             if residue.sequence_number in unmapped_ref:
                                                 # print('residue.sequence_number',residue.sequence_number,'not mapped though')
                                                 if residue.amino_acid == wt_lookup[residue.sequence_number].amino_acid:
@@ -1219,38 +1235,46 @@ class Command(BaseBuild):
                 if res.generic_number==None and (res.protein_segment.category == "helix" or res.missing_gn): # residue.missing_gn
                     if (res.protein_segment==prev_segment):
                         # print(res, prev_gn, res.protein_segment)
-                        gn_split = prev_gn.split("x")
-                        new_gn = gn_split[0]+"x"+str(int(gn_split[1])+1)
+                        if prev_gn is None:
+                            # No anchor GN to extrapolate from in this segment
+                            # (e.g. the first residue of the segment already
+                            # lacked one) -- leave this residue's GN unset
+                            # rather than crash, matching the "can't
+                            # determine -> leave unset" pattern used above.
+                            if debug: print("Skipping GN extrapolation for",res.sequence_number,"- no anchor GN in",res.protein_segment)
+                        else:
+                            gn_split = prev_gn.split("x")
+                            new_gn = gn_split[0]+"x"+str(int(gn_split[1])+1)
 
-                        display_split=prev_display.split("x")
-                        seq_split = display_split[0].split(".")
+                            display_split=prev_display.split("x")
+                            seq_split = display_split[0].split(".")
 
-                        new_display = seq_split[0]+"."+str(int(seq_split[1])+1)+"x"+str(int(display_split[1])+1)
-                        new_equivalent = seq_split[0]+"x"+str(int(display_split[1])+1)
+                            new_display = seq_split[0]+"."+str(int(seq_split[1])+1)+"x"+str(int(display_split[1])+1)
+                            new_equivalent = seq_split[0]+"x"+str(int(display_split[1])+1)
 
-                        if debug: print("Added Generic Number for",res.sequence_number,": GN",new_gn," Display",new_display)
+                            if debug: print("Added Generic Number for",res.sequence_number,": GN",new_gn," Display",new_display)
 
-                        gn, created = ResidueGenericNumber.objects.get_or_create(
-                                scheme=ns_obj, label=new_gn, protein_segment=res.protein_segment)
-                        display_gn, created = ResidueGenericNumber.objects.get_or_create(
-                                scheme=scheme, label=new_display, protein_segment=res.protein_segment)
+                            gn, created = ResidueGenericNumber.objects.get_or_create(
+                                    scheme=ns_obj, label=new_gn, protein_segment=res.protein_segment)
+                            display_gn, created = ResidueGenericNumber.objects.get_or_create(
+                                    scheme=scheme, label=new_display, protein_segment=res.protein_segment)
 
-                        try:
-                            gn_equivalent, created = ResidueGenericNumberEquivalent.objects.get_or_create(
-                                default_generic_number=gn,
-                                scheme=scheme,
-                                defaults={'label': new_equivalent})
-                        except IntegrityError:
-                            gn_equivalent = ResidueGenericNumberEquivalent.objects.get(
-                                default_generic_number=gn,
-                                scheme=scheme)
+                            try:
+                                gn_equivalent, created = ResidueGenericNumberEquivalent.objects.get_or_create(
+                                    default_generic_number=gn,
+                                    scheme=scheme,
+                                    defaults={'label': new_equivalent})
+                            except IntegrityError:
+                                gn_equivalent = ResidueGenericNumberEquivalent.objects.get(
+                                    default_generic_number=gn,
+                                    scheme=scheme)
 
-                        res.generic_number = gn
-                        res.display_generic_number = display_gn
+                            res.generic_number = gn
+                            res.display_generic_number = display_gn
 
-                        prev_gn = new_gn
-                        prev_display = new_display
-                        prev_segment = res.protein_segment
+                            prev_gn = new_gn
+                            prev_display = new_display
+                            prev_segment = res.protein_segment
                 else:
                     if res.generic_number:
                         prev_gn = res.generic_number.label
@@ -1264,38 +1288,42 @@ class Command(BaseBuild):
             if res.protein_segment:
                 if res.generic_number==None and (res.protein_segment.category == "helix" or res.missing_gn): # residue.missing_gn
                     if (res.protein_segment==prev_segment):
-                        gn_split = prev_gn.split("x")
-                        new_gn = gn_split[0]+"x"+str(int(gn_split[1])-1)
+                        if prev_gn is None:
+                            # See matching comment in the forward pass above.
+                            if debug: print("Skipping GN extrapolation for",res.sequence_number,"- no anchor GN in",res.protein_segment)
+                        else:
+                            gn_split = prev_gn.split("x")
+                            new_gn = gn_split[0]+"x"+str(int(gn_split[1])-1)
 
-                        display_split=prev_display.split("x")
-                        seq_split = display_split[0].split(".")
+                            display_split=prev_display.split("x")
+                            seq_split = display_split[0].split(".")
 
-                        new_display = seq_split[0]+"."+str(int(seq_split[1])-1)+"x"+str(int(display_split[1])-1)
-                        new_equivalent = seq_split[0]+"x"+str(int(display_split[1])-1)
+                            new_display = seq_split[0]+"."+str(int(seq_split[1])-1)+"x"+str(int(display_split[1])-1)
+                            new_equivalent = seq_split[0]+"x"+str(int(display_split[1])-1)
 
-                        if debug: print("Added Generic Number for",res.sequence_number,": GN",new_gn," Display",new_display)
+                            if debug: print("Added Generic Number for",res.sequence_number,": GN",new_gn," Display",new_display)
 
-                        gn, created = ResidueGenericNumber.objects.get_or_create(
-                                scheme=ns_obj, label=new_gn, protein_segment=res.protein_segment)
-                        display_gn, created = ResidueGenericNumber.objects.get_or_create(
-                                scheme=scheme, label=new_display, protein_segment=res.protein_segment)
+                            gn, created = ResidueGenericNumber.objects.get_or_create(
+                                    scheme=ns_obj, label=new_gn, protein_segment=res.protein_segment)
+                            display_gn, created = ResidueGenericNumber.objects.get_or_create(
+                                    scheme=scheme, label=new_display, protein_segment=res.protein_segment)
 
-                        try:
-                            gn_equivalent, created = ResidueGenericNumberEquivalent.objects.get_or_create(
-                                default_generic_number=gn,
-                                scheme=scheme,
-                                defaults={'label': new_equivalent})
-                        except IntegrityError:
-                            gn_equivalent = ResidueGenericNumberEquivalent.objects.get(
-                                default_generic_number=gn,
-                                scheme=scheme)
+                            try:
+                                gn_equivalent, created = ResidueGenericNumberEquivalent.objects.get_or_create(
+                                    default_generic_number=gn,
+                                    scheme=scheme,
+                                    defaults={'label': new_equivalent})
+                            except IntegrityError:
+                                gn_equivalent = ResidueGenericNumberEquivalent.objects.get(
+                                    default_generic_number=gn,
+                                    scheme=scheme)
 
-                        res.generic_number = gn
-                        res.display_generic_number = display_gn
+                            res.generic_number = gn
+                            res.display_generic_number = display_gn
 
-                        prev_gn = new_gn
-                        prev_display = new_display
-                        prev_segment = res.protein_segment
+                            prev_gn = new_gn
+                            prev_display = new_display
+                            prev_segment = res.protein_segment
                 else:
                     if res.generic_number:
                         prev_gn = res.generic_number.label
@@ -1768,6 +1796,7 @@ class Command(BaseBuild):
 
             # ligands
             peptide_chain = ""
+            ligands_missing_uaa = set()
             if self.debug:
                 print(sd)
             if 'ligand' in sd and sd['ligand'] and sd['ligand']!='None':
@@ -1811,6 +1840,15 @@ class Command(BaseBuild):
                         else:
                             ligand_title = ligand['name']
 
+                        # a peptide/protein ligand annotated with the same chain ID as the
+                        # receptor's own preferred chain isn't a separate, cleanly delimited
+                        # chain (e.g. a Stachel/tethered-stalk peptide fused to the receptor,
+                        # or a fusion/mislabeled partner chain) - skip ligand lookup/creation
+                        # entirely rather than building a sequence from a mixed chain
+                        if ligand['type'] in ['peptide', 'protein'] and peptide_chain and peptide_chain == s.preferred_chain:
+                            self.logger.warning('Ligand {} ({}) in structure {} shares chain ID {} with the receptor preferred chain - skipping ligand lookup/creation'.format(ligand_title, ligand['type'], s, peptide_chain))
+                            continue
+
                         # Adding the PDB three-letter code
                         ids = {}
                         pdb_reference = ligand['name']
@@ -1829,6 +1867,7 @@ class Command(BaseBuild):
 
                         if ligand['name'] != "pep" and ligand['name'] != "apo":
                             ids["pdb"] = ligand['name']
+                            ids["pdbe"] = ligand['name']
 
                         # use pubchem_id
                         if 'pubchemId' in ligand and ligand['pubchemId'] and ligand['pubchemId'] != 'None':
@@ -1854,18 +1893,27 @@ class Command(BaseBuild):
                         # sequence
                         if ligand['type'] in ['peptide', 'protein'] and peptide_chain in self.parsed_pdb:
                             seq = ''
+                            missing_residues = []
                             for res in self.parsed_pdb[peptide_chain]:
                                 one_letter = Polypeptide.protein_letters_3to1.get(res.get_resname())
                                 if not one_letter:
                                     if res.get_resname() in self.unnatural_amino_acids:
                                         one_letter = self.unnatural_amino_acids[res.get_resname()]
                                     else:
-                                        print('WARNING: {} residue in structure {} is missing from unnatural amino acid definitions (data/protwis/gpcr/residue_data/unnatural_amino_acids.yaml)'.format(res, s))
+                                        missing_residues.append('{}:{}'.format(res.get_resname(), res.id[1]))
                                         continue
                                 seq+=one_letter
+                            if missing_residues:
+                                msg = 'ERROR: Missing unnatural amino acid definitions in structure {} for ligand {}: {} (add to data/protwis/gpcr/residue_data/unnatural_amino_acids.yaml) - skipping ligand lookup/creation'.format(
+                                    s, ligand_title, ', '.join(missing_residues))
+                                print(msg)
+                                self.logger.warning(msg)
+                                ligands_missing_uaa.add(id(ligand))
+                                continue
                             ids['sequence'] = seq
 
-                        l = get_or_create_ligand(ligand_title, ids, ligand['type'])
+                        l = get_or_create_ligand(ligand_title, ids, ligand['type'],
+                                                  seq_and_name_lookup=(ligand['type'] in ['peptide', 'protein']))
                         # Create LigandPeptideStructure object to store chain ID for peptide ligands - supposed to b TEMP
                         if ligand['type'] in ['peptide','protein']:
                             lps, created = LigandPeptideStructure.objects.get_or_create(structure=s, ligand=l, chain=peptide_chain)
@@ -2105,6 +2153,19 @@ class Command(BaseBuild):
                         peptide_chain = ""
                         if ligand['chain']!='' and ligand_type in ['protein', 'peptide']:
                             peptide_chain = ligand['chain']
+                        if ligand_type in ['protein', 'peptide'] and peptide_chain and peptide_chain == s.preferred_chain:
+                            # same chain as the receptor's own preferred chain - the ligand
+                            # DB-creation loop already skipped creating a Ligand/
+                            # StructureLigandInteraction for this entry, so there is nothing
+                            # here to run interaction calculations against
+                            print('WARNING: Ligand {} ({}) in structure {} shares chain ID {} with the receptor preferred chain - skipping interaction calculation'.format(ligand['name'], ligand_type, s, peptide_chain))
+                            continue
+                        if id(ligand) in ligands_missing_uaa:
+                            # Loop A already skipped this ligand (missing unnatural amino acid
+                            # definition), so there is no StructureLigandInteraction row to
+                            # calculate interactions against
+                            print('ERROR: Ligand {} ({}) in structure {} was skipped earlier due to a missing unnatural amino acid definition - skipping interaction calculation'.format(ligand['name'], ligand_type, s))
+                            continue
                         # mypath = '/tmp/interactions/results/' + sd['pdb'] + '/output'
                         # if not os.path.isdir(mypath):
                         #     #Only run calcs, if not already in temp
