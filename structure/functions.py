@@ -1460,6 +1460,8 @@ class StructureBuildCheck():
         self.end_error = []
         self.helix_length_error = []
         self.duplicate_residue_error = {}
+        self.residue_mismatch_structures = []
+        self.residue_mismatch_data = {}
         psc = ParseStructureCSV()
         psc.parse_ligands()
         self.ligand_data = psc.structures
@@ -1574,6 +1576,59 @@ class StructureBuildCheck():
         else:
             print('Warning: {} not annotated'.format(key))
 
+    def check_residue_mismatches(self, structure, min_consecutive_mismatches=10):
+        parent = structure.protein_conformation.protein.parent
+        parent_residues = Residue.objects.filter(protein_conformation__protein=parent) \
+            .exclude(generic_number=None).select_related('generic_number')
+        structure_residues = Residue.objects.filter(protein_conformation=structure.protein_conformation) \
+            .exclude(generic_number=None).select_related('generic_number', 'protein_segment')
+
+        parent_by_gn = {r.generic_number.label: r for r in parent_residues}
+
+        max_streak = 0
+        current_streak = 0
+        for r in structure_residues:
+            wt_r = parent_by_gn.get(r.generic_number.label)
+            if wt_r is None:
+                continue
+            if r.amino_acid != wt_r.amino_acid:
+                current_streak += 1
+                max_streak = max(max_streak, current_streak)
+            else:
+                current_streak = 0
+
+        if max_streak > min_consecutive_mismatches:
+            self.residue_mismatch_structures.append(structure)
+            self.residue_mismatch_data[structure] = (structure_residues, parent_by_gn, max_streak)
+
+    def print_residue_mismatch_alignment(self, structure, structure_residues, parent_by_gn, max_streak):
+        print("=== Residue mismatch alignment for {}: longest run of {} consecutive mismatches ===".format(structure, max_streak))
+        current_segment = None
+        gns, struct_aas, parent_aas, marks = [], [], [], []
+
+        def flush():
+            if not gns:
+                return
+            print("--- {} ---".format(current_segment))
+            print("GN:    " + ' '.join(gns))
+            print("Struct:" + ' '.join(struct_aas))
+            print("Parent:" + ' '.join(parent_aas))
+            print("       " + ' '.join(marks))
+
+        for r in structure_residues:
+            if r.generic_number is None or r.generic_number.label not in parent_by_gn:
+                continue
+            if r.protein_segment.slug != current_segment:
+                flush()
+                current_segment = r.protein_segment.slug
+                gns, struct_aas, parent_aas, marks = [], [], [], []
+            wt_r = parent_by_gn[r.generic_number.label]
+            gns.append(r.generic_number.label)
+            struct_aas.append(r.amino_acid)
+            parent_aas.append(wt_r.amino_acid)
+            marks.append(' ' if r.amino_acid == wt_r.amino_acid else '*')
+        flush()
+
     def check_ligand_interactions(self, structure):
         key = structure.pdb_code.index
         tsv_ligands = self.ligand_data.get(key, {}).get('ligand', [])
@@ -1584,6 +1639,8 @@ class StructureBuildCheck():
             self.ligand_count_error.append([structure, len(named_ligands), sli_qs.count()])
 
         for sli in sli_qs:
+            if sli.ligand.name == "Apo (no ligand)":
+                continue
             if not ResidueFragmentInteraction.objects.filter(structure_ligand_pair=sli).exists():
                 self.missing_ligand_interaction.append([structure, sli.ligand])
 

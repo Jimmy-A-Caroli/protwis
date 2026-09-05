@@ -9,15 +9,23 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--signprot', help='Test G alpha structures', action='store_true', default=False)
+        parser.add_argument('-s', '--structures', dest='structures', nargs='+', default=None,
+            help='Limit all checks to these PDB codes (space-separated), e.g. -s 7XW5 6TPJ')
 
     def handle(self, *args, **options):
         sbc = StructureBuildCheck()
+        pdb_filter = [p.upper() for p in options['structures']] if options['structures'] else None
         if not options['signprot']:
+            if pdb_filter:
+                sbc.pdbs = [p for p in sbc.pdbs if p in pdb_filter]
             sbc.check_structures()
             structs = Structure.objects.all().exclude(structure_type__slug__startswith='af-')
+            if pdb_filter:
+                structs = structs.filter(pdb_code__index__in=pdb_filter)
             sbc.check_duplicate_residues(structs)
             for s in structs:
                 sbc.check_segment_ends(s)
+                sbc.check_residue_mismatches(s)
             print("Missing segments: ", len(sbc.missing_seg))
             p = []
             for i in sbc.missing_seg:
@@ -40,6 +48,13 @@ class Command(BaseCommand):
             print("Residue duplicate errors: ", len(sbc.duplicate_residue_error))
             for i, j in sbc.duplicate_residue_error.items():
                 print("Error: {} has duplicate residue for {}".format(i,j))
+            print("Structures with >10 consecutive residue mismatches vs parent: ", len(sbc.residue_mismatch_structures))
+            if pdb_filter:
+                for s in sbc.residue_mismatch_structures:
+                    structure_residues, parent_by_gn, max_streak = sbc.residue_mismatch_data[s]
+                    sbc.print_residue_mismatch_alignment(s, structure_residues, parent_by_gn, max_streak)
+            else:
+                print(' '.join(str(s) for s in sbc.residue_mismatch_structures))
 
             for s in structs:
                 sbc.check_ligand_interactions(s)
@@ -57,9 +72,12 @@ class Command(BaseCommand):
             for i in sbc.missing_peptide_residue_pair:
                 print("Error: {} has no InteractingPeptideResiduePair objects for peptide ligand {}".format(i[0],i[1]))
         else:
-            for sc in SignprotComplex.objects.all():
+            sc_qs = SignprotComplex.objects.all()
+            if pdb_filter:
+                sc_qs = sc_qs.filter(structure__pdb_code__index__in=pdb_filter)
+            for sc in sc_qs:
                 sbc.check_signprot_struct_residues(sc)
-            scs = SignprotComplex.objects.all().exclude(structure__structure_type__slug__startswith='af-')
+            scs = sc_qs.exclude(structure__structure_type__slug__startswith='af-')
             for i in sbc.missing_seg:
                 print("Error: Missing segment {} {} has {} residue objects.".format(i[0],i[1],i[2]))
             sbc.check_duplicate_residues(scs)
